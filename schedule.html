@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Schedule — TeacherPal</title>
+  <meta name="color-scheme" content="dark">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;600;700&family=Rajdhani:wght@500;600;700&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="app">
+  <header class="topbar"></header>
+
+
+  <main class="page schedule-page">
+    <div id="status" class="status"></div>
+
+    <div class="schedule-layout">
+      <!-- ---------- Overrides ---------- -->
+      <section class="card" aria-label="Schedule overrides">
+        <div class="card-head"><h2>Schedule overrides</h2></div>
+        <p class="today-line" id="today-line">Today: <strong>—</strong></p>
+        <p class="bell-hint">Weekday default: Monday = Early Release, Tuesday–Friday = Tues–Fri schedule. An override for a date always wins.</p>
+
+        <form class="ov-form" id="ov-form">
+          <label><span class="lbl">Date</span><input type="date" id="ov-date" class="neu-inset" required></label>
+          <label><span class="lbl">Schedule</span><select id="ov-schedule" class="neu-inset"></select></label>
+          <label id="ov-pair-wrap" hidden><span class="lbl">Finals periods</span>
+            <select id="ov-pair" class="neu-inset">
+              <option value="1-2">Periods 1 / 2</option>
+              <option value="3-4">Periods 3 / 4</option>
+              <option value="5-6">Periods 5 / 6</option>
+            </select>
+          </label>
+          <label><span class="lbl">Note (optional)</span><input type="text" id="ov-note" class="neu-inset" placeholder="e.g. Rally day" autocomplete="off"></label>
+          <div class="actions">
+            <button type="submit" class="neu-btn primary" id="ov-save">Save override</button>
+          </div>
+        </form>
+
+        <ul class="ov-list" id="ov-list" aria-label="Override dates"></ul>
+        <p class="ov-empty" id="ov-empty" hidden>No overrides yet — every day follows the weekday default.</p>
+      </section>
+
+      <!-- ---------- Bell schedule reference ---------- -->
+      <section class="card" aria-label="Bell schedules">
+        <div class="card-head"><h2>Bell schedules</h2></div>
+        <div class="bell-head">
+          <label><span class="lbl">Show</span><select id="bell-pick" class="neu-inset"></select></label>
+          <span class="chip" id="bell-tag"></span>
+        </div>
+        <table class="bell-table">
+          <thead><tr><th>Block</th><th>Time</th><th>Class</th></tr></thead>
+          <tbody id="bell-body"></tbody>
+        </table>
+        <p class="bell-hint">Class names come from the roster: a period called "5th Period - ERWC" is bell period 5. Periods without a class are shown as prep.</p>
+      </section>
+    </div>
+  </main>
+  </div>
+
+  <script src="shared.js"></script>
+  <script src="schedule.js"></script>
+  <script src="nav.js"></script>
+  <script>
+    const $ = (id) => document.getElementById(id);
+    let overrides = [];
+    let teaches = new Map();
+
+    // every schedule the reference table can show: the six + the three finals pairs
+    const BELL_CHOICES = [
+      ['early_release'], ['regular'], ['minimum'], ['double_second'], ['homecoming'],
+      ['finals', '1-2'], ['finals', '3-4'], ['finals', '5-6'],
+    ];
+
+    const fmtDate = (ymd) => {
+      const [y, m, d] = ymd.split('-').map(Number);
+      return new Date(y, m - 1, d).toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' });
+    };
+    const describe = (sched) => sched.name;
+
+    // ---------- today line ----------
+    function renderToday() {
+      const now = new Date();
+      const sched = resolveSchedule(now, overrides);
+      const st = scheduleStatus(now, sched, teaches);
+      const src = sched.override ? 'override' : (sched.key === 'weekend' ? '' : 'weekday default');
+      $('today-line').innerHTML = `Today, ${escapeHtml(now.toLocaleDateString(undefined, { weekday: 'long', month: 'short', day: 'numeric' }))}: <strong>${escapeHtml(describe(sched))}</strong>${src ? ` <span>(${src})</span>` : ''} <span>— ${escapeHtml(st.text)}</span>`;
+    }
+
+    // ---------- override list ----------
+    function renderList() {
+      const todayKey = dateKey(new Date());
+      const list = $('ov-list');
+      list.innerHTML = overrides.map((o) => {
+        const s = scheduleFor(o.schedule, o.finals_pair);
+        const cls = o.date < todayKey ? 'past' : (o.date === todayKey ? 'today' : '');
+        return `<li class="ov-row ${cls}" data-id="${o.id}">
+          <span class="ov-date">${escapeHtml(fmtDate(o.date))}</span>
+          <span class="ov-what">${escapeHtml(s.name)}${o.note ? `<span class="ov-note">${escapeHtml(o.note)}</span>` : ''}</span>
+          <button type="button" class="icon-btn danger" data-del="${o.id}" aria-label="Remove override for ${escapeHtml(fmtDate(o.date))}" title="Remove"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/></svg></button>
+        </li>`;
+      }).join('');
+      $('ov-empty').hidden = overrides.length > 0;
+    }
+
+    $('ov-list').addEventListener('click', async (e) => {
+      const btn = e.target.closest('[data-del]');
+      if (!btn) return;
+      const id = btn.dataset.del;
+      const row = overrides.find((o) => o.id === id);
+      if (!row || !confirm(`Remove the override for ${fmtDate(row.date)}? That day goes back to the weekday default.`)) return;
+      try {
+        await deleteScheduleOverride(id);
+        overrides = overrides.filter((o) => o.id !== id);
+        renderList(); renderToday();
+        setStatus(`Removed override for ${fmtDate(row.date)}.`, 'ok');
+      } catch (err) { showError(err); }
+    });
+
+    // ---------- form ----------
+    const schedSel = $('ov-schedule');
+    schedSel.innerHTML = SCHEDULE_OPTIONS.map((o) => `<option value="${o.key}">${escapeHtml(o.name)}</option>`).join('');
+    const syncPair = () => { $('ov-pair-wrap').hidden = schedSel.value !== 'finals'; };
+    schedSel.addEventListener('change', syncPair);
+    syncPair();
+    $('ov-date').value = dateKey(new Date());
+
+    $('ov-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const date = $('ov-date').value;
+      if (!date) return;
+      const schedule = schedSel.value;
+      const finals_pair = schedule === 'finals' ? $('ov-pair').value : null;
+      const note = $('ov-note').value.trim() || null;
+      $('ov-save').disabled = true;
+      try {
+        const saved = await saveScheduleOverride({ date, schedule, finals_pair, note });
+        overrides = overrides.filter((o) => o.date !== date).concat(saved).sort((a, b) => a.date.localeCompare(b.date));
+        renderList(); renderToday();
+        $('ov-note').value = '';
+        setStatus(`${fmtDate(date)} → ${scheduleFor(schedule, finals_pair).name}.`, 'ok');
+      } catch (err) { showError(err); }
+      finally { $('ov-save').disabled = false; }
+    });
+
+    // ---------- bell schedule reference ----------
+    const bellPick = $('bell-pick');
+    bellPick.innerHTML = BELL_CHOICES.map(([k, pair], i) => `<option value="${i}">${escapeHtml(scheduleFor(k, pair).name)}</option>`).join('');
+    function renderBell() {
+      const [k, pair] = BELL_CHOICES[Number(bellPick.value)];
+      const sched = scheduleFor(k, pair);
+      const now = new Date();
+      const live = resolveSchedule(now, overrides).key === k && (k !== 'finals' || resolveSchedule(now, overrides).finalsPair === pair);
+      const t = now.getHours() * 3600 + now.getMinutes() * 60 + now.getSeconds();
+      const toS = (hhmm) => { const [h, m] = hhmm.split(':').map(Number); return h * 3600 + m * 60; };
+      $('bell-tag').textContent = k === 'early_release' ? 'Monday default' : k === 'regular' ? 'Tue–Fri default' : 'By override only';
+      $('bell-body').innerHTML = sched.segments.map((s) => {
+        const isLive = live && t >= toS(s.start) && t < toS(s.end);
+        if (s.kind === 'break') {
+          return `<tr class="break ${isLive ? 'live' : ''}"><td>${escapeHtml(s.label)}</td><td>${fmt12(s.start)}–${fmt12(s.end)}</td><td></td></tr>`;
+        }
+        const course = teaches.get(s.n);
+        const block = `Period ${s.n}${s.note ? ` <span class="ov-note">${escapeHtml(s.note)}</span>` : ''}`;
+        return `<tr class="${isLive ? 'live' : ''}"><td>${block}</td><td>${fmt12(s.start)}–${fmt12(s.end)}</td><td class="${course ? 'course' : 'prep'}">${course ? escapeHtml(course) : 'Prep'}</td></tr>`;
+      }).join('');
+    }
+    bellPick.addEventListener('change', renderBell);
+
+    // ---------- load ----------
+    (async () => {
+      try {
+        const [periods, ov] = await Promise.all([getPeriods(), getScheduleOverrides()]);
+        teaches = teachingMap(periods);
+        overrides = ov;
+        // open the reference on today's schedule
+        const today = resolveSchedule(new Date(), overrides);
+        const idx = BELL_CHOICES.findIndex(([k, pair]) => k === today.key && (k !== 'finals' || pair === today.finalsPair));
+        bellPick.value = String(idx >= 0 ? idx : 1);
+        renderList(); renderToday(); renderBell();
+        setInterval(() => { renderToday(); renderBell(); }, 1000);
+      } catch (err) {
+        showError(new Error(`${err.message} — if schedule_overrides is missing, run migration-schedule-overrides.sql in the Supabase SQL editor.`));
+        renderBell();
+      }
+    })();
+  </script>
+</body>
+</html>

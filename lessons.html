@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Lesson Plans — TeacherPal</title>
+  <meta name="color-scheme" content="dark">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;600;700&family=Rajdhani:wght@500;600;700&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body class="hub">
+  <div class="app">
+    <header class="topbar"></header>
+
+    <main class="page hud-page lessons-page">
+      <div id="status" class="status"></div>
+      <div class="lessons-layout">
+        <!-- LEFT: week grid (built by the inline script) -->
+        <section class="hud-box week-box" aria-label="Week" style="--i:0">
+          <span class="tick tl" aria-hidden="true"></span><span class="tick tr" aria-hidden="true"></span><span class="tick bl" aria-hidden="true"></span><span class="tick br" aria-hidden="true"></span>
+          <div class="dash-head">
+            <button type="button" class="hud-chip" id="wk-prev" title="Previous week">← WEEK</button>
+            <span class="hud-stat"><span class="hud-key">WEEK OF</span><span class="hud-val" id="wk-label">—</span></span>
+            <button type="button" class="hud-chip" id="wk-next" title="Next week">WEEK →</button>
+            <button type="button" class="hud-chip" id="wk-today">TODAY</button>
+            <label class="dash-field"><span class="hud-key">JUMP TO</span><input type="date" id="wk-date" aria-label="Jump to date"></label>
+            <span class="spacer"></span>
+            <span class="hud-val hud-quiet wk-hint">← → day · ↑ ↓ period</span>
+            <button type="button" class="hud-chip" data-fullscreen aria-pressed="false" title="Full screen (F)"><span class="when-off">EXPAND</span><span class="when-on">EXIT</span></button>
+          </div>
+          <div class="week-grid" id="week-grid"></div>
+        </section>
+        <!-- RIGHT: the editor for the selected cell (lesson.js) -->
+        <div id="lesson" class="lesson"></div>
+      </div>
+    </main>
+  </div>
+
+  <script src="shared.js"></script>
+  <script src="schedule.js"></script>
+  <script src="nav.js"></script>
+  <script src="lesson.js"></script>
+  <script>
+    // ---------- week view ----------
+    const $ = (id) => document.getElementById(id);
+    const panel = initLessonPanel({ mount: '#lesson', follow: false, onChange: ({ periodId, date, plan }) => updateCell(periodId, date, plan) });
+    let periods = [];
+    let weekStart = mondayOf(todayKey());   // 'YYYY-MM-DD' of the Monday
+    let selected = { periodId: null, date: todayKey() };
+    let plans = new Map();                   // 'periodId|date' → plan row
+
+    function parse(ymd) { const [y, m, d] = ymd.split('-').map(Number); return new Date(y, m - 1, d); }
+    function shift(ymd, days) { const d = parse(ymd); d.setDate(d.getDate() + days); return dateKey(d); }
+    function mondayOf(ymd) { const d = parse(ymd); const wd = (d.getDay() + 6) % 7; return shift(ymd, -wd); }
+    const days = () => [0, 1, 2, 3, 4].map((i) => shift(weekStart, i));
+    const key = (pid, d) => `${pid}|${d}`;
+    const summary = (p) => {
+      if (!p) return '';
+      const items = (p.agenda || []).filter((a) => a.text && a.text.trim());
+      return (p.objective || '').trim() || items.map((a) => a.text).join(' · ') || (p.materials || p.homework || p.notes || '').trim();
+    };
+    const agendaMeta = (p) => { const items = ((p && p.agenda) || []).filter((a) => a.text && a.text.trim()); return items.length ? `${items.filter((a) => a.done).length}/${items.length}` : ''; };
+
+    function renderGrid() {
+      const ds = days();
+      const today = todayKey();
+      $('wk-label').textContent = `${parse(weekStart).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })} – ${parse(ds[4]).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}`.toUpperCase();
+      $('wk-date').value = selected.date;
+      let html = '<div class="wk-corner"></div>' + ds.map((d) => `<div class="wk-day${d === today ? ' today' : ''}"><span class="wk-dow">${parse(d).toLocaleDateString(undefined, { weekday: 'short' }).toUpperCase()}</span><span class="wk-dnum">${parse(d).getDate()}</span></div>`).join('');
+      for (const p of periods) {
+        const { n, course } = parsePeriodName(p.name);
+        html += `<div class="wk-period"><span class="wk-pnum">${n !== null ? `P${n}` : ''}</span><span class="wk-pname">${escapeHtml(course || p.name)}</span></div>`;
+        for (const d of ds) {
+          const plan = plans.get(key(p.id, d));
+          const sel = selected.periodId === p.id && selected.date === d;
+          const text = summary(plan);
+          html += `<button type="button" class="wk-cell${text ? ' has-plan' : ''}${sel ? ' selected' : ''}${d === today ? ' today' : ''}" data-period="${p.id}" data-date="${d}" id="cell-${p.id}-${d}">
+            <span class="wk-text">${text ? escapeHtml(text) : '<span class="wk-add">+ plan</span>'}</span>
+            <span class="wk-meta">${agendaMeta(plan)}</span>
+          </button>`;
+        }
+      }
+      $('week-grid').innerHTML = html;
+    }
+    function updateCell(pid, d, plan) {
+      plans.set(key(pid, d), plan);
+      const cell = document.getElementById(`cell-${pid}-${d}`);
+      if (!cell) return;
+      const text = summary(plan);
+      cell.classList.toggle('has-plan', !!text);
+      cell.querySelector('.wk-text').innerHTML = text ? escapeHtml(text) : '<span class="wk-add">+ plan</span>';
+      cell.querySelector('.wk-meta').textContent = agendaMeta(plan);
+    }
+    async function loadWeek() {
+      const ds = days();
+      plans = new Map();
+      try {
+        const rows = await getLessonPlansRange(ds[0], ds[4]);
+        for (const r of rows) plans.set(key(r.period_id, r.date), r);
+      } catch (err) { setStatus(`Lesson plans unavailable — run migration-lessons-bathroom.sql in the Supabase SQL editor. (${err.message})`, 'error'); }
+      renderGrid();
+    }
+    function select(pid, d) {
+      selected = { periodId: pid, date: d };
+      if (mondayOf(d) !== weekStart) { weekStart = mondayOf(d); loadWeek(); } else renderGrid();
+      panel.show(pid, d);
+    }
+    $('week-grid').addEventListener('click', (e) => { const c = e.target.closest('.wk-cell'); if (c) select(c.dataset.period, c.dataset.date); });
+    $('wk-prev').addEventListener('click', () => { weekStart = shift(weekStart, -7); loadWeek(); });
+    $('wk-next').addEventListener('click', () => { weekStart = shift(weekStart, 7); loadWeek(); });
+    $('wk-today').addEventListener('click', () => select(selected.periodId || (periods[0] || {}).id, todayKey()));
+    $('wk-date').addEventListener('change', (e) => { if (e.target.value) select(selected.periodId || (periods[0] || {}).id, e.target.value); });
+    // keyboard: ← → move a school day, ↑ ↓ move a period (not while typing)
+    document.addEventListener('keydown', (e) => {
+      if (isTyping(e.target) || !selected.periodId || document.querySelector('dialog[open]')) return;
+      const i = periods.findIndex((p) => p.id === selected.periodId);
+      const dow = parse(selected.date).getDay();
+      if (e.key === 'ArrowLeft') { e.preventDefault(); select(selected.periodId, shift(selected.date, dow === 1 ? -3 : -1)); }
+      else if (e.key === 'ArrowRight') { e.preventDefault(); select(selected.periodId, shift(selected.date, dow === 5 ? 3 : 1)); }
+      else if (e.key === 'ArrowUp' && i > 0) { e.preventDefault(); select(periods[i - 1].id, selected.date); }
+      else if (e.key === 'ArrowDown' && i < periods.length - 1) { e.preventDefault(); select(periods[i + 1].id, selected.date); }
+    });
+
+    navReady.then(async (nav) => {
+      periods = nav.periods;
+      const d = new Date();
+      const n = suggestedPeriod(d, resolveSchedule(d, nav.overrides), (k) => nav.byNumber.has(k));
+      const pid = n !== null ? nav.byNumber.get(n).id : ((periods.find((p) => p.id === getLastPeriodId()) || periods[0] || {}).id || null);
+      await loadWeek();
+      if (pid) select(pid, todayKey());
+    });
+  </script>
+</body>
+</html>

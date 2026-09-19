@@ -1,0 +1,892 @@
+# TeacherPal
+
+A teacher hub web app for West High: a period dashboard (live seating chart + attendance + bell-schedule status), rosters, Create Groups, seating chart, and (later) Wordle.
+Built for a classroom projector — big type, high contrast, minimal chrome.
+Dark dashboard look with a subtle pink accent (see design-ref.png).
+
+## Stack
+
+- **Plain HTML / CSS / JS. No npm, no bundler, no build step, no framework.**
+  Open any `.html` file in a browser and it works.
+- **Supabase** (Postgres + PostgREST) as the backend, called directly over the
+  REST API with `fetch`. No `@supabase/supabase-js` client.
+- **Vercel** static hosting. Deploys the repo root as-is; no `vercel.json` needed.
+- **No login yet.** The anon key is used for every request. Auth will be added
+  later — see the rules below for how that is kept cheap.
+
+## Screens
+
+Nine screens, one horizontal top nav (built by `nav.js` on every page):
+**Hub · Attendance · Lesson Plans · Create Groups · Seating · Bathroom ·
+Wordle · Schedule · | Rosters** (Rosters is the quiet "setup" item after a
+divider). The active
+screen gets `aria-current="page"` (pink fill). The nav bar also carries
+the live readouts — clock, date, SCHED, NOW period + countdown — and the
+full-screen toggle. There is no sidebar; every page uses the full width.
+
+| Screen | File | What it is for |
+|--------|------|----------------|
+| Hub | `index.html` | **Launcher only**: the eight tools as a balanced grid of HUD panels (icon · name · a few words). No live data, no Supabase calls of its own |
+| Attendance | `attendance.html` | Taking roll: the seating chart large and central with click-to-cycle, counts, absent/tardy lists, Copy list, Reset, date control; the screen to project |
+| Lesson Plans | `lessons.html` | Writing plans: a Mon–Fri week grid across all periods (jump to any date, ← → ↑ ↓ to move) with the full editor for the selected cell beside it |
+| Create Groups | `groups.html` | Random / formula groups, projector view in full screen |
+| Seating | `seating.html` | Room builder + seat assignment |
+| Bathroom | `bathroom.html` | Bathroom tracker: click a student to sign out (timestamped) / back in, live elapsed time, "too long" flag, max-out cap, today's log, per-student history |
+| Wordle | `wordle.html` | Stub |
+| Rosters | `roster.html` | Setup: periods + students |
+| Schedule | `schedule.html` | Setup: bell-schedule overrides + reference |
+
+## File structure
+
+| File           | Purpose |
+|----------------|---------|
+| `index.html`   | Hub launcher (`body.hub.launcher`): static `.hub-panels.launcher` grid of `.hud-panel` links; loads only `shared.js`, `schedule.js`, `nav.js` (top bar **without** nav links — the panels are the nav) |
+| `attendance.html` | Attendance screen: `#attendance` in **full** mode — big chart + side column with counts, lists, Copy, Reset, date |
+| `nav.js`       | Shared top bar: renders brand + nav links + readouts + full-screen button into `<header class="topbar">`, marks the active page, runs the clock / bell status (`teacherpal:tick`), exposes `navReady` (periods, overrides, teaches, byNumber). Loaded on every page after `shared.js` + `schedule.js`. |
+| `lessons.html` | Lesson Plans screen: week grid (inline script) + `#lesson` editor from `lesson.js` |
+| `bathroom.html` | Bathroom Tracker screen: `#bathroom` built by `bathroom.js` |
+| `lesson.js`    | `initLessonPanel({ mount, follow, onChange })` — the lesson-plan editor (objective, checkable agenda with minutes, materials, homework, notes; inline editing, 800ms autosave, empty state, Copy from period / Copy yesterday). `follow: true` tracks `teacherpal:period` (hub); otherwise `panel.show(periodId, date)`. |
+| `bathroom.js`  | `initBathroom()` — the bathroom tracker (tiles, sign out/in, live elapsed, flag + cap settings in localStorage, log, history). |
+| `migration-lessons-bathroom.sql` | One-off migration creating `lesson_plans` + `bathroom_log` (incl. the manual-tally columns; run in the Supabase SQL editor) |
+| `seed-bathroom-q1.sql` | Seed: Q1 used-pass tallies from the paper tracker — name-matches students per period, creates three missing students, upserts manual tallies, reports unmatched names in its last result set |
+| `attendance.js` | `initAttendance({ mode: 'full' \| 'compact' })` builds and runs the attendance view (chart or tiles, click-to-cycle, AUTO period, date, counts, lists, Copy, Reset, autosave). Data only via `shared.js`; bell data via `navReady`. |
+| `room.js`      | Seating-room geometry shared by the builder and the hub chart: `G`, `TYPES`, `FRONT`, `pieceTransform`, `bbox`, `labelStyle`, `roomBounds`. No DOM state, no Supabase. |
+| `shared.js`    | Supabase config + REST client + data helpers + small UI helpers. **The only file that talks to Supabase.** |
+| `schedule.js`  | West High bell schedules as data (`SCHEDULES`, `FINALS_PAIRS`, `SCHEDULE_OPTIONS`) + pure helpers: `resolveSchedule(date, overrides)`, `scheduleStatus(now, sched, teaches)`, `teachingMap(periods)`, `parsePeriodName`, `dateKey`, `formatCountdown`, `fmt12`. No DOM, no Supabase. |
+| `formula.js`   | Shared Formula **algorithms and modal only** — never rule data: type metadata per scope (`RULE_TYPES`, `SCOPE_TYPES`, `KEY_TYPES`), priorities (`sortByPriority`, `priorityWeight`, `planRules`), feasibility (`findImpossibleHard`, `confirmImpossible`), the `annealAssign()` solver, `groupWithFormula()`, `summarizeRun()`, `absentTodayFor()`, `createFormulaModal({ scope, … })`. No Supabase calls. |
+| `style.css`    | Shared styling for every page (dark pink dashboard theme; all tokens at the top) |
+| `roster.html`  | Two-panel roster: period panel (search, sort, add, import modal, edit mode, full screen) + name-card grid with undo-toast remove |
+| `groups.html`  | **Create Groups**: compact toolbar (period, attendance panel, mode toggle, first-names, Formula on/off + Formula modal), FLIP-animated pool → group cards, full screen |
+| `seating.html` | Freeform room builder: palette of desk pieces on a zoomable dot-grid canvas (Arrange Room), then drag names onto seats (Assign Seats); layout shared, seats per period, autosave, full screen |
+| `migration-room-builder.sql` | One-off migration for the room builder tables (run in the Supabase SQL editor) |
+| `migration-seating-rules.sql` | One-off migration creating the formula rules table (run in the Supabase SQL editor) |
+| `migration-rule-scopes.sql` | One-off migration splitting rules into `scope` = seating / grouping (copies existing rules into both, then `notify pgrst`) |
+| `migration-attendance.sql` | One-off migration creating the `attendance` table (run in the Supabase SQL editor) |
+| `migration-schedule-overrides.sql` | One-off migration creating `schedule_overrides` + seeding the six finals dates (run in the Supabase SQL editor) |
+| `schedule.html` | Schedule admin: date → schedule overrides (add / remove, finals pair, note) and a bell-schedule reference table with the roster's classes filled in |
+| `wordle.html`  | Stub |
+| `schema.sql`   | Tables + RLS policies. Run in the Supabase SQL editor. Safe to re-run. |
+| `design-ref.png` | Visual reference for the current theme (blue in the image = pink here) |
+
+Every page: `<link rel="stylesheet" href="style.css">`, an **empty**
+`<header class="topbar"></header>` (nav.js fills it), then at the end of
+`<body>`: `shared.js`, `schedule.js`, (`formula.js` on Seating and Create
+Groups, `room.js` on Seating / hub / attendance), `nav.js`, then the page's
+own script (`attendance.js` + `initAttendance()` on Attendance; `lesson.js`
+on Lesson Plans; `bathroom.js` on Bathroom; nothing on the hub; an inline
+`<script>` elsewhere). Pages should have a `<div id="status" class="status"></div>` so
+`setStatus()` / `showError()` have somewhere to write.
+
+## Database schema
+
+All tables live in `public`. Ids are `uuid` with `gen_random_uuid()` defaults.
+
+### `periods`
+| column       | type        | notes |
+|--------------|-------------|-------|
+| `id`         | uuid        | PK |
+| `name`       | text        | e.g. "Period 3" |
+| `sort_order` | integer     | display order, default 0 |
+| `created_at` | timestamptz | default now() |
+
+### `students`
+| column       | type        | notes |
+|--------------|-------------|-------|
+| `id`         | uuid        | PK |
+| `period_id`  | uuid        | FK → periods.id, `on delete cascade` |
+| `name`       | text        | |
+| `sort_order` | integer     | display order within period, default 0 |
+| `created_at` | timestamptz | default now() |
+
+### `room_layouts` — one shared room (the same physical classroom for every period)
+| column       | type        | notes |
+|--------------|-------------|-------|
+| `id`         | uuid        | PK |
+| `key`        | text        | **UNIQUE**, default `'default'` — the app only ever uses this one row |
+| `layout`     | jsonb       | `{ version: 2, grid: 24, front: { x, y, w, h }, pieces: [{ id, type, x, y, rotation }] }` |
+| `updated_at` | timestamptz | set by the client on save |
+
+`x`/`y` are in grid units (24px at zoom 1); `type` is one of `single`, `pair`,
+`row3`, `group4`, `group6`, `round`, `teacher`; `rotation` is any angle in
+degrees (integer, 0–359) about the piece centre. `version: 2` marks free
+angles — v1 layouts only ever held 0/90/180/270 and load unchanged, so no
+migration was needed for the change.
+Piece geometry (desk rectangles, seat offsets) is **not** stored — it comes
+from the `TYPES` table in `room.js`, so the JSON stays small and the
+shapes can be tuned without a migration.
+
+### `seat_assignments` — one row per period
+| column        | type        | notes |
+|---------------|-------------|-------|
+| `id`          | uuid        | PK |
+| `period_id`   | uuid        | FK → periods.id, `on delete cascade`, **UNIQUE** |
+| `assignments` | jsonb       | `{ "<pieceId>:<seatIndex>": "<student uuid>", ... }` |
+| `updated_at`  | timestamptz | set by the client on save |
+
+Seat ids are derived from the piece (`<piece.id>:<index into TYPES[type].seats>`),
+so switching periods keeps the desks and swaps the names. Both saves are
+upserts (`on_conflict=key` / `on_conflict=period_id` with
+`Prefer: resolution=merge-duplicates`). The old grid table `seating_charts`
+is unused; `migration-room-builder.sql` creates the two tables above and has
+an optional, commented-out `drop table` for it.
+
+### `seating_rules` — Formula rules, one row per (period, scope)
+
+**Seating rules and grouping rules are two completely separate data sets.**
+The `scope` column says which: `'seating'` rows are read/written only by
+`seating.html`, `'grouping'` rows only by `groups.html`. A rule added on one
+page never appears on, or affects, the other. Each scope has its own rule
+list, its own priority order, and its own "Formula on/off" toggle.
+
+| column        | type        | notes |
+|---------------|-------------|-------|
+| `id`          | uuid        | PK |
+| `period_id`   | uuid        | FK → periods.id, `on delete cascade` |
+| `scope`       | text        | `'seating'` \| `'grouping'` (check constraint); **UNIQUE (period_id, scope)** |
+| `rules`       | jsonb       | `[{ id, type, a, b?, hard }]` in priority order (index 0 = highest). Seating types: `apart` · `together` · `close` · `front` · `back`. Grouping types: `apart` · `together` · `close` only — front/back do not exist in that scope. `a`/`b` are student uuids; pair rules stored once, applied both ways; `hard` = "Must meet" (missing → `RULE_TYPES[type].defaultHard`) |
+| `use_formula` | boolean     | this scope's toggle (Seating: Randomize follows the rules; Grouping: Create Groups / Reshuffle follow them) |
+| `updated_at`  | timestamptz | set by the client on save |
+
+Upsert is `POST /seating_rules?on_conflict=period_id,scope`. The table name
+is historical — it holds both scopes.
+
+### `attendance` — one row per (period, date)
+| column       | type        | notes |
+|--------------|-------------|-------|
+| `id`         | uuid        | PK |
+| `period_id`  | uuid        | FK → periods.id, `on delete cascade` |
+| `date`       | date        | local calendar day; **UNIQUE (period_id, date)** |
+| `marks`      | jsonb       | `{ "<student uuid>": { status: 'absent' \| 'tardy', at: ISO } }` — **present students are not stored**; `at` is when the mark was made (shown next to tardies) |
+| `updated_at` | timestamptz | set by the client on save |
+
+Upsert is `POST /attendance?on_conflict=period_id,date`. Written by the hub
+(click-to-cycle) and by Create Groups' Edit Roster (absent only — it keeps
+existing tardies). Looking back at a past day is just a different `date`.
+
+### `lesson_plans` — one row per (period, date)
+| column       | type        | notes |
+|--------------|-------------|-------|
+| `id`         | uuid        | PK |
+| `period_id`  | uuid        | FK → periods.id, `on delete cascade` |
+| `date`       | date        | **UNIQUE (period_id, date)** |
+| `objective`  | text        | learning target |
+| `agenda`     | jsonb       | `[{ id, text, minutes|null, done }]` in order — `done` is the live class checklist |
+| `materials`  | text        | materials / links |
+| `homework`   | text        | |
+| `notes`      | text        | |
+| `updated_at` | timestamptz | set by the client on save |
+
+Upsert is `POST /lesson_plans?on_conflict=period_id,date`. A plan is "empty"
+when every text field is blank and no agenda item has text; the editor shows
+the "Add a lesson plan" prompt until then.
+
+### `bathroom_log` — one row per trip
+| column       | type        | notes |
+|--------------|-------------|-------|
+| `id`         | uuid        | PK |
+| `period_id`  | uuid        | FK → periods.id, `on delete cascade` |
+| `student_id` | uuid        | FK → students.id, `on delete cascade` |
+| `date`       | date        | local calendar day |
+| `out_at`     | timestamptz | sign-out time (= `in_at` on manual rows) |
+| `in_at`      | timestamptz | null while the student is out |
+| `manual`     | boolean     | **true = a tally, not a timed trip** (seeded from the paper tracker or adjusted by hand); never shows as "out" or in the daily log |
+| `quarter`    | text        | `'Q1'..'Q4'` on manual rows; timed trips derive their quarter from `date` via `quarterOf()` |
+| `count`      | integer     | passes used (manual rows); 1 on trips |
+| `created_at` | timestamptz | |
+
+Indexes on `(period_id, date)`, `(student_id)`, and a partial unique index
+`(student_id, quarter) where manual` — one tally row per student per quarter.
+**Passes used in a quarter = manual count + timed trips in that quarter.** The
+flag limit, max-out cap and passes-per-quarter allowance (default 4) are
+per-browser settings (`teacherpal.bathroom.settings`).
+
+### `schedule_overrides` — dates that don't follow the weekday default
+| column        | type        | notes |
+|---------------|-------------|-------|
+| `id`          | uuid        | PK |
+| `date`        | date        | **UNIQUE** — the calendar day (local) |
+| `schedule`    | text        | `early_release` \| `regular` \| `minimum` \| `double_second` \| `homecoming` \| `finals` \| `no_school` (check constraint) |
+| `finals_pair` | text        | `'1-2'` \| `'3-4'` \| `'5-6'`; **required iff** `schedule = 'finals'` (check constraint) |
+| `note`        | text        | optional, shown in the override list |
+| `created_at`  | timestamptz | default now() |
+
+The bell schedules themselves are **not** in the database — they are data in
+`schedule.js`. This table only maps a date to one of them. Upsert is
+`POST /schedule_overrides?on_conflict=date`. `schema.sql` and the migration
+seed the known finals dates (2026-12-16/17/18 and 2027-05-25/26/27 as
+1/2, 3/4, 5/6) with `on conflict (date) do nothing`.
+
+### RLS
+RLS is enabled on every table (the project enables it automatically, and
+`schema.sql` enables it explicitly too). Each table currently has one policy
+named **`TEMP anon full access`** (`for all to anon using (true) with check (true)`).
+These are placeholders until login exists.
+
+## `shared.js` API
+
+Low level: `sb(table, { method, params, body, prefer })` — one wrapper around
+`fetch` to `${SUPABASE_URL}/rest/v1/<table>`. `params` become PostgREST query
+params (`{ id: 'eq.<uuid>', select: '*', order: 'name.asc' }`). Writes default
+to `Prefer: return=representation` so inserted/updated rows come back.
+
+Data helpers:
+- `getPeriods()`, `createPeriod(name, sortOrder)`, `renamePeriod(id, name)`, `deletePeriod(id)`
+- `getStudents(periodId)`, `addStudents(periodId, names[], startSortOrder)`, `updateStudent(id, fields)`, `deleteStudent(id)`, `countStudents()` (all periods, ids only)
+- `getRoomLayout()` → layout object or `null`; `saveRoomLayout(layout)` (upsert on `key`)
+- `getSeatAssignments(periodId)` → `{}` when none; `saveSeatAssignments(periodId, assignments)` (upsert on `period_id`)
+- `getAttendance(periodId, date)` → `{ marks, updatedAt }` or `null`; `saveAttendance(periodId, date, marks)` (upsert on `period_id,date`). Plus the same-browser cache helpers `readAbsentCache(periodId)` / `writeAbsentCache(periodId, ids)` (`teacherpal.absent.<periodId>` = `{ date, ids }`, today only), `absentIdsOf(marks)` and `todayKey()`.
+- `getAttendanceForDate(date)` → `[{ period_id, marks }]` for every period; `countStudentsByPeriod()` → `Map<periodId, n>`
+- `getLessonPlan(periodId, date)` → row or `null`; `getLessonPlansRange(from, to)` (week view); `saveLessonPlan(periodId, date, plan)` (upsert on `period_id,date`); `deleteLessonPlan(periodId, date)`; `EMPTY_PLAN()`
+- `getBathroomLog(periodId, date)`, `getBathroomHistory(periodId)` (all dates, newest first, ≤2000), `bathroomSignOut(periodId, studentId, date)` → row, `bathroomSignIn(id)` → row, `deleteBathroomTrip(id)`, `setManualTally(periodId, studentId, quarter, count)` (read-then-write because the uniqueness is a partial index; count 0 deletes)
+- `getScheduleOverrides()` → rows ordered by date; `saveScheduleOverride({ date, schedule, finals_pair, note })` (upsert on `date`; `finals_pair` is nulled unless `schedule === 'finals'`); `deleteScheduleOverride(id)`
+- `getFormulaRules(periodId, scope)` → `{ rules, useFormula }` for **that scope only**; `saveFormulaRules(periodId, scope, rules, useFormula)` (upsert on `period_id,scope`). `scope` must be `'seating'` or `'grouping'` (`assertScope` throws otherwise). No helper reads or writes both scopes in one operation.
+
+Full screen: `toggleFullscreen()` / `enterFullscreen()` / `exitFullscreen()`,
+`isPresent()`, `setPresentMode(on, { remember })`, `isTyping(el)`; any
+`[data-fullscreen]` button is wired automatically and mirrors the state in
+`aria-pressed`; pages listen for `document` event `teacherpal:present`
+(`detail.on`). See the Design rules for behaviour.
+
+UI helpers: `fillPeriodSelect(selectEl, periods, preferredId)` (remembers the
+last-used period in `localStorage`), `getLastPeriodId()` / `setLastPeriodId()`,
+`escapeHtml()`, `shuffle()`, `setStatus(msg, 'info'|'ok'|'error')`, `showError(err)`,
+`isConfigured()`.
+
+## Rules — keep future sessions consistent
+
+1. **No npm, no build step, no frameworks, no ES modules.** Plain script tags.
+   Everything in `shared.js` is a global on purpose.
+2. **All Supabase access goes through `shared.js`.** (`formula.js` is UI +
+   solver only and takes rules in/out through callbacks.) Pages never call `fetch`
+   on the Supabase URL, never touch the anon key, never build REST URLs. Add a
+   helper in `shared.js` instead. When login is added, `authHeaders()` is the
+   single place that changes.
+3. **The anon key is public by design** (it is shipped to browsers). Security
+   comes from RLS policies, not from hiding the key. Never put a service-role
+   key anywhere in this repo.
+4. **`schema.sql` must stay idempotent**: `create table if not exists`, and
+   policies wrapped in `DO $$ ... END $$` blocks that check `pg_policies`
+   first. **Never use `CREATE POLICY IF NOT EXISTS`** (not valid Postgres).
+5. **Every table needs RLS policies** or the anon key silently gets nothing.
+   New tables: enable RLS, add a `TEMP anon full access` policy in the same
+   DO-block style, and label it TEMPORARY in a comment.
+6. **Keep the table/column listing comment at the top of `schema.sql`** in
+   sync with the tables, and keep the schema tables in this file in sync too.
+7. **Projector-first UI.** Fluid root font (14–22px, scales with the screen), large buttons, high contrast. There is
+   **one** big-screen mode for the whole app — the full-screen system in
+   `shared.js` (`body.present`, see the Design rules) — never add a
+   page-local "present" or fullscreen toggle; hook the `teacherpal:present`
+   event and hide chrome with `.no-present` instead.
+8. **Escape user text with `escapeHtml()`** whenever student/period names go
+   into `innerHTML`.
+9. **`cascade` deletes are relied on**: deleting a period deletes its students
+   and its seat assignments in the database, so the client does not clean up.
+10. Deploy is just `git push` — Vercel serves the repo root. Don't add a build
+    command or output directory.
+11. **Seating rules and grouping rules are separate data sets**, scoped by
+    `seating_rules.scope`. `seating.html` uses `RULE_SCOPE = 'seating'`,
+    `groups.html` uses `RULE_SCOPE = 'grouping'`, and every load/save passes
+    that constant. `shared.js` and `formula.js` share **algorithms only,
+    never rule data** — don't add code that merges, copies or reads across
+    scopes (the one-off migration was the only exception).
+12. **Bell schedules (and quarters) are data in `schedule.js`, never
+    hard-coded elsewhere.** `QUARTERS` holds the Q1–Q4 date ranges
+    (`quarterOf(ymd)`, `currentQuarter()`); Q2/Q4 end on the finals weeks,
+    the other boundaries are placeholders — adjust them to the real calendar.
+    Don't put a year calendar (holidays, minimum days) in code — those are
+    `schedule_overrides` rows managed on `schedule.html`. Period ↔ class
+    mapping comes from the roster period *names* (`parsePeriodName`), not from
+    `sort_order`, so name periods "3rd Period - English 9" / "Period 3 …".
+13. **Attendance has one source of truth: the `attendance` table.** The
+    localStorage key `teacherpal.absent.<periodId>` is only a same-browser
+    cache of today's absentees (so Seating's Formula and Create Groups can
+    read it synchronously); every page that changes attendance writes the
+    table *and* the cache through the `shared.js` helpers. Tardy = present
+    for grouping/seating purposes.
+15. **The hub is a launcher and stays one.** It pulls no data: every tool
+    loads its own data on its own screen. Cross-module events still exist
+    for pages that want them — `attendance.js` broadcasts `teacherpal:period
+    { periodId, date }` and `teacherpal:attendance { … counts }` and exposes
+    `window.attendanceView.selectPeriod(id)`; `nav.js` broadcasts
+    `teacherpal:tick { now, sched, status }` every second (use it instead of
+    your own `setInterval` for clock-driven UI).
+14. **Seating geometry lives in `room.js`** (`TYPES`, `G`, `FRONT`, `bbox`,
+    `labelStyle`, `roomBounds`). Any page that draws the room loads it;
+    don't copy the table.
+
+## Design rules — dark premium dashboard (pink)
+
+Reference: `design-ref.png` (a dark fintech dashboard) with its blue swapped
+for a subtle pink. Deep plum-navy ground with a soft radial glow, near-black
+cards with 24px corners, faint 1px borders with a pink glow line along the top
+edge, white medium-weight card titles with a square outlined ↗ button at the
+top-right, bordered pill chips, outlined percentage badges, slim progress
+bars, muted gray secondary text. Single dark theme — there is no light mode
+and no theme toggle. All styling lives in `style.css`; pages carry almost no
+inline styling.
+
+- **Tokens first.** Every color, gradient, shadow, font size/weight, spacing
+  step and radius is a CSS variable at the top of `style.css`. Never
+  hard-code a hex color, radius or shadow anywhere else.
+- **Palette.** Ground `--bg-0 #151320` → `--bg-1 #1E1A2E` (radial glow on
+  `body`, plus a faint pink glow at the top). Surfaces `--card #0D0B14`,
+  `--card-2 #15121F` (inputs, chips, wells, rows), `--card-3 #1C1828`
+  (hover). Borders `--border rgba(255,255,255,.06)`, `--border-strong .12`,
+  `--border-hover .16`. Text `--text #FFFFFF`, `--text-2 #C9C4D4`,
+  `--text-muted #8B8699`. Accent `--accent #F07FAE`, `--accent-deep
+  #D9578F`, `--accent-soft` / `--accent-glow` (rgba tints), secondary
+  `--lavender #B79CF5`, `--danger #FF7A8A`, `--ok #6FD3A6`.
+- **Card recipe** (`.card`, `.tile`, `.group`, and `.neu-raised` which now
+  aliases it): `background: var(--card)`, `1px solid var(--border)`,
+  `--radius-lg` (24px), `--shadow-card`, `padding: var(--space-5)`, a `::before`
+  1px `--gradient-glow-top` line across the top edge, hover → `--border-hover`
+  (+ `--shadow-card-hover` and a 2px lift on tiles). Inner rows/wells use
+  `--card-2` with `--radius-md` (14px). Controls use `--radius-sm` (10px).
+- **Card header.** `<div class="card-head"><h2>Title</h2><button
+  class="corner-btn">↗</button></div>` — title white `--fw-medium`
+  `--fs-lg`, button 2.3rem square, `--border-strong`, `--card-2`, pink on
+  hover. Only add a `.corner-btn` when it triggers a real existing action
+  (roster → full screen, groups → full screen). The hub does not use cards at all —
+  it has its own HUD panels (see the Hub bullet below).
+- **Accent is sparse.** Pink is for: active/pressed fills (`--gradient-accent`,
+  fading to transparent), primary buttons, progress fills (`--gradient-bar`),
+  selection rings, badge outlines, tile icons and the glow line. **Never pink
+  body text** — names, group results, seating names and all copy are white
+  (`--text`) or muted gray. Lavender is the contrast accent (e.g. the "Coming
+  soon" badge, duplicate warnings).
+- **Small parts.** `.chip` = pill, thin `--border-strong`, `--card-2`, icon +
+  text (student counts, unseated count). `.pct` = small outlined badge in
+  accent color (seated %, `GROUP N` labels). `.progress > .fill` = 0.35rem
+  rounded bar with `--gradient-bar` and a soft glow. `.stat .value/.label`
+  for big bold numbers with a muted label (period title uses `--fs-stat`).
+- **Pressed / active / selected — app-wide.** One rule block targets
+  `button[aria-pressed="true"]`, `.neu-btn.active`, `[role="switch"]
+  [aria-checked="true"]`, `.tab[aria-current="page"]`, `.seg input:checked +
+  span`, `.segment:has(input:checked)`, `details[open] > summary`,
+  `select:focus`: `--gradient-accent` fill, `--accent` border,
+  `--shadow-pressed` inner ring/glow, white text, pink icon, plus the
+  `.when-off` / `.when-on` label swap (pencil "Edit roster" ↔ check "Done",
+  ✓ on selected sort/segment). `:active` scales to 0.97 (off under
+  reduced-motion). New toggles must use `aria-pressed` / `aria-current`.
+- **Full screen = the one big-screen mode (`shared.js`).** `body.present`
+  is the layout: the nav links and `.no-present` elements disappear, the app
+  shell becomes one column, the topbar slims, and everything scales up for
+  distance viewing — `html:has(body.present)` raises the root font to
+  `clamp(16px, 0.72vw + 0.6vh, 26px)`, cards / groups / HUD boxes / student
+  cards get 2px borders, status-bar readouts grow (`.hud-val` 1.05rem,
+  `.hud-key` 0.72rem). The browser Fullscreen API
+  (`documentElement.requestFullscreen({ navigationUI: 'hide' })`) is layered
+  on top whenever the browser allows it; if it refuses (no gesture) the
+  layout still applies. **Controls**: every topbar has an `.icon-btn.fs-btn`
+  with `[data-fullscreen]` (enter/exit corner-arrow icons swapped by
+  `.when-off/.when-on`; the hub uses a `.hud-chip.fs-chip` FULL/EXIT); the
+  Create Groups and Seating toolbars and the Rosters "Present" buttons call
+  the same thing. **F** toggles (ignored while typing in an input / select
+  / textarea / contenteditable, while any `<dialog>` is open, or with
+  Ctrl/Alt/Meta); **Esc** exits (the browser handles Esc in true fullscreen
+  and `fullscreenchange` then drops `body.present`, so the buttons stay in
+  sync when the browser leaves on its own). A floating `.fs-float` toolbar
+  (injected by `shared.js`, bottom-right, 55% opacity until hovered) has
+  **Nav** — toggles `body.show-nav`, which shows the top-bar nav links
+  again while full screen stays on — and
+  **Exit**, plus a "Press F for full screen" hint when the layout is on but
+  true fullscreen isn't. **Remembered**: `teacherpal.fullscreen` in
+  localStorage; on load `'1'` re-applies the layout (without writing) so
+  navigating between pages doesn't fight you — true fullscreen needs a new
+  gesture, hence the hint; `pagehide`/`beforeunload` set `fsLeaving` so
+  the browser's own exit during navigation isn't saved as "off".
+  In full screen the top nav links hide (readouts + toggle stay; the
+  floating **Nav** brings the links back). **Per page** (all via the
+  `teacherpal:present` event): Attendance screen — the chart goes edge to
+  edge with the side column narrowed, `#exp-counts` (P/A/T) shows in the
+  chart header, lists/tiles larger; hub — the panel grid hides (Nav
+  brings the links back); Create Groups — the projector view: big
+  group cards (2.1rem names), animations intact, Space reshuffles, the
+  `.present-only` bar shows Reshuffle + the hint, entering with no groups
+  yet creates them; Seating — forces Assign mode, hides sidebar/bars,
+  `fitToScreen()` (again after 350ms for the fullscreen resize), 2px
+  seat borders, 14px labels, the front marker stays at its real position;
+  Rosters — leaves edit mode, big name cards only. Test in headless Edge by
+  setting `localStorage.teacherpal.fullscreen = '1'` before `shared.js`
+  loads (the API itself can't run without a gesture).
+- **Type system — three faces, HUD flavoured (no Inter anywhere).** All from
+  Google Fonts; every page carries the same `<link>` (Orbitron 500/600/700,
+  Rajdhani 500/600/700, Share Tech Mono 400, `display=swap`) plus the two
+  `preconnect`s. The faces are tokens at the top of `style.css` — change
+  them there, nowhere else:
+  - `--font-display` **Orbitron** (fallback Rajdhani → Segoe UI → system):
+    **short text only**, always uppercase and tracked (`--track-display`
+    0.14em for headings, `--track-label` 0.18em for small labels). Used for
+    the brand, page titles, card `h2`s (0.78rem, muted), the roster
+    `.period-title`, `GROUP N` labels, hub tool names, the nav tabs
+    (0.6rem), dialog titles (Formula, Import, Today's roster, the
+    "can't all hold" warning), `.hud-key` labels, the front-of-room marker,
+    empty-state lines and Wordle tiles. **Never** for paragraphs, lists,
+    names, or anything longer than a few words — it gets unreadable fast.
+  - `--font-mono` **Share Tech Mono** (fallback JetBrains Mono → system
+    mono; `--hud-mono` aliases it): every figure and technical label —
+    clock, countdown, `.hud-val`, counts (`.att-counts b`, `.stat .value`),
+    chips, the groups preview ("25 → 6 groups"), zoom %, save states,
+    status lines/toasts, `kbd` shortcut hints, bell-table times, override
+    dates, roster numbers, the rotation angle. Always
+    `font-variant-numeric: tabular-nums` (the face is monospaced anyway) so
+    the clock never jitters. It has one weight — use size/colour for
+    emphasis, never `bold`.
+  - `--font-body` **Rajdhani** (fallback Segoe UI → system sans) is `--font`
+    and the default: buttons, form fields, roster lists, hints, paragraphs,
+    modal bodies. Rajdhani is condensed with a small x-height, so the scale
+    was retuned for it: `--fs-xs` 0.86 · `--fs-sm` 0.98 · `--fs-md` 1.08 ·
+    `--fs-lg` 1.25 · `--fs-xl` 1.6 · `--fs-2xl` 2.4rem, body weight
+    `--fw-regular` = 500 (400 is too thin on the dark ground), buttons 600,
+    body tracking `--track-body` 0.01em. Control labels that read as HUD
+    but must stay narrow (segmented toggles, Formula tabs, rule-type chips,
+    priority dividers) are Rajdhani **uppercase 600 tracked 0.1em**, not
+    Orbitron — Orbitron there made the one-row toolbars wrap.
+  - **Student names are Rajdhani, heavier and a touch larger** so they carry
+    on a projector: roster names 1.15rem/700, group cards 1.7rem/700
+    (2.1rem in full screen), pool chips 1.12rem/600, seat labels 700
+    (11px in the builder, 14px in the hub's compact room, 15px there in
+    full screen, 14px on the Seating page in full screen), attendance
+    tiles/lists 600.
+  - The whole mapping lives in one "Type system" block at the end of
+    `style.css` (it deliberately comes last so it wins over component
+    rules). Hierarchy still comes from size/weight and white-vs-muted, not
+    colour.
+- **Contrast for the projector.** Group results ≥ `--fs-xl` (`--fs-2xl` in
+  full screen) white on `--card` with thin `--border` dividers; seating desk
+  names white `--fw-semibold` on `--card-3`; roster names 1.05rem/600 white.
+  Muted text is `--text-muted` (#8B8699, ~5:1 on `--card`) and nothing
+  dimmer; pink text only on badges/labels ≥ `--fs-xs` semibold.
+- **Icons are inline SVG** (24×24, `stroke="currentColor"`, width 2,
+  `aria-hidden="true"`). No emoji, icon fonts or image URLs.
+- **Hub (`index.html`) is a HUD / command center** — the JARVIS-style
+  dashboard direction. It is the one page that is allowed to look "sci-fi":
+  thin precise lines, small tracked uppercase labels, monospace data, corner
+  brackets and a faint grid. Every other page keeps the calmer dashboard
+  chrome above. Pink is still the only accent (never blue); it is the HUD
+  line colour and glows **only on hover/focus**. No emoji, no libraries.
+  - **Tokens** live in `style.css` under the HUD block: `--hud` (= accent),
+    `--hud-line` / `--hud-line-strong` (pink at 0.28 / 0.7 alpha),
+    `--hud-glow` / `--hud-glow-soft`, `--hud-grid` / `--hud-scan` (texture
+    at ≤ 0.035 alpha), `--hud-mono` (= `--font-mono`, Share Tech Mono), `--hud-tick` / `--hud-tick-hover` (corner bracket length 0.9rem →
+    1.6rem), `--hud-in` 420ms and `--hud-stagger` 60ms. Change looks by
+    editing tokens, not selectors.
+  - **Shell**: `body.hub` has a soft top radial pink wash and a fixed
+    `::before` layer with the grid + 3px scanlines, radially masked so it
+    fades toward the edges and never sits above content (`z-index: 0`,
+    `body.hub .app` is `z-index: 1`). `attendance.html` shares `body.hub`.
+  - **Hub = launcher** (`.launcher-page` > `.hub-panels.launcher`): a
+    4-column grid of `.hud-panel` links (3 columns under 1100px, 2 under
+    800px, 1 under 480px), `max-width: 82rem`, centred vertically and
+    horizontally, rows `clamp(11rem, 32vh, 17rem)`, gap `clamp(1rem, 2vw,
+    1.75rem)` — eight panels make two even rows of four. Order: Attendance,
+    Lesson Plans, Create Groups, Seating, Bathroom, Wordle (`.soon`),
+    Schedule, Rosters last (`.setup`, dashed, quieter). Each panel is only a
+    thin-line SVG icon, the tracked `.hud-name` and one mono `.hud-sub`
+    line — **no live data, no counts, no Supabase** (the only requests on the
+    page are nav.js's readouts, as on every page). Don't put dashboards back
+    on the hub; a tool that needs a summary shows it on its own screen.
+    The hub's top bar has **no nav links** (`body.launcher` → `nav.js` skips
+    them and adds `.topnav.no-links`, which also keeps the wordmark text
+    visible at every width); every other page keeps the full nav, and the
+    wordmark links to `index.html` everywhere. The floating full-screen Nav
+    button is hidden on the hub since there are no links to show.
+  - **Top bar = nav + readouts on every page** (`header.topbar.hud-bar.topnav`,
+    rendered by `nav.js`): brand "TeacherPal" left in 0.32em-tracked caps
+    with a small rotated pink square; then `.nav-links` of `.tab`s (Orbitron
+    0.6rem; active = `aria-current="page"`; `.tab.setup` Rosters + Schedule
+    muted after a hairline divider); right side is `.hud-status` of
+    `.hud-stat` pairs (`.hud-key` muted tracked label + `.hud-val` tabular
+    mono): TIME (hh:mm:ss), DATE, **SCHED** (today's schedule `short` name,
+    `*` when it comes from an override; an `a.hud-link` to `schedule.html`),
+    **NOW** (the live line from `scheduleStatus()`, recomputed every second
+    together with the clock — see the Schedule model below), then the
+    `.fs-btn` full-screen toggle. `#hud-now[data-state]` dims passing /
+    break / before-school lines to `--text-2` and after-school / weekend /
+    no-school to muted. Below 1500px the readout key labels drop, below
+    1200px the date; under 900px the links wrap to a second row. Periods +
+    overrides are fetched once per page load (`navReady`); the schedule is
+    re-resolved only when the date key rolls over; every second nav.js
+    dispatches `teacherpal:tick { now, sched, status }`.
+  - **HUD boxes** (`.hud-box`): the tool screens' sections are boxes with
+    the panel's faint `--hud-line` border, translucent `--card` fill and
+    the four `.tick` corner spans (tick rules target `.hud-panel, .hud-box`).
+    Small mono controls inside are `.hud-chip` (AUTO / TODAY; `aria-pressed`
+    = pink outline + glow) and `.dash-field` (mono `.hud-key` label +
+    select / date input on the dark HUD fill).
+  - **Lesson plan panel** (`lesson.js`, `.lesson-panel` hud-box, used on the
+    Lesson Plans screen): header = "LESSON PLAN <period> · <date>", agenda
+    progress (`done/total · N MIN`), save state, COPY FROM PERIOD / COPY
+    YESTERDAY chips. Body = sections with small display-face labels; every
+    field is a borderless `textarea.lp-text` (auto-grows, border appears on
+    hover/focus) so it reads as text but edits inline; the agenda is an
+    `ol.lp-agenda` of `.lp-item` rows (checkbox → `done` + strike-through,
+    number, text input, minutes input, × on hover; Enter adds the next item,
+    Backspace on an empty item removes it). Autosave 800ms after the last
+    edit via `saveLessonPlan`; `beforeunload` warns while dirty. **Empty
+    state** (`.lesson-empty`): no row and nothing typed → "No lesson plan
+    yet · <period> · <date>" with **Add a lesson plan** (opens the editor
+    with one blank agenda line), Copy from another period, Copy yesterday's
+    plan. Copy-from-period opens a `<dialog>` listing the other periods'
+    plans for that date (disabled when none); Copy yesterday uses the
+    previous weekday; both confirm before replacing a non-empty plan.
+    `onChange` lets the week view mirror edits. `follow: true` (track
+    `teacherpal:period`) exists but is unused now.
+  - The nav order is fixed in `NAV_ITEMS` in `nav.js`: Hub, Attendance,
+    Lesson Plans, Create Groups, Seating, Bathroom, Wordle, Schedule, then
+    Rosters as `setup`. Add a screen there and every page's nav updates.
+    Nine items fit one row at 1366px because the brand text collapses to its
+    mark below 1400px and the tabs tighten.
+- **Lesson Plans screen** (`lessons.html`): `.lessons-layout` = `.week-box`
+  (58%) + `#lesson` editor (42%). The week grid (`.week-grid`, sticky day
+  headers, `9rem` period column + 5 day columns, rows `minmax(5.2rem,1fr)`)
+  shows one `.wk-cell` per period × day with the plan summary (objective,
+  else the agenda joined by ·, 3-line clamp) and `done/total`; `.has-plan`
+  fills, `.today` outlines, `.selected` glows. ← WEEK / WEEK → / TODAY /
+  JUMP TO date; ← → move a school day, ↑ ↓ a period. Plans load per week
+  with `getLessonPlansRange`; `panel.show(pid, date)` opens the editor and
+  its `onChange` updates the cell live. Opens on the bell's current period,
+  today.
+- **Bathroom Tracker** (`bathroom.html` + `bathroom.js`): `.bathroom` =
+  `.br-main` (period select + AUTO, date + TODAY, FLAG AFTER n MIN, MAX OUT
+  n, EXPAND; an OUT NOW n OF max line; the `.br-tiles` roster grid) and a
+  `.br-side` column (OUT NOW list with live elapsed, today's LOG with out →
+  in · duration and a hover × to delete a trip, HISTORY = trips · days ·
+  minutes per student across all dates for this period, click a name for
+  their trip list). Click a tile: not out → `bathroomSignOut` (refused with
+  a status line when `maxOut` are already out); out → `bathroomSignIn`.
+  `.br-tile.out` = amber outline + live `m:ss`; `.flagged` (elapsed ≥
+  flag minutes) = red pulsing outline + "TOO LONG". Elapsed times and flags
+  refresh every second. **Quarter allowance**: every tile shows
+  `used/limit` for the quarter of the viewed date (`quarterOf(date)`);
+  `.last` (one left) turns the count amber, `.blocked` (used ≥ limit) is
+  dashed red "NO PASSES" and a sign-out is refused with a status line (raise
+  PASSES / Qn in the header to override). HISTORY is per quarter:
+  `used/limit · n timed · min · n manual`, red at the limit; a student's
+  history box has −/+ buttons for the quarter's manual tally
+  (`setManualTally`). Settings persist in `teacherpal.bathroom.settings`
+  (`{ flagMinutes: 8, maxOut: 2, passLimit: 4 }`). Seeding from paper:
+  `seed-bathroom-q1.sql` (match rules: normalised exact → first + last word
+  → first name + a shared surname, each only when unique in the period).
+  - Don't add taglines or descriptions to the tool panels beyond the mono
+    sub-line — if a tool needs explaining, fix the tool. Don't reuse the HUD
+    look on tool pages.
+- **Attendance view (`attendance.js`) — the Attendance screen.**
+  `.attendance[data-mode="full"]` is a grid `minmax(0,1fr) clamp(19rem, 26vw,
+  26rem)` — the `.att-chart` box on the left, `.att-side` (counts card with
+  Copy / Reset / save state, then the lists box) on the right; the chart
+  header holds PERIOD, AUTO, DATE + TODAY, the seated note, FIRST NAMES and
+  EXPAND. (A 'compact' mode once fed the hub; only 'full' is used now.)
+  - **Period**: `#period-select` + an **AUTO** chip. While AUTO is pressed
+    (default) and the date is today, every clock tick calls
+    `suggestedPeriod(now, sched, n => byNumber.has(n))` — the bell period
+    happening now if a roster period maps to it (`parsePeriodName`), else the
+    next taught period, else the last one — and switches the select when it
+    changes. Changing the select by hand turns AUTO off; clicking AUTO turns
+    it back on and jumps immediately. `#att-date` (defaults to today) views
+    or fixes any past day; a TODAY chip appears when it isn't today, and AUTO
+    never moves a past date.
+  - **Chart** (`.hub-chart` > `.hub-room`): the shared room drawn with the
+    same `.piece / .seat / .seat-label / .desk-block / .table-top /
+    .piece.front` markup as the builder (geometry from `room.js`), scaled by
+    `fitRoom()` (centred, dot grid scaled to match, re-fit by a
+    `ResizeObserver`). **Full mode** fits `roomBounds` (whole room, zoom
+    0.2–2.4, 12px margin). **Compact mode crops to what matters**:
+    `fitBounds()` takes only pieces with an occupied seat — no teacher desk,
+    empty desks or front marker — with a 4px margin and zoom up to 4, so the
+    seats get the whole panel (~0.75 zoom at 1366px). Compact seat labels
+    are sized by `fitLabels()`: one line at `LABEL_PX` 18px in room units,
+    shrunk with a canvas `measureText` only for names wider than the seat,
+    never below `LABEL_MIN` 13px — so names land at 11–14 screen px on a
+    laptop; if that ever gets too small, widen the column, don't shrink
+    the text. The state ring is 2px / the A·T badge 12px so both survive
+    the scale-down. Read-only: no drag, no rotate, no palette. Occupied seats
+    are `<button class="seat taken" data-student>`; labels counter-rotate
+    via `labelStyle`. **Names**: the FIRST NAMES chip (default on, saved in
+    `teacherpal.hub.firstNames`; the compact view has its own key
+    `teacherpal.hub.firstNames.compact`, also default on) shows first names only, disambiguating
+    shared first names with a growing last-name prefix exactly like Create
+    Groups; off = "First L." for everyone. Students who have no seat appear
+    in a `.att-tiles.small` "NOT SEATED" strip under the room so they can
+    still be marked. Header right shows `SEATING 27/27 SEATED`.
+  - **Expand** = the shared full-screen mode (the chip is
+    a `[data-fullscreen]` button, EXPAND ↔ EXIT via `.when-off/.when-on`; F
+    and the top-bar button do the same). In `body.present` the side column
+    narrows, the chart fills the rest, and `#exp-counts` (P / A / T) shows
+    in the chart header. Attendance clicks work identically in both sizes.
+  - **No chart yet** (no room pieces, or nobody seated for the period): the
+    roster is a `.att-tiles` grid of `.att-tile` buttons (same
+    `data-student` / `data-status` contract) and the header reads
+    `ROSTER NO SEATING CHART · BUILD ONE` linking to `seating.html`.
+    Empty states (`.chart-empty`) link to Rosters.
+  - **Click to cycle**: one delegated click handler on `.dash-left` for any
+    `[data-student]` → `cycle(id)`: none → `absent` → `tardy` → none.
+    Marking stores `{ status, at: now }`; tardy `at` is shown as "9:42 AM"
+    in the list and in the copied text. State is painted purely through
+    `data-status` on every element for that student: absent = 45% opacity,
+    `--att-absent` (danger red) outline/inset ring and soft fill; tardy =
+    `--att-tardy` (amber #F5B84B) outline and soft fill; both get a mono
+    `::after` badge (A / T) tucked into the top-right corner. Tokens
+    `--att-absent(-soft)` / `--att-tardy(-soft)` sit in the HUD block. A
+    `.dash-legend` line explains the colours and the click.
+  - **Side column**: `.att-card` = `.att-counts` "**23** present · **2**
+    absent · **2** tardy" (present = roster − absent − tardy; red / amber
+    numbers) plus the action row; `.att-lists-box` (`flex: 1`) = two
+    `.att-list` columns (ABSENT nn / TARDY nn, names in roster order at
+    `--fs-md`, tardy time in amber mono, "none" when empty). Actions (full
+    mode): **Copy list**
+    (writes `Absent: A, B / Tardy: C (9:42 AM)` with "none" for empty
+    sides via `navigator.clipboard`, textarea fallback, and echoes it in
+    `#status`), **Reset attendance** (confirm → `marks = {}` → immediate
+    save) and the mono `.save-state` (SAVING… / ● SAVED green / NOT SAVED
+    red). `beforeunload` warns while a save is pending.
+  - **Persistence**: every click calls `scheduleSave()` — 500ms debounce,
+    then `saveAttendance(periodId, date, marks)` and, when the date is
+    today, `writeAbsentCache(periodId, absentIdsOf(marks))` so Create Groups
+    and Seating see the same absentees. `loadPeriod()` fetches students,
+    seat assignments and the day's attendance in parallel, drops marks for
+    students no longer on the roster, and guards against stale responses
+    with a load sequence number. If the table is missing the page says
+    "run migration-attendance.sql" and still shows the chart.
+- **Schedule model — `schedule.js` (West High bell schedules).**
+  `SCHEDULES[key]` = `{ name, short, segments }` built from `P(n, start,
+  end, note?)` (a class period) and `B(label, start, end)` (Lunch / Break /
+  Activity), 24-hour `'HH:MM'`, listed in clock order. Keys: `early_release`
+  (Monday default), `regular` ("Tues–Fri", Tue–Fri default), `minimum`,
+  `double_second` (two period-2 segments whose `note` names the assembly
+  half), `homecoming`, `finals` (`pairs['1-2'|'3-4'|'5-6']`, two 120-min
+  periods + break), `no_school` (no segments). `scheduleFor(key, pair)`
+  flattens finals into `{ key, name: 'Finals · Periods 1/2', short, segments,
+  finalsPair }`. **Resolution**: `resolveSchedule(date, overrides)` — a row
+  in `schedule_overrides` whose `date === dateKey(date)` always wins;
+  otherwise `defaultScheduleKey` (Mon → early_release, Tue–Fri → regular,
+  Sat/Sun → a synthetic `weekend` schedule with no segments). **Classes**:
+  `teachingMap(periods)` → `Map<bellPeriodNumber, course>` via
+  `parsePeriodName("3rd Period - English 9")` = `{ n: 3, course: 'English
+  9' }` (also "Period 6", "P3 Biology"; unparseable names are skipped).
+  **Status** `scheduleStatus(now, sched, teaches)` → `{ state, label, parts,
+  text }` with `text = [label, ...parts].join(' · ')`:
+  `PERIOD 3 · ENGLISH 9 · 22:14 REMAINING` (course, or `PREP` for a period
+  not on the roster; assembly halves add `1ST ASSEMBLY`), `LUNCH · 39:40
+  REMAINING` / `BREAK` / `ACTIVITY`, `PASSING · 4:32 to Period 4` (also to
+  Lunch), `BEFORE SCHOOL · Period 1 in 1:12:00` (counts to the first period
+  actually taught, else the first bell), `SCHOOL DAY COMPLETE`, `WEEKEND`,
+  `NO SCHOOL`. `formatCountdown` is `h:mm:ss` over an hour, else `m:ss`.
+  States: `period | break | passing | before | after | weekend | no-school`.
+- **Schedule page** (`schedule.html`, nav tab "Schedule" after Rosters in
+  the setup group; also linked from the hub's SCHED stat). Two cards in
+  `.schedule-layout` (30rem + 1fr, stacks under 900px). **Schedule
+  overrides**: a `.today-line` (today's schedule, "(override)" / "(weekday
+  default)", and the live status), the weekday-default hint, an `.ov-form`
+  (date input defaulting to today, schedule select from
+  `SCHEDULE_OPTIONS`, a finals-pair select shown only for Finals, optional
+  note, "Save override" = upsert on date) and the `.ov-list` of `.ov-row`s
+  (date · schedule name + note · trash icon-button with a confirm; past rows
+  at 45% opacity, today's row pink-ringed). **Bell schedules**: a select of
+  all eight schedules (five + three finals pairs, opening on today's), a
+  `.chip` saying "Monday default / Tue–Fri default / By override only", and
+  a `.bell-table` (Block · Time in the printed 12-hour form via `fmt12` ·
+  Class from the roster or italic "Prep"; break rows muted; the segment
+  happening right now gets `.live` with a pink left bar). Re-renders every
+  second. If the table is missing the page shows a "run
+  migration-schedule-overrides.sql" error and still renders the reference.
+- **Create Groups page** (`groups.html`; the nav tab and hub panel also say
+  "Create Groups"). Everything sits in one compact `.groups-bar` (a `.card`
+  with `--ctl: 2.1rem` control height, one row at 1366px, wraps below):
+  period select, "N present · M absent" chip, **Edit Roster**, `.seg.mode-seg`
+  toggle "Groups" / "Per group", the number input (its meaning lives in
+  `aria-label` + the `.preview` text "31 → 6 groups of 5–6"), a "First names"
+  `role="switch"`, **Create Groups** (reads **Reshuffle** after the first
+  run), and the full-screen icon button. Attendance lives in
+  `<dialog id="attendance-dialog">`. On load, today's `attendance` row
+  (`getAttendance(periodId, todayKey())`) wins: its absent ids become the
+  `absent` set (tardy = present) and the cache is refreshed; without a row
+  the same-browser cache `readAbsentCache()` is used. Every change
+  (`saveAbsent()`) writes the cache and, debounced 400ms, upserts the row —
+  setting/clearing `absent` marks while keeping any tardies the hub
+  recorded. So attendance taken on the hub is already reflected here and
+  vice versa; it resets tomorrow because it is keyed by date. Mode / number /
+  first-names are remembered in `teacherpal.groups.*`. "First names only" =
+  text before the first space; present students sharing one get a growing
+  last-name prefix ("Maria G.", "Brandon Ce." / "Brandon Cl.").
+  **Formula on Create Groups**: the toolbar has the same "Formula on/off"
+  `.toggle` (saved per period as the grouping row's `use_formula`) and a Formula button
+  opening the shared modal (`scope: 'grouping'` → grouping types and labels,
+  footer button "Create Groups"), reading/writing only grouping-scope rules
+  via `getFormulaRules(periodId, 'grouping')` / `saveFormulaRules(…)`. With the toggle on, `doShuffle()` first runs
+  `findImpossibleHard(…, 'grouping', { groupCount, groupMax })` and, if
+  anything is impossible, `confirmImpossible()` (Cancel aborts; Run anyway
+  demotes those rules), then `groupWithFormula(present, g, rules, nameOf,
+  { demote })` and `summarizeRun()` for the status line. With no grouping
+  rules it refuses with a hint. Results go through the same `flipTo()`
+  animation. Seating's `populateWithFormula()` follows the identical
+  check → confirm → solve → summarize flow.
+- **Create Groups animation (FLIP, plain CSS + JS).** `#stage` holds one
+  `.name-chip` element per present student (kept in a `chips` Map) — first
+  loose in `.name-pool`, then moved into `.group > .group-names`; the same
+  element is a pill in the pool and a big white row in a group. `flipTo()`
+  measures First rects, calls `mountGroups()` (new `.group.enter` cards, chips
+  appended), measures Last, inverts with `translate(...) scale(...)`, forces
+  a reflow, then plays with `transform 520ms cubic-bezier(.34,1.56,.64,1)`
+  and a per-chip delay (`120ms + i * min(18ms, 600/n)`, shuffled order) so the
+  total stays ≈1–1.5s; cards drop `.enter` (opacity/scale 260ms) before names
+  arrive. A reshuffle first adds `.shuffling` (chips lift/wiggle 320ms) and
+  then flies chips from old card to new. `setAnimating()` disables the
+  buttons/select while running. Under `prefers-reduced-motion` the stage
+  simply fades. Full screen uses the same stage; Space reshuffles. To test
+  the flight in headless Edge on this machine (OS animations off) pass
+  `--blink-settings=prefersReducedMotion=false`.
+- **Seating Chart = freeform room builder** (`seating.html`). Compact
+  `.seat-bar` (period, **Arrange Room / Assign Seats** `.seg` toggle,
+  mode-specific tools, undo/redo, zoom −/%/+/Fit, Saved indicator, full screen)
+  over a `.seat-side` sidebar + `.viewport` canvas. **The room is infinite**:
+  the `.viewport` paints the dot grid (`background-size = G*zoom`,
+  `background-position = pan`) so it fills the panel at every zoom, and
+  `.room` is a zero-size origin transformed with `translate(pan) scale(zoom)`
+  that pieces hang off at any coordinate, negative included — nothing is
+  ever clamped to a room rectangle;
+  `clientToRoom()` converts pointer coords; Ctrl+wheel zooms around the
+  cursor, wheel pans, `fitToScreen()` frames all pieces. Pieces are `.piece`
+  divs at `left:0; top:0` placed with `transform: translate3d(x*G, y*G, 0)
+  rotate(deg)` (composited — never top/left), rotated about their centre; each holds
+  `.seat` boxes (`data-seat="<pieceId>:<i>"`) and, for the teacher desk, a
+  `.desk-block`; `.seat-label` counter-rotates so names stay upright (its box
+  is the seat width when roughly level, the height when roughly sideways,
+  the smaller side at odd angles). `bbox()` gives the axis-aligned box of the
+  rotated piece (`w|cos|+h|sin|` × `w|sin|+h|cos|`) — snapping, marquee and
+  fit all use it, so edge-snapping works against rotated pieces too. **All dragging is pointer events + pointer capture**
+  (`touch-action: none`) so it works on an iPad. **Drag feel** (copied from
+  RotationPal's hand-rolled court-bubble drag, not dnd-kit): 3px activation,
+  then `.lifting` (z-index + brightness, no transition); every pointermove
+  only stores numbers and calls `frame(fn)` — a one-slot
+  `requestAnimationFrame` batcher, so there is exactly one DOM write per
+  refresh; the piece follows the pointer 1:1 with **no snapping during the
+  drag**, while a dashed `.snap-ghost` per piece shows where `snapBox()`
+  (round to grid, then snap edges to nearby pieces within 0.75 units — how
+  single desks "click" together) will land it. On release: `flushFrame()`,
+  state set to the snapped spot, `.settling` (`transition: transform 120ms
+  ease`) eases the DOM there, then `commit()` runs once after 130ms (one
+  render, one autosave). Nothing re-renders or saves mid-drag. Palette drags
+  show the same snap ghost on the canvas; pan, marquee, rotation (transforms
+  + `.seat-label` restyle via `data-w/data-h`, no element replacement) and
+  name drags all go through `frame()` too. Headless Edge does not run rAF
+  under `--virtual-time-budget` — shim it onto `setTimeout` in test hooks. Shift-click toggles; **left-drag on empty canvas pans** (grab cursor),
+  **Shift+drag box-selects** (`.marquee`), Space / the hand button /
+  middle-mouse also pan; plain wheel scrolls the canvas, Shift+wheel scrolls
+  sideways, Ctrl+wheel / trackpad pinch zooms about the cursor. **Rotation is a toggled mode**: a
+  selected piece shows only its outline; R or the Rotate button
+  (`aria-pressed` while on) calls `enterRotate()`, which captures `base` and a
+  `rotSession` (ids, shared centre from `selectionGeom()`) and shows the
+  `.rot-handle` on the piece's local "up", the `.rot-line`, a dashed
+  `.rot-ring` and the `.rot-label` ("37°"). While it is on, a pointerdown on
+  the handle **or the piece body** starts a rotate drag (`beginRotateDrag()`
+  re-measures start angles so nothing jumps); `rotateTo()` follows the
+  pointer angle around the centre, snaps to 15° with Shift and to
+  0/90/180/270 within 3°, and orbits multi-selections around the shared
+  centre — all batched through `frame()`. Releasing keeps the mode on. R
+  again, Enter, or a click on empty canvas / another piece →
+  `confirmRotate()` (keeps the angle; one `commit()` = one undo step, skipped
+  if nothing turned; a click on another piece then selects it as normal);
+  Esc → `cancelRotate()` restores the state from when the mode began.
+  Duplicate (Ctrl+D),
+  Delete (Del) act on the selection; the Front marker moves but can't rotate
+  or be deleted. Assign mode locks pieces; names drag from the `.student-chip`
+  list (unseated ones have a pink border) or from a seat, drop target found
+  with `elementFromPoint` → `placeStudent()` (swap when occupied) or
+  `unseat()` when dropped on the sidebar; Randomize fills every seat,
+  Clear seats empties, "First names" shares the `teacherpal.groups.firstNames`
+  setting. **Undo/redo** is a snapshot stack of `{ front, pieces, assignments }`
+  (`base` is captured before a change, `commit()` pushes it); Ctrl+Z /
+  Ctrl+Shift+Z / Ctrl+Y. **Autosave**: `commit()` marks `dirty.layout` /
+  `dirty.seats`, `scheduleSave()` debounces 600ms then upserts via
+  `saveRoomLayout` / `saveSeatAssignments` and sets the `.save-state` text
+  (Saving… / ● Saved / Not saved); `beforeunload` warns if dirty. Full
+  screen forces Assign, hides sidebar/bars and fits the room with 14px labels.
+  If the room tables are missing the page still loads periods and shows a
+  "run migration-room-builder.sql" error.
+- **Formula system — `formula.js`: shared code, separate data.** Each page
+  owns one rule set per period in its own `scope` (see the `seating_rules`
+  schema) and passes `scope` into every helper and into
+  `createFormulaModal({ scope })`; the modal is the same component pointed
+  at different data. **Rule model**: `{ id, type, a, b?, hard }`; the array
+  order is the priority list. `RULE_TYPES[type]` holds `pair` and
+  `defaultHard`; `SCOPE_TYPES[scope]` lists which types exist in a scope and
+  their wording — seating: "Don't sit near / Should sit next to / Can be
+  close to / In the front / In the back"; grouping: "Should not be grouped
+  with / Should be grouped with / Fine together" (no front/back at all — the
+  chips, number keys 4–5 and `planRules` simply don't include them). Shared
+  helpers: `ruleLabel`, `ruleSentence(r, nameOf, scope)`, `ruleContradictions`,
+  `rulesForPresent`, `absentTodayFor`.
+  **Priority & weights** (`planRules(rules, presentIds, scope, demote)`): drop
+  rules that don't apply (absent participant, type not in this scope), order
+  with `sortByPriority()` (all "Must meet" first, then "Try to meet", each
+  keeping their list order) and attach a `weight`: hard = `HARD_WEIGHT` 1000
+  (a broken must always outweighs every soft rule combined); soft = linear
+  from `SOFT_MAX` 30 for the top soft rule down to `SOFT_MIN` 3 for the
+  last, so when not everything fits the higher one wins. Rules in the
+  `demote` set are treated as soft for that run (`demoted: true`, shown as
+  'run as "try"' in the summary).
+  **Feasibility first** (`findImpossibleHard(rules, nameOf, ctx, info)`):
+  before solving, hard rules that cannot all hold are named with a reason —
+  hard apart+together on one pair, hard front+back on one student, a
+  must-together chain longer than the biggest group (`info.groupMax`), an
+  apart pair joined by a together-chain, a mutually-apart clique bigger than
+  `info.groupCount` (greedy clique), or more hard front/back students than
+  zone seats. Pages call `confirmImpossible()` (a small `<dialog>`) — Cancel
+  aborts, "Run anyway" demotes exactly those rules. **Solver**
+  `annealAssign({ items, slots, evaluate })`: simulated annealing over slot
+  swaps, 4000 steps, T 20→0.5, 6 random restarts, keep the best; every run
+  starts from a fresh shuffle so reshuffles differ. `evaluate` returns
+  `{ score, unmet: [{ rule, why }] }`; `summarizeRun()` turns that into
+  "Grouped/Seated using formula · all N rules met." or "… · 2 rules missed:
+  A ↔ B: … (must — ended up in the same group); …".
+  **Groups** (`groupWithFormula`): balanced group-size slots; apart in the
+  same group / together split cost the rule's weight, close split costs
+  0.1×weight (mild, never listed as missed); a together-chain longer than
+  the group size is explained in `notes` ("… they were split"). **Seating**
+  (`evaluateSeating` in seating.html): apart near / together not adjacent
+  / front outside the K closest seats cost the weight, back is a 0.2×
+  pull, close a 0.02× pull per unit; front/back capacity for the check is
+  K (tagged count) and the farther half.
+  **Modal** (`createFormulaModal(opts)`, one per page from callbacks:
+  `context`, `students`, `absent`, `displayName`, `getRules`/`setRules`,
+  `populateLabel`, `onPopulate`): 75vw × 75vh, header with Rules / Priority
+  tabs. **Rules tab**: roster with search + rule-count pills; the student's
+  rules as colour-coded cards (type label, names, a "Must meet / Try to meet"
+  pill that toggles, ×), and an Add-rule area (type chips with 1–5 shortcuts,
+  other-student select, a "Must meet" checkbox defaulting from
+  `defaultHard`); new hard rules join at the bottom of the hard band, soft at
+  the end. **Priority tab**: every rule in one draggable list (HTML5 DnD,
+  band-locked — a rule can't be dragged across the divider; toggle Must/Try
+  to change band) with "Must meet — constraints" / "Try to meet — highest
+  first" dividers. Keyboard (one document listener while open, skipped while
+  typing): ↑/↓ walk students (Rules) or rules (Priority), letters search,
+  1–5 pick a type, Enter adds, click a rule to highlight then **M** toggles
+  must/try, **Ctrl+↑/↓** moves it within its band, Del removes, Esc clears
+  search → leaves the add row → closes, Ctrl+Enter runs `onPopulate`.
+- **Layout is unchanged by theme work**: app shell grid (top bar / main,
+  no sidebar) locked to `100dvh`, fluid root font, rem everywhere, each tool
+  scrolls internally, roster is a sticky panel + numbered `columns: 18rem`
+  list, the seating room is a zoom/pan canvas, full screen hides the nav
+  links and slims the header. Check new work at 1366×768, 1080p, 4K and 375px.
+
+## Dev server — start this at the beginning of every session
+
+Run live-server in the background so the app opens in the browser and
+auto-reloads on every file save:
+
+```
+npx --yes live-server --port=8080
+```
+
+URL: **http://127.0.0.1:8080**. Check first whether it is already up
+(`curl -s -o /dev/null -w "%{http_code}" http://127.0.0.1:8080/` returns 200)
+before starting another one. `npx` runs it from the npm cache — it must not add
+a `package.json` or `node_modules` to the repo (rule 1 still applies).
+
+## Setup (first time)
+
+1. Run `schema.sql` in the Supabase SQL editor.
+2. Paste the project URL and anon key into the two constants at the top of
+   `shared.js` (Supabase dashboard → Settings → API).
+3. Push to the Vercel-connected repo, or open `index.html` locally.

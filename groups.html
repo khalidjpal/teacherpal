@@ -1,0 +1,532 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Create Groups — TeacherPal</title>
+  <meta name="color-scheme" content="dark">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;600;700&family=Rajdhani:wght@500;600;700&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="app">
+  <header class="topbar"></header>
+
+
+  <main class="page">
+    <h1 class="page-title no-present">Create Groups</h1>
+
+    <!-- ---------- Compact toolbar ---------- -->
+    <div class="groups-bar card no-present" role="toolbar" aria-label="Group settings">
+      <label class="bar-field">
+        <span class="lbl">Period</span>
+        <select id="period-select"></select>
+      </label>
+
+      <span class="chip" id="present-chip"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg><span id="present-count">—</span></span>
+      <button type="button" id="btn-attendance" title="Mark who is absent today (roster is not changed)">Edit Roster</button>
+
+      <span class="bar-sep" aria-hidden="true"></span>
+
+      <div class="seg mode-seg" role="radiogroup" aria-label="Group mode">
+        <label><input type="radio" name="mode" value="count"><span>Groups</span></label>
+        <label><input type="radio" name="mode" value="size"><span>Per group</span></label>
+      </div>
+      <input type="number" id="group-n" min="1" value="6" inputmode="numeric" aria-label="How many groups?" aria-describedby="preview">
+      <button type="button" id="btn-firstnames" role="switch" aria-checked="false" title="Show first names only">
+        <span class="when-off">First names</span>
+        <span class="when-on">✓ First names</span>
+      </button>
+
+      <span class="preview" id="preview">Pick a period to begin.</span>
+
+      <button id="btn-shuffle" class="primary">Create Groups</button>
+      <button type="button" id="btn-use-formula" class="toggle" role="switch" aria-checked="false" title="When on, Create Groups / Reshuffle follow this period's formula (shared with Seating)">
+        <span class="toggle-dot" aria-hidden="true"></span>
+        <span class="when-off">Formula off</span>
+        <span class="when-on">Formula on</span>
+      </button>
+      <button type="button" id="btn-formula" title="Seating & grouping rules for this period">Formula</button>
+      <button type="button" class="icon-btn" data-fullscreen aria-pressed="false" title="Present full screen (F) · Space reshuffles" aria-label="Present full screen"><span class="when-off"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 3H5a2 2 0 0 0-2 2v3M16 3h3a2 2 0 0 1 2 2v3M8 21H5a2 2 0 0 1-2-2v-3M16 21h3a2 2 0 0 0 2-2v-3"/></svg></span><span class="when-on"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 3v3a2 2 0 0 1-2 2H3M21 8h-3a2 2 0 0 1-2-2V3M3 16h3a2 2 0 0 1 2 2v3M16 21v-3a2 2 0 0 1 2-2h3"/></svg></span></button>
+    </div>
+
+    <div id="status" class="status"></div>
+
+    <div class="toolbar present-only" id="present-bar" hidden>
+      <button id="btn-shuffle-2" class="primary big">Reshuffle</button>
+      <span class="hint">Space reshuffles · Esc exits</span>
+    </div>
+
+    <!-- Results stage: the same .name-chip elements live in the pool first,
+         then get moved into group cards (FLIP-animated). -->
+    <div id="stage" class="stage">
+      <div id="pool" class="name-pool" aria-label="Present students"></div>
+    </div>
+    <div id="empty" class="empty" hidden>Pick a period with students, then create groups.</div>
+
+    <!-- Attendance panel (today only) -->
+    <dialog id="attendance-dialog" class="attendance-dialog card">
+      <form method="dialog" class="attendance-form">
+        <div class="card-head">
+          <h2 id="attendance-title">Today's roster</h2>
+          <span class="chip"><span id="attendance-count">—</span></span>
+        </div>
+        <p class="hint">Uncheck anyone who is absent today. This never changes the saved roster.</p>
+        <div id="attendance-list" class="attendance-list"></div>
+        <div class="attendance-actions">
+          <button type="button" id="btn-all-present">Mark all present</button>
+          <span class="spacer"></span>
+          <button type="button" class="primary" id="attendance-done">Done</button>
+        </div>
+      </form>
+    </dialog>
+  </main>
+  </div>
+
+  <script src="shared.js"></script>
+  <script src="schedule.js"></script>
+  <script src="nav.js"></script>
+  <script src="formula.js"></script>
+  <script>
+    // ---------- Elements ----------
+    const periodSelect = document.getElementById('period-select');
+    const stage = document.getElementById('stage');
+    const poolEl = document.getElementById('pool');
+    const emptyEl = document.getElementById('empty');
+    const nInput = document.getElementById('group-n');
+    const previewEl = document.getElementById('preview');
+    const firstNamesBtn = document.getElementById('btn-firstnames');
+    const shuffleBtn = document.getElementById('btn-shuffle');
+    const shuffleBtn2 = document.getElementById('btn-shuffle-2');
+    const attendanceDialog = document.getElementById('attendance-dialog');
+    const attendanceList = document.getElementById('attendance-list');
+
+    // ---------- State ----------
+    let students = [];            // full roster for the period (never modified here)
+    let currentPeriodId = null;
+    let absent = new Set();       // student ids absent today
+    let attMarks = {};            // today's attendance row (absent + tardy) — shared with the hub
+    let attSaveTimer = null;
+    let lastGroups = [];          // array of arrays of student objects
+    let mode = 'count';           // 'count' = number of groups, 'size' = people per group
+    let firstNamesOnly = false;
+    let animating = false;
+    const RULE_SCOPE = 'grouping';     // this page only ever reads/writes grouping-scope rules
+    let rules = [];                    // grouping rules for the period (separate from Seating's)
+    let useFormula = false;            // this scope's toggle, saved per period
+    let rulesSaveTimer = null;
+    const chips = new Map();      // student id → .name-chip element (persist across pool/groups)
+
+    const reduceMotion = () => window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const wait = (ms) => new Promise((r) => setTimeout(r, ms));
+
+    // ---------- Persistence (localStorage) ----------
+    const MODE_KEY = 'teacherpal.groups.mode';
+    const N_KEY = 'teacherpal.groups.n';
+    const FIRST_KEY = 'teacherpal.groups.firstNames';
+
+    const todayStamp = todayKey;   // shared.js
+    // Absences are for today only — anything older resets automatically.
+    // The localStorage copy (readAbsentCache) is a same-browser cache; the
+    // attendance table is the source of truth and is what the hub edits.
+    const loadAbsent = (pid) => readAbsentCache(pid);
+    function saveAbsent() {
+      if (!currentPeriodId) return;
+      writeAbsentCache(currentPeriodId, absent);
+      // mirror into today's attendance row: set/clear 'absent', keep tardies
+      const ids = new Set(students.map((s) => s.id));
+      const next = {};
+      for (const [id, mk] of Object.entries(attMarks)) if (ids.has(id) && mk && mk.status === 'tardy') next[id] = mk;
+      for (const id of absent) if (ids.has(id)) next[id] = (attMarks[id] && attMarks[id].status === 'absent') ? attMarks[id] : { status: 'absent', at: new Date().toISOString() };
+      attMarks = next;
+      const pid = currentPeriodId, snapshot = JSON.parse(JSON.stringify(next));
+      clearTimeout(attSaveTimer);
+      attSaveTimer = setTimeout(() => saveAttendance(pid, todayStamp(), snapshot).catch((err) => console.error('attendance not saved', err)), 400);
+    }
+    function loadSettings() {
+      try {
+        mode = localStorage.getItem(MODE_KEY) === 'size' ? 'size' : 'count';
+        const saved = JSON.parse(localStorage.getItem(N_KEY) || 'null');
+        nInput.value = saved && saved[mode] ? saved[mode] : (mode === 'size' ? 4 : 6);
+        firstNamesOnly = localStorage.getItem(FIRST_KEY) === '1';
+      } catch { /* ignore */ }
+      document.querySelector(`input[name="mode"][value="${mode}"]`).checked = true;
+      firstNamesBtn.setAttribute('aria-checked', String(firstNamesOnly));
+    }
+    function saveSettings() {
+      try {
+        localStorage.setItem(MODE_KEY, mode);
+        const saved = JSON.parse(localStorage.getItem(N_KEY) || '{}');
+        saved[mode] = parseInt(nInput.value, 10) || (mode === 'size' ? 4 : 6);
+        localStorage.setItem(N_KEY, JSON.stringify(saved));
+        localStorage.setItem(FIRST_KEY, firstNamesOnly ? '1' : '0');
+      } catch { /* ignore */ }
+    }
+
+    // ---------- Names ----------
+    const presentStudents = () => students.filter((s) => !absent.has(s.id));
+
+    function firstName(name) { return name.trim().split(/\s+/)[0] || name; }
+    function lastName(name) {
+      const parts = name.trim().split(/\s+/);
+      return parts.length > 1 ? parts[parts.length - 1] : '';
+    }
+
+    // With "first names only", any first name shared by two present students
+    // gets a last initial — and if the initials clash too (Brandon Cedillo /
+    // Brandon Clifton), the prefix grows until it tells them apart.
+    function displayName(student) {
+      if (!firstNamesOnly) return student.name;
+      const first = firstName(student.name);
+      const twins = presentStudents().filter((s) => firstName(s.name).toLocaleLowerCase() === first.toLocaleLowerCase());
+      const last = lastName(student.name);
+      if (twins.length < 2 || !last) return first;
+      for (let k = 1; k <= last.length; k++) {
+        const mine = last.slice(0, k).toLocaleLowerCase();
+        const unique = twins.every((s) => s === student || lastName(s.name).slice(0, k).toLocaleLowerCase() !== mine);
+        if (unique) return `${first} ${last.slice(0, k)}.`;
+      }
+      return student.name;
+    }
+
+    function chipFor(student) {
+      let el = chips.get(student.id);
+      if (!el) {
+        el = document.createElement('div');
+        el.className = 'name-chip';
+        el.dataset.id = student.id;
+        chips.set(student.id, el);
+      }
+      el.textContent = displayName(student);
+      el.title = student.name;
+      return el;
+    }
+    function relabelChips() {
+      for (const s of presentStudents()) chipFor(s);
+    }
+
+    // How many groups for the current mode + number
+    function groupCountFor(P, n) {
+      if (P === 0 || !n || n < 1) return 0;
+      return mode === 'size' ? Math.max(1, Math.round(P / n)) : Math.max(1, Math.min(n, P));
+    }
+
+    // ---------- Periods & students ----------
+    async function loadStudents() {
+      students = [];
+      lastGroups = [];
+      chips.clear();
+      absent = currentPeriodId ? loadAbsent(currentPeriodId) : new Set();
+      if (currentPeriodId) {
+        try { students = await getStudents(currentPeriodId); } catch (err) { showError(err); }
+      }
+      const ids = new Set(students.map((s) => s.id));
+      attMarks = {};
+      if (currentPeriodId) {
+        // today's attendance taken on the hub wins over the local cache
+        try {
+          const att = await getAttendance(currentPeriodId, todayStamp());
+          if (att) { attMarks = att.marks || {}; absent = absentIdsOf(attMarks); writeAbsentCache(currentPeriodId, absent); }
+        } catch (err) { console.error('attendance not loaded', err); }
+      }
+      absent = new Set([...absent].filter((id) => ids.has(id)));
+      rules = []; useFormula = false;
+      if (currentPeriodId) {
+        try {
+          const r = await getFormulaRules(currentPeriodId, RULE_SCOPE);
+          rules = r.rules.filter((x) => ids.has(x.a) && (!ruleIsPair(x.type) || ids.has(x.b)));
+          useFormula = r.useFormula;
+        } catch (err) { console.error(err); setStatus('Formula rules could not be loaded — run migration-rule-scopes.sql in the Supabase SQL editor.', 'error'); }
+      }
+      $('btn-use-formula').setAttribute('aria-checked', String(useFormula));
+      renderPool();
+      updateSummary();
+      // projecting already (full screen restored on load)? make the groups straight away
+      if (isPresent() && students.length && lastGroups.length === 0) doShuffle();
+    }
+
+    // ---------- Formula (shared with Seating) ----------
+    const $ = (id) => document.getElementById(id);
+    function saveRulesSoon() {
+      clearTimeout(rulesSaveTimer);
+      rulesSaveTimer = setTimeout(async () => {
+        if (!currentPeriodId) return;
+        try { await saveFormulaRules(currentPeriodId, RULE_SCOPE, rules, useFormula); }
+        catch (err) { showError(err); }
+      }, 500);
+    }
+    const nameOf = (id) => { const st = students.find((x) => x.id === id); return st ? displayName(st) : '?'; };
+    const ruleText = (r) => ruleSentence(r, nameOf, RULE_SCOPE);
+    const formula = createFormulaModal({
+      scope: RULE_SCOPE,
+      periodName: () => periodSelect.selectedOptions[0] ? periodSelect.selectedOptions[0].textContent : '',
+      students: () => students,
+      absent: () => absent,
+      displayName,
+      getRules: () => rules,
+      setRules: (r) => { rules = r; saveRulesSoon(); },
+      populateLabel: 'Create Groups',
+      onPopulate: () => { if (!useFormula) { useFormula = true; $('btn-use-formula').setAttribute('aria-checked', 'true'); saveRulesSoon(); } doShuffle(); },
+    });
+    $('btn-formula').addEventListener('click', () => {
+      if (!currentPeriodId) { setStatus('Create a period first.', 'error'); return; }
+      formula.open();
+    });
+    $('btn-use-formula').addEventListener('click', () => {
+      useFormula = !useFormula;
+      $('btn-use-formula').setAttribute('aria-checked', String(useFormula));
+      saveRulesSoon();
+    });
+
+    periodSelect.addEventListener('change', async () => {
+      if (animating) return;
+      currentPeriodId = periodSelect.value || null;
+      setLastPeriodId(currentPeriodId);
+      await loadStudents();
+    });
+
+    // ---------- Pool (starting state) ----------
+    function renderPool() {
+      lastGroups = [];
+      stage.innerHTML = '';
+      poolEl.innerHTML = '';
+      for (const s of presentStudents()) poolEl.appendChild(chipFor(s));
+      stage.appendChild(poolEl);
+      stage.classList.remove('has-groups');
+      shuffleBtn.textContent = 'Create Groups';
+      emptyEl.hidden = !(currentPeriodId && students.length === 0);
+    }
+
+    // ---------- Summary + live preview ----------
+    function updateSummary() {
+      const P = presentStudents().length;
+      const A = absent.size;
+      document.getElementById('present-count').textContent = currentPeriodId ? `${P} present · ${A} absent` : '—';
+      nInput.setAttribute('aria-label', mode === 'size' ? 'How many people per group?' : 'How many groups?');
+      nInput.min = mode === 'size' ? 2 : 1;
+
+      const n = parseInt(nInput.value, 10);
+      const g = groupCountFor(P, n);
+      if (!currentPeriodId) previewEl.textContent = 'Pick a period to begin.';
+      else if (students.length === 0) previewEl.textContent = 'No students yet — add some in Roster.';
+      else if (P === 0) previewEl.textContent = 'Everyone is marked absent.';
+      else if (!g) previewEl.textContent = 'Enter a number greater than 0.';
+      else {
+        const base = Math.floor(P / g), extra = P % g;
+        previewEl.textContent = `${P} → ${g} group${g === 1 ? '' : 's'} of ${extra ? `${base}–${base + 1}` : base}`;
+      }
+    }
+
+    document.querySelectorAll('input[name="mode"]').forEach((r) => {
+      r.addEventListener('change', () => {
+        mode = r.value;
+        try {
+          const saved = JSON.parse(localStorage.getItem(N_KEY) || '{}');
+          nInput.value = saved[mode] || (mode === 'size' ? 4 : 6);
+        } catch { nInput.value = mode === 'size' ? 4 : 6; }
+        saveSettings();
+        updateSummary();
+      });
+    });
+    nInput.addEventListener('input', () => { saveSettings(); updateSummary(); });
+
+    firstNamesBtn.addEventListener('click', () => {
+      firstNamesOnly = !firstNamesOnly;
+      firstNamesBtn.setAttribute('aria-checked', String(firstNamesOnly));
+      saveSettings();
+      relabelChips();               // relabel in place — no reshuffle, no movement
+    });
+
+    // ---------- Attendance panel ----------
+    function renderAttendance() {
+      const P = presentStudents().length;
+      document.getElementById('attendance-count').textContent = `${P} present · ${absent.size} absent`;
+      attendanceList.innerHTML = students
+        .slice()
+        .sort((a, b) => a.name.localeCompare(b.name))
+        .map((s) => `
+          <label class="attend${absent.has(s.id) ? ' is-absent' : ''}">
+            <input type="checkbox" data-id="${s.id}" ${absent.has(s.id) ? '' : 'checked'}>
+            <span class="attend-name">${escapeHtml(s.name)}</span>
+            <span class="attend-state">${absent.has(s.id) ? 'Absent' : 'Present'}</span>
+          </label>`)
+        .join('') || '<p class="hint">No students in this period.</p>';
+    }
+    attendanceList.addEventListener('change', (e) => {
+      const cb = e.target.closest('input[type="checkbox"]');
+      if (!cb) return;
+      if (cb.checked) absent.delete(cb.dataset.id); else absent.add(cb.dataset.id);
+      saveAbsent();
+      renderAttendance();
+      updateSummary();
+    });
+    document.getElementById('btn-attendance').addEventListener('click', () => {
+      if (animating) return;
+      if (!currentPeriodId) { setStatus('Create a period first.', 'error'); return; }
+      renderAttendance();
+      attendanceDialog.showModal();
+    });
+    document.getElementById('btn-all-present').addEventListener('click', () => {
+      absent = new Set();
+      saveAbsent();
+      renderAttendance();
+      updateSummary();
+    });
+    document.getElementById('attendance-done').addEventListener('click', () => attendanceDialog.close());
+    // Attendance changed → back to the pool with today's present students
+    attendanceDialog.addEventListener('close', () => { renderPool(); updateSummary(); });
+
+    // ---------- Grouping ----------
+    // Extra students are spread round-robin so no group is more than one larger than another.
+    function makeGroups(list, g) {
+      const shuffled = shuffle(list);
+      const groups = Array.from({ length: g }, () => []);
+      shuffled.forEach((s, i) => groups[i % g].push(s));
+      return groups;
+    }
+
+    // Build fresh group cards and move the existing chips into them.
+    function mountGroups(groups) {
+      const frag = document.createDocumentFragment();
+      groups.forEach((members, i) => {
+        const card = document.createElement('div');
+        card.className = 'group enter';
+        card.innerHTML = `<h3>Group ${i + 1}</h3><div class="group-names"></div>`;
+        const names = card.querySelector('.group-names');
+        members.forEach((s) => names.appendChild(chipFor(s)));
+        frag.appendChild(card);
+      });
+      stage.innerHTML = '';
+      stage.appendChild(frag);
+      stage.classList.add('has-groups');
+    }
+
+    // FLIP: measure First, mutate, measure Last, Invert with a transform, Play.
+    // Chips fly one after another with a springy ease; cards fade/scale in first.
+    async function flipTo(groups, { beat = false } = {}) {
+      const all = [...stage.querySelectorAll('.name-chip')];
+      const order = shuffle(all);                                   // scattered take-off order
+      const n = order.length;
+
+      if (reduceMotion()) {                                         // simple fade instead
+        stage.style.transition = 'opacity 160ms ease';
+        stage.style.opacity = '0';
+        await wait(160);
+        mountGroups(groups);
+        stage.querySelectorAll('.group').forEach((c) => c.classList.remove('enter'));
+        stage.style.opacity = '1';
+        await wait(160);
+        stage.style.transition = '';
+        return;
+      }
+
+      if (beat) {                                                   // quick shuffle beat: lift + wiggle
+        stage.classList.add('shuffling');
+        await wait(320);
+        stage.classList.remove('shuffling');
+      }
+
+      const first = new Map(all.map((c) => [c, c.getBoundingClientRect()]));
+      mountGroups(groups);
+
+      const stagger = Math.min(18, 600 / Math.max(n, 1));
+      const base = 120;                                             // cards begin before names arrive
+      const duration = 520;
+      order.forEach((c) => {
+        const f = first.get(c);
+        const l = c.getBoundingClientRect();
+        if (!f || !l.width) return;
+        c.style.transition = 'none';
+        c.style.transformOrigin = 'top left';
+        c.style.transform = `translate(${f.left - l.left}px, ${f.top - l.top}px) scale(${f.width / l.width}, ${f.height / l.height})`;
+        c.classList.add('flying');
+      });
+      void stage.offsetHeight;                                      // commit the inverted positions
+
+      stage.querySelectorAll('.group').forEach((c) => c.classList.remove('enter'));
+      order.forEach((c, i) => {
+        c.style.transition = `transform ${duration}ms cubic-bezier(0.34, 1.56, 0.64, 1) ${Math.round(base + i * stagger)}ms`;
+        c.style.transform = '';
+      });
+      await wait(base + n * stagger + duration + 40);
+      order.forEach((c) => { c.style.transition = ''; c.style.transformOrigin = ''; c.classList.remove('flying'); });
+    }
+
+    function setAnimating(on) {
+      animating = on;
+      shuffleBtn.disabled = on;
+      shuffleBtn2.disabled = on;
+      document.getElementById('btn-attendance').disabled = on;
+      periodSelect.disabled = on;
+    }
+
+    async function doShuffle() {
+      if (animating) return;
+      setStatus('');
+      const present = presentStudents();
+      if (students.length === 0) { setStatus('This period has no students yet — add some in Roster.', 'error'); return; }
+      if (present.length === 0) { setStatus('Everyone is marked absent — open Edit Roster to mark students present.', 'error'); return; }
+      const g = groupCountFor(present.length, parseInt(nInput.value, 10));
+      if (!g) { setStatus('Enter a number greater than 0.', 'error'); return; }
+
+      const reshuffle = lastGroups.length > 0;
+      let summary = '';
+      if (useFormula) {
+        if (!rules.length) { setStatus('Formula is on, but this period has no grouping rules yet — open Formula to add some, or turn the toggle off for random groups.', 'info'); return; }
+        // early check: can every "must" hold with this many groups?
+        const presentIds = new Set(present.map((st) => st.id));
+        const base = Math.floor(present.length / g), groupMax = base + (present.length % g ? 1 : 0);
+        const problems = findImpossibleHard(rulesForPresent(rules, presentIds), nameOf, RULE_SCOPE, { groupCount: g, groupMax });
+        let demote = new Set();
+        if (problems.length) {
+          const chosen = await confirmImpossible(problems, nameOf, RULE_SCOPE);
+          if (!chosen) { setStatus('Cancelled — edit the rules in Formula and try again.', 'info'); return; }
+          demote = chosen;
+        }
+        const result = groupWithFormula(present, g, rules, nameOf, { demote });
+        lastGroups = result.groups.filter((grp) => grp.length);
+        const sum = summarizeRun(result.plan, result.unmet, nameOf, RULE_SCOPE, result.notes);
+        summary = sum.text;
+        setStatus(summary, sum.ok ? 'ok' : 'info');
+        formula.setSummary(summary);
+      } else {
+        lastGroups = makeGroups(present, g);
+      }
+      setAnimating(true);
+      try {
+        await flipTo(lastGroups, { beat: reshuffle });
+      } finally {
+        setAnimating(false);
+        shuffleBtn.textContent = 'Reshuffle';
+      }
+    }
+
+    shuffleBtn.addEventListener('click', doShuffle);
+    shuffleBtn2.addEventListener('click', doShuffle);
+
+    // ---------- Big screen mode (shared full-screen system in shared.js) ----------
+    // Full screen IS the projector view: big group cards, animations intact, Space reshuffles.
+    function onPresent(on) {
+      document.getElementById('present-bar').hidden = !on;
+      if (on && lastGroups.length === 0 && students.length) doShuffle();
+    }
+    document.addEventListener('teacherpal:present', (e) => onPresent(e.detail.on));
+    onPresent(isPresent());
+    document.addEventListener('keydown', (e) => {
+      if (e.key === ' ' && isPresent() && !isTyping(e.target) && !attendanceDialog.open) { e.preventDefault(); doShuffle(); }
+    });
+
+    // ---------- Boot ----------
+    loadSettings();
+    if (isConfigured()) {
+      (async () => {
+        const periods = await getPeriods();
+        currentPeriodId = fillPeriodSelect(periodSelect, periods);
+        await loadStudents();
+      })().catch(showError);
+    }
+  </script>
+</body>
+</html>

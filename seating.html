@@ -1,0 +1,1180 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Seating Chart — TeacherPal</title>
+  <meta name="color-scheme" content="dark">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;600;700&family=Rajdhani:wght@500;600;700&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="app">
+  <header class="topbar"></header>
+
+
+  <main class="page seating-page">
+    <!-- ---------- Top bar ---------- -->
+    <div class="seat-bar card no-present" role="toolbar" aria-label="Seating chart controls">
+      <label class="bar-field">
+        <span class="lbl">Period</span>
+        <select id="period-select"></select>
+      </label>
+
+      <div class="seg mode-seg" role="radiogroup" aria-label="Mode">
+        <label><input type="radio" name="mode" value="arrange" checked><span>Arrange Room</span></label>
+        <label><input type="radio" name="mode" value="assign"><span>Assign Seats</span></label>
+      </div>
+
+      <span class="bar-sep" aria-hidden="true"></span>
+
+      <!-- Arrange tools -->
+      <div class="bar-group" id="arrange-tools">
+        <button type="button" id="btn-rotate" title="Rotate mode (R) — drag the piece or its handle to turn it; Shift = 15° steps; R, Enter or a click elsewhere keeps the angle, Esc cancels" aria-pressed="false" disabled>Rotate</button>
+        <button type="button" id="btn-duplicate" title="Duplicate (Ctrl+D)" disabled>Duplicate</button>
+        <button type="button" id="btn-delete" title="Delete (Del)" disabled>Delete</button>
+        <button type="button" id="btn-pan" class="icon-btn" title="Pan mode (hold Space, or drag empty space in Assign mode)" aria-label="Pan mode" aria-pressed="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 11V6a2 2 0 0 0-4 0v5M14 10V4a2 2 0 0 0-4 0v6M10 10.5V6a2 2 0 0 0-4 0v8"/><path d="M18 8a2 2 0 1 1 4 0v6a8 8 0 0 1-8 8h-2c-2.8 0-4.5-.9-5.8-2.4L3 15.7a2 2 0 0 1 2.9-2.7L6 14"/></svg></button>
+      </div>
+
+      <!-- Assign tools -->
+      <div class="bar-group" id="assign-tools" hidden>
+        <button type="button" id="btn-randomize">Randomize</button>
+        <button type="button" id="btn-use-formula" class="toggle" role="switch" aria-checked="false" title="When on, Randomize follows this period's formula">
+          <span class="toggle-dot" aria-hidden="true"></span>
+          <span class="when-off">Formula off</span>
+          <span class="when-on">Formula on</span>
+        </button>
+        <button type="button" id="btn-formula" title="Seating rules for this period">Formula</button>
+        <button type="button" id="btn-clear-seats" title="Clear all seats">Clear</button>
+        <button type="button" id="btn-firstnames" role="switch" aria-checked="false" title="Show first names only">
+          <span class="when-off">First names</span>
+          <span class="when-on">✓ First names</span>
+        </button>
+        <span class="chip" id="seated-chip"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg><span id="seated-count">—</span></span>
+      </div>
+
+      <span class="bar-sep" aria-hidden="true"></span>
+
+      <div class="bar-group zoom-group">
+        <button type="button" id="btn-undo" class="icon-btn" title="Undo (Ctrl+Z)" aria-label="Undo" disabled><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 14 4 9l5-5"/><path d="M4 9h11a5 5 0 0 1 0 10h-3"/></svg></button>
+        <button type="button" id="btn-redo" class="icon-btn" title="Redo (Ctrl+Shift+Z)" aria-label="Redo" disabled><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15 14 5-5-5-5"/><path d="M20 9H9a5 5 0 0 0 0 10h3"/></svg></button>
+        <button type="button" id="btn-zoom-out" class="icon-btn" title="Zoom out" aria-label="Zoom out"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M5 12h14"/></svg></button>
+        <span class="zoom-pct" id="zoom-pct">100%</span>
+        <button type="button" id="btn-zoom-in" class="icon-btn" title="Zoom in" aria-label="Zoom in"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg></button>
+        <button type="button" id="btn-fit" title="Fit room to screen">Fit</button>
+      </div>
+
+      <span class="spacer"></span>
+      <span class="save-state" id="save-state" aria-live="polite"></span>
+      <button type="button" class="icon-btn" data-fullscreen aria-pressed="false" title="Present full screen (F)" aria-label="Present full screen"><span class="when-off"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 3H5a2 2 0 0 0-2 2v3M16 3h3a2 2 0 0 1 2 2v3M8 21H5a2 2 0 0 1-2-2v-3M16 21h3a2 2 0 0 0 2-2v-3"/></svg></span><span class="when-on"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 3v3a2 2 0 0 1-2 2H3M21 8h-3a2 2 0 0 1-2-2V3M3 16h3a2 2 0 0 1 2 2v3M16 21v-3a2 2 0 0 1 2-2h3"/></svg></span></button>
+    </div>
+
+    <div id="status" class="status no-present"></div>
+
+    <!-- ---------- Sidebar + canvas ---------- -->
+    <div class="seat-layout">
+      <aside class="seat-side card no-present" id="sidebar">
+        <!-- Palette (Arrange Room) -->
+        <div id="palette" class="palette">
+          <div class="card-head"><h2>Desks</h2></div>
+          <p class="hint">Drag a piece onto the room. Pieces snap to the grid and to each other.</p>
+          <div class="palette-list" id="palette-list"></div>
+          <p class="hint">Drag empty canvas to pan, wheel to scroll, Shift+wheel sideways, Ctrl+wheel or pinch to zoom · Shift+drag box-selects · click a piece: drag to move · R (or Rotate) turns on rotate mode — drag the piece or its handle to turn it, Shift = 15° steps, press R / Enter or click elsewhere to keep the angle, Esc to cancel · Ctrl+D duplicate · Del delete · Shift-click for several · Ctrl+Z / Ctrl+Shift+Z undo / redo · F full screen.</p>
+        </div>
+
+        <!-- Student list (Assign Seats) -->
+        <div id="students-panel" class="students-panel" hidden>
+          <div class="card-head"><h2>Students</h2><span class="chip"><span id="side-count">—</span></span></div>
+          <p class="hint">Drag a name onto a seat. Drop on a taken seat to swap. Drag a seated name back here to unseat.</p>
+          <div class="student-list" id="student-list"></div>
+        </div>
+      </aside>
+
+      <div class="viewport card" id="viewport" tabindex="0" aria-label="Room canvas">
+        <div class="room" id="room"></div>
+        <div class="marquee" id="marquee" hidden></div>
+        <div class="empty-room" id="empty-room" hidden>Drag desks from the left to build your room.</div>
+      </div>
+    </div>
+
+    <div class="drag-ghost" id="ghost" hidden></div>
+
+  </main>
+  </div>
+
+  <script src="shared.js"></script>
+  <script src="schedule.js"></script>
+  <script src="nav.js"></script>
+  <script src="formula.js"></script>
+  <script src="room.js"></script>
+  <script>
+    // =====================================================================
+    // Piece geometry (G, TYPES, FRONT, pieceTransform, bbox, labelStyle,
+    // roomBounds) lives in room.js — shared with the hub's read-only chart.
+    // =====================================================================
+    // The room is infinite: pieces live at any (x, y) in grid units, including
+    // negative; the dot grid is painted on the viewport and follows pan/zoom.
+
+    // =====================================================================
+    // State
+    // =====================================================================
+    // version 2: rotation is a free angle in degrees (v1 only used 90° steps — same JSON shape)
+    let layout = { version: 2, grid: G, front: { x: 20, y: 3, w: FRONT.w, h: FRONT.h }, pieces: [] };
+    let assignments = {};                      // seatId -> studentId (current period)
+    let students = [];
+    let currentPeriodId = null;
+    let mode = 'arrange';
+    let selected = new Set();                  // piece ids ('front' allowed)
+    let zoom = 1, pan = { x: 0, y: 0 };
+    let panMode = false, spaceHeld = false;
+    let firstNamesOnly = false;
+    let history = [], future = [];
+    let saveTimer = null, dirty = { layout: false, seats: false, rules: false };
+    let rules = [];                            // this period's formula (see RULE_TYPES)
+    let useFormula = false;                    // Randomize follows the formula (per period)
+    let absentToday = new Set();               // from Create Groups' "Edit Roster" (today only)
+    let periodsCache = [];
+
+    const $ = (id) => document.getElementById(id);
+    const viewport = $('viewport'), room = $('room'), ghost = $('ghost'), marquee = $('marquee');
+    const uid = () => Math.random().toString(36).slice(2, 9);
+    const clone = (o) => JSON.parse(JSON.stringify(o));
+    const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+    const FIRST_KEY = 'teacherpal.groups.firstNames';   // shared with Create Groups
+    const reduceMotion = () => window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+    // One DOM write per display refresh: call frame(fn) as often as you like,
+    // only the latest fn runs, once, on the next animation frame.
+    let rafId = 0, rafFn = null;
+    function frame(fn) {
+      rafFn = fn;
+      if (!rafId) rafId = requestAnimationFrame(() => { rafId = 0; const f = rafFn; rafFn = null; f && f(); });
+    }
+    const flushFrame = () => { if (rafId) { cancelAnimationFrame(rafId); rafId = 0; const f = rafFn; rafFn = null; f && f(); } };
+
+    const normDeg = (d) => ((d % 360) + 360) % 360;
+    const allPieces = () => [{ id: 'front', ...layout.front }, ...layout.pieces];
+    const pieceById = (id) => (id === 'front' ? { id: 'front', ...layout.front } : layout.pieces.find((p) => p.id === id));
+    const seatIds = () => layout.pieces.flatMap((p) => TYPES[p.type].seats.map((_, i) => `${p.id}:${i}`));
+
+    // =====================================================================
+    // Names (same rules as Create Groups)
+    // =====================================================================
+    const studentById = (id) => students.find((s) => s.id === id);
+    const firstName = (n) => n.trim().split(/\s+/)[0] || n;
+    const lastName = (n) => { const p = n.trim().split(/\s+/); return p.length > 1 ? p[p.length - 1] : ''; };
+    function displayName(s) {
+      if (!firstNamesOnly) return s.name;
+      const first = firstName(s.name);
+      const twins = students.filter((o) => firstName(o.name).toLocaleLowerCase() === first.toLocaleLowerCase());
+      const last = lastName(s.name);
+      if (twins.length < 2 || !last) return first;
+      for (let k = 1; k <= last.length; k++) {
+        const mine = last.slice(0, k).toLocaleLowerCase();
+        if (twins.every((o) => o === s || lastName(o.name).slice(0, k).toLocaleLowerCase() !== mine)) return `${first} ${last.slice(0, k)}.`;
+      }
+      return s.name;
+    }
+
+    // =====================================================================
+    // History (undo / redo) + autosave
+    // =====================================================================
+    function snapshot() { return clone({ front: layout.front, pieces: layout.pieces, assignments }); }
+    function restore(snap) {
+      layout.front = clone(snap.front);
+      layout.pieces = clone(snap.pieces);
+      assignments = clone(snap.assignments);
+      selected = new Set([...selected].filter((id) => pieceById(id)));
+    }
+    let base = null;                           // state before the current change
+    function commit({ seats = false } = {}) {
+      history.push(base || snapshot());
+      if (history.length > 100) history.shift();
+      future = [];
+      base = null;
+      dirty.layout = true;
+      if (seats) dirty.seats = true;
+      updateUndoButtons();
+      render();
+      scheduleSave();
+    }
+    function undo() {
+      if (!history.length) return;
+      future.push(snapshot());
+      restore(history.pop());
+      afterHistory();
+    }
+    function redo() {
+      if (!future.length) return;
+      history.push(snapshot());
+      restore(future.pop());
+      afterHistory();
+    }
+    function afterHistory() {
+      dirty.layout = true; dirty.seats = true;
+      updateUndoButtons();
+      render();
+      scheduleSave();
+    }
+    function updateUndoButtons() {
+      $('btn-undo').disabled = history.length === 0;
+      $('btn-redo').disabled = future.length === 0;
+    }
+
+    function scheduleSave() {
+      clearTimeout(saveTimer);
+      setSaveState('Saving…');
+      saveTimer = setTimeout(saveNow, 600);
+    }
+    async function saveNow() {
+      try {
+        const jobs = [];
+        if (dirty.layout) { jobs.push(saveRoomLayout(layout)); dirty.layout = false; }
+        if (dirty.seats && currentPeriodId) { jobs.push(saveSeatAssignments(currentPeriodId, assignments)); dirty.seats = false; }
+        if (dirty.rules && currentPeriodId) { jobs.push(saveFormulaRules(currentPeriodId, RULE_SCOPE, rules, useFormula)); dirty.rules = false; }
+        await Promise.all(jobs);
+        setSaveState('Saved');
+      } catch (err) {
+        setSaveState('Not saved', true);
+        showError(err);
+      }
+    }
+    function setSaveState(text, bad = false) {
+      const el = $('save-state');
+      el.textContent = text;
+      el.classList.toggle('bad', bad);
+      el.classList.toggle('ok', text === 'Saved');
+    }
+    window.addEventListener('beforeunload', (e) => {
+      if (dirty.layout || dirty.seats || dirty.rules) { e.preventDefault(); e.returnValue = ''; }
+    });
+
+    // =====================================================================
+    // Rendering
+    // =====================================================================
+    function applyView() {
+      room.style.transform = `translate(${pan.x}px, ${pan.y}px) scale(${zoom})`;
+      const cell = G * zoom;
+      viewport.style.backgroundSize = `${cell}px ${cell}px`;
+      viewport.style.backgroundPosition = `${pan.x}px ${pan.y}px`;
+      $('zoom-pct').textContent = `${Math.round(zoom * 100)}%`;
+    }
+
+    function render() {
+      room.innerHTML = '';
+      room.appendChild(renderFront());
+      for (const p of layout.pieces) room.appendChild(renderPiece(p));
+      renderGizmo();
+      $('empty-room').hidden = layout.pieces.length > 0 || mode !== 'arrange';
+      renderSidebar();
+      updateSelectionButtons();
+      updateCounts();
+    }
+
+    function renderFront() {
+      const f = layout.front;
+      const el = document.createElement('div');
+      el.className = 'piece front' + (selected.has('front') ? ' selected' : '');
+      el.dataset.id = 'front';
+      el.style.width = `${FRONT.w * G}px`;
+      el.style.height = `${FRONT.h * G}px`;
+      el.style.transform = pieceTransform(f.x, f.y, 0);
+      el.innerHTML = '<span class="front-text">Front of room</span>';
+      return el;
+    }
+
+    function renderPiece(p) {
+      const t = TYPES[p.type];
+      const el = document.createElement('div');
+      el.className = `piece ${p.type}` + (selected.has(p.id) ? ' selected' : '') + (t.round ? ' is-round' : '');
+      el.dataset.id = p.id;
+      el.style.width = `${t.w * G}px`;
+      el.style.height = `${t.h * G}px`;
+      el.style.transform = pieceTransform(p.x, p.y, p.rotation || 0);
+      if (t.round) {
+        const table = document.createElement('div');
+        table.className = 'table-top';
+        el.appendChild(table);
+      }
+      (t.desks || []).forEach(([x, y, w, h]) => {
+        const d = document.createElement('div');
+        d.className = 'desk-block';
+        d.style.cssText = `left:${x * G}px;top:${y * G}px;width:${w * G}px;height:${h * G}px`;
+        d.innerHTML = `<span class="seat-label" data-w="${w}" data-h="${h}" style="${labelStyle(p, w, h)}">${t.text || ''}</span>`;
+        el.appendChild(d);
+      });
+      t.seats.forEach(([x, y, w, h], i) => {
+        const seatId = `${p.id}:${i}`;
+        const sid = assignments[seatId];
+        const s = sid ? studentById(sid) : null;
+        const seat = document.createElement('div');
+        seat.className = 'seat' + (s ? ' taken' : '') + (mode === 'assign' ? ' droppable' : '');
+        seat.dataset.seat = seatId;
+        if (s) seat.dataset.student = s.id;
+        seat.style.cssText = `left:${x * G}px;top:${y * G}px;width:${w * G}px;height:${h * G}px`;
+        const label = mode === 'assign' && s ? escapeHtml(displayName(s)) : '';
+        seat.innerHTML = `<span class="seat-label" data-w="${w}" data-h="${h}" style="${labelStyle(p, w, h)}" title="${s ? escapeHtml(s.name) : ''}">${label}</span>`;
+        el.appendChild(seat);
+      });
+      return el;
+    }
+
+    function renderSidebar() {
+      const arrange = mode === 'arrange';
+      $('palette').hidden = !arrange;
+      $('students-panel').hidden = arrange;
+      $('arrange-tools').hidden = !arrange;
+      $('assign-tools').hidden = arrange;
+      if (arrange) {
+        if (!$('palette-list').children.length) {
+          $('palette-list').innerHTML = Object.entries(TYPES).map(([type, t]) => `
+            <div class="palette-item" data-type="${type}" role="button" tabindex="0" aria-label="Add ${t.label}">
+              <div class="mini ${t.round ? 'is-round' : ''}" style="--w:${t.w};--h:${t.h}">
+                ${t.round ? '<div class="mini-round"></div>' : ''}
+                ${[...t.seats, ...(t.desks || [])].map(([x, y, w, h]) => `<span style="left:${(x / t.w) * 100}%;top:${(y / t.h) * 100}%;width:${(w / t.w) * 100}%;height:${(h / t.h) * 100}%"></span>`).join('')}
+              </div>
+              <span class="palette-name">${t.label}</span>
+            </div>`).join('');
+        }
+        return;
+      }
+      const seatedIds = new Set(Object.values(assignments));
+      const list = $('student-list');
+      list.innerHTML = students
+        .slice()
+        .sort((a, b) => a.name.localeCompare(b.name))
+        .map((s) => `<div class="student-chip${seatedIds.has(s.id) ? ' seated' : ' unseated'}${absentToday.has(s.id) ? ' absent' : ''}" data-student="${s.id}" title="${escapeHtml(s.name)}${absentToday.has(s.id) ? ' (absent today)' : ''}">${escapeHtml(displayName(s))}</div>`)
+        .join('') || '<p class="hint">No students in this period.</p>';
+    }
+
+    function updateCounts() {
+      const total = seatIds().length;
+      const seatedIds = new Set(Object.values(assignments).filter((id) => studentById(id)));
+      const seated = students.filter((s) => seatedIds.has(s.id)).length;
+      $('seated-count').textContent = currentPeriodId ? `${seated} of ${students.length} seated` : '—';
+      $('side-count').textContent = `${students.length - seated} unseated · ${total} seats`;
+    }
+
+    function updateSelectionButtons() {
+      const pieces = [...selected].filter((id) => id !== 'front');
+      $('btn-rotate').disabled = pieces.length === 0;
+      $('btn-duplicate').disabled = pieces.length === 0;
+      $('btn-delete').disabled = pieces.length === 0;
+    }
+
+    // =====================================================================
+    // View: zoom / pan / fit
+    // =====================================================================
+    function clientToRoom(cx, cy) {
+      const r = viewport.getBoundingClientRect();
+      return { x: (cx - r.left - pan.x) / zoom / G, y: (cy - r.top - pan.y) / zoom / G };
+    }
+    function setZoom(z, cx, cy) {
+      const r = viewport.getBoundingClientRect();
+      const px = cx ?? r.left + r.width / 2, py = cy ?? r.top + r.height / 2;
+      const before = clientToRoom(px, py);
+      zoom = clamp(z, 0.25, 3);
+      pan.x = px - r.left - before.x * G * zoom;
+      pan.y = py - r.top - before.y * G * zoom;
+      applyView();
+    }
+    function fitToScreen() {
+      const r = viewport.getBoundingClientRect();
+      const { minX, minY, maxX, maxY } = roomBounds(layout);
+      const padPx = 40;
+      const w = (maxX - minX) * G, h = (maxY - minY) * G;
+      zoom = clamp(Math.min((r.width - padPx * 2) / w, (r.height - padPx * 2) / h), 0.25, 3);
+      pan.x = (r.width - w * zoom) / 2 - minX * G * zoom;
+      pan.y = (r.height - h * zoom) / 2 - minY * G * zoom;
+      applyView();
+    }
+    $('btn-zoom-in').addEventListener('click', () => setZoom(zoom * 1.25));
+    $('btn-zoom-out').addEventListener('click', () => setZoom(zoom / 1.25));
+    $('btn-fit').addEventListener('click', fitToScreen);
+    viewport.addEventListener('wheel', (e) => {
+      e.preventDefault();
+      if (e.ctrlKey || e.metaKey) {                       // Ctrl+wheel and trackpad pinch (browsers send it as ctrl+wheel)
+        setZoom(zoom * (e.deltaY < 0 ? 1.1 : 1 / 1.1), e.clientX, e.clientY);
+      } else if (e.shiftKey && e.deltaX === 0) {         // Shift+wheel: sideways
+        pan.x -= e.deltaY; frame(applyView);
+      } else {                                            // plain wheel / two-finger scroll: pan
+        pan.x -= e.deltaX; pan.y -= e.deltaY; frame(applyView);
+      }
+    }, { passive: false });
+    window.addEventListener('resize', () => { if (document.body.classList.contains('present')) fitToScreen(); });
+
+    // =====================================================================
+    // Snapping: to the grid, then to the edges of nearby pieces
+    // =====================================================================
+    function snapBox(box, ignore) {
+      let x = Math.round(box.x), y = Math.round(box.y);
+      const SNAP = 0.75;
+      for (const q of allPieces()) {
+        if (ignore.has(q.id)) continue;
+        const b = bbox(q);
+        const nearY = y < b.y + b.h + SNAP && y + box.h > b.y - SNAP;
+        const nearX = x < b.x + b.w + SNAP && x + box.w > b.x - SNAP;
+        if (nearY) {
+          if (Math.abs(x - (b.x + b.w)) <= SNAP) x = b.x + b.w;          // my left to its right
+          else if (Math.abs(x + box.w - b.x) <= SNAP) x = b.x - box.w;    // my right to its left
+          else if (Math.abs(x - b.x) <= SNAP) x = b.x;                    // align lefts
+        }
+        if (nearX) {
+          if (Math.abs(y - (b.y + b.h)) <= SNAP) y = b.y + b.h;
+          else if (Math.abs(y + box.h - b.y) <= SNAP) y = b.y - box.h;
+          else if (Math.abs(y - b.y) <= SNAP) y = b.y;
+        }
+      }
+      return { x, y };
+    }
+
+    // =====================================================================
+    // Pointer interactions on the canvas
+    // =====================================================================
+    // =====================================================================
+    // Rotation: handle on the selection (Arrange mode) + a rotate session
+    // entered with R / the Rotate button / dragging the handle
+    // =====================================================================
+    let rotSession = null;   // { ids, cx, cy, starts: Map, baseAngle, byDrag, angle }
+
+    const rotIds = () => [...selected].filter((id) => id !== 'front' && pieceById(id));
+
+    // Shared centre + ring radius for the selected pieces (room units)
+    function selectionGeom(ids) {
+      const boxes = ids.map((id) => bbox(pieceById(id)));
+      const minX = Math.min(...boxes.map((b) => b.x)), minY = Math.min(...boxes.map((b) => b.y));
+      const maxX = Math.max(...boxes.map((b) => b.x + b.w)), maxY = Math.max(...boxes.map((b) => b.y + b.h));
+      const cx = (minX + maxX) / 2, cy = (minY + maxY) / 2;
+      const radius = Math.hypot(maxX - minX, maxY - minY) / 2 + 1;
+      return { cx, cy, radius };
+    }
+
+    // Handle + ring + angle label: shown only while rotate mode is on
+    function renderGizmo() {
+      room.querySelectorAll('.rot-ring, .rot-line, .rot-handle, .rot-label').forEach((el) => el.remove());
+      if (mode !== 'arrange' || !rotSession) return;
+      const ids = rotSession.ids;
+      const { cx, cy, radius } = rotSession;
+      // the handle sits on the piece's local "up", so it turns with the piece
+      const angle = ids.length === 1 ? (pieceById(ids[0]).rotation || 0) : rotSession.angle;
+      const rad = (angle * Math.PI) / 180;
+      const hx = cx + Math.sin(rad) * radius, hy = cy - Math.cos(rad) * radius;
+
+      const line = document.createElement('div');
+      line.className = 'rot-line';
+      line.style.cssText = `left:${cx * G}px;top:${(cy - radius) * G}px;height:${radius * G}px;transform:translateX(-50%) rotate(${angle}deg)`;
+      const handle = document.createElement('div');
+      handle.className = 'rot-handle';
+      handle.title = 'Drag to rotate';
+      handle.style.cssText = `left:${hx * G}px;top:${hy * G}px`;
+      const ring = document.createElement('div');
+      ring.className = 'rot-ring';
+      ring.style.cssText = `left:${cx * G}px;top:${cy * G}px;width:${radius * 2 * G}px;height:${radius * 2 * G}px`;
+      const label = document.createElement('div');
+      label.className = 'rot-label';
+      label.textContent = `${Math.round(normDeg(rotSession.angle))}°`;
+      label.style.cssText = `left:${hx * G}px;top:${(hy - 1.1) * G}px`;
+      room.append(line, handle, ring, label);
+    }
+
+    // Rotate mode (R / Rotate button toggle it on; R, Enter or a click elsewhere
+    // turn it off and keep the angle; Esc cancels). While it is on, dragging the
+    // handle OR the piece body turns the selection about its centre.
+    function enterRotate() {
+      const ids = rotIds();
+      if (!ids.length || rotSession) return;
+      const { cx, cy, radius } = selectionGeom(ids);
+      base = snapshot();                          // whole mode = one undo step
+      rotSession = {
+        ids, cx, cy, radius,
+        starts: null, baseAngle: null,            // set at the start of each drag
+        angle: ids.length === 1 ? (pieceById(ids[0]).rotation || 0) : 0,
+      };
+      viewport.classList.add('rotating');
+      $('btn-rotate').setAttribute('aria-pressed', 'true');
+      render();
+    }
+    function toggleRotate() { rotSession ? confirmRotate() : enterRotate(); }
+    // A drag inside rotate mode: measure from the current angles so nothing jumps
+    function beginRotateDrag(e) {
+      rotSession.starts = new Map(rotSession.ids.map((id) => { const p = pieceById(id); return [id, { rotation: p.rotation || 0, x: p.x, y: p.y }]; }));
+      rotSession.baseAngle = pointerAngle(e.clientX, e.clientY);
+      if (rotSession.ids.length > 1) rotSession.angle = 0;
+      drag = { kind: 'rotate' };
+      viewport.setPointerCapture(e.pointerId);
+    }
+    function pointerAngle(clientX, clientY) {
+      const at = clientToRoom(clientX, clientY);
+      return (Math.atan2(at.y - rotSession.cy, at.x - rotSession.cx) * 180) / Math.PI;
+    }
+    function rotateTo(clientX, clientY, shift) {
+      if (!rotSession.starts || rotSession.baseAngle === null) return;
+      const a = pointerAngle(clientX, clientY);
+      let delta = a - rotSession.baseAngle;
+      // Snap the leading piece's absolute angle (Shift: 15° steps; always: ±3° of the axes)
+      const lead = rotSession.starts.get(rotSession.ids[0]).rotation;
+      let target = normDeg(lead + delta);
+      if (shift) target = normDeg(Math.round(target / 15) * 15);
+      for (const axis of [0, 90, 180, 270, 360]) if (Math.abs(target - axis) <= 3) target = axis % 360;
+      delta = target - lead;
+      rotSession.angle = rotSession.ids.length === 1 ? target : delta;
+
+      const rad = (delta * Math.PI) / 180, cos = Math.cos(rad), sin = Math.sin(rad);
+      for (const id of rotSession.ids) {
+        const p = pieceById(id), st = rotSession.starts.get(id), t = TYPES[p.type];
+        p.rotation = Math.round(normDeg(st.rotation + delta));
+        // several pieces: orbit each centre around the shared centre
+        const pcx = st.x + t.w / 2 - rotSession.cx, pcy = st.y + t.h / 2 - rotSession.cy;
+        const ncx = rotSession.cx + pcx * cos - pcy * sin, ncy = rotSession.cy + pcx * sin + pcy * cos;
+        p.x = Math.round((ncx - t.w / 2) * 100) / 100;
+        p.y = Math.round((ncy - t.h / 2) * 100) / 100;
+      }
+      // one batched DOM pass: piece transforms + upright labels + gizmo
+      frame(() => {
+        if (!rotSession) return;
+        for (const id of rotSession.ids) {
+          const p = pieceById(id);
+          const el = room.querySelector(`.piece[data-id="${id}"]`);
+          if (!el) continue;
+          el.style.transform = pieceTransform(p.x, p.y, p.rotation);
+          el.querySelectorAll('.seat-label').forEach((lb) => { lb.style.cssText = labelStyle(p, +lb.dataset.w, +lb.dataset.h); });
+        }
+        renderGizmo();
+      });
+    }
+    function confirmRotate() {
+      if (!rotSession) return;
+      flushFrame();
+      rotSession = null;
+      drag = null;
+      viewport.classList.remove('rotating');
+      $('btn-rotate').setAttribute('aria-pressed', 'false');
+      const unchanged = base && JSON.stringify(base.pieces) === JSON.stringify(layout.pieces);
+      if (unchanged) { base = null; render(); }   // toggled on and off without turning anything
+      else commit();                              // one undo step for the whole rotation
+    }
+    function cancelRotate() {
+      if (!rotSession) return;
+      flushFrame();
+      if (base) restore(base);                    // back to how it was when rotate mode began
+      rotSession = null;
+      drag = null;
+      base = null;
+      $('btn-rotate').setAttribute('aria-pressed', 'false');
+      viewport.classList.remove('rotating');
+      render();
+    }
+
+    let drag = null;   // { kind: 'move'|'marquee'|'pan'|'rotate', ... }
+
+    viewport.addEventListener('pointerdown', (e) => {
+      if (e.button !== 0 && e.button !== 1) return;
+      if (rotSession) {
+        const hit = e.target.closest('.piece');
+        const inSession = e.target.closest('.rot-handle') || (hit && rotSession.ids.includes(hit.dataset.id));
+        if (inSession && e.button === 0) { beginRotateDrag(e); return; }
+        confirmRotate();                           // empty canvas / another piece: leave rotate mode, keep the angle
+      }
+      const pieceEl = e.target.closest('.piece');
+      const seatEl = e.target.closest('.seat.taken');
+      const wantPan = e.button === 1 || panMode || spaceHeld || (mode === 'assign' && !seatEl);
+
+      if (mode === 'assign' && seatEl && !wantPan) {
+        startNameDrag(e, seatEl.dataset.student, seatEl.dataset.seat);
+        return;
+      }
+      if (wantPan || !pieceEl && mode !== 'arrange') {
+        drag = { kind: 'pan', sx: e.clientX, sy: e.clientY, px: pan.x, py: pan.y };
+        viewport.setPointerCapture(e.pointerId);
+        viewport.classList.add('panning');
+        return;
+      }
+      if (pieceEl) {
+        const id = pieceEl.dataset.id;
+        if (e.shiftKey) { selected.has(id) ? selected.delete(id) : selected.add(id); }
+        else if (!selected.has(id)) { selected = new Set([id]); }
+        render();
+        const ids = [...selected];
+        const starts = new Map(ids.map((pid) => [pid, { ...pieceById(pid) }]));
+        const boxes = ids.map((pid) => bbox(starts.get(pid)));
+        const box = {
+          x: Math.min(...boxes.map((b) => b.x)), y: Math.min(...boxes.map((b) => b.y)),
+        };
+        box.w = Math.max(...boxes.map((b) => b.x + b.w)) - box.x;
+        box.h = Math.max(...boxes.map((b) => b.y + b.h)) - box.y;
+        const els = new Map(ids.map((pid) => [pid, room.querySelector(`.piece[data-id="${pid}"]`)]));
+        // faint ghost outline per piece, shown at the spot it will snap to
+        const ghosts = new Map(ids.map((pid) => {
+          const st = starts.get(pid), el = els.get(pid);
+          const gh = document.createElement('div');
+          gh.className = 'snap-ghost' + (pid === 'front' ? ' front' : '');
+          gh.style.width = el.style.width; gh.style.height = el.style.height;
+          gh.style.transform = pieceTransform(st.x, st.y, st.rotation || 0);
+          room.appendChild(gh);
+          return [pid, gh];
+        }));
+        base = snapshot();
+        drag = { kind: 'move', ids, starts, box, els, ghosts, sx: e.clientX, sy: e.clientY, moved: false, dx: 0, dy: 0, ox: 0, oy: 0 };
+        viewport.setPointerCapture(e.pointerId);
+        return;
+      }
+      // empty space in Arrange mode: drag pans; Shift+drag box-selects
+      if (!e.shiftKey) {
+        if (selected.size) { selected = new Set(); render(); }
+        drag = { kind: 'pan', sx: e.clientX, sy: e.clientY, px: pan.x, py: pan.y };
+        viewport.setPointerCapture(e.pointerId);
+        viewport.classList.add('panning');
+        return;
+      }
+      const start = clientToRoom(e.clientX, e.clientY);
+      drag = { kind: 'marquee', start, additive: true, ids: new Set() };
+      viewport.setPointerCapture(e.pointerId);
+    });
+
+    viewport.addEventListener('pointermove', (e) => {
+      if (drag && drag.kind === 'rotate') { rotateTo(e.clientX, e.clientY, e.shiftKey); return; }
+      if (!drag) return;
+      if (drag.kind === 'pan') {
+        pan.x = drag.px + (e.clientX - drag.sx);
+        pan.y = drag.py + (e.clientY - drag.sy);
+        frame(applyView);
+      } else if (drag.kind === 'move') {
+        const dx = (e.clientX - drag.sx) / zoom / G, dy = (e.clientY - drag.sy) / zoom / G;
+        if (!drag.moved && Math.hypot(e.clientX - drag.sx, e.clientY - drag.sy) < 3) return;   // 3px activation
+        if (!drag.moved) {
+          drag.moved = true;
+          drag.els.forEach((el) => el.classList.add('lifting'));
+          room.querySelectorAll('.rot-line, .rot-handle').forEach((el) => (el.style.visibility = 'hidden'));
+        }
+        // where the block will land: snap its combined bbox, offset every piece by the same amount
+        const snapped = snapBox({ x: drag.box.x + dx, y: drag.box.y + dy, w: drag.box.w, h: drag.box.h }, new Set(drag.ids));
+        drag.dx = dx; drag.dy = dy;
+        drag.ox = snapped.x - drag.box.x; drag.oy = snapped.y - drag.box.y;
+        frame(() => {
+          if (!drag || drag.kind !== 'move') return;
+          for (const id of drag.ids) {
+            const st = drag.starts.get(id), el = drag.els.get(id), gh = drag.ghosts.get(id);
+            if (el) el.style.transform = pieceTransform(st.x + drag.dx, st.y + drag.dy, st.rotation || 0);   // 1:1, unsnapped
+            if (gh) gh.style.transform = pieceTransform(st.x + drag.ox, st.y + drag.oy, st.rotation || 0);   // snap preview
+          }
+        });
+      } else if (drag.kind === 'marquee') {
+        const cur = clientToRoom(e.clientX, e.clientY);
+        const x1 = Math.min(drag.start.x, cur.x), y1 = Math.min(drag.start.y, cur.y);
+        const x2 = Math.max(drag.start.x, cur.x), y2 = Math.max(drag.start.y, cur.y);
+        drag.ids = new Set(allPieces().filter((p) => { const b = bbox(p); return b.x < x2 && b.x + b.w > x1 && b.y < y2 && b.y + b.h > y1; }).map((p) => p.id));
+        frame(() => {
+          if (!drag || drag.kind !== 'marquee') return;
+          marquee.hidden = false;
+          marquee.style.transform = `translate3d(${x1 * G * zoom + pan.x}px, ${y1 * G * zoom + pan.y}px, 0)`;
+          marquee.style.width = `${(x2 - x1) * G * zoom}px`;
+          marquee.style.height = `${(y2 - y1) * G * zoom}px`;
+          room.querySelectorAll('.piece').forEach((el) => el.classList.toggle('selected', drag.ids.has(el.dataset.id) || (drag.additive && selected.has(el.dataset.id))));
+        });
+      }
+    });
+
+    function endDrag(e) {
+      if (!drag) return;
+      const d = drag; drag = null;
+      viewport.classList.remove('panning');
+      try { viewport.releasePointerCapture(e.pointerId); } catch { /* ignore */ }
+      if (d.kind === 'rotate') {
+        flushFrame();                             // drag over; rotate mode stays on
+      } else if (d.kind === 'move') {
+        flushFrame();
+        d.ghosts.forEach((gh) => gh.remove());
+        if (!d.moved) { base = null; return; }
+        // Commit the snapped positions to state now, ease the DOM into them
+        // (~120ms), then re-render + save once the settle is done.
+        for (const id of d.ids) {
+          const st = d.starts.get(id), nx = st.x + d.ox, ny = st.y + d.oy;
+          if (id === 'front') { layout.front.x = nx; layout.front.y = ny; } else { const p = pieceById(id); p.x = nx; p.y = ny; }
+          const el = d.els.get(id);
+          if (el) {
+            el.classList.remove('lifting');
+            el.classList.add('settling');
+            el.style.transform = pieceTransform(nx, ny, st.rotation || 0);
+          }
+        }
+        setTimeout(commit, 130);
+      } else if (d.kind === 'marquee') {
+        flushFrame();
+        marquee.hidden = true;
+        selected = new Set([...(d.additive ? selected : []), ...d.ids]);
+        render();
+      }
+    }
+    viewport.addEventListener('pointerup', endDrag);
+    viewport.addEventListener('pointercancel', endDrag);
+
+    // Palette → canvas (new piece)
+    $('palette-list').addEventListener('pointerdown', (e) => {
+      const item = e.target.closest('.palette-item');
+      if (!item || e.button !== 0) return;
+      const type = item.dataset.type, t = TYPES[type];
+      item.setPointerCapture(e.pointerId);
+      ghost.hidden = false;
+      ghost.textContent = t.label;
+      // snap preview on the canvas while the pointer is over it
+      const preview = document.createElement('div');
+      preview.className = 'snap-ghost';
+      preview.style.width = `${t.w * G}px`; preview.style.height = `${t.h * G}px`;
+      preview.hidden = true;
+      room.appendChild(preview);
+      const overCanvas = (ev) => { const r = viewport.getBoundingClientRect(); return ev.clientX >= r.left && ev.clientX <= r.right && ev.clientY >= r.top && ev.clientY <= r.bottom; };
+      let last = e, pos = null;
+      const move = (ev) => {
+        last = ev;
+        if (overCanvas(ev)) {
+          const at = clientToRoom(ev.clientX, ev.clientY);
+          pos = snapBox({ x: at.x - t.w / 2, y: at.y - t.h / 2, w: t.w, h: t.h }, new Set());
+        } else pos = null;
+        frame(() => {
+          ghost.style.transform = `translate3d(${last.clientX + 12}px, ${last.clientY + 12}px, 0)`;
+          preview.hidden = !pos;
+          if (pos) preview.style.transform = pieceTransform(pos.x, pos.y, 0);
+        });
+      };
+      move(e);
+      const up = (ev) => {
+        item.removeEventListener('pointermove', move);
+        item.removeEventListener('pointerup', up);
+        item.removeEventListener('pointercancel', up);
+        flushFrame();
+        ghost.hidden = true;
+        preview.remove();
+        if (!overCanvas(ev)) return;
+        const at = clientToRoom(ev.clientX, ev.clientY);
+        const drop = snapBox({ x: at.x - t.w / 2, y: at.y - t.h / 2, w: t.w, h: t.h }, new Set());
+        base = snapshot();
+        const piece = { id: uid(), type, x: drop.x, y: drop.y, rotation: 0 };
+        layout.pieces.push(piece);
+        selected = new Set([piece.id]);
+        commit();
+      };
+      item.addEventListener('pointermove', move);
+      item.addEventListener('pointerup', up);
+      item.addEventListener('pointercancel', up);
+    });
+    // Keyboard: Enter/Space on a palette item drops it in the middle of the view
+    $('palette-list').addEventListener('keydown', (e) => {
+      const item = e.target.closest('.palette-item');
+      if (!item || (e.key !== 'Enter' && e.key !== ' ')) return;
+      e.preventDefault();
+      const t = TYPES[item.dataset.type];
+      const r = viewport.getBoundingClientRect();
+      const at = clientToRoom(r.left + r.width / 2, r.top + r.height / 2);
+      const pos = snapBox({ x: at.x - t.w / 2, y: at.y - t.h / 2, w: t.w, h: t.h }, new Set());
+      base = snapshot();
+      const piece = { id: uid(), type: item.dataset.type, x: pos.x, y: pos.y, rotation: 0 };
+      layout.pieces.push(piece);
+      selected = new Set([piece.id]);
+      commit();
+    });
+
+    // =====================================================================
+    // Selection actions
+    // =====================================================================
+    // Rotate button / R: toggle rotate mode (see the Rotation section)
+    function rotateSelected() { toggleRotate(); }
+    function duplicateSelected() {
+      const ids = [...selected].filter((id) => id !== 'front');
+      if (!ids.length) return;
+      base = snapshot();
+      const copies = ids.map((id) => {
+        const p = pieceById(id);
+        const b = bbox(p);
+        return { ...clone(p), id: uid(), x: p.x + b.w + 1, y: p.y };
+      });
+      layout.pieces.push(...copies);
+      selected = new Set(copies.map((c) => c.id));
+      commit({ seats: true });
+    }
+    function deleteSelected() {
+      const ids = new Set([...selected].filter((id) => id !== 'front'));
+      if (!ids.size) return;
+      base = snapshot();
+      layout.pieces = layout.pieces.filter((p) => !ids.has(p.id));
+      for (const seatId of Object.keys(assignments)) if (ids.has(seatId.split(':')[0])) delete assignments[seatId];
+      selected = new Set();
+      commit({ seats: true });
+    }
+    $('btn-rotate').addEventListener('click', rotateSelected);
+    $('btn-duplicate').addEventListener('click', duplicateSelected);
+    $('btn-delete').addEventListener('click', deleteSelected);
+    $('btn-undo').addEventListener('click', undo);
+    $('btn-redo').addEventListener('click', redo);
+    $('btn-pan').addEventListener('click', () => {
+      panMode = !panMode;
+      $('btn-pan').setAttribute('aria-pressed', String(panMode));
+      viewport.classList.toggle('pan-mode', panMode);
+    });
+
+    document.addEventListener('keydown', (e) => {
+      const typing = !!(e.target && e.target.matches && e.target.matches('input, select, textarea'));
+      if (e.key === ' ' && !typing) { spaceHeld = true; viewport.classList.add('pan-mode'); e.preventDefault(); }
+      if (typing) return;
+      const ctrl = e.ctrlKey || e.metaKey;
+      if (rotSession) {
+        if (e.key === 'Enter' || (e.key.toLowerCase() === 'r' && !ctrl)) { e.preventDefault(); confirmRotate(); }
+        else if (e.key === 'Escape') { e.preventDefault(); cancelRotate(); }
+        return;
+      }
+      if (ctrl && e.key.toLowerCase() === 'z') { e.preventDefault(); e.shiftKey ? redo() : undo(); }
+      else if (ctrl && e.key.toLowerCase() === 'y') { e.preventDefault(); redo(); }
+      else if (mode === 'arrange' && ctrl && e.key.toLowerCase() === 'd') { e.preventDefault(); duplicateSelected(); }
+      else if (mode === 'arrange' && (e.key === 'Delete' || e.key === 'Backspace')) { e.preventDefault(); deleteSelected(); }
+      else if (mode === 'arrange' && e.key.toLowerCase() === 'r' && !ctrl) { e.preventDefault(); enterRotate(); }
+      else if (e.key === 'Escape') {
+        if (formula.isOpen() || isPresent()) return;   // shared.js handles Esc in full screen
+        if (selected.size) { selected = new Set(); render(); }
+      }
+    });
+    document.addEventListener('keyup', (e) => {
+      if (e.key === ' ') { spaceHeld = false; if (!panMode) viewport.classList.remove('pan-mode'); }
+    });
+
+    // =====================================================================
+    // Assign mode: drag names between the list and seats
+    // =====================================================================
+    function startNameDrag(e, studentId, fromSeat) {
+      const s = studentById(studentId);
+      if (!s) return;
+      const source = e.target.closest('.seat, .student-chip') || e.target;
+      source.setPointerCapture(e.pointerId);
+      ghost.hidden = false;
+      ghost.textContent = displayName(s);
+      ghost.classList.add('name');
+      let over = null, last = e;
+      const move = (ev) => {
+        last = ev;
+        frame(() => {
+          ghost.style.transform = `translate3d(${last.clientX + 12}px, ${last.clientY + 12}px, 0)`;
+          const el = document.elementFromPoint(last.clientX, last.clientY);
+          const seat = el && el.closest('.seat');
+          if (over && over !== seat) over.classList.remove('drop-target');
+          over = seat;
+          if (seat) seat.classList.add('drop-target');
+        });
+      };
+      move(e);
+      const up = (ev) => {
+        source.removeEventListener('pointermove', move);
+        source.removeEventListener('pointerup', up);
+        source.removeEventListener('pointercancel', up);
+        flushFrame();
+        ghost.hidden = true;
+        ghost.classList.remove('name');
+        if (over) over.classList.remove('drop-target');
+        const el = document.elementFromPoint(ev.clientX, ev.clientY);
+        const seat = el && el.closest('.seat');
+        const list = el && el.closest('#sidebar');
+        if (seat) placeStudent(studentId, seat.dataset.seat, fromSeat);
+        else if (list && fromSeat) unseat(studentId);
+      };
+      source.addEventListener('pointermove', move);
+      source.addEventListener('pointerup', up);
+      source.addEventListener('pointercancel', up);
+    }
+
+    $('student-list').addEventListener('pointerdown', (e) => {
+      const chip = e.target.closest('.student-chip');
+      if (!chip || e.button !== 0) return;
+      e.preventDefault();
+      const seatOf = Object.keys(assignments).find((k) => assignments[k] === chip.dataset.student) || null;
+      startNameDrag(e, chip.dataset.student, seatOf);
+    });
+
+    function placeStudent(studentId, seatId, fromSeat) {
+      if (fromSeat === seatId) return;
+      base = snapshot();
+      const occupant = assignments[seatId];
+      const prev = fromSeat || Object.keys(assignments).find((k) => assignments[k] === studentId);
+      if (prev) delete assignments[prev];
+      assignments[seatId] = studentId;
+      if (occupant && occupant !== studentId) {
+        if (prev) assignments[prev] = occupant;          // swap
+      }
+      commit({ seats: true });
+    }
+    function unseat(studentId) {
+      const k = Object.keys(assignments).find((key) => assignments[key] === studentId);
+      if (!k) return;
+      base = snapshot();
+      delete assignments[k];
+      commit({ seats: true });
+    }
+    $('btn-randomize').addEventListener('click', () => {
+      if (useFormula) {
+        if (!rules.length) { setStatus('Formula is on, but this period has no rules yet — open Formula to add some, or turn the toggle off for a random seating.', 'info'); return; }
+        populateWithFormula();
+        return;
+      }
+      const seats = shuffle(seatIds());
+      if (!seats.length) { setStatus('Add some desks in Arrange Room first.', 'error'); return; }
+      const present = students.filter((st) => !absentToday.has(st.id));
+      const next = {};
+      shuffle(present).forEach((st, i) => { if (seats[i]) next[seats[i]] = st.id; });
+      if (present.length > seats.length) setStatus(`${present.length - seats.length} student(s) have no seat — add more desks.`, 'info');
+      applySeating(next);
+      setStatus('Seated randomly (formula off).', 'ok');
+    });
+    $('btn-use-formula').addEventListener('click', () => {
+      useFormula = !useFormula;
+      $('btn-use-formula').setAttribute('aria-checked', String(useFormula));
+      dirty.rules = true;
+      scheduleSave();
+    });
+    $('btn-clear-seats').addEventListener('click', () => {
+      if (!Object.keys(assignments).length) return;
+      base = snapshot();
+      assignments = {};
+      commit({ seats: true });
+    });
+    $('btn-firstnames').addEventListener('click', () => {
+      firstNamesOnly = !firstNamesOnly;
+      $('btn-firstnames').setAttribute('aria-checked', String(firstNamesOnly));
+      try { localStorage.setItem(FIRST_KEY, firstNamesOnly ? '1' : '0'); } catch { /* ignore */ }
+      render();
+    });
+
+    // =====================================================================
+    // Formula on the seating chart: seat geometry + scoring. Rule metadata,
+    // the annealing solver and the modal live in formula.js (shared with
+    // Create Groups).
+    // =====================================================================
+    // Rule weights come from the priority list (formula.js planRules): must = 1000, try = 30 → 3 by rank.
+    const NEAR = 5, ADJ = 3.3;                 // grid units: "about one desk" / directly adjacent
+    const RULE_SCOPE = 'seating';              // this page only ever reads/writes seating-scope rules
+    const nameOf = (id) => { const st = studentById(id); return st ? displayName(st) : '?'; };
+    const ruleText = (r) => ruleSentence(r, nameOf);
+
+    // ---- seat geometry from the canvas (rotation-aware) ----
+    function seatWorld() {
+      const list = [];
+      for (const p of layout.pieces) {
+        const t = TYPES[p.type];
+        const rad = ((p.rotation || 0) * Math.PI) / 180, cos = Math.cos(rad), sin = Math.sin(rad);
+        const pcx = p.x + t.w / 2, pcy = p.y + t.h / 2;
+        t.seats.forEach(([x, y, w, h], i) => {
+          const lx = p.x + x + w / 2 - pcx, ly = p.y + y + h / 2 - pcy;   // seat centre relative to piece centre
+          list.push({ id: `${p.id}:${i}`, piece: p.id, cx: pcx + lx * cos - ly * sin, cy: pcy + lx * sin + ly * cos });
+        });
+      }
+      // distance from each seat centre to the nearest point of the Front of Room bar
+      const f = layout.front, fy = f.y + FRONT.h / 2, fx0 = f.x, fx1 = f.x + FRONT.w;
+      for (const st of list) {
+        const nx = Math.max(fx0, Math.min(fx1, st.cx));
+        st.depth = Math.hypot(st.cx - nx, st.cy - fy);
+      }
+      // rank 0 = physically closest seat; the back half counts as "toward the back"
+      const byDepth = list.slice().sort((a, b) => a.depth - b.depth);
+      byDepth.forEach((st, i) => { st.rank = i; });
+      for (const st of list) st.back = st.rank >= Math.floor(list.length / 2);
+      return list;
+    }
+    const dist = (a, b) => Math.hypot(a.cx - b.cx, a.cy - b.cy);
+    const isAdjacent = (a, b) => a.piece === b.piece || dist(a, b) <= ADJ;
+    const isNear = (a, b) => a.piece === b.piece || dist(a, b) <= NEAR;
+
+    // ---- scoring: lower is better; returns { score, unmet: [rule] } ----
+    function evaluateSeating(seatOf, seats, plan) {
+      let score = 0;
+      const unmet = [];
+      // "In the front" students must occupy the K closest seats (K = how many are tagged):
+      // nearest row fills first, then the next row out.
+      const frontK = new Set(plan.filter((r) => r.type === 'front').map((r) => r.a)).size;
+      for (const r of plan) {
+        const A = seatOf.get(r.a), B = r.b ? seatOf.get(r.b) : null;
+        const w = r.weight;
+        // a participant left unseated: the rule can't be honoured, so charge for it —
+        // when seats are short this makes the solver bench rule-free students first
+        if (!A || (ruleIsPair(r.type) && !B)) { if (r.type !== 'close') { score += w; unmet.push({ rule: r, why: 'someone had no seat' }); } continue; }
+        if (r.type === 'apart') { if (isNear(A, B)) { score += w; unmet.push({ rule: r, why: 'ended up near each other' }); } }
+        else if (r.type === 'together') { if (!isAdjacent(A, B)) { score += w; unmet.push({ rule: r, why: 'not adjacent' }); } }
+        else if (r.type === 'front') {
+          if (A.rank >= frontK) { score += w + (A.rank - frontK) * 2; unmet.push({ rule: r, why: `seat #${A.rank + 1} from the front` }); }   // outside the K nearest: worse the farther out
+        }
+        else if (r.type === 'back') {
+          score += w * (1 - A.rank / Math.max(1, seats.length - 1)) * 0.2;         // gentle pull toward the farthest seats
+          if (!A.back) unmet.push({ rule: r, why: 'in the front half' });
+        }
+        else if (r.type === 'close') { const d = Math.max(0, dist(A, B) - ADJ); score += w * 0.02 * Math.min(d, 12); }   // mild, never "missed"
+      }
+      return { score, unmet };
+    }
+
+    function solveFormula(present, seats, plan) {
+      return annealAssign({ items: present, slots: seats, evaluate: (map) => evaluateSeating(map, seats, plan) });
+    }
+
+    async function populateWithFormula() {
+      const seats = seatWorld();
+      if (!seats.length) { setStatus('Add some desks in Arrange Room first.', 'error'); return; }
+      const present = students.filter((st) => !absentToday.has(st.id));
+      const presentIds = new Set(present.map((st) => st.id));
+      // early check: can every "must" hold at all? (front = K closest seats, back = farther half)
+      const applicable = rulesForPresent(rules, presentIds);
+      const frontK = new Set(applicable.filter((r) => r.type === 'front').map((r) => r.a)).size;
+      const problems = findImpossibleHard(applicable, nameOf, RULE_SCOPE, { frontSeats: Math.min(frontK, seats.length), backSeats: seats.length - Math.floor(seats.length / 2) });
+      let demote = new Set();
+      if (problems.length) {
+        const chosen = await confirmImpossible(problems, nameOf, RULE_SCOPE);
+        if (!chosen) { setStatus('Cancelled — edit the rules in Formula and try again.', 'info'); return; }
+        demote = chosen;
+      }
+      const plan = planRules(rules, presentIds, RULE_SCOPE, demote);
+      const best = solveFormula(present, seats, plan);
+      const next = {};
+      for (const [sid, seat] of best.map) next[seat.id] = sid;
+      applySeating(next);
+      const extra = [];
+      if (present.length > seats.length) extra.push(`${present.length - seats.length} student(s) have no seat`);
+      const summary = summarizeRun(plan, best.unmet, nameOf, RULE_SCOPE, extra);
+      setStatus(summary.text, summary.ok ? 'ok' : 'info');
+      formula.setSummary(summary.text);
+    }
+
+    // Apply a new seating with names flying from where they were to their seats
+    function applySeating(next) {
+      base = snapshot();
+      const from = new Map();
+      for (const [seatId, sid] of Object.entries(assignments)) {
+        const lb = room.querySelector(`.seat[data-seat="${seatId}"] .seat-label`);
+        if (lb) from.set(sid, lb.getBoundingClientRect());
+      }
+      $('student-list').querySelectorAll('.student-chip').forEach((ch) => { if (!from.has(ch.dataset.student)) from.set(ch.dataset.student, ch.getBoundingClientRect()); });
+      assignments = next;
+      commit({ seats: true });
+      if (reduceMotion()) return;
+      // fly a clone of each name from its old spot to its new seat, staggered
+      const seated = Object.entries(assignments);
+      seated.forEach(([seatId, sid], i) => {
+        const seat = room.querySelector(`.seat[data-seat="${seatId}"]`);
+        const lb = seat && seat.querySelector('.seat-label');
+        const start = from.get(sid);
+        if (!seat || !lb || !start) return;
+        const end = lb.getBoundingClientRect();
+        const fly = document.createElement('div');
+        fly.className = 'fly-name';
+        fly.textContent = lb.textContent;
+        fly.style.transform = `translate3d(${start.left + start.width / 2}px, ${start.top + start.height / 2}px, 0)`;
+        document.body.appendChild(fly);
+        lb.style.opacity = '0';
+        const delay = Math.min(i * 18, 500);
+        requestAnimationFrame(() => requestAnimationFrame(() => {
+          fly.style.transition = `transform 420ms cubic-bezier(0.34, 1.3, 0.64, 1) ${delay}ms, opacity 200ms ease ${delay + 300}ms`;
+          fly.style.transform = `translate3d(${end.left + end.width / 2}px, ${end.top + end.height / 2}px, 0)`;
+          fly.style.opacity = '0';
+        }));
+        setTimeout(() => { fly.remove(); lb.style.opacity = ''; }, delay + 520);
+      });
+    }
+
+    // ---- the shared Formula modal, wired to this page ----
+    const formula = createFormulaModal({
+      scope: RULE_SCOPE,
+      periodName: () => { const p = periodsCache.find((x) => x.id === currentPeriodId); return p ? p.name : ''; },
+      students: () => students,
+      absent: () => absentToday,
+      displayName,
+      getRules: () => rules,
+      setRules: (r) => { rules = r; dirty.rules = true; scheduleSave(); },
+      populateLabel: 'Populate',
+      onPopulate: populateWithFormula,
+    });
+    $('btn-formula').addEventListener('click', () => {
+      if (!currentPeriodId) { setStatus('Create a period first.', 'error'); return; }
+      formula.open();
+    });
+
+    // =====================================================================
+    // Mode, period, present
+    // =====================================================================
+    document.querySelectorAll('input[name="mode"]').forEach((r) => {
+      r.addEventListener('change', () => {
+        cancelRotate();
+        mode = r.value;
+        selected = new Set();
+        viewport.classList.toggle('assign', mode === 'assign');
+        render();
+      });
+    });
+
+    async function loadPeriod() {
+      students = [];
+      assignments = {};
+      history = []; future = [];
+      updateUndoButtons();
+      if (!currentPeriodId) { render(); return; }
+      try {
+        students = await getStudents(currentPeriodId);
+        let seats = {};
+        try { seats = await getSeatAssignments(currentPeriodId); } catch (err) { console.error(err); }
+        rules = []; useFormula = false;
+        try {
+          const r = await getFormulaRules(currentPeriodId, RULE_SCOPE);
+          rules = r.rules; useFormula = r.useFormula;
+        } catch (err) { console.error(err); setStatus('Formula rules could not be loaded — run migration-rule-scopes.sql in the Supabase SQL editor.', 'error'); }
+        const ids0 = new Set(students.map((s) => s.id));
+        rules = rules.filter((r) => ids0.has(r.a) && (!ruleIsPair(r.type) || ids0.has(r.b)));
+        absentToday = absentTodayFor(currentPeriodId);
+        $('btn-use-formula').setAttribute('aria-checked', String(useFormula));
+        // drop assignments for students/seats that no longer exist
+        const ids = new Set(students.map((s) => s.id)), valid = new Set(seatIds());
+        for (const [k, v] of Object.entries(seats || {})) if (ids.has(v) && valid.has(k)) assignments[k] = v;
+      } catch (err) { showError(err); }
+      render();
+    }
+    $('period-select').addEventListener('change', async () => {
+      currentPeriodId = $('period-select').value || null;
+      setLastPeriodId(currentPeriodId);
+      await loadPeriod();
+    });
+
+    // Full screen (shared system in shared.js): the room fills the screen in
+    // Assign mode with big names; the front marker stays at its real position.
+    function onPresent(on) {
+      if (on && mode !== 'assign') { document.querySelector('input[name="mode"][value="assign"]').checked = true; mode = 'assign'; selected = new Set(); viewport.classList.add('assign'); render(); }
+      requestAnimationFrame(fitToScreen);
+      setTimeout(fitToScreen, 350);          // again once the browser has finished the fullscreen resize
+    }
+    document.addEventListener('teacherpal:present', (e) => onPresent(e.detail.on));
+
+    // =====================================================================
+    // Boot
+    // =====================================================================
+    try { firstNamesOnly = localStorage.getItem(FIRST_KEY) === '1'; } catch { /* ignore */ }
+    $('btn-firstnames').setAttribute('aria-checked', String(firstNamesOnly));
+
+    if (isConfigured()) {
+      (async () => {
+        const periods = await getPeriods();
+        let saved = null;
+        try {
+          saved = await getRoomLayout();
+        } catch (err) {
+          // Most likely the new tables don't exist yet.
+          setStatus('Room tables not found — run migration-room-builder.sql in the Supabase SQL editor, then reload.', 'error');
+          console.error(err);
+        }
+        if (saved && Array.isArray(saved.pieces)) {
+          layout = { ...layout, ...saved, front: { ...layout.front, ...(saved.front || {}) } };
+        }
+        periodsCache = periods;
+        currentPeriodId = fillPeriodSelect($('period-select'), periods);
+        await loadPeriod();
+        if (isPresent()) onPresent(true);
+        fitToScreen();
+        setSaveState(saved ? 'Saved' : '');
+      })().catch(showError);
+    } else {
+      render();
+      fitToScreen();
+    }
+  </script>
+</body>
+</html>

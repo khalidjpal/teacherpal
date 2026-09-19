@@ -1,0 +1,453 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Rosters — TeacherPal</title>
+  <meta name="color-scheme" content="dark">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;600;700&family=Rajdhani:wght@500;600;700&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="app">
+  <header class="topbar"></header>
+
+
+  <main class="page roster-page">
+    <div id="status" class="status no-present"></div>
+
+    <div class="roster-layout">
+      <!-- ---------- Left panel ---------- -->
+      <aside class="roster-panel neu-raised no-present" aria-label="Roster controls">
+        <label class="period-pick">
+          <span class="lbl">Period</span>
+          <select id="period-select" class="neu-inset"></select>
+        </label>
+        <div class="period-links">
+          <button type="button" class="link" data-action="new-period">New</button>
+          <span aria-hidden="true">·</span>
+          <button type="button" class="link" data-action="rename-period">Rename</button>
+          <span aria-hidden="true">·</span>
+          <button type="button" class="link" data-action="delete-period">Delete</button>
+        </div>
+
+        <div class="period-head">
+          <h1 class="period-title" id="period-title">Rosters</h1>
+          <p class="period-course" id="period-course"></p>
+        </div>
+
+        <div class="seg" role="radiogroup" aria-label="Sort by">
+          <label><input type="radio" name="sort" value="last" checked><span>Last name</span></label>
+          <label><input type="radio" name="sort" value="first"><span>First name</span></label>
+        </div>
+
+        <div class="panel-actions">
+          <button type="button" class="neu-btn" data-action="add">+ Add student</button>
+          <form id="add-form" class="add-form" hidden>
+            <input type="text" id="add-name" class="neu-inset" placeholder="First Last" autocomplete="off" aria-label="New student name">
+            <button type="submit" class="neu-btn primary">Add</button>
+          </form>
+          <button type="button" class="neu-btn" data-action="import">Import list</button>
+          <button type="button" class="neu-btn" id="btn-edit" data-action="edit" aria-pressed="false">
+            <span class="when-off"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>Edit roster</span>
+            <span class="when-on"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12 5 5L20 7"/></svg>Done</span>
+          </button>
+          <button type="button" class="neu-btn ghost" data-action="present">Present</button>
+        </div>
+      </aside>
+
+      <!-- ---------- Right panel: the names ---------- -->
+      <section class="roster-names card" aria-label="Students">
+        <div class="card-head">
+          <h2>Students</h2>
+          <button type="button" class="corner-btn" data-action="present" aria-label="Present on projector" title="Present on projector"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 17 17 7"/><path d="M8 7h9v9"/></svg></button>
+        </div>
+        <div class="list-head">
+          <span class="chip list-count"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg><span id="list-count"></span></span>
+          <input type="search" id="search" class="search" placeholder="Search students…" autocomplete="off" aria-label="Search students">
+          <details class="more">
+            <summary class="neu-btn icon" aria-label="More actions">⋯</summary>
+            <div class="more-menu neu-raised">
+              <button type="button" class="neu-btn" data-action="add">+ Add student</button>
+              <button type="button" class="neu-btn" data-action="import">Import list</button>
+              <button type="button" class="neu-btn" data-action="edit">Edit roster</button>
+              <button type="button" class="neu-btn" data-action="present">Present</button>
+            </div>
+          </details>
+        </div>
+        <div id="grid" class="name-list" role="list"></div>
+        <div id="empty" class="empty-state neu-inset" hidden>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M19 8v6M22 11h-6"/></svg>
+          <p id="empty-text">No students yet</p>
+          <button type="button" class="neu-btn" data-action="import">Import list</button>
+        </div>
+      </section>
+    </div>
+
+    <!-- Undo toast -->
+    <div id="toast" class="toast neu-raised" role="status" aria-live="polite" hidden>
+      <span id="toast-text"></span>
+      <button type="button" class="link" id="toast-undo">Undo</button>
+    </div>
+
+    <!-- Import modal -->
+    <dialog id="import-dialog" class="import-dialog neu-raised">
+      <form method="dialog" class="import-form">
+        <h2 id="import-title">Import list</h2>
+        <textarea id="import-box" class="neu-inset" placeholder="Paste names, one per line: First Last" rows="10"></textarea>
+        <p class="import-meta">
+          <span id="import-count">0 names detected</span>
+          <span id="import-dupes" class="dupes"></span>
+        </p>
+        <div class="import-actions">
+          <button type="button" class="neu-btn ghost" id="import-cancel">Cancel</button>
+          <button type="button" class="neu-btn primary" id="import-go">Import</button>
+        </div>
+      </form>
+    </dialog>
+  </main>
+  </div>
+
+  <script src="shared.js"></script>
+  <script src="schedule.js"></script>
+  <script src="nav.js"></script>
+  <script>
+    // ---------- Elements ----------
+    const periodSelect = document.getElementById('period-select');
+    const gridEl = document.getElementById('grid');
+    const emptyEl = document.getElementById('empty');
+    const searchEl = document.getElementById('search');
+    const editBtn = document.getElementById('btn-edit');
+    const addForm = document.getElementById('add-form');
+    const addInput = document.getElementById('add-name');
+    const toastEl = document.getElementById('toast');
+    const importDialog = document.getElementById('import-dialog');
+    const importBox = document.getElementById('import-box');
+
+    // ---------- State ----------
+    let periods = [];
+    let students = [];
+    let currentPeriodId = null;
+    let query = '';
+    let sortMode = 'last';
+    let editMode = false;
+    let undo = null;          // { student, timer }
+
+    const currentPeriod = () => periods.find((p) => p.id === currentPeriodId) || null;
+
+    // "1st Period - English 9" → { title: "1st Period", course: "English 9" }
+    function splitPeriodName(name) {
+      const m = String(name || '').match(/^(.*?)\s*(?:[-–—:|]|\(|,)\s*(.+?)\)?\s*$/);
+      return m ? { title: m[1], course: m[2] } : { title: name || '', course: '' };
+    }
+
+    function lastName(name) {
+      const parts = name.trim().split(/\s+/);
+      return parts[parts.length - 1] || '';
+    }
+
+    function sortKey(s) {
+      return (sortMode === 'last' ? `${lastName(s.name)} ${s.name}` : s.name).toLocaleLowerCase();
+    }
+
+    // ---------- Periods ----------
+
+    async function loadPeriods(preferredId) {
+      periods = await getPeriods();
+      currentPeriodId = fillPeriodSelect(periodSelect, periods, preferredId);
+      await loadStudents();
+    }
+
+    periodSelect.addEventListener('change', async () => {
+      currentPeriodId = periodSelect.value || null;
+      setLastPeriodId(currentPeriodId);
+      await loadStudents();
+    });
+
+    async function newPeriod() {
+      const name = prompt('Period name (e.g. "Period 3 - English 9"):');
+      if (!name || !name.trim()) return;
+      try {
+        const p = await createPeriod(name.trim(), periods.length);
+        await loadPeriods(p.id);
+        setStatus(`Created "${p.name}".`, 'ok');
+      } catch (err) { showError(err); }
+    }
+
+    async function renameCurrentPeriod() {
+      const p = currentPeriod();
+      if (!p) return;
+      const name = prompt('New name:', p.name);
+      if (!name || !name.trim() || name.trim() === p.name) return;
+      try {
+        await renamePeriod(p.id, name.trim());
+        await loadPeriods(p.id);
+        setStatus('Renamed.', 'ok');
+      } catch (err) { showError(err); }
+    }
+
+    async function deleteCurrentPeriod() {
+      const p = currentPeriod();
+      if (!p) return;
+      if (!confirm(`Delete "${p.name}" and all ${students.length} of its students? This cannot be undone.`)) return;
+      try {
+        await deletePeriod(p.id);
+        await loadPeriods();
+        setStatus(`Deleted "${p.name}".`, 'ok');
+      } catch (err) { showError(err); }
+    }
+
+    // ---------- Students ----------
+
+    async function loadStudents() {
+      students = [];
+      if (currentPeriodId) {
+        try { students = await getStudents(currentPeriodId); } catch (err) { showError(err); }
+      }
+      render();
+    }
+
+    function nextSortOrder() {
+      return students.reduce((m, s) => Math.max(m, s.sort_order), -1) + 1;
+    }
+
+    // ---------- Rendering ----------
+
+    function render() {
+      const p = currentPeriod();
+      const { title, course } = splitPeriodName(p ? p.name : '');
+      document.getElementById('period-title').textContent = p ? title : 'No period';
+      document.getElementById('period-course').textContent = course;
+      document.title = `${p ? title : 'Rosters'} — TeacherPal`;
+
+      const q = query.trim().toLocaleLowerCase();
+      const visible = students
+        .filter((s) => !q || s.name.toLocaleLowerCase().includes(q))
+        .sort((a, b) => sortKey(a).localeCompare(sortKey(b)));
+
+      // "34 students", or "12 of 34 students" while a search is active
+      const total = `${students.length} student${students.length === 1 ? '' : 's'}`;
+      document.getElementById('list-count').textContent =
+        !p ? '' : (q ? `${visible.length} of ${total}` : total);
+
+      gridEl.innerHTML = '';
+      visible.forEach((s, i) => {
+        const card = document.createElement('div');
+        card.className = 'student';
+        card.dataset.id = s.id;
+        card.setAttribute('role', 'listitem');
+        card.innerHTML = `
+          <span class="num" aria-hidden="true">${i + 1}</span>
+          <span class="divider" aria-hidden="true"></span>
+          <span class="name" title="${escapeHtml(s.name)}">${escapeHtml(s.name)}</span>
+          <button type="button" class="remove" data-action="remove" aria-label="Remove ${escapeHtml(s.name)}" title="Remove">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6h18M8 6V4h8v2M6 6l1 14h10l1-14"/><path d="M10 11v6M14 11v6"/></svg>
+          </button>`;
+        gridEl.appendChild(card);
+      });
+
+      const empty = students.length === 0 && !!currentPeriodId;
+      emptyEl.hidden = !empty;
+      gridEl.hidden = empty;
+      document.getElementById('empty-text').textContent = p ? `No students in ${title} yet` : 'Create a period to get started';
+
+      if (!empty && visible.length === 0) {
+        gridEl.innerHTML = '<p class="no-match">No names match your search.</p>';
+      }
+    }
+
+    // ---------- Search & sort ----------
+
+    searchEl.addEventListener('input', () => { query = searchEl.value; render(); });
+
+    document.querySelectorAll('input[name="sort"]').forEach((r) => {
+      r.addEventListener('change', () => { sortMode = r.value; render(); });
+    });
+
+    // ---------- Edit mode ----------
+
+    function setEditMode(on) {
+      editMode = on;
+      document.body.classList.toggle('editing', on);
+      editBtn.setAttribute('aria-pressed', String(on));
+    }
+
+    // Click a name in edit mode → inline inset input
+    gridEl.addEventListener('click', (e) => {
+      if (!editMode) return;
+      const nameEl = e.target.closest('.name');
+      if (!nameEl || nameEl.querySelector('input')) return;
+      const card = nameEl.closest('.student');
+      const student = students.find((s) => s.id === card.dataset.id);
+      if (!student) return;
+      const input = document.createElement('input');
+      input.type = 'text';
+      input.className = 'neu-inset inline-edit';
+      input.value = student.name;
+      input.setAttribute('aria-label', 'Student name');
+      nameEl.textContent = '';
+      nameEl.appendChild(input);
+      input.focus();
+      input.select();
+
+      let done = false;
+      const finish = async (save) => {
+        if (done) return;
+        done = true;
+        const name = input.value.trim();
+        if (save && name && name !== student.name) {
+          card.classList.add('saving');
+          try {
+            await updateStudent(student.id, { name });
+            student.name = name;
+          } catch (err) { showError(err); }
+        }
+        render();
+      };
+      input.addEventListener('keydown', (ev) => {
+        if (ev.key === 'Enter') { ev.preventDefault(); finish(true); }
+        if (ev.key === 'Escape') { ev.preventDefault(); finish(false); }
+      });
+      input.addEventListener('blur', () => finish(true));
+    });
+
+    // ---------- Remove + undo toast ----------
+
+    function showToast(text, onUndo) {
+      document.getElementById('toast-text').textContent = text;
+      toastEl.hidden = false;
+      if (undo) clearTimeout(undo.timer);
+      undo = { onUndo, timer: setTimeout(hideToast, 6000) };
+    }
+    function hideToast() {
+      toastEl.hidden = true;
+      if (undo) clearTimeout(undo.timer);
+      undo = null;
+    }
+    document.getElementById('toast-undo').addEventListener('click', async () => {
+      const u = undo;
+      hideToast();
+      if (u && u.onUndo) await u.onUndo();
+    });
+
+    async function removeStudent(id) {
+      const student = students.find((s) => s.id === id);
+      if (!student) return;
+      try {
+        await deleteStudent(student.id);
+        students = students.filter((s) => s.id !== student.id);
+        render();
+        showToast(`Removed ${student.name}`, async () => {
+          try {
+            await addStudents(currentPeriodId, [student.name], student.sort_order);
+            await loadStudents();
+          } catch (err) { showError(err); }
+        });
+      } catch (err) { showError(err); }
+    }
+
+    // ---------- Add ----------
+
+    addForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const name = addInput.value.trim();
+      if (!name) return;
+      if (!currentPeriodId) { setStatus('Create a period first.', 'error'); return; }
+      try {
+        await addStudents(currentPeriodId, [name], nextSortOrder());
+        addInput.value = '';
+        await loadStudents();
+        setStatus(`Added ${name}.`, 'ok');
+        addInput.focus();
+      } catch (err) { showError(err); }
+    });
+
+    // ---------- Import modal ----------
+
+    function parseNames(text) {
+      return text.split(/[\n,]/).map((s) => s.trim()).filter(Boolean);
+    }
+
+    function updateImportPreview() {
+      const names = parseNames(importBox.value);
+      document.getElementById('import-count').textContent =
+        `${names.length} name${names.length === 1 ? '' : 's'} detected`;
+      const existing = new Set(students.map((s) => s.name.toLocaleLowerCase()));
+      const seen = new Set();
+      const dupes = [];
+      for (const n of names) {
+        const k = n.toLocaleLowerCase();
+        if (existing.has(k) || seen.has(k)) dupes.push(n);
+        seen.add(k);
+      }
+      const dupeEl = document.getElementById('import-dupes');
+      dupeEl.textContent = dupes.length
+        ? `${dupes.length} duplicate${dupes.length === 1 ? '' : 's'}: ${[...new Set(dupes)].slice(0, 5).join(', ')}${dupes.length > 5 ? '…' : ''}`
+        : '';
+      document.getElementById('import-go').disabled = names.length === 0;
+    }
+    importBox.addEventListener('input', updateImportPreview);
+
+    function openImport() {
+      if (!currentPeriodId) { setStatus('Create a period first.', 'error'); return; }
+      const { title } = splitPeriodName(currentPeriod().name);
+      document.getElementById('import-title').textContent = `Import to ${title}`;
+      document.getElementById('import-go').textContent = `Import to ${title}`;
+      importBox.value = '';
+      updateImportPreview();
+      importDialog.showModal();
+      importBox.focus();
+    }
+    document.getElementById('import-cancel').addEventListener('click', () => importDialog.close());
+    document.getElementById('import-go').addEventListener('click', async () => {
+      const names = parseNames(importBox.value);
+      if (names.length === 0) return;
+      try {
+        await addStudents(currentPeriodId, names, nextSortOrder());
+        importDialog.close();
+        await loadStudents();
+        setStatus(`Imported ${names.length} student${names.length === 1 ? '' : 's'}.`, 'ok');
+      } catch (err) { showError(err); }
+    });
+
+    // ---------- Present (projector) mode ----------
+
+    // Full screen (shared system in shared.js) is the projector view: big names, no controls.
+    document.addEventListener('teacherpal:present', (e) => { if (e.detail.on) setEditMode(false); });
+
+    // ---------- Action delegation (desktop panel, mobile menu, cards) ----------
+
+    document.addEventListener('click', (e) => {
+      const btn = e.target.closest('[data-action]');
+      if (!btn) return;
+      const menu = btn.closest('details.more');
+      if (menu) menu.removeAttribute('open');
+      switch (btn.dataset.action) {
+        case 'new-period': newPeriod(); break;
+        case 'rename-period': renameCurrentPeriod(); break;
+        case 'delete-period': deleteCurrentPeriod(); break;
+        case 'add':
+          addForm.hidden = !addForm.hidden;
+          if (!addForm.hidden) addInput.focus();
+          break;
+        case 'import': openImport(); break;
+        case 'edit': setEditMode(!editMode); break;
+        case 'present': enterFullscreen(); break;
+        case 'remove': if (editMode) removeStudent(btn.closest('.student').dataset.id); break;
+      }
+    });
+
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && !isPresent() && editMode && !e.target.closest('input')) setEditMode(false);
+    });
+
+    // ---------- Boot ----------
+
+    if (isConfigured()) {
+      loadPeriods().catch(showError);
+    }
+  </script>
+</body>
+</html>
