@@ -212,27 +212,40 @@
       }
 
       function parseRecoveryFromUrl() {
-        if (location.hash && location.hash.length > 1) {
-          const h = new URLSearchParams(location.hash.slice(1));
-          if (h.get('type') === 'recovery' && h.get('access_token')) {
-            return {
-              kind: 'implicit',
-              access_token: h.get('access_token'),
-              refresh_token: h.get('refresh_token') || null,
-              expires_in: Number(h.get('expires_in') || 3600),
-            };
-          }
-          if (h.get('error')) {
-            return { error: humanErr(h.get('error_description') || h.get('error')) };
-          }
-        }
+        const h = (location.hash && location.hash.length > 1)
+          ? new URLSearchParams(location.hash.slice(1)) : new URLSearchParams();
         const q = new URLSearchParams(location.search);
-        if (q.get('code')) return { kind: 'code', code: q.get('code') };
-        if (q.get('type') === 'recovery' && q.get('token_hash')) {
-          return { kind: 'verify', token_hash: q.get('token_hash') };
+
+        // TEMP diagnostic — remove once recovery flow is confirmed working.
+        console.info('[login] parseRecoveryFromUrl', {
+          hash_keys:  Array.from(h.keys()),
+          query_keys: Array.from(q.keys()),
+        });
+
+        // Errors first — Supabase drops these into either the hash or the
+        // query depending on the flow.
+        const err = h.get('error') || h.get('error_description') || h.get('error_code')
+                 || q.get('error') || q.get('error_description') || q.get('error_code');
+        if (err && !h.get('access_token') && !q.get('code') && !q.get('token_hash')) {
+          return { error: humanErr(h.get('error_description') || q.get('error_description') || err) };
         }
-        if (q.get('error')) {
-          return { error: humanErr(q.get('error_description') || q.get('error')) };
+
+        // Implicit flow — any hash with access_token is treated as a recovery
+        // (or magic-link) callback; some Supabase configs omit `type=recovery`.
+        if (h.get('access_token')) {
+          return {
+            kind: 'implicit',
+            access_token: h.get('access_token'),
+            refresh_token: h.get('refresh_token') || null,
+            expires_in: Number(h.get('expires_in') || 3600),
+            type: h.get('type') || 'recovery',
+          };
+        }
+        // PKCE flow — a bare ?code=... is what Supabase's newer default sends.
+        if (q.get('code')) return { kind: 'code', code: q.get('code') };
+        // Legacy verify flow — ?token_hash=...
+        if (q.get('token_hash')) {
+          return { kind: 'verify', token_hash: q.get('token_hash'), type: q.get('type') || 'recovery' };
         }
         return null;
       }

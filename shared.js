@@ -28,33 +28,44 @@ const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
 const SESSION_KEY = 'teacherpal.session';
 const LOGIN_PAGE = 'login.html';
 
-// Recovery / magic-link bounce — runs synchronously at script parse time
-// so any page that receives a Supabase auth redirect hands the tokens off
-// to login.html (which knows how to complete the flow) before the rest of
-// the page tries to load a session. Covers all three redirect shapes the
-// project might use, depending on Supabase auth-flow config:
-//   • Implicit  → `#access_token=…&type=recovery&…`
-//   • PKCE      → `?code=…`
-//   • Verify    → `?token_hash=…&type=recovery`
+// Recovery / magic-link bounce — runs synchronously at script parse time.
+// If any page (other than login.html itself) lands with a Supabase auth
+// redirect in the URL, hand the tokens off to login.html preserving the
+// full search + hash. This has to fire *before* the "no session → redirect
+// to login" logic below, because redirectToLogin() only preserves the
+// query string and would strip the recovery token from the hash.
+//
+// Detection is deliberately permissive — any of these params in the hash
+// or query is enough to treat the URL as an auth callback:
+//   hash:  access_token, refresh_token, provider_token, error, error_code
+//   query: code, token_hash, error, error_code
+// This covers implicit, PKCE, verify, and magic-link flows equally.
 (function recoveryBounce() {
   if (typeof location === 'undefined') return;
   const onLoginPage = /(^|\/)login\.html$/i.test(location.pathname);
-  if (onLoginPage) return;
 
-  let looksLikeAuthRedirect = false;
-  if (location.hash && location.hash.length > 1) {
-    const h = new URLSearchParams(location.hash.slice(1));
-    if ((h.get('type') === 'recovery' && h.get('access_token')) || h.get('error')) {
-      looksLikeAuthRedirect = true;
-    }
+  const hashParams  = (location.hash && location.hash.length > 1)
+    ? new URLSearchParams(location.hash.slice(1)) : new URLSearchParams();
+  const queryParams = new URLSearchParams(location.search || '');
+
+  const hashLooksAuth = ['access_token', 'refresh_token', 'provider_token', 'error', 'error_code']
+    .some((k) => hashParams.get(k));
+  const queryLooksAuth = ['code', 'token_hash', 'error', 'error_code']
+    .some((k) => queryParams.get(k));
+  const looksLikeAuthRedirect = hashLooksAuth || queryLooksAuth;
+
+  // TEMP diagnostic: keep until recovery flow is confirmed working end-to-end.
+  if (looksLikeAuthRedirect || location.hash) {
+    console.info('[recoveryBounce]', {
+      path: location.pathname,
+      hash_keys: Array.from(hashParams.keys()),
+      query_keys: Array.from(queryParams.keys()),
+      onLoginPage,
+      willBounce: looksLikeAuthRedirect && !onLoginPage,
+    });
   }
-  if (!looksLikeAuthRedirect && location.search) {
-    const q = new URLSearchParams(location.search);
-    if (q.get('code') || (q.get('type') === 'recovery' && q.get('token_hash')) || q.get('error')) {
-      looksLikeAuthRedirect = true;
-    }
-  }
-  if (looksLikeAuthRedirect) {
+
+  if (looksLikeAuthRedirect && !onLoginPage) {
     location.replace(`${LOGIN_PAGE}${location.search}${location.hash}`);
   }
 })();
