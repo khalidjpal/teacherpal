@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin — TeacherPal</title>
+  <meta name="color-scheme" content="dark">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;600;700&family=Rajdhani:wght@500;600;700&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+  <style>
+    .admin-page {
+      padding: var(--space-5) var(--page-pad);
+      display: grid;
+      grid-template-columns: minmax(0, 28rem) minmax(0, 1fr);
+      gap: var(--space-5);
+      align-items: start;
+    }
+    @media (max-width: 900px) { .admin-page { grid-template-columns: 1fr; } }
+
+    .admin-card {
+      position: relative;
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: var(--space-5);
+      box-shadow: var(--shadow-card);
+    }
+    .admin-card::before {
+      content: "";
+      position: absolute; inset: 0 var(--space-5) auto;
+      height: 1px;
+      background: var(--gradient-glow-top);
+    }
+    .admin-card h2 {
+      font-family: var(--font-display);
+      font-size: 0.78rem;
+      font-weight: var(--fw-medium);
+      text-transform: uppercase;
+      letter-spacing: var(--track-display);
+      color: var(--text-muted);
+      margin: 0 0 var(--space-4);
+    }
+
+    .admin-form { display: grid; gap: var(--space-4); }
+    .admin-field { display: grid; gap: var(--space-2); }
+    .admin-field label {
+      font-family: var(--font-body);
+      font-weight: var(--fw-semibold);
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      font-size: var(--fs-xs);
+      color: var(--text-muted);
+    }
+    .admin-field input {
+      width: 100%;
+      min-height: 2.4rem;
+      padding: 0.4rem 0.75rem;
+      font-size: var(--fs-md);
+    }
+    .admin-msg {
+      min-height: 1.4rem;
+      font-family: var(--font-mono);
+      font-size: var(--fs-xs);
+      color: var(--danger);
+    }
+    .admin-msg.ok { color: var(--ok); }
+
+    .user-table { width: 100%; border-collapse: collapse; font-size: var(--fs-sm); }
+    .user-table th {
+      font-family: var(--font-display);
+      font-size: 0.66rem;
+      text-transform: uppercase;
+      letter-spacing: var(--track-label);
+      color: var(--text-muted);
+      text-align: left;
+      padding: 0.5rem 0.6rem;
+      border-bottom: 1px solid var(--border-strong);
+      font-weight: var(--fw-medium);
+    }
+    .user-table td {
+      padding: 0.55rem 0.6rem;
+      border-bottom: 1px solid var(--border);
+      vertical-align: middle;
+    }
+    .user-table tr:last-child td { border-bottom: 0; }
+    .user-table .u-name { font-weight: var(--fw-semibold); }
+    .user-table .u-email { color: var(--text-muted); font-family: var(--font-mono); font-size: var(--fs-xs); }
+    .user-table .u-when  { font-family: var(--font-mono); font-size: var(--fs-xs); color: var(--text-muted); white-space: nowrap; }
+    .user-table .badge-admin {
+      display: inline-block;
+      padding: 0.1rem 0.5rem;
+      border-radius: var(--radius-pill);
+      border: 1px solid var(--accent);
+      color: var(--accent);
+      font-family: var(--font-mono);
+      font-size: 0.7rem;
+      letter-spacing: 0.08em;
+    }
+    .user-table td.actions { text-align: right; white-space: nowrap; }
+    .user-table td.actions button { min-height: 2rem; font-size: var(--fs-xs); padding: 0.3rem 0.7rem; }
+
+    .list-empty { color: var(--text-muted); font-style: italic; padding: var(--space-4) 0; }
+    .list-note  { color: var(--text-muted); font-family: var(--font-mono); font-size: 0.78rem; margin: 0 0 var(--space-4); }
+  </style>
+</head>
+<body class="hub">
+  <div class="app">
+    <header class="topbar"></header>
+
+    <main class="page admin-page" hidden id="admin-main">
+      <section class="admin-card">
+        <h2>Create user</h2>
+        <form class="admin-form" id="create-form" novalidate>
+          <div class="admin-field">
+            <label for="new-username">Username</label>
+            <input type="text" id="new-username" name="username" autocomplete="off" spellcheck="false" autocapitalize="off" required>
+          </div>
+          <div class="admin-field">
+            <label for="new-email">Email</label>
+            <input type="email" id="new-email" name="email" autocomplete="off" spellcheck="false" required>
+          </div>
+          <div class="admin-field">
+            <label for="new-password">Password</label>
+            <input type="text" id="new-password" name="password" autocomplete="off" spellcheck="false" minlength="6" required>
+          </div>
+          <div class="admin-msg" id="create-msg" role="status" aria-live="polite"></div>
+          <button type="submit" class="primary" id="create-submit">Create user</button>
+        </form>
+      </section>
+
+      <section class="admin-card">
+        <h2>Users</h2>
+        <p class="list-note">No delete button — deleting an auth user cascades and destroys all their data.</p>
+        <div id="user-list"><p class="list-empty">Loading…</p></div>
+      </section>
+
+      <div id="status" class="status" hidden></div>
+    </main>
+  </div>
+
+  <script src="shared.js"></script>
+  <script src="schedule.js"></script>
+  <script src="nav.js"></script>
+  <script>
+    (function () {
+      // Client-side gate. The server-side check (in the SECURITY DEFINER
+      // functions) is the real one — this just avoids showing the UI to
+      // non-admins.
+      if (!hasSession()) return;   // shared.js already handled the redirect
+      if (!isAdmin()) { location.replace('index.html'); return; }
+      document.getElementById('admin-main').hidden = false;
+
+      const createForm = document.getElementById('create-form');
+      const uEl = document.getElementById('new-username');
+      const eEl = document.getElementById('new-email');
+      const pEl = document.getElementById('new-password');
+      const msg = document.getElementById('create-msg');
+      const submit = document.getElementById('create-submit');
+      const list = document.getElementById('user-list');
+      const me = currentUser();
+
+      createForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const username = uEl.value.trim();
+        const email = eEl.value.trim();
+        const password = pEl.value;
+        if (!username || !email || !password) { setMsg(msg, 'Fill every field.'); return; }
+        if (password.length < 6) { setMsg(msg, 'Password must be at least 6 characters.'); return; }
+        submit.disabled = true;
+        submit.textContent = 'Creating…';
+        setMsg(msg, '');
+        try {
+          await adminCreateUser(username, email, password);
+          setMsg(msg, `Created ${username}.`, 'ok');
+          uEl.value = ''; eEl.value = ''; pEl.value = '';
+          await loadUsers();
+        } catch (err) {
+          setMsg(msg, humanErr(err));
+        } finally {
+          submit.disabled = false;
+          submit.textContent = 'Create user';
+        }
+      });
+
+      async function loadUsers() {
+        try {
+          const users = await adminListUsers();
+          renderUsers(users || []);
+        } catch (err) {
+          list.innerHTML = `<p class="list-empty">Couldn't load users: ${escapeHtml(humanErr(err))}</p>`;
+        }
+      }
+
+      function renderUsers(users) {
+        if (!users.length) { list.innerHTML = '<p class="list-empty">No users yet.</p>'; return; }
+        const rows = users.map((u) => {
+          const isMe = me && u.user_id === me.id;
+          const admin = u.is_admin ? ' <span class="badge-admin">ADMIN</span>' : '';
+          const last = u.last_sign_in_at
+            ? new Date(u.last_sign_in_at).toLocaleString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })
+            : '—';
+          return `
+            <tr>
+              <td>
+                <div class="u-name">${escapeHtml(u.username)}${admin}${isMe ? ' <span class="u-email">(you)</span>' : ''}</div>
+                <div class="u-email">${escapeHtml(u.email)}</div>
+              </td>
+              <td class="u-when">${escapeHtml(last)}</td>
+              <td class="actions">
+                <button type="button" class="small" data-reset="${escapeHtml(u.user_id)}" data-name="${escapeHtml(u.username)}">Reset password</button>
+              </td>
+            </tr>`;
+        }).join('');
+        list.innerHTML = `
+          <table class="user-table">
+            <thead><tr><th>User</th><th>Last sign-in</th><th></th></tr></thead>
+            <tbody>${rows}</tbody>
+          </table>`;
+        list.querySelectorAll('[data-reset]').forEach((btn) => {
+          btn.addEventListener('click', () => resetFor(btn.dataset.reset, btn.dataset.name));
+        });
+      }
+
+      async function resetFor(userId, username) {
+        const pw = prompt(`New password for ${username}?`);
+        if (pw === null) return;
+        if (pw.length < 6) { showError(new Error('Password must be at least 6 characters.')); return; }
+        try {
+          await adminResetPassword(userId, pw);
+          setStatus(`Password reset for ${username}.`, 'ok');
+        } catch (err) {
+          showError(new Error(humanErr(err)));
+        }
+      }
+
+      function setMsg(el, text, kind) {
+        el.textContent = text || '';
+        el.classList.toggle('ok', kind === 'ok');
+      }
+      function humanErr(err) {
+        const m = (err && err.message) || String(err);
+        // sb() wraps the raw response — try to pull PostgREST's { message } out.
+        const match = m.match(/\{[^{}]*"message"\s*:\s*"([^"]+)"/);
+        return match ? match[1] : m;
+      }
+
+      loadUsers();
+    })();
+  </script>
+</body>
+</html>

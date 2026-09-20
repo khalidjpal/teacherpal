@@ -72,7 +72,12 @@ function normalizeSession(raw) {
   const expiresInMs = (raw.expires_in || 3600) * 1000;
   const prevUser = _session ? _session.user : null;
   const user = raw.user
-    ? { id: raw.user.id, email: raw.user.email, username: prevUser && prevUser.username || null }
+    ? {
+        id: raw.user.id,
+        email: raw.user.email,
+        username: prevUser && prevUser.username || null,
+        is_admin: !!(prevUser && prevUser.is_admin),
+      }
     : prevUser;
   return {
     access_token: raw.access_token,
@@ -82,15 +87,16 @@ function normalizeSession(raw) {
   };
 }
 
-// Resolve a username to the account's email so we can call Supabase's
-// email+password auth underneath. Reads the `profiles` table (anon-readable).
-// Returns null when the username doesn't exist — the caller reports a
-// generic "Sign-in failed" either way, so usernames can't be enumerated.
-async function resolveUsernameToEmail(username) {
+// Resolve a username to the account's profile row so we can call Supabase's
+// email+password auth underneath *and* pick up is_admin in the same fetch.
+// Reads the `profiles` table (anon-readable). Returns null when the username
+// doesn't exist — the caller reports a generic "Sign-in failed" either way,
+// so usernames can't be enumerated.
+async function resolveUsernameToProfile(username) {
   const u = String(username || '').trim();
   if (!u) return null;
   const url = new URL(`${SUPABASE_URL}/rest/v1/profiles`);
-  url.searchParams.set('select', 'email');
+  url.searchParams.set('select', 'user_id,username,email,is_admin');
   url.searchParams.set('username', `ilike.${u}`);
   url.searchParams.set('limit', '1');
   const res = await fetch(url, {
@@ -98,25 +104,36 @@ async function resolveUsernameToEmail(username) {
   });
   if (!res.ok) return null;
   const rows = await res.json().catch(() => []);
-  return (rows[0] && rows[0].email) || null;
+  return rows[0] || null;
+}
+
+// Back-compat alias — some code may still want just the email.
+async function resolveUsernameToEmail(username) {
+  const p = await resolveUsernameToProfile(username);
+  return p ? p.email : null;
 }
 
 async function signIn(username, password) {
   const trimmed = String(username || '').trim();
-  const email = await resolveUsernameToEmail(trimmed);
-  if (!email) throw new Error('Sign-in failed.');
+  const profile = await resolveUsernameToProfile(trimmed);
+  if (!profile) throw new Error('Sign-in failed.');
   const res = await fetch(`${SUPABASE_URL}/auth/v1/token?grant_type=password`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', apikey: SUPABASE_ANON_KEY },
-    body: JSON.stringify({ email, password }),
+    body: JSON.stringify({ email: profile.email, password }),
   });
   const data = await res.json().catch(() => ({}));
   if (!res.ok) throw new Error('Sign-in failed.');   // generic on purpose — no enumeration
   const session = normalizeSession(data);
-  if (session && session.user) session.user.username = trimmed;
+  if (session && session.user) {
+    session.user.username = profile.username || trimmed;
+    session.user.is_admin = !!profile.is_admin;
+  }
   saveSession(session);
   return _session;
 }
+
+const isAdmin = () => !!(_session && _session.user && _session.user.is_admin);
 
 async function signOut() {
   const s = _session;
@@ -238,6 +255,33 @@ async function sbFetch(table, { method = 'GET', params, body, prefer } = {}) {
   const raw = await res.text();
   const data = raw ? (() => { try { return JSON.parse(raw); } catch { return raw; } })() : null;
   return { ok: res.ok, status: res.status, raw, data };
+}
+
+// ---------------------------------------------------------------------------
+// Admin RPCs — call the SECURITY DEFINER functions in migration-admin.sql.
+// The functions themselves check that auth.uid() belongs to an admin, so a
+// non-admin who bypasses the client-side gate still gets 'not authorized'.
+// PostgREST maps RPCs to POST /rest/v1/rpc/<function_name> with a JSON body
+// of named parameters. sb() handles the auth/refresh/401 flow the same as
+// table calls.
+// ---------------------------------------------------------------------------
+
+async function adminCreateUser(username, email, password) {
+  return sb('rpc/admin_create_user', {
+    method: 'POST',
+    body: { p_username: username, p_email: email, p_password: password },
+  });
+}
+
+async function adminResetPassword(userId, password) {
+  return sb('rpc/admin_reset_password', {
+    method: 'POST',
+    body: { p_user_id: userId, p_password: password },
+  });
+}
+
+async function adminListUsers() {
+  return sb('rpc/admin_list_users', { method: 'POST', body: {} });
 }
 
 // ---------------------------------------------------------------------------

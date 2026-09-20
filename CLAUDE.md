@@ -43,8 +43,12 @@ full-screen toggle. There is no sidebar; every page uses the full width.
 
 | File           | Purpose |
 |----------------|---------|
-| `login.html`   | Sign-in page (`body.hub.no-auth`): HUD-styled email/password form; loads only `shared.js` and calls `signIn(email, password)`. Redirects back to `?from=…` on success, else `index.html` |
+| `login.html`   | Sign-in page (`body.hub.no-auth`): HUD-styled username/password form; loads only `shared.js` and calls `signIn(username, password)`. Redirects back to `?from=…` on success, else `index.html` |
+| `admin.html`   | Admin-only user management: create user (username + email + password → auth user + profiles row in one shot) and reset password. **No delete button** — deleting an auth user cascades and destroys all their data. Guarded client-side (`isAdmin()` → redirect) and server-side (every RPC checks `profiles.is_admin`). Loads `shared.js`, `schedule.js`, `nav.js` |
 | `migration-auth.sql` | One-off migration that adds `owner_id` to every table, backfills existing rows to Khalid's uuid, drops the "TEMP anon full access" policies and creates per-owner select/insert/update/delete policies. Run in the Supabase SQL editor before deploying the auth code |
+| `migration-usernames.sql` | One-off migration that adds the `profiles` table (user_id, username, email) so `login.html` can resolve username → email against Supabase Auth. Anon-readable |
+| `migration-admin.sql` | One-off migration that adds `profiles.is_admin` (seeded to true for `khalid`) and creates the SECURITY DEFINER RPCs `admin_create_user`, `admin_reset_password`, `admin_list_users`. Each one gates on the caller's `profiles.is_admin`. Depends on Supabase-internal `auth.users` / `auth.identities` shape — see the file's fragility note |
+| `migration-rekey-owner.sql` | One-off migration for when the auth user was deleted and recreated: repoints every `owner_id` from the old UID to the new one and rebuilds the `profiles.khalid` row |
 | `index.html`   | Hub launcher (`body.hub.launcher`): static `.hub-panels.launcher` grid of `.hud-panel` links; loads only `shared.js`, `schedule.js`, `nav.js` (top bar **without** nav links — the panels are the nav) |
 | `attendance.html` | Attendance screen: `#attendance` in **full** mode — big chart + side column with counts, lists, Copy, Reset, date |
 | `nav.js`       | Shared top bar: renders brand + nav links + readouts + full-screen button into `<header class="topbar">`, marks the active page, runs the clock / bell status (`teacherpal:tick`), exposes `navReady` (periods, overrides, teaches, byNumber). Loaded on every page after `shared.js` + `schedule.js`. |
@@ -110,11 +114,15 @@ shared across accounts.
 - **`shared.js` is the only auth surface.** `authHeaders()` picks the access
   token when signed in (the anon key otherwise), `sb()` refreshes 60s before
   expiry and after any 401, and pages never touch `/auth/v1/*` directly.
-  Exposed helpers: `signIn(username, password)` (resolves username → email
-  via `profiles` first), `resolveUsernameToEmail(username)`, `signOut()`
-  (POSTs `/auth/v1/logout`, clears storage, redirects to login),
-  `refreshSession()`, `hasSession()`, `currentUser()` →
-  `{ id, email, username }`.
+  Exposed helpers: `signIn(username, password)` (resolves username → profile
+  via `profiles` first, so it also picks up `is_admin`),
+  `resolveUsernameToProfile(username)` / `resolveUsernameToEmail(username)`,
+  `signOut()` (POSTs `/auth/v1/logout`, clears storage, redirects to login),
+  `refreshSession()`, `hasSession()`, `isAdmin()`, `currentUser()` →
+  `{ id, email, username, is_admin }`.
+  Admin RPCs: `adminCreateUser(username, email, password)` → new user id,
+  `adminResetPassword(userId, password)`, `adminListUsers()` →
+  `[{ user_id, email, username, is_admin, created_at, last_sign_in_at }]`.
 - **Top-bar account chip + sign-out** (`nav.js`): every page except the hub
   shows `USER <email>` and a small door-arrow icon-button; on the hub the
   chip still appears in the readout row. Both hide on `body.no-auth` pages.
@@ -128,6 +136,25 @@ shared across accounts.
 - **Session storage sits in `localStorage`, not cookies.** Two tabs share
   the session; a sign-out in one tab logs the other out on its next
   request (the refresh fails → redirect).
+- **Admin flag.** `profiles.is_admin boolean` (default false, `khalid` seeded
+  true). Attached to `session.user.is_admin` at sign-in; `isAdmin()` reads
+  it. Purely UI: the source-of-truth check lives in the RPC functions
+  themselves (see below). `nav.js` filters entries marked `admin: true`
+  out of the top nav for non-admins.
+- **Admin user-management uses Postgres RPCs, not an Edge Function.**
+  `admin_create_user`, `admin_reset_password`, `admin_list_users` are
+  SECURITY DEFINER (`migration-admin.sql`); each starts with an
+  `if not exists (select 1 from profiles where user_id = auth.uid() and
+  is_admin) then raise exception 'not authorized'` guard. That means a
+  non-admin who bypasses the client-side gate still gets rejected. The
+  functions insert directly into `auth.users` + `auth.identities`
+  (bcrypt-hashed password, email already confirmed) — this couples us to
+  Supabase's internal auth schema, so a future release could require a
+  migration. The alternative — an Edge Function using the service_role
+  key — would be more future-proof but needs the Supabase CLI + a Deno
+  function deploy, which conflicts with the "plain HTML, no build step"
+  rule. **Never** put the service_role key in client code; the RPC
+  pattern keeps it out of the repo entirely.
 
 ## Database schema
 

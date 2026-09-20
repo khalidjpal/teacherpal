@@ -18,6 +18,7 @@ const NAV_ITEMS = [
   { href: 'wordle.html', label: 'Wordle' },
   { href: 'schedule.html', label: 'Schedule' },
   { href: 'roster.html', label: 'Rosters', setup: true },
+  { href: 'admin.html',  label: 'Admin',   setup: true, admin: true },
 ];
 
 const navPad = (n) => String(n).padStart(2, '0');
@@ -34,10 +35,13 @@ function renderTopNav() {
   const header = document.querySelector('header.topbar');
   if (!header) return;
   const page = currentPage();
-  const links = NAV_ITEMS.map((it) => {
-    const cur = it.href === page ? ' aria-current="page"' : '';
-    return `<a class="tab${it.setup ? ' setup' : ''}" href="${it.href}"${cur}>${it.label}</a>`;
-  }).join('');
+  const admin = typeof isAdmin === 'function' && isAdmin();
+  const links = NAV_ITEMS
+    .filter((it) => !it.admin || admin)   // admin-only entries hide from non-admins
+    .map((it) => {
+      const cur = it.href === page ? ' aria-current="page"' : '';
+      return `<a class="tab${it.setup ? ' setup' : ''}" href="${it.href}"${cur}>${it.label}</a>`;
+    }).join('');
   // the hub (body.launcher) shows no links — its panels are the navigation;
   // every other page keeps the full nav, and the wordmark always links home
   const noLinks = document.body.classList.contains('launcher');
