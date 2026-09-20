@@ -120,7 +120,8 @@ shared across accounts.
   `signOut()` (POSTs `/auth/v1/logout`, clears storage, redirects to login),
   `refreshSession()`, `hasSession()`, `isAdmin()`, `currentUser()` →
   `{ id, email, username, is_admin }`.
-  Admin RPCs: `adminCreateUser(username, email, password)` → new user id,
+  Admin RPCs: `adminCreateUser(username, password)` → new user id (email is
+  minted by `syntheticEmailFor(username)` inside the helper),
   `adminResetPassword(userId, password)`, `adminListUsers()` →
   `[{ user_id, email, username, is_admin, created_at, last_sign_in_at }]`.
 - **Top-bar account chip + sign-out** (`nav.js`): every page except the hub
@@ -155,6 +156,18 @@ shared across accounts.
   function deploy, which conflicts with the "plain HTML, no build step"
   rule. **Never** put the service_role key in client code; the RPC
   pattern keeps it out of the repo entirely.
+- **Synthetic emails for admin-created accounts.** The admin form only
+  asks for a username and password. Supabase still needs an email
+  internally (`/auth/v1/token?grant_type=password` requires one), so
+  `shared.js` mints `<username>@teacherpal.local` — see
+  `syntheticEmailFor()` and `SYNTHETIC_EMAIL_DOMAIN`. **Consequence:**
+  Supabase's password-reset-by-email flow doesn't work for these
+  accounts (nothing routes `*.teacherpal.local`). Admins reset passwords
+  from `admin.html` instead, which calls `admin_reset_password` and
+  updates `auth.users.encrypted_password` directly. If a teacher ever
+  needs a real email address (e.g. to receive Supabase auth emails), you
+  can update `profiles.email` and `auth.users.email` by hand in the SQL
+  editor — nothing else in the app depends on the local domain.
 
 ## Database schema
 

@@ -266,10 +266,25 @@ async function sbFetch(table, { method = 'GET', params, body, prefer } = {}) {
 // table calls.
 // ---------------------------------------------------------------------------
 
-async function adminCreateUser(username, email, password) {
+// Synthetic email for admin-created accounts. Supabase Auth needs one
+// internally (email+password grant), but TeacherPal signs in by username, so
+// we don't ask the admin for a real address — we mint <username>@teacherpal.local
+// deterministically. Password reset via email won't work for these accounts;
+// use the admin page instead.
+const SYNTHETIC_EMAIL_DOMAIN = 'teacherpal.local';
+function syntheticEmailFor(username) {
+  const local = String(username || '').trim().toLowerCase().replace(/[^a-z0-9._-]+/g, '-');
+  return `${local}@${SYNTHETIC_EMAIL_DOMAIN}`;
+}
+
+async function adminCreateUser(username, password) {
   return sb('rpc/admin_create_user', {
     method: 'POST',
-    body: { p_username: username, p_email: email, p_password: password },
+    body: {
+      p_username: username,
+      p_email:    syntheticEmailFor(username),
+      p_password: password,
+    },
   });
 }
 

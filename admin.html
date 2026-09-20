@@ -118,10 +118,6 @@
             <input type="text" id="new-username" name="username" autocomplete="off" spellcheck="false" autocapitalize="off" required>
           </div>
           <div class="admin-field">
-            <label for="new-email">Email</label>
-            <input type="email" id="new-email" name="email" autocomplete="off" spellcheck="false" required>
-          </div>
-          <div class="admin-field">
             <label for="new-password">Password</label>
             <input type="text" id="new-password" name="password" autocomplete="off" spellcheck="false" minlength="6" required>
           </div>
@@ -154,7 +150,6 @@
 
       const createForm = document.getElementById('create-form');
       const uEl = document.getElementById('new-username');
-      const eEl = document.getElementById('new-email');
       const pEl = document.getElementById('new-password');
       const msg = document.getElementById('create-msg');
       const submit = document.getElementById('create-submit');
@@ -164,17 +159,16 @@
       createForm.addEventListener('submit', async (e) => {
         e.preventDefault();
         const username = uEl.value.trim();
-        const email = eEl.value.trim();
         const password = pEl.value;
-        if (!username || !email || !password) { setMsg(msg, 'Fill every field.'); return; }
+        if (!username || !password) { setMsg(msg, 'Fill every field.'); return; }
         if (password.length < 6) { setMsg(msg, 'Password must be at least 6 characters.'); return; }
         submit.disabled = true;
         submit.textContent = 'Creating…';
         setMsg(msg, '');
         try {
-          await adminCreateUser(username, email, password);
+          await adminCreateUser(username, password);
           setMsg(msg, `Created ${username}.`, 'ok');
-          uEl.value = ''; eEl.value = ''; pEl.value = '';
+          uEl.value = ''; pEl.value = '';
           await loadUsers();
         } catch (err) {
           setMsg(msg, humanErr(err));

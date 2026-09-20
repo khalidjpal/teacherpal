@@ -597,9 +597,13 @@ body.hub::before {
 body.hub .app { position: relative; z-index: 1; }
 
 /* ---------- status bar ---------- */
+/* The bar is allowed to wrap: nav-links get priority (never clipped), so when
+   the readouts + nav can't share one row, the nav takes its own row below
+   rather than losing its last tabs to overflow. */
 .hud-bar { min-height: 3.4rem; border-bottom: 1px solid var(--hud-line); gap: var(--space-4); background: rgba(13, 11, 20, 0.55); }
+.topnav { min-width: 0; flex-wrap: wrap; row-gap: 0.35rem; }
 /* horizontal nav: the old rail tabs, laid out in a row; Rosters/Schedule are the quiet setup group */
-.topnav .nav-links { display: flex; align-items: center; gap: 0.15rem; min-width: 0; overflow: hidden; }
+.topnav .nav-links { display: flex; align-items: center; gap: 0.15rem; min-width: 0; flex-shrink: 0; flex-wrap: wrap; row-gap: 0.15rem; }
 .topnav .nav-links .tab { min-height: 2.2rem; padding: 0 0.6rem; white-space: nowrap; border-radius: 4px; }
 @media (max-width: 1400px) { .topnav:not(.no-links) .hud-brand { font-size: 0; gap: 0; } .topnav:not(.no-links) .hud-brand-mark { margin-right: 0.5rem; } .topnav .nav-links .tab { padding: 0 0.5rem; } }
 /* hub: no nav links, so the wordmark stays and the floating Nav button has nothing to show */
@@ -609,12 +613,19 @@ body.launcher .fs-float .fs-nav { display: none; }
 .topnav .nav-links .tab.setup { color: var(--text-muted); opacity: 0.75; }
 .topnav .nav-links .tab.setup:first-of-type, .topnav .nav-links .tab:not(.setup) + .tab.setup { margin-left: 0.6rem; position: relative; }
 .topnav .nav-links .tab:not(.setup) + .tab.setup::before { content: ""; position: absolute; left: -0.4rem; top: 25%; height: 50%; width: 1px; background: var(--hud-line); }
-.topnav { min-width: 0; overflow: hidden; }
-.topnav .hud-status { flex-wrap: nowrap; min-width: 0; overflow: hidden; }
+/* The readouts (right side) are the flex "give" — they shrink and drop items
+   before the nav-links do. */
+.topnav .hud-status { flex-wrap: nowrap; min-width: 0; flex-shrink: 1; overflow: hidden; }
 body.present .topnav .hud-status .hud-key, body.present .topnav .hud-status .hud-stat:nth-child(2) { display: none; }
 .topnav .fs-btn { flex: none; width: 2.2rem; height: 2.2rem; }
-@media (max-width: 1500px) { .topnav .hud-status .hud-key { display: none; } .topnav .hud-status { gap: var(--space-3); } }
-@media (max-width: 1200px) { .topnav .hud-status .hud-stat:nth-child(2) { display: none; } }
+@media (max-width: 1600px) { .topnav .hud-status .hud-key { display: none; } .topnav .hud-status { gap: var(--space-3); } }
+@media (max-width: 1400px) { .topnav .hud-status .hud-stat:nth-child(2) { display: none; } /* drop the date */ }
+@media (max-width: 1200px) { .topnav .hud-status .hud-stat:nth-child(3) { display: none; } /* drop the SCHED */ }
+/* Below this width, the nav takes its own full row so ADMIN can't be clipped
+   even if the readouts and account chip together fill the top row. */
+@media (max-width: 1500px) {
+  .topnav .nav-links { order: 3; flex-basis: 100%; }
+}
 .hud-brand {
   display: inline-flex;
   align-items: center;
