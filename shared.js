@@ -32,7 +32,8 @@ function isConfigured() {
   return SUPABASE_URL.startsWith('http') && !SUPABASE_ANON_KEY.startsWith('PASTE_');
 }
 
-// Pages that don't require a session (login itself, student-facing Wordle).
+// Pages that don't require a session (login itself; add any student-facing
+// pages here in the future).
 function pageAllowsAnon() {
   const b = document.body;
   if (!b) return false;
@@ -77,6 +78,10 @@ function normalizeSession(raw) {
         email: raw.user.email,
         username: prevUser && prevUser.username || null,
         is_admin: !!(prevUser && prevUser.is_admin),
+        theme:    prevUser && prevUser.theme || null,
+        teaches_periods: (prevUser && Array.isArray(prevUser.teaches_periods))
+          ? prevUser.teaches_periods.slice()
+          : null,
       }
     : prevUser;
   return {
@@ -96,7 +101,7 @@ async function resolveUsernameToProfile(username) {
   const u = String(username || '').trim();
   if (!u) return null;
   const url = new URL(`${SUPABASE_URL}/rest/v1/profiles`);
-  url.searchParams.set('select', 'user_id,username,email,is_admin');
+  url.searchParams.set('select', 'user_id,username,email,is_admin,theme,teaches_periods');
   url.searchParams.set('username', `ilike.${u}`);
   url.searchParams.set('limit', '1');
   const res = await fetch(url, {
@@ -128,12 +133,45 @@ async function signIn(username, password) {
   if (session && session.user) {
     session.user.username = profile.username || trimmed;
     session.user.is_admin = !!profile.is_admin;
+    session.user.theme    = profile.theme || DEFAULT_THEME;
+    session.user.teaches_periods = Array.isArray(profile.teaches_periods)
+      ? profile.teaches_periods.slice()
+      : [0, 1, 2, 3, 4, 5, 6, 7];
   }
   saveSession(session);
+  applyTheme(session && session.user ? session.user.theme : DEFAULT_THEME);
   return _session;
 }
 
 const isAdmin = () => !!(_session && _session.user && _session.user.is_admin);
+
+// Bell periods the signed-in user teaches (0..7). Returns a sorted array of
+// ints. Null means "not configured" — callers should treat that as
+// "assume all periods". Used by scheduleStatus, teachingMap, and the
+// period-select filter in fillPeriodSelect.
+function currentTeachesPeriods() {
+  if (!_session || !_session.user) return null;
+  const t = _session.user.teaches_periods;
+  return Array.isArray(t) ? t : null;
+}
+
+// Update the signed-in user's teaches_periods (server + local session +
+// broadcast so nav.js can recompute the status readout without a reload).
+async function setMyTeachesPeriods(periods) {
+  const clean = [...new Set((periods || []).map(Number).filter((n) => Number.isInteger(n) && n >= 0 && n <= 7))]
+    .sort((a, b) => a - b);
+  if (_session && _session.user) {
+    _session.user.teaches_periods = clean;
+    saveSession(_session);
+    document.dispatchEvent(new CustomEvent('teacherpal:teachesPeriods', { detail: { teachesPeriods: clean } }));
+  }
+  try {
+    await sb('rpc/set_my_teaches_periods', { method: 'POST', body: { p_periods: clean } });
+  } catch (err) {
+    console.error('save teaches_periods', err);
+  }
+  return clean;
+}
 
 async function signOut() {
   const s = _session;
@@ -201,7 +239,8 @@ if (isConfigured()) {
 // ---------------------------------------------------------------------------
 
 // The bearer is the user's access token when signed in, otherwise the anon
-// key (so unauthenticated pages like Wordle can still hit their own tables).
+// key (so unauthenticated pages, if any, can still hit their own narrow-
+// policy tables).
 function authHeaders() {
   const bearer = (_session && _session.access_token) || SUPABASE_ANON_KEY;
   return { apikey: SUPABASE_ANON_KEY, Authorization: `Bearer ${bearer}` };
@@ -631,24 +670,35 @@ function setLastPeriodId(id) {
 }
 
 // Fills a <select> with periods and restores the last-used one.
+// Filters the roster to only the bell periods the signed-in user teaches
+// (session.user.teaches_periods); roster entries whose name can't be
+// parsed into a bell number always pass through so weird/legacy names
+// don't silently disappear.
 // Returns the selected period id (or null if there are no periods).
 function fillPeriodSelect(selectEl, periods, preferredId) {
   selectEl.innerHTML = '';
-  if (periods.length === 0) {
+  const teaches = currentTeachesPeriods();
+  const list = teaches && typeof parsePeriodName === 'function'
+    ? periods.filter((p) => {
+        const { n } = parsePeriodName(p.name);
+        return n === null || teaches.includes(n);
+      })
+    : periods;
+  if (list.length === 0) {
     const opt = document.createElement('option');
     opt.value = '';
     opt.textContent = 'No periods yet';
     selectEl.appendChild(opt);
     return null;
   }
-  for (const p of periods) {
+  for (const p of list) {
     const opt = document.createElement('option');
     opt.value = p.id;
     opt.textContent = p.name;
     selectEl.appendChild(opt);
   }
   const wanted = preferredId || getLastPeriodId();
-  const chosen = periods.find((p) => p.id === wanted) ? wanted : periods[0].id;
+  const chosen = list.find((p) => p.id === wanted) ? wanted : list[0].id;
   selectEl.value = chosen;
   setLastPeriodId(chosen);
   return chosen;
@@ -781,37 +831,60 @@ document.addEventListener('keydown', (e) => {
 });
 
 // ---------------------------------------------------------------------------
-// Theme (light / dark)
-// The initial data-theme is set by a tiny inline script in each page's <head>
-// so there is no flash; this just wires the toggle button and persists it.
+// Themes — per-user visual styles.
+//
+// The registry below is the source of truth for which themes exist. A theme
+// is just a token block in style.css (`:root[data-theme="<id>"] { ... }`)
+// plus optional theme-scoped overrides.
+//
+// A tiny inline script in every page's <head> runs *before* the stylesheet
+// parses, and sets data-theme on <html> from localStorage['teacherpal.theme'].
+// That's what prevents a flash of the wrong theme. This file just:
+//   • keeps the applied theme in sync with the signed-in profile,
+//   • exposes applyTheme / currentTheme / setMyTheme for the nav settings
+//     menu and the login-time hydration.
 // ---------------------------------------------------------------------------
 
 const THEME_KEY = 'teacherpal.theme';
+const DEFAULT_THEME = 'jarvis';
+const THEMES = [
+  { id: 'jarvis', label: 'Jarvis' },
+  { id: 'marwa',  label: 'Marwa'  },
+];
 
-function syncThemeToggles() {
-  const dark = document.documentElement.getAttribute('data-theme') === 'dark';
-  document.querySelectorAll('[data-theme-toggle]').forEach((btn) => {
-    btn.setAttribute('aria-checked', String(dark));
-  });
+function validTheme(id) { return !!(id && THEMES.some((t) => t.id === id)); }
+function currentTheme() { return document.documentElement.getAttribute('data-theme') || DEFAULT_THEME; }
+
+// Apply and cache locally. Does not touch the server — call setMyTheme for that.
+function applyTheme(theme) {
+  const t = validTheme(theme) ? theme : DEFAULT_THEME;
+  document.documentElement.setAttribute('data-theme', t);
+  try { localStorage.setItem(THEME_KEY, t); } catch { /* ignore */ }
+  document.dispatchEvent(new CustomEvent('teacherpal:theme', { detail: { theme: t } }));
 }
 
-function setTheme(theme) {
-  document.documentElement.setAttribute('data-theme', theme);
-  try { localStorage.setItem(THEME_KEY, theme); } catch { /* ignore */ }
-  syncThemeToggles();
+// User-triggered theme change: apply immediately, save to server profile.
+async function setMyTheme(theme) {
+  const t = validTheme(theme) ? theme : DEFAULT_THEME;
+  applyTheme(t);
+  if (_session && _session.user) {
+    _session.user.theme = t;
+    saveSession(_session);
+    try {
+      await sb('rpc/set_my_theme', { method: 'POST', body: { p_theme: t } });
+    } catch (err) {
+      // Non-fatal — the theme is applied locally; server persistence is
+      // best-effort.
+      console.error('theme save', err);
+    }
+  }
 }
 
-function toggleTheme() {
-  const current = document.documentElement.getAttribute('data-theme') || 'light';
-  setTheme(current === 'dark' ? 'light' : 'dark');
-}
+// If we already have a stored session with a theme, apply it now so pages
+// come up in the right theme even before the head script runs.
+if (_session && _session.user && _session.user.theme) applyTheme(_session.user.theme);
 
 document.addEventListener('DOMContentLoaded', () => {
-  document.querySelectorAll('[data-theme-toggle]').forEach((btn) => {
-    btn.addEventListener('click', toggleTheme);
-  });
-  syncThemeToggles();
-
   // Warn loudly if shared.js still has placeholder config.
   if (!isConfigured()) {
     setStatus('Supabase is not configured yet — paste your URL and anon key into shared.js.', 'error');

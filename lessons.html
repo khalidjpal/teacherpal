@@ -7,7 +7,8 @@
   <meta name="color-scheme" content="dark">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;600;700&family=Rajdhani:wght@500;600;700&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Comfortaa:wght@400;500;600;700&family=Quicksand:wght@400;500;600;700&family=JetBrains+Mono&family=Nunito:wght@400;600;700&family=Orbitron:wght@500;600;700&family=Rajdhani:wght@500;600;700&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+  <script>(function(){try{var t=localStorage.getItem('teacherpal.theme')||'jarvis';document.documentElement.setAttribute('data-theme',t);}catch(e){document.documentElement.setAttribute('data-theme','jarvis');}})();</script>
   <link rel="stylesheet" href="style.css">
 </head>
 <body class="hub">
@@ -21,13 +22,13 @@
         <section class="hud-box week-box" aria-label="Week" style="--i:0">
           <span class="tick tl" aria-hidden="true"></span><span class="tick tr" aria-hidden="true"></span><span class="tick bl" aria-hidden="true"></span><span class="tick br" aria-hidden="true"></span>
           <div class="dash-head">
-            <button type="button" class="hud-chip" id="wk-prev" title="Previous week">← WEEK</button>
+            <button type="button" class="hud-chip" id="wk-prev" title="Previous week">â† WEEK</button>
             <span class="hud-stat"><span class="hud-key">WEEK OF</span><span class="hud-val" id="wk-label">—</span></span>
-            <button type="button" class="hud-chip" id="wk-next" title="Next week">WEEK →</button>
+            <button type="button" class="hud-chip" id="wk-next" title="Next week">WEEK â†’</button>
             <button type="button" class="hud-chip" id="wk-today">TODAY</button>
             <label class="dash-field"><span class="hud-key">JUMP TO</span><input type="date" id="wk-date" aria-label="Jump to date"></label>
             <span class="spacer"></span>
-            <span class="hud-val hud-quiet wk-hint">← → day · ↑ ↓ period</span>
+            <span class="hud-val hud-quiet wk-hint">â† â†’ day · â†‘ â†“ period</span>
             <button type="button" class="hud-chip" data-fullscreen aria-pressed="false" title="Full screen (F)"><span class="when-off">EXPAND</span><span class="when-on">EXIT</span></button>
           </div>
           <div class="week-grid" id="week-grid"></div>
@@ -49,7 +50,7 @@
     let periods = [];
     let weekStart = mondayOf(todayKey());   // 'YYYY-MM-DD' of the Monday
     let selected = { periodId: null, date: todayKey() };
-    let plans = new Map();                   // 'periodId|date' → plan row
+    let plans = new Map();                   // 'periodId|date' â†’ plan row
 
     function parse(ymd) { const [y, m, d] = ymd.split('-').map(Number); return new Date(y, m - 1, d); }
     function shift(ymd, days) { const d = parse(ymd); d.setDate(d.getDate() + days); return dateKey(d); }
@@ -112,7 +113,7 @@
     $('wk-next').addEventListener('click', () => { weekStart = shift(weekStart, 7); loadWeek(); });
     $('wk-today').addEventListener('click', () => select(selected.periodId || (periods[0] || {}).id, todayKey()));
     $('wk-date').addEventListener('change', (e) => { if (e.target.value) select(selected.periodId || (periods[0] || {}).id, e.target.value); });
-    // keyboard: ← → move a school day, ↑ ↓ move a period (not while typing)
+    // keyboard: â† â†’ move a school day, â†‘ â†“ move a period (not while typing)
     document.addEventListener('keydown', (e) => {
       if (isTyping(e.target) || !selected.periodId || document.querySelector('dialog[open]')) return;
       const i = periods.findIndex((p) => p.id === selected.periodId);

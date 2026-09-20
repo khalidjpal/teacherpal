@@ -36,6 +36,18 @@
 create extension if not exists pgcrypto with schema extensions;
 
 -- ---------------------------------------------------------------------------
+-- 0. Drop the existing admin functions before recreating them.
+--    `create or replace function` refuses to change the return type of an
+--    existing function (Postgres error 42P13), and admin_list_users moved
+--    from RETURNS TABLE (...) to RETURNS SETOF json. Explicit drops with the
+--    full argument signatures make this migration safely re-runnable on top
+--    of any previous version.
+-- ---------------------------------------------------------------------------
+drop function if exists public.admin_create_user(text, text, text);
+drop function if exists public.admin_reset_password(uuid, text);
+drop function if exists public.admin_list_users();
+
+-- ---------------------------------------------------------------------------
 -- 1. is_admin flag on profiles + seed Khalid.
 -- ---------------------------------------------------------------------------
 alter table public.profiles

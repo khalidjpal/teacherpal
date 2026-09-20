@@ -181,13 +181,27 @@ function parsePeriodName(name) {
   return { n: Number(m[1]), course: m[2].trim() || null };
 }
 
-// Map<periodNumber, courseLabel> from the roster's period rows. Periods whose
-// name has no number are skipped (they can't be placed on the bell schedule).
-function teachingMap(periods) {
+// Map<periodNumber, courseLabel|null> — which bell periods the signed-in
+// user teaches. When `teachesPeriods` is supplied (from
+// profiles.teaches_periods), the map contains exactly those bell numbers;
+// the course label comes from a matching roster entry, or is null when the
+// user has a period marked as "mine" but hasn't set up its roster yet.
+// When `teachesPeriods` is null/undefined the legacy behaviour applies: the
+// map is derived from roster names alone (used before the user has a
+// teaches_periods setting, and in defensive callers).
+function teachingMap(periods, teachesPeriods) {
   const map = new Map();
-  for (const p of periods || []) {
-    const { n, course } = parsePeriodName(p.name);
-    if (n !== null && !map.has(n)) map.set(n, course || p.name);
+  if (Array.isArray(teachesPeriods)) {
+    for (const n of teachesPeriods) map.set(n, null);
+    for (const p of periods || []) {
+      const { n, course } = parsePeriodName(p.name);
+      if (n !== null && map.has(n)) map.set(n, course || p.name);
+    }
+  } else {
+    for (const p of periods || []) {
+      const { n, course } = parsePeriodName(p.name);
+      if (n !== null && !map.has(n)) map.set(n, course || p.name);
+    }
   }
   return map;
 }
@@ -210,6 +224,23 @@ function formatCountdown(seconds) {
 function fmt12(hhmm) {
   const [h, m] = hhmm.split(':').map(Number);
   return `${((h + 11) % 12) + 1}:${String(m).padStart(2, '0')}`;
+}
+
+// Wall clock for the top bar. Two formats picked per theme:
+//   • 24-hour: "22:14:37"  (jarvis, matches the HUD feel)
+//   • 12-hour: "10:14:37 PM"  (marwa; caller passes hour12=true)
+// Seconds are optional so pages can render the same time compactly.
+function fmtWallClock(date, { hour12 = false, seconds = true } = {}) {
+  const pad = (n) => String(n).padStart(2, '0');
+  let h = date.getHours();
+  const m = pad(date.getMinutes());
+  const s = pad(date.getSeconds());
+  if (!hour12) {
+    return seconds ? `${pad(h)}:${m}:${s}` : `${pad(h)}:${m}`;
+  }
+  const suffix = h >= 12 ? 'PM' : 'AM';
+  h = ((h + 11) % 12) + 1;
+  return seconds ? `${h}:${m}:${s} ${suffix}` : `${h}:${m} ${suffix}`;
 }
 
 // Which bell period the hub should open on: the period happening now if it

@@ -230,8 +230,9 @@ create index if not exists schedule_overrides_owner_idx on public.schedule_overr
 -- ---------------------------------------------------------------------------
 -- Row Level Security. Every table locks down to authenticated users, filtered
 -- by owner_id = auth.uid(). No anon access anywhere in this file — the
--- future student-facing Wordle tables live outside this schema and get
--- their own narrow anon policies.
+-- if any future student-facing pages need tables, they'd live outside this
+-- schema and get their own narrow anon policies (never grant anon access
+-- to any of the teacher-owned tables above).
 -- ---------------------------------------------------------------------------
 
 alter table public.periods            enable row level security;

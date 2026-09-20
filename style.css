@@ -14,15 +14,59 @@
    Tweak the theme by editing the tokens in the first section only.
    ========================================================================== */
 
-/* ---------- Tokens: color ---------- */
+/* ==========================================================================
+   Tokens
+   --------------------------------------------------------------------------
+   Structural tokens (spacing, sizes, transition, touch) live in the shared
+   `:root` block below — they don't change per theme.
+
+   Every colour, gradient, shadow, font, radius and typographic track lives
+   in a per-theme block: `:root[data-theme="<id>"] { … }`. Add a new theme
+   by copying the marwa block and swapping the values — see CLAUDE.md.
+
+   The default (no `data-theme` attribute) is jarvis, so unstyled pages
+   still render correctly.
+   ========================================================================== */
+
+/* ---------- Tokens: shared (structure) ---------- */
 
 :root {
+  --fs-xs: 0.86rem;
+  --fs-sm: 0.98rem;
+  --fs-md: 1.08rem;
+  --fs-lg: 1.25rem;
+  --fs-xl: 1.6rem;
+  --fs-2xl: 2.4rem;
+  --fs-stat: 2rem;                  /* big key numbers (mono) */
+  --fs-hero: clamp(3rem, 10vw, 12rem);
+
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 0.75rem;
+  --space-4: 1rem;
+  --space-5: 1.5rem;
+  --space-6: 2rem;
+  --space-7: 3rem;
+  --page-pad: clamp(12px, 2vw, 40px);
+
+  --transition: 160ms ease;
+  --touch: 2.5rem;
+  --rail-width: 12.5rem;
+
+  --font: var(--font-body);
+}
+
+/* ---------- Tokens: jarvis (default, dark HUD) ---------- */
+
+:root,
+:root[data-theme="jarvis"] {
   color-scheme: dark;
 
   /* ground */
   --bg-0: #151320;                  /* page edge */
   --bg-1: #1E1A2E;                  /* page glow centre */
   --bg: var(--bg-0);
+  --body-pattern: none;
 
   /* surfaces */
   --card: #0D0B14;                  /* near-black, slight plum tint */
@@ -58,53 +102,111 @@
   --shadow-card-hover: 0 1px 0 rgba(255, 255, 255, 0.04) inset, 0 14px 36px rgba(0, 0, 0, 0.45), 0 0 24px rgba(240, 127, 174, 0.08);
   --shadow-pop: 0 18px 50px rgba(0, 0, 0, 0.6);
   --shadow-pressed: inset 0 0 0 1px var(--accent), inset 0 0 18px rgba(240, 127, 174, 0.25);
+
+  /* type — three faces, HUD flavoured */
+  --font-display: "Orbitron", "Rajdhani", "Segoe UI", system-ui, sans-serif;
+  --font-mono:    "Share Tech Mono", "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  --font-body:    "Rajdhani", "Segoe UI", system-ui, -apple-system, Roboto, Helvetica, Arial, sans-serif;
+  --track-display: 0.14em;          /* Orbitron headings */
+  --track-label:   0.18em;          /* small mono / display labels */
+  --track-body:    0.01em;          /* Rajdhani reads better slightly opened up */
+  --label-transform: uppercase;
+
+  --fw-regular:  500;               /* Rajdhani 400 is too light on a dark ground */
+  --fw-medium:   500;
+  --fw-semibold: 600;
+  --fw-bold:     700;
+
+  --radius-lg:   24px;              /* cards */
+  --radius-md:   14px;              /* inner cards, rows, dialogs */
+  --radius-sm:   10px;              /* buttons, inputs, chips */
+  --radius-pill: 999px;
 }
 
-/* ---------- Tokens: type, spacing, radii, motion ---------- */
+/* ---------- Tokens: marwa (soft cream-pink, one pastel surface) ---------- */
 
-:root {
-  /* type system — three faces, one place to change them
-     display: short uppercase text only (headings, tool names, labels)
-     mono:    every figure and technical label (clock, counts, hints)
-     body:    everything else (buttons, fields, lists, names, paragraphs) */
-  --font-display: "Orbitron", "Rajdhani", "Segoe UI", system-ui, sans-serif;
-  --font-mono: "Share Tech Mono", "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-  --font-body: "Rajdhani", "Segoe UI", system-ui, -apple-system, Roboto, Helvetica, Arial, sans-serif;
-  --font: var(--font-body);
-  --track-display: 0.14em;          /* Orbitron headings */
-  --track-label: 0.18em;            /* small mono / display labels */
-  --track-body: 0.01em;             /* Rajdhani reads better slightly opened up */
+:root[data-theme="marwa"] {
+  color-scheme: light;
 
-  --fs-xs: 0.86rem;
-  --fs-sm: 0.98rem;
-  --fs-md: 1.08rem;
-  --fs-lg: 1.25rem;
-  --fs-xl: 1.6rem;
-  --fs-2xl: 2.4rem;
-  --fs-stat: 2rem;                  /* big key numbers (mono) */
-  --fs-hero: clamp(3rem, 10vw, 12rem);
-  --fw-regular: 500;                /* Rajdhani 400 is too light on a dark ground */
-  --fw-medium: 500;
-  --fw-semibold: 600;
-  --fw-bold: 700;
+  /* ground: slightly deeper cream-pink so cards can be softer and still
+     lift. Cards are barely a shade off the background — the elevation
+     comes from a diffuse pink shadow, never from contrast. */
+  --bg-0: #FBEBF1;
+  --bg-1: #F7E1EA;
+  --bg: var(--bg-0);
+  /* Barely-there texture: 96px tile, tiny 8px heart at 40% fill in a
+     colour just off the background. Reads as grain, not graphic. */
+  --body-pattern: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='96' height='96' viewBox='0 0 96 96'><path d='M48 54 C 44 51 42 48.5 44 47 C 45.5 46.3 47 47 48 48.5 C 49 47 50.5 46.3 52 47 C 54 48.5 52 51 48 54 Z' fill='%23F0D6DF' fill-opacity='0.5'/></svg>");
 
-  --space-1: 0.25rem;
-  --space-2: 0.5rem;
-  --space-3: 0.75rem;
-  --space-4: 1rem;
-  --space-5: 1.5rem;
-  --space-6: 2rem;
-  --space-7: 3rem;
-  --page-pad: clamp(12px, 2vw, 40px);
+  /* surfaces: warm off-white cards, nearly the same colour as the bg */
+  --card: #FFFBFC;                  /* warmer white */
+  --card-2: #FBF3F7;                /* inputs / insets */
+  --card-3: #F5E7EE;                /* hover rows, soft */
+  --border: transparent;            /* no visible borders in marwa */
+  --border-strong: rgba(255, 174, 204, 0.20);
+  --border-hover: rgba(255, 95, 162, 0.22);
 
-  --radius-lg: 24px;                /* cards */
-  --radius-md: 14px;                /* inner cards, rows, dialogs */
-  --radius-sm: 10px;                /* buttons, inputs, chips */
+  /* text — softened plum, closer weights so titles and subtitles blend */
+  --text: #6E5461;                  /* soft plum body */
+  --text-2: #957A87;                /* card titles */
+  --text-muted: #B7A0AB;            /* subtitles */
+
+  /* accent — bubblegum pink, used sparingly */
+  --accent: #FF7FB5;                /* slightly softened from #FF5FA2 */
+  --accent-deep: #ED5C97;
+  --accent-soft: rgba(255, 127, 181, 0.08);   /* the "faint pink wash" hover */
+  --accent-glow: rgba(255, 127, 181, 0.20);
+  --lavender: #C9A7F5;
+  --lavender-soft: rgba(201, 167, 245, 0.14);
+  --danger: #E88090;
+  --ok: #8EDEB4;                    /* mint success */
+
+  --gradient-accent: linear-gradient(180deg, rgba(255, 127, 181, 0.12), rgba(255, 127, 181, 0.02));
+  --gradient-bar: linear-gradient(90deg, var(--accent-deep), var(--accent));
+  --gradient-glow-top: linear-gradient(90deg, transparent, rgba(255, 127, 181, 0.08), transparent);
+
+  --ring: rgba(255, 127, 181, 0.24);
+  /* diffuse, soft pink elevation — larger blur, low alpha */
+  --shadow-card:       0 10px 30px rgba(255, 127, 181, 0.09), 0 2px 6px rgba(255, 127, 181, 0.05);
+  --shadow-card-hover: 0 14px 40px rgba(255, 127, 181, 0.14), 0 2px 8px rgba(255, 127, 181, 0.07);
+  --shadow-pop:        0 20px 60px rgba(255, 127, 181, 0.18);
+  --shadow-pressed:    inset 0 0 0 2px var(--accent), 0 0 10px rgba(255, 127, 181, 0.18);
+
+  /* type — soft rounded, no monospace anywhere. Comfortaa for headings
+     (rounder, lighter than Baloo 2), Quicksand for body / UI / numbers.
+     The clock loses the mono font in marwa but keeps tabular-nums so
+     digits still don't jitter (see .hud-val override below). */
+  --font-display: "Comfortaa", "Quicksand", "Nunito", "Segoe UI", system-ui, sans-serif;
+  --font-mono:    "Quicksand", "Nunito", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  --font-body:    "Quicksand", "Nunito", "Segoe UI", system-ui, -apple-system, Roboto, Helvetica, Arial, sans-serif;
+  --track-display: 0em;
+  --track-label:   0em;
+  --track-body:    0em;
+  --label-transform: none;          /* sentence case throughout */
+
+  --fw-regular:  400;
+  --fw-medium:   500;
+  --fw-semibold: 600;                /* title/subtitle weights closer together */
+  --fw-bold:     700;
+
+  /* Rounder everywhere. Buttons pill via a marwa override; the tokens
+     govern cards, inputs, dialogs. */
+  --radius-lg:   30px;              /* cards */
+  --radius-md:   24px;              /* inner cards / dialogs / rows */
+  --radius-sm:   18px;              /* inputs, chips, small controls */
   --radius-pill: 999px;
+}
 
-  --transition: 160ms ease;
-  --touch: 2.5rem;
-  --rail-width: 12.5rem;
+/* --- marwa HUD tokens: override the jarvis-tinted HUD variables --- */
+:root[data-theme="marwa"] {
+  --hud: var(--accent);
+  --hud-dim: rgba(255, 127, 181, 0.22);
+  --hud-line: rgba(255, 127, 181, 0.14);
+  --hud-line-strong: rgba(255, 127, 181, 0.28);
+  --hud-glow: 0 0 12px rgba(255, 127, 181, 0.14);
+  --hud-glow-soft: 0 0 18px rgba(255, 127, 181, 0.06);
+  --hud-grid: rgba(255, 127, 181, 0.03);
+  --hud-scan: rgba(255, 127, 181, 0.02);
 }
 
 /* ==========================================================================
@@ -665,6 +767,77 @@ a.hud-link:hover, a.hud-link:focus-visible { border-bottom-color: var(--hud); ou
 .signout-btn:hover { border-color: var(--danger); color: var(--danger); }
 @media (max-width: 1400px) { .hud-account { display: none; } }
 
+/* settings menu (gear icon → theme picker) */
+.hud-settings { position: relative; }
+.hud-settings > summary { list-style: none; cursor: pointer; width: 2.3rem; height: 2.3rem; padding: 0; display: inline-flex; align-items: center; justify-content: center; border-radius: var(--radius-sm); }
+.hud-settings > summary::-webkit-details-marker { display: none; }
+.hud-settings > summary::marker { content: ""; }
+.hud-menu {
+  position: absolute;
+  top: calc(100% + 0.5rem);
+  right: 0;
+  min-width: 12rem;
+  background: var(--card);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-pop);
+  padding: 0.5rem;
+  display: grid;
+  gap: 0.25rem;
+  z-index: 40;
+}
+.hud-menu-title {
+  font-family: var(--font-display);
+  text-transform: var(--label-transform);
+  letter-spacing: var(--track-label);
+  font-size: 0.66rem;
+  color: var(--text-muted);
+  padding: 0.35rem 0.6rem 0.15rem;
+}
+.hud-menu-item {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  padding: 0.5rem 0.6rem;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  font-size: var(--fs-sm);
+}
+.hud-menu-item:hover { background: var(--card-2); }
+.hud-menu-item input[type="radio"] { accent-color: var(--accent); }
+
+/* "Periods I teach" — compact 4×2 pill grid */
+.hud-periods {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 0.3rem;
+  padding: 0.35rem 0.6rem 0.55rem;
+}
+.hud-period {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 2rem;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-sm);
+  background: var(--card-2);
+  color: var(--text-muted);
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: background 140ms ease, color 140ms ease, border-color 140ms ease;
+}
+.hud-period input { position: absolute; opacity: 0; pointer-events: none; }
+.hud-period[data-on] {
+  background: var(--accent-soft);
+  border-color: var(--accent);
+  color: var(--accent);
+  font-weight: var(--fw-semibold);
+}
+.hud-period:hover { border-color: var(--border-hover); color: var(--text); }
+.hud-period[data-on]:hover { color: var(--accent); }
+
 /* ---------- panels ---------- */
 .hud-page { padding: clamp(24px, 5vh, 64px) var(--page-pad) var(--space-5); display: flex; flex-direction: column; }
 /* ---------- attendance view (attendance.js) ---------- */
@@ -903,7 +1076,8 @@ body.present.show-nav .topnav .nav-links { display: flex; }
 .hud-panel:hover .tick, .hud-panel:focus-visible .tick { width: var(--hud-tick-hover); height: var(--hud-tick-hover); border-color: var(--hud); }
 .hud-panel:hover .hud-icon, .hud-panel:focus-visible .hud-icon { filter: drop-shadow(0 0 6px rgba(240, 127, 174, 0.6)); }
 
-/* quieter modules: Wordle (offline) and Rosters (setup) */
+/* quieter modules: Rosters (setup). The .soon variant is kept for any
+   future coming-soon tile even though no tool currently uses it. */
 .hud-panel.soon { color: var(--text-muted); }
 .hud-panel.soon .hud-icon { color: var(--text-muted); opacity: 0.6; }
 .hud-panel.soon:hover { transform: none; box-shadow: none; border-color: var(--border-strong); }
@@ -1933,24 +2107,6 @@ body.present .viewport { cursor: default; }
 }
 
 /* ==========================================================================
-   Wordle — layout hooks for when the game is built
-   ========================================================================== */
-
-.wordle-layout { flex: 1; min-height: 0; display: grid; grid-template-columns: minmax(0, 65fr) minmax(16rem, 35fr); gap: var(--space-5); }
-.wordle-main { display: flex; flex-direction: column; min-height: 0; gap: var(--space-4); }
-.wordle-board {
-  --kb-h: 11rem;
-  --tile: min(calc((100dvh - 3.6rem - 2 * var(--page-pad) - var(--kb-h) - 5 * 0.4rem) / 6), calc((100% - 4 * 0.4rem) / 5), 140px);
-  flex: 1; min-height: 0;
-  display: grid; grid-template-columns: repeat(5, var(--tile)); grid-auto-rows: var(--tile); gap: 0.4rem;
-  justify-content: center; align-content: center;
-}
-.wordle-tile { display: grid; place-items: center; border: 1px solid var(--border-strong); border-radius: var(--radius-sm); background: var(--card-2); font-size: calc(var(--tile) * 0.5); font-weight: var(--fw-bold); text-transform: uppercase; }
-.wordle-keyboard { flex: none; width: 100%; display: grid; gap: 0.4rem; }
-.wordle-keyboard .row { display: flex; gap: 0.4rem; }
-.wordle-keyboard button { flex: 1; min-width: 0; padding: 0; min-height: 3rem; }
-
-/* ==========================================================================
    Responsive
    ========================================================================== */
 
@@ -1958,7 +2114,7 @@ body.present .viewport { cursor: default; }
   .rail-sep { width: 1px; height: auto; align-self: stretch; margin: 0.25rem 0.35rem 0.25rem auto; }
   .topnav { flex-wrap: wrap; row-gap: var(--space-2); }
   .topnav .nav-links { order: 3; flex-basis: 100%; overflow-x: auto; }
-  .two-col, .seating-layout, .wordle-layout { grid-template-columns: 1fr; grid-template-rows: auto; }
+  .two-col, .seating-layout { grid-template-columns: 1fr; grid-template-rows: auto; }
   .seating-layout > .card:first-child { min-height: 60dvh; }
   .toolbar .spacer { display: none; }
 }
@@ -2001,10 +2157,10 @@ button, .btn, .neu-btn { font-weight: var(--fw-semibold); }
 /* --- display: headings, brand, tool + rail names, badges --- */
 .brand, .hud-brand, .page-title, .hero h1, .card h2, .card-head h2, .period-title, .group h3,
 .hud-name, .formula-header h2, .impossible-inner h3, .import-form h2, #attendance-title,
-.tab, .front-text, .wordle-tile, .pct,
+.tab, .front-text, .pct,
 .dash-legend .lg, .chart-empty p, .empty-state p, .att-list h3 .hud-key, .hud-chip, .hud-key, .fd-name {
   font-family: var(--font-display);
-  text-transform: uppercase;
+  text-transform: var(--label-transform);
 }
 .brand { font-size: 0.78rem; font-weight: 600; letter-spacing: 0.22em; }
 .hud-brand { font-size: 0.74rem; font-weight: 600; letter-spacing: 0.3em; }
@@ -2022,7 +2178,7 @@ button, .btn, .neu-btn { font-weight: var(--fw-semibold); }
 .front-text { letter-spacing: 0.24em; }
 .pct { font-family: var(--font-mono); text-transform: uppercase; font-weight: 400; letter-spacing: 0.08em; }
 /* control labels: body face, uppercase + tracked so they still read as HUD but stay narrow */
-.mode-seg span, .seg span, .formula-tab, .prio-divider, .rule-type, .fd-add-title, .fd-rule-type { font-family: var(--font-body); text-transform: uppercase; font-weight: 600; letter-spacing: 0.1em; }
+.mode-seg span, .seg span, .formula-tab, .prio-divider, .rule-type, .fd-add-title, .fd-rule-type { font-family: var(--font-body); text-transform: var(--label-transform); font-weight: 600; letter-spacing: 0.1em; }
 .mode-seg span, .seg span { font-size: 0.78rem; }
 .formula-tab { font-size: 0.85rem; }
 .prio-divider, .fd-add-title { font-size: 0.74rem; letter-spacing: 0.14em; }
@@ -2031,7 +2187,6 @@ button, .btn, .neu-btn { font-weight: var(--fw-semibold); }
 .rule-type { font-size: 0.6rem; font-weight: 500; letter-spacing: 0.1em; }
 .chart-empty p, .empty-state p { font-size: 0.8rem; font-weight: 500; letter-spacing: 0.12em; }
 .fd-name { font-size: 0.85rem; font-weight: 600; letter-spacing: 0.08em; }
-.wordle-tile { font-weight: 700; }
 
 /* --- mono: every figure and technical label --- */
 .hud-stat, .hud-key, .hud-val, .hud-sub, .hud-idx, .hud-chip, .save-state, .dash-legend, .att-names li .at,
@@ -2053,7 +2208,7 @@ button, .btn, .neu-btn { font-weight: var(--fw-semibold); }
 .dash-legend { font-size: 0.66rem; letter-spacing: 0.14em; }
 .dash-legend .lg { font-size: 0.56rem; }
 .dash-legend .lg-hint { font-family: var(--font-body); font-size: var(--fs-xs); letter-spacing: 0.02em; }
-.att-counts { font-family: var(--font-display); font-size: 0.64rem; letter-spacing: 0.16em; text-transform: uppercase; }
+.att-counts { font-family: var(--font-display); font-size: 0.64rem; letter-spacing: 0.16em; text-transform: var(--label-transform); }
 .att-counts b { font-size: 2rem; margin-right: 0.3rem; }
 .att-list h3 .hud-val { font-size: 0.9rem; }
 .stat .value { letter-spacing: 0.02em; }
@@ -2117,3 +2272,458 @@ body.present .att-tile { font-size: 1.35rem; }
 @media (max-width: 1100px) { .hub-panels.launcher { grid-template-columns: repeat(3, minmax(0, 1fr)); grid-auto-rows: clamp(10rem, 24vh, 14rem); } }
 @media (max-width: 800px)  { .hub-panels.launcher { grid-template-columns: repeat(2, minmax(0, 1fr)); grid-auto-rows: minmax(8.5rem, auto); align-content: start; } .launcher-page { overflow-y: auto; } }
 @media (max-width: 480px)  { .hub-panels.launcher { grid-template-columns: 1fr; } }
+
+/* ==========================================================================
+   marwa theme — visual overrides beyond what tokens can express.
+   Design intent: one soft pastel surface with gentle elevation. No visible
+   borders anywhere. Rounder-than-jarvis radii, pill buttons, diffuse pink
+   shadows, decorative SVGs used sparingly. Sentence case, closer weights,
+   quieter hierarchy.
+   ========================================================================== */
+
+/* -------------------------------------------------------------------------
+   Marwa mascots and decorative motifs.
+
+   Original, hand-drawn characters kept as inline SVG data URIs so they need
+   no image files and inherit no external dependency. Consistent style
+   across the cast:
+     • simple rounded shapes, flat fills (no strokes on the character
+       silhouette, thin stroke only for the mouth)
+     • tiny minimal face: 2 dot eyes, small curved mouth, soft blush
+     • theme palette only: pinks, lavender, mint, cream
+     • 48×48 viewBox — reads at 24px and stays clear at 200px
+
+   Cast:
+     cat      — round cat with a small bow at the right ear
+     cloud    — sleepy cloud, closed-arc eyes
+     star     — 5-point rounded star, cheerful
+     bunny    — soft cream body with long floppy ears
+     mushroom — pink cap with cream spots, cream stem with a face
+   Add a new mascot by copying one of the entries in the block below and
+   swapping the SVG; see the Marwa mascots section in CLAUDE.md.
+
+   Two small decorative motifs (heart, sparkle) are kept for section
+   headings, corner flourishes, and the save-success animation.
+   ------------------------------------------------------------------------- */
+:root[data-theme="marwa"] {
+  /* --- small motifs (used on pseudo-elements) --- */
+  --marwa-heart:   url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20' fill='%23FFAAC7'><path d='M10 17 C 5 13 2 10 4 7 C 5.5 5.5 8 6 10 8.5 C 12 6 14.5 5.5 16 7 C 18 10 15 13 10 17 Z'/></svg>");
+  --marwa-sparkle: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23F5C3D3'><path d='M12 2 L13.4 10.6 L22 12 L13.4 13.4 L12 22 L10.6 13.4 L2 12 L10.6 10.6 Z'/></svg>");
+
+  /* --- mascots (used in empty states, hub corner, login hero, etc.) --- */
+  --marwa-mascot-cat: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 48 48'><path d='M13 20 L10 6 L22 16 Z' fill='%23FFDCE7'/><path d='M35 20 L38 6 L26 16 Z' fill='%23FFDCE7'/><path d='M14 17 L12.5 10 L19 15 Z' fill='%23FF9EC3'/><path d='M34 17 L35.5 10 L29 15 Z' fill='%23FF9EC3'/><circle cx='24' cy='28' r='16' fill='%23FFDCE7'/><path d='M34 14 L38 11 L38 17 Z' fill='%23FF7FB5'/><path d='M34 14 L30 11 L30 17 Z' fill='%23FF7FB5'/><circle cx='34' cy='14' r='1.6' fill='%23ED5C97'/><circle cx='19' cy='27' r='1.5' fill='%235C3D50'/><circle cx='29' cy='27' r='1.5' fill='%235C3D50'/><ellipse cx='15' cy='31' rx='2.2' ry='1.4' fill='%23FFA8C4' opacity='0.55'/><ellipse cx='33' cy='31' rx='2.2' ry='1.4' fill='%23FFA8C4' opacity='0.55'/><path d='M22 30 Q24 32 26 30' stroke='%235C3D50' stroke-width='1.1' fill='none' stroke-linecap='round'/></svg>");
+
+  --marwa-mascot-cloud: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 48 48'><circle cx='13' cy='30' r='9' fill='%23EAE0F2'/><circle cx='24' cy='22' r='12' fill='%23EAE0F2'/><circle cx='35' cy='30' r='9' fill='%23EAE0F2'/><rect x='13' y='27' width='22' height='12' rx='6' fill='%23EAE0F2'/><path d='M18 25 Q20 27 22 25' stroke='%235C3D50' stroke-width='1.4' fill='none' stroke-linecap='round'/><path d='M26 25 Q28 27 30 25' stroke='%235C3D50' stroke-width='1.4' fill='none' stroke-linecap='round'/><ellipse cx='18' cy='30' rx='1.8' ry='1.1' fill='%23FFA8C4' opacity='0.5'/><ellipse cx='30' cy='30' rx='1.8' ry='1.1' fill='%23FFA8C4' opacity='0.5'/><ellipse cx='24' cy='30' rx='1.2' ry='0.9' fill='%235C3D50' opacity='0.55'/></svg>");
+
+  --marwa-mascot-star: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 48 48'><path d='M24 4 L29 18 L44 19 L32 28 L36 43 L24 34 L12 43 L16 28 L4 19 L19 18 Z' fill='%23FFECC4'/><circle cx='20' cy='23' r='1.5' fill='%235C3D50'/><circle cx='28' cy='23' r='1.5' fill='%235C3D50'/><ellipse cx='17' cy='27' rx='1.6' ry='1' fill='%23FFA8C4' opacity='0.55'/><ellipse cx='31' cy='27' rx='1.6' ry='1' fill='%23FFA8C4' opacity='0.55'/><path d='M22 27 Q24 29 26 27' stroke='%235C3D50' stroke-width='1.1' fill='none' stroke-linecap='round'/></svg>");
+
+  --marwa-mascot-bunny: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 48 48'><ellipse cx='18' cy='11' rx='3.5' ry='9' fill='%23FFCEDD'/><ellipse cx='30' cy='11' rx='3.5' ry='9' fill='%23FFCEDD'/><ellipse cx='18' cy='12' rx='1.4' ry='6' fill='%23FFCCD9'/><ellipse cx='30' cy='12' rx='1.4' ry='6' fill='%23FFCCD9'/><circle cx='24' cy='30' r='13' fill='%23FFCEDD'/><circle cx='19' cy='28' r='1.4' fill='%235C3D50'/><circle cx='29' cy='28' r='1.4' fill='%235C3D50'/><ellipse cx='15' cy='32' rx='2' ry='1.3' fill='%23FFA8C4' opacity='0.6'/><ellipse cx='33' cy='32' rx='2' ry='1.3' fill='%23FFA8C4' opacity='0.6'/><ellipse cx='24' cy='31' rx='0.9' ry='0.7' fill='%23FF7FB5'/><path d='M22 34 Q24 35 26 34' stroke='%235C3D50' stroke-width='0.9' fill='none' stroke-linecap='round'/></svg>");
+
+  --marwa-mascot-mushroom: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 48 48'><rect x='17' y='22' width='14' height='22' rx='7' fill='%23FFF3EA'/><path d='M6 24 Q6 5 24 5 Q42 5 42 24 Z' fill='%23FF9EC3'/><circle cx='16' cy='14' r='2.6' fill='%23FFFBFC'/><circle cx='30' cy='12' r='2.2' fill='%23FFFBFC'/><circle cx='24' cy='20' r='1.8' fill='%23FFFBFC'/><circle cx='21' cy='30' r='1.3' fill='%235C3D50'/><circle cx='27' cy='30' r='1.3' fill='%235C3D50'/><ellipse cx='19' cy='33' rx='1.5' ry='1' fill='%23FFA8C4' opacity='0.6'/><ellipse cx='29' cy='33' rx='1.5' ry='1' fill='%23FFA8C4' opacity='0.6'/><path d='M22.5 33 Q24 34 25.5 33' stroke='%235C3D50' stroke-width='0.9' fill='none' stroke-linecap='round'/></svg>");
+}
+
+/* --- .marwa-mascot utility: drop a mascot anywhere in HTML ---
+   Usage: <span class="marwa-mascot" data-mascot="cat"></span>
+   Size via inline style / class (defaults to 3rem square). Themed away
+   from marwa the element collapses to display:none, so it takes no space
+   in jarvis. */
+.marwa-mascot {
+  display: none;
+  width: 3rem; height: 3rem;
+  vertical-align: middle;
+  background-repeat: no-repeat;
+  background-position: center;
+  background-size: contain;
+}
+:root[data-theme="marwa"] .marwa-mascot { display: inline-block; }
+:root[data-theme="marwa"] .marwa-mascot[data-mascot="cat"]      { background-image: var(--marwa-mascot-cat); }
+:root[data-theme="marwa"] .marwa-mascot[data-mascot="cloud"]    { background-image: var(--marwa-mascot-cloud); }
+:root[data-theme="marwa"] .marwa-mascot[data-mascot="star"]     { background-image: var(--marwa-mascot-star); }
+:root[data-theme="marwa"] .marwa-mascot[data-mascot="bunny"]    { background-image: var(--marwa-mascot-bunny); }
+:root[data-theme="marwa"] .marwa-mascot[data-mascot="mushroom"] { background-image: var(--marwa-mascot-mushroom); }
+
+:root[data-theme="marwa"] body {
+  background: var(--body-pattern), var(--bg-0);
+  color: var(--text);
+}
+:root[data-theme="marwa"] body.hub {
+  background: var(--body-pattern), var(--bg-0);
+}
+/* the sci-fi grid overlay is off */
+:root[data-theme="marwa"] body.hub::before { display: none; }
+
+/* --- surfaces: no borders anywhere, diffuse shadow only --- */
+:root[data-theme="marwa"] .card,
+:root[data-theme="marwa"] .tile,
+:root[data-theme="marwa"] .group,
+:root[data-theme="marwa"] .neu-raised,
+:root[data-theme="marwa"] .hud-panel,
+:root[data-theme="marwa"] .hud-box,
+:root[data-theme="marwa"] .hud-menu,
+:root[data-theme="marwa"] dialog,
+:root[data-theme="marwa"] .toast {
+  border: 0;
+  box-shadow: var(--shadow-card);
+  background: var(--card);
+  border-radius: var(--radius-lg);
+}
+:root[data-theme="marwa"] .hud-menu,
+:root[data-theme="marwa"] .toast { border-radius: var(--radius-md); }
+/* pink glow line at the top edge — off */
+:root[data-theme="marwa"] .card::before,
+:root[data-theme="marwa"] .hud-panel::before,
+:root[data-theme="marwa"] .hud-box::before,
+:root[data-theme="marwa"] .tile::before,
+:root[data-theme="marwa"] .hud-menu::before { display: none; }
+/* corner ticks — off */
+:root[data-theme="marwa"] .tick { display: none; }
+/* top bar edge — soften from a hard line to a faint pink fade */
+:root[data-theme="marwa"] .hud-bar { border-bottom: 0; box-shadow: 0 1px 0 rgba(255, 127, 181, 0.10); background: transparent; }
+
+/* --- hub icons: clearly visible soft pink --- */
+:root[data-theme="marwa"] .hud-icon { color: #FF9DC0; opacity: 1; }
+:root[data-theme="marwa"] .hud-panel:hover .hud-icon,
+:root[data-theme="marwa"] .hud-panel:focus-visible .hud-icon {
+  filter: drop-shadow(0 0 4px rgba(255, 127, 181, 0.28));
+  color: var(--accent);
+}
+
+/* --- subtitles + tracked labels: sentence case, normal spacing --- */
+:root[data-theme="marwa"] .brand,
+:root[data-theme="marwa"] .hud-brand,
+:root[data-theme="marwa"] .page-title,
+:root[data-theme="marwa"] .card h2,
+:root[data-theme="marwa"] .card-head h2,
+:root[data-theme="marwa"] .hud-key,
+:root[data-theme="marwa"] .hud-name,
+:root[data-theme="marwa"] .hud-sub,
+:root[data-theme="marwa"] .hud-idx,
+:root[data-theme="marwa"] .hud-chip,
+:root[data-theme="marwa"] .save-state,
+:root[data-theme="marwa"] .dash-legend,
+:root[data-theme="marwa"] .att-counts,
+:root[data-theme="marwa"] .tab,
+:root[data-theme="marwa"] .group h3,
+:root[data-theme="marwa"] .mode-seg span,
+:root[data-theme="marwa"] .seg span,
+:root[data-theme="marwa"] .formula-tab,
+:root[data-theme="marwa"] .prio-divider,
+:root[data-theme="marwa"] .rule-type,
+:root[data-theme="marwa"] .fd-add-title { letter-spacing: 0; }
+
+/* subtitles (hub panels + everywhere else): sentence case, sit around
+   #8A6A78 — muted but legible, not ghosted */
+:root[data-theme="marwa"] .hud-sub,
+:root[data-theme="marwa"] .hud-idx {
+  font-family: var(--font-body);
+  font-size: 0.82rem;
+  font-weight: 400;
+  color: #8A6A78;
+  text-transform: none;
+  letter-spacing: 0;
+}
+/* top-bar readout labels: same tone as subtitles for consistency */
+:root[data-theme="marwa"] .hud-key {
+  font-family: var(--font-body);
+  font-size: 0.72rem;
+  font-weight: 500;
+  color: #8A6A78;
+  text-transform: none;
+  letter-spacing: 0;
+}
+/* top-bar readout values: darker deep-plum so they read at a glance */
+:root[data-theme="marwa"] .hud-val {
+  color: #5C3D50;
+  font-weight: 500;
+}
+/* card titles + hub tool names: strong deep-plum, weight 600 */
+:root[data-theme="marwa"] .card h2,
+:root[data-theme="marwa"] .card-head h2,
+:root[data-theme="marwa"] .hud-name {
+  color: #5C3D50;
+  font-size: 1rem;
+  font-weight: 600;
+}
+:root[data-theme="marwa"] .page-title {
+  color: #5C3D50;
+  font-weight: 600;
+}
+/* hub tool subtitle: pin size + explicit colour so the launcher rule wins */
+:root[data-theme="marwa"] .launcher .hud-panel .hud-sub { font-size: 0.78rem; color: #8A6A78; }
+
+/* --- buttons: pill, gentle bounce, no border --- */
+:root[data-theme="marwa"] button,
+:root[data-theme="marwa"] .btn,
+:root[data-theme="marwa"] .neu-btn {
+  border-radius: var(--radius-pill);
+  border-color: transparent;
+  transition: transform 180ms cubic-bezier(.34,1.56,.64,1),
+              background 160ms ease, color 160ms ease,
+              box-shadow 160ms ease;
+}
+:root[data-theme="marwa"] button:hover,
+:root[data-theme="marwa"] .btn:hover,
+:root[data-theme="marwa"] .neu-btn:hover { transform: translateY(-1px); background: var(--card-2); border-color: transparent; }
+:root[data-theme="marwa"] button:active,
+:root[data-theme="marwa"] .btn:active,
+:root[data-theme="marwa"] .neu-btn:active { transform: translateY(0) scale(0.98); }
+/* icon-only buttons (top-bar gear, sign-out, full-screen) stay circular */
+:root[data-theme="marwa"] .icon-btn { border-radius: var(--radius-pill); }
+
+/* --- inputs / selects / textareas: rounded, no hard border --- */
+:root[data-theme="marwa"] input[type="text"],
+:root[data-theme="marwa"] input[type="email"],
+:root[data-theme="marwa"] input[type="number"],
+:root[data-theme="marwa"] input[type="search"],
+:root[data-theme="marwa"] input[type="password"],
+:root[data-theme="marwa"] input[type="date"],
+:root[data-theme="marwa"] select,
+:root[data-theme="marwa"] textarea,
+:root[data-theme="marwa"] .neu-inset,
+:root[data-theme="marwa"] .search {
+  background: var(--card-2);
+  border-color: transparent;
+  border-radius: var(--radius-sm);
+  color: var(--text);
+}
+:root[data-theme="marwa"] input:focus,
+:root[data-theme="marwa"] select:focus,
+:root[data-theme="marwa"] textarea:focus {
+  border-color: transparent;
+  box-shadow: 0 0 0 3px var(--ring);
+}
+/* segmented / tab groups: pill container */
+:root[data-theme="marwa"] .seg,
+:root[data-theme="marwa"] .mode-seg { border-radius: var(--radius-pill); background: var(--card-2); border-color: transparent; padding: 0.25rem; }
+:root[data-theme="marwa"] .seg label,
+:root[data-theme="marwa"] .mode-seg label { border-radius: var(--radius-pill); }
+
+/* --- card hover: small lift + faint pink wash --- */
+:root[data-theme="marwa"] .card:hover,
+:root[data-theme="marwa"] .tile:hover,
+:root[data-theme="marwa"] .hud-panel:hover {
+  box-shadow: var(--shadow-card-hover);
+  transform: translateY(-1px);
+  background: color-mix(in oklab, var(--card) 88%, var(--accent-soft) 12%);
+}
+@supports not (color: color-mix(in oklab, red, blue)) {
+  :root[data-theme="marwa"] .card:hover,
+  :root[data-theme="marwa"] .tile:hover,
+  :root[data-theme="marwa"] .hud-panel:hover { background: var(--card-2); }
+}
+
+/* --- decorative motifs --- */
+
+/* section heading: a tiny heart to the left of the title */
+:root[data-theme="marwa"] .card h2::before,
+:root[data-theme="marwa"] .card-head h2::before {
+  content: "";
+  display: inline-block;
+  width: 0.9em;
+  height: 0.9em;
+  margin-right: 0.5rem;
+  background: var(--marwa-heart) no-repeat center / contain;
+  vertical-align: -0.1em;
+}
+:root[data-theme="marwa"] .page-title::before {
+  content: "";
+  display: inline-block;
+  width: 1em;
+  height: 1em;
+  margin-right: 0.5rem;
+  background: var(--marwa-heart) no-repeat center / contain;
+  vertical-align: -0.15em;
+}
+
+/* friendly mascot illustration on empty states — rotate through the cast
+   so different empty views feel varied. .chart-empty → bunny (roster-y),
+   .lesson-empty → cloud (sleepy day), .list-empty → cat (default),
+   .empty-state → mushroom (generic). */
+:root[data-theme="marwa"] .list-empty,
+:root[data-theme="marwa"] .chart-empty,
+:root[data-theme="marwa"] .empty-state,
+:root[data-theme="marwa"] .lesson-empty {
+  text-align: center;
+  padding: var(--space-5) var(--space-4);
+}
+:root[data-theme="marwa"] .list-empty::before,
+:root[data-theme="marwa"] .chart-empty::before,
+:root[data-theme="marwa"] .empty-state::before,
+:root[data-theme="marwa"] .lesson-empty::before {
+  content: "";
+  display: block;
+  width: 5rem;
+  height: 5rem;
+  margin: 0 auto var(--space-3);
+  background-repeat: no-repeat;
+  background-position: center;
+  background-size: contain;
+  opacity: 0.9;
+}
+:root[data-theme="marwa"] .list-empty::before   { background-image: var(--marwa-mascot-cat); }
+:root[data-theme="marwa"] .chart-empty::before  { background-image: var(--marwa-mascot-bunny); }
+:root[data-theme="marwa"] .empty-state::before  { background-image: var(--marwa-mascot-mushroom); }
+:root[data-theme="marwa"] .lesson-empty::before { background-image: var(--marwa-mascot-cloud); }
+
+/* login page: cat mascot above the brand text. Overrides the pink glow
+   line that login.html defines inline on .login-box::before. */
+:root[data-theme="marwa"] .login-box::before {
+  content: "";
+  position: static;
+  display: block;
+  width: 5.5rem;
+  height: 5.5rem;
+  inset: auto;
+  margin: 0 auto var(--space-3);
+  background: var(--marwa-mascot-cat) no-repeat center / contain;
+}
+
+/* hub launcher: a subtle bunny sitting in the bottom-left corner as a
+   soft flourish. Doesn't overlap the floating full-screen widget
+   (bottom-right) or any nav. */
+:root[data-theme="marwa"] body.launcher::after {
+  content: "";
+  position: fixed;
+  left: 1.5rem;
+  bottom: 1.5rem;
+  width: 4.5rem;
+  height: 4.5rem;
+  background: var(--marwa-mascot-bunny) no-repeat center / contain;
+  filter: drop-shadow(0 3px 8px rgba(255, 95, 162, 0.18));
+  opacity: 0.95;
+  pointer-events: none;
+  z-index: 5;
+}
+@media (max-width: 900px) {
+  :root[data-theme="marwa"] body.launcher::after { display: none; }
+}
+
+/* --- sparkle animation on save-success status --- */
+:root[data-theme="marwa"] .status.status-ok::after {
+  content: "";
+  display: inline-block;
+  width: 0.9em;
+  height: 0.9em;
+  margin-left: 0.35em;
+  background: var(--marwa-sparkle) no-repeat center / contain;
+  vertical-align: -0.05em;
+  animation: marwa-sparkle 900ms ease-out;
+}
+@keyframes marwa-sparkle {
+  0%   { transform: scale(0)   rotate(-90deg); opacity: 0; }
+  40%  { transform: scale(1.4) rotate(20deg);  opacity: 1; }
+  100% { transform: scale(1)   rotate(45deg);  opacity: 0.9; }
+}
+
+/* --- projector readability: names stay high-contrast --- */
+:root[data-theme="marwa"] .student .name,
+:root[data-theme="marwa"] .name-chip,
+:root[data-theme="marwa"] .seat-label,
+:root[data-theme="marwa"] .att-tile,
+:root[data-theme="marwa"] .attend-name,
+:root[data-theme="marwa"] .att-names li,
+:root[data-theme="marwa"] .group .name-chip { color: #3E2434; }
+
+/* --- setup tab: no dashed border, just quieter tone --- */
+:root[data-theme="marwa"] .topnav .nav-links .tab.setup { color: var(--text-muted); opacity: 0.9; }
+:root[data-theme="marwa"] .launcher .hud-panel.setup { border-style: solid; border-color: transparent; }
+
+/* --- dividers: faint pink, or spacing --- */
+:root[data-theme="marwa"] .rail-sep { background: rgba(255, 127, 181, 0.14); }
+:root[data-theme="marwa"] .card-head { border-color: rgba(255, 127, 181, 0.10); }
+:root[data-theme="marwa"] hr { border: 0; height: 1px; background: rgba(255, 127, 181, 0.10); }
+
+/* --- typography: drop the mono clock, airier lines, sentence case --- */
+/* The clock and every mono readout in jarvis (hud-val, save-state, chips,
+   counts, badges, seed/status text) inherits Share Tech Mono. In marwa we
+   replace those with the display face — Comfortaa reads soft and legible
+   at small sizes — and force tabular-nums so the digits don't jitter as
+   the seconds tick over. */
+:root[data-theme="marwa"] .hud-val,
+:root[data-theme="marwa"] .hud-stat,
+:root[data-theme="marwa"] .hud-sub,
+:root[data-theme="marwa"] .hud-idx,
+:root[data-theme="marwa"] .hud-chip,
+:root[data-theme="marwa"] .save-state,
+:root[data-theme="marwa"] .dash-legend,
+:root[data-theme="marwa"] .stat .value,
+:root[data-theme="marwa"] .att-counts b,
+:root[data-theme="marwa"] .att-counts i,
+:root[data-theme="marwa"] #exp-counts,
+:root[data-theme="marwa"] .chip,
+:root[data-theme="marwa"] .list-count,
+:root[data-theme="marwa"] .groups-bar .preview,
+:root[data-theme="marwa"] .seat-bar .zoom-pct,
+:root[data-theme="marwa"] .seat-bar .save-state,
+:root[data-theme="marwa"] .period-links,
+:root[data-theme="marwa"] .status,
+:root[data-theme="marwa"] .toast,
+:root[data-theme="marwa"] .bell-table td:nth-child(2),
+:root[data-theme="marwa"] .bell-table th,
+:root[data-theme="marwa"] .ov-date,
+:root[data-theme="marwa"] .today-line span,
+:root[data-theme="marwa"] .dash-field input[type="date"],
+:root[data-theme="marwa"] .fd-absent,
+:root[data-theme="marwa"] .fd-count,
+:root[data-theme="marwa"] .formula-warnings,
+:root[data-theme="marwa"] .student .num,
+:root[data-theme="marwa"] .rot-label,
+:root[data-theme="marwa"] .att-names li .at {
+  font-family: var(--font-display);
+  font-variant-numeric: tabular-nums;
+  font-weight: 500;
+  letter-spacing: 0;
+  text-transform: none;
+}
+/* the clock itself — same, but a touch heavier so it doesn't disappear */
+:root[data-theme="marwa"] #hud-time,
+:root[data-theme="marwa"] #hud-date,
+:root[data-theme="marwa"] #hud-sched,
+:root[data-theme="marwa"] #hud-now { font-family: var(--font-display); font-variant-numeric: tabular-nums; font-weight: 500; letter-spacing: 0; text-transform: none; }
+
+/* airier lines throughout marwa */
+:root[data-theme="marwa"] body { line-height: 1.65; }
+:root[data-theme="marwa"] .card, :root[data-theme="marwa"] .hud-panel { line-height: 1.55; }
+/* headings breathe more */
+:root[data-theme="marwa"] .card h2,
+:root[data-theme="marwa"] .card-head h2,
+:root[data-theme="marwa"] .page-title,
+:root[data-theme="marwa"] .hud-name { line-height: 1.4; }
+
+/* catch any last uppercase / wide-tracked HUD leftovers */
+:root[data-theme="marwa"] .hud-key,
+:root[data-theme="marwa"] .hud-sub,
+:root[data-theme="marwa"] .hud-idx,
+:root[data-theme="marwa"] .hud-chip,
+:root[data-theme="marwa"] .att-counts,
+:root[data-theme="marwa"] .front-text,
+:root[data-theme="marwa"] .fd-name,
+:root[data-theme="marwa"] .chip,
+:root[data-theme="marwa"] .pct,
+:root[data-theme="marwa"] .save-state,
+:root[data-theme="marwa"] .dash-legend .lg,
+:root[data-theme="marwa"] .empty-state p,
+:root[data-theme="marwa"] .chart-empty p,
+:root[data-theme="marwa"] .att-list h3 .hud-key,
+:root[data-theme="marwa"] .prio-divider,
+:root[data-theme="marwa"] .rule-type,
+:root[data-theme="marwa"] .fd-add-title,
+:root[data-theme="marwa"] .fd-rule-type,
+:root[data-theme="marwa"] .mode-seg span,
+:root[data-theme="marwa"] .seg span,
+:root[data-theme="marwa"] .formula-tab,
+:root[data-theme="marwa"] .brand,
+:root[data-theme="marwa"] .hud-brand,
+:root[data-theme="marwa"] .tab { text-transform: none; letter-spacing: 0; }
+
+/* --- reduced motion --- */
+@media (prefers-reduced-motion: reduce) {
+  :root[data-theme="marwa"] button:hover,
+  :root[data-theme="marwa"] .btn:hover,
+  :root[data-theme="marwa"] .neu-btn:hover,
+  :root[data-theme="marwa"] .card:hover,
+  :root[data-theme="marwa"] .tile:hover,
+  :root[data-theme="marwa"] .hud-panel:hover { transform: none; }
+  :root[data-theme="marwa"] .hud-panel:hover::after { transform: none; }
+  :root[data-theme="marwa"] .status.status-ok::after { animation: none; }
+}

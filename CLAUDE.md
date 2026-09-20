@@ -1,6 +1,6 @@
 # TeacherPal
 
-A teacher hub web app for West High: a period dashboard (live seating chart + attendance + bell-schedule status), rosters, Create Groups, seating chart, and (later) Wordle.
+A teacher hub web app for West High: a period dashboard (live seating chart + attendance + bell-schedule status), rosters, Create Groups, and a seating chart.
 Built for a classroom projector — big type, high contrast, minimal chrome.
 Dark dashboard look with a subtle pink accent (see design-ref.png).
 
@@ -14,14 +14,14 @@ Dark dashboard look with a subtle pink accent (see design-ref.png).
 - **Supabase Auth (email/password), no public sign-up.** Accounts are created
   in the Supabase dashboard; every request goes as an authenticated user with
   a Bearer access token. The anon key is still shipped (harmless — RLS blocks
-  it) so the student-facing Wordle page can hit its own narrow-policy tables
-  without a login. See the Auth section below.
+  it) so future student-facing pages (if any) can hit their own
+  narrow-policy tables without a login. See the Auth section below.
 
 ## Screens
 
-Nine screens, one horizontal top nav (built by `nav.js` on every page):
+Eight screens, one horizontal top nav (built by `nav.js` on every page):
 **Hub · Attendance · Lesson Plans · Create Groups · Seating · Bathroom ·
-Wordle · Schedule · | Rosters** (Rosters is the quiet "setup" item after a
+Schedule · | Rosters** (Rosters is the quiet "setup" item after a
 divider). The active
 screen gets `aria-current="page"` (pink fill). The nav bar also carries
 the live readouts — clock, date, SCHED, NOW period + countdown — and the
@@ -29,13 +29,12 @@ full-screen toggle. There is no sidebar; every page uses the full width.
 
 | Screen | File | What it is for |
 |--------|------|----------------|
-| Hub | `index.html` | **Launcher only**: the eight tools as a balanced grid of HUD panels (icon · name · a few words). No live data, no Supabase calls of its own |
+| Hub | `index.html` | **Launcher only**: the tools as a balanced grid of HUD panels (icon · name · a few words). No live data, no Supabase calls of its own |
 | Attendance | `attendance.html` | Taking roll: the seating chart large and central with click-to-cycle, counts, absent/tardy lists, Copy list, Reset, date control; the screen to project |
 | Lesson Plans | `lessons.html` | Writing plans: a Mon–Fri week grid across all periods (jump to any date, ← → ↑ ↓ to move) with the full editor for the selected cell beside it |
 | Create Groups | `groups.html` | Random / formula groups, projector view in full screen |
 | Seating | `seating.html` | Room builder + seat assignment |
 | Bathroom | `bathroom.html` | Bathroom tracker: click a student to sign out (timestamped) / back in, live elapsed time, "too long" flag, max-out cap, today's log, per-student history |
-| Wordle | `wordle.html` | Stub |
 | Rosters | `roster.html` | Setup: periods + students |
 | Schedule | `schedule.html` | Setup: bell-schedule overrides + reference |
 
@@ -49,6 +48,8 @@ full-screen toggle. There is no sidebar; every page uses the full width.
 | `migration-usernames.sql` | One-off migration that adds the `profiles` table (user_id, username, email) so `login.html` can resolve username → email against Supabase Auth. Anon-readable |
 | `migration-admin.sql` | One-off migration that adds `profiles.is_admin` (seeded to true for `khalid`) and creates the SECURITY DEFINER RPCs `admin_create_user`, `admin_reset_password`, `admin_list_users`. Each one gates on the caller's `profiles.is_admin`. Depends on Supabase-internal `auth.users` / `auth.identities` shape — see the file's fragility note |
 | `migration-rekey-owner.sql` | One-off migration for when the auth user was deleted and recreated: repoints every `owner_id` from the old UID to the new one and rebuilds the `profiles.khalid` row |
+| `migration-themes.sql` | One-off migration that adds `profiles.theme text default 'jarvis'` and the `set_my_theme(text)` SECURITY DEFINER RPC (validated `^[a-z0-9_-]+$`, updates only the caller's own row) |
+| `migration-teaches-periods.sql` | One-off migration that adds `profiles.teaches_periods integer[]` (each entry 0-7) and the `set_my_teaches_periods(int[])` RPC. Seeds `khalid` to `{1,2,3,5,6}` and `marwa` to `{2,3,4,5,6}` |
 | `index.html`   | Hub launcher (`body.hub.launcher`): static `.hub-panels.launcher` grid of `.hud-panel` links; loads only `shared.js`, `schedule.js`, `nav.js` (top bar **without** nav links — the panels are the nav) |
 | `attendance.html` | Attendance screen: `#attendance` in **full** mode — big chart + side column with counts, lists, Copy, Reset, date |
 | `nav.js`       | Shared top bar: renders brand + nav links + readouts + full-screen button into `<header class="topbar">`, marks the active page, runs the clock / bell status (`teacherpal:tick`), exposes `navReady` (periods, overrides, teaches, byNumber). Loaded on every page after `shared.js` + `schedule.js`. |
@@ -61,7 +62,7 @@ full-screen toggle. There is no sidebar; every page uses the full width.
 | `attendance.js` | `initAttendance({ mode: 'full' \| 'compact' })` builds and runs the attendance view (chart or tiles, click-to-cycle, AUTO period, date, counts, lists, Copy, Reset, autosave). Data only via `shared.js`; bell data via `navReady`. |
 | `room.js`      | Seating-room geometry shared by the builder and the hub chart: `G`, `TYPES`, `FRONT`, `pieceTransform`, `bbox`, `labelStyle`, `roomBounds`. No DOM state, no Supabase. |
 | `shared.js`    | Supabase config + REST client + data helpers + small UI helpers. **The only file that talks to Supabase.** |
-| `schedule.js`  | West High bell schedules as data (`SCHEDULES`, `FINALS_PAIRS`, `SCHEDULE_OPTIONS`) + pure helpers: `resolveSchedule(date, overrides)`, `scheduleStatus(now, sched, teaches)`, `teachingMap(periods)`, `parsePeriodName`, `dateKey`, `formatCountdown`, `fmt12`. No DOM, no Supabase. |
+| `schedule.js`  | West High bell schedules as data (`SCHEDULES`, `FINALS_PAIRS`, `SCHEDULE_OPTIONS`) + pure helpers: `resolveSchedule(date, overrides)`, `scheduleStatus(now, sched, teaches)`, `teachingMap(periods, teachesPeriods?)`, `parsePeriodName`, `dateKey`, `formatCountdown`, `fmt12`, `fmtWallClock(date, {hour12, seconds})`. No DOM, no Supabase. |
 | `formula.js`   | Shared Formula **algorithms and modal only** — never rule data: type metadata per scope (`RULE_TYPES`, `SCOPE_TYPES`, `KEY_TYPES`), priorities (`sortByPriority`, `priorityWeight`, `planRules`), feasibility (`findImpossibleHard`, `confirmImpossible`), the `annealAssign()` solver, `groupWithFormula()`, `summarizeRun()`, `absentTodayFor()`, `createFormulaModal({ scope, … })`. No Supabase calls. |
 | `style.css`    | Shared styling for every page (dark pink dashboard theme; all tokens at the top) |
 | `roster.html`  | Two-panel roster: period panel (search, sort, add, import modal, edit mode, full screen) + name-card grid with undo-toast remove |
@@ -73,7 +74,6 @@ full-screen toggle. There is no sidebar; every page uses the full width.
 | `migration-attendance.sql` | One-off migration creating the `attendance` table (run in the Supabase SQL editor) |
 | `migration-schedule-overrides.sql` | One-off migration creating `schedule_overrides` + seeding the six finals dates (run in the Supabase SQL editor) |
 | `schedule.html` | Schedule admin: date → schedule overrides (add / remove, finals pair, note) and a bell-schedule reference table with the roster's classes filled in |
-| `wordle.html`  | Stub |
 | `schema.sql`   | Tables + RLS policies. Run in the Supabase SQL editor. Safe to re-run. |
 | `design-ref.png` | Visual reference for the current theme (blue in the image = pink here) |
 
@@ -124,16 +124,22 @@ shared across accounts.
   minted by `syntheticEmailFor(username)` inside the helper),
   `adminResetPassword(userId, password)`, `adminListUsers()` →
   `[{ user_id, email, username, is_admin, created_at, last_sign_in_at }]`.
+  Theme: `THEMES` (registry), `applyTheme(id)`, `currentTheme()`,
+  `setMyTheme(id)` (applies locally + POSTs `set_my_theme` RPC to persist
+  on the profile).
+  Teaches-periods: `currentTeachesPeriods()` → `int[]` or `null`,
+  `setMyTeachesPeriods(arr)` (dedupes / sorts / clamps to 0-7 client-side,
+  updates local session, dispatches `teacherpal:teachesPeriods`, POSTs
+  `set_my_teaches_periods` RPC).
 - **Top-bar account chip + sign-out** (`nav.js`): every page except the hub
   shows `USER <email>` and a small door-arrow icon-button; on the hub the
   chip still appears in the readout row. Both hide on `body.no-auth` pages.
 - **`body.no-auth`** — the one escape hatch. Pages carrying this class skip
   the auth check and stay accessible to anonymous visitors. Today only
-  `login.html` and `wordle.html` use it. The student-facing Wordle page has
-  no login by design; when it grows tables of its own, give those tables
-  their own narrow anon policies (anon can `insert` a result, `select` only
-  the day's word, and nothing else — never grant anon access to any of the
-  teacher-owned tables).
+  `login.html` uses it. Any future student-facing page (a shared classroom
+  activity, etc.) should carry this class and get its own narrow anon RLS
+  policies on its own tables — never grant anon access to any of the
+  teacher-owned tables.
 - **Session storage sits in `localStorage`, not cookies.** Two tabs share
   the session; a sign-out in one tab logs the other out on its next
   request (the refresh fails → redirect).
@@ -142,6 +148,29 @@ shared across accounts.
   it. Purely UI: the source-of-truth check lives in the RPC functions
   themselves (see below). `nav.js` filters entries marked `admin: true`
   out of the top nav for non-admins.
+- **Teaches-periods.** `profiles.teaches_periods integer[]` (each 0-7,
+  default all eight; seeded `khalid={1,2,3,5,6}`, `marwa={2,3,4,5,6}`).
+  Attached to `session.user.teaches_periods`; `currentTeachesPeriods()`
+  returns the sorted array. **This is the source of truth for which bell
+  periods count as "yours" vs "prep":**
+    - `teachingMap(periods, teachesPeriods)` (schedule.js) is now
+      seeded from `teaches_periods` first, then overlaid with course
+      names from any matching roster entry (`parsePeriodName`). A bell
+      number in the map is "taught"; missing → `scheduleStatus`
+      renders it as `PREP` in the hub NOW line and in the bell-table.
+    - `fillPeriodSelect(select, periods)` (shared.js) filters roster
+      entries whose parsed bell number isn't in `teaches_periods` so
+      selectors on Attendance / Groups / Seating / Bathroom hide them
+      too. Entries whose name has no bell number always pass through
+      (safety for weird/legacy names).
+    - The bell schedule itself (`SCHEDULES` in schedule.js) still
+      contains every period — it's the real school timetable. Only
+      the *display* of "mine vs prep" is filtered.
+  Change it in the top-bar gear menu → **Periods I teach** (0-7
+  checkboxes). Toggling any checkbox calls `setMyTeachesPeriods(arr)`,
+  which broadcasts `teacherpal:teachesPeriods`; `nav.js` listens and
+  rebuilds `navState.teaches` on the fly so the NOW readout updates
+  without a page reload.
 - **Admin user-management uses Postgres RPCs, not an Edge Function.**
   `admin_create_user`, `admin_reset_password`, `admin_list_users` are
   SECURITY DEFINER (`migration-admin.sql`); each starts with an
@@ -327,10 +356,10 @@ delete cascade`, enable RLS, add the four per-owner policies in a `DO $$`
 block (never `CREATE POLICY IF NOT EXISTS` — not valid Postgres), and put
 `owner_id` in any per-user uniqueness constraint.
 
-The future student-facing Wordle tables are the one exception: those live
-outside this ownership model and get their own narrow anon policies — anon
-can `insert` a submitted result and `select` only the day's word, nothing
-else. Never grant anon access to any of the teacher-owned tables.
+Any future student-facing page (one where students, not the teacher, hit
+the app) would need its own tables *outside* the owner_id model, with
+narrow anon policies scoped to what those students should be able to do —
+never grant anon access to any of the teacher-owned tables above.
 
 ## `shared.js` API
 
@@ -353,7 +382,7 @@ Auth:
 - `authHeaders()` — picks the access token when signed in, else the anon
   key. Only `sb()` calls this.
 - `body.no-auth` — a page carrying this class opts out of the login
-  redirect (currently `login.html` and `wordle.html`).
+  redirect (currently only `login.html`).
 
 Data helpers (owner_id is filled by the DB default, so no helper here ever
 sends it):
@@ -401,10 +430,10 @@ last-used period in `localStorage`), `getLastPeriodId()` / `setLastPeriodId()`,
    `owner_id = auth.uid()` (see the DO block at the bottom of `schema.sql`).
    Any per-user uniqueness constraint must include `owner_id` (`(key,
    owner_id)`, `(date, owner_id)`, …). Client helpers **never** send
-   `owner_id` — the DB default fills it. The **only** exception is future
-   student-facing Wordle tables, which get their own narrow anon policies
-   and live outside the ownership model; anon must never be able to touch a
-   teacher-owned table.
+   `owner_id` — the DB default fills it. The **only** exception would be
+   tables for a future student-facing page (one loaded without a session),
+   which would get their own narrow anon policies and live outside the
+   ownership model; anon must never be able to touch a teacher-owned table.
 6. **Keep the table/column listing comment at the top of `schema.sql`** in
    sync with the tables, and keep the schema tables in this file in sync too.
 7. **Projector-first UI.** Fluid root font (14–22px, scales with the screen), large buttons, high contrast. There is
@@ -449,6 +478,120 @@ last-used period in `localStorage`), `getLastPeriodId()` / `setLastPeriodId()`,
     `labelStyle`, `roomBounds`). Any page that draws the room loads it;
     don't copy the table.
 
+## Themes — per-user visual styles
+
+TeacherPal ships two themes, one per teacher's taste:
+
+- **`jarvis`** — the original dark HUD (deep plum-navy, near-black cards,
+  subtle pink accent, Orbitron uppercase labels, corner ticks). Default for
+  every account and every logged-out page. See the Design rules below.
+- **`marwa`** — soft cream-pink background with a tiny heart pattern, white
+  cards, bubblegum pink accent (`#FF5FA2`), deep-plum text, lavender/mint
+  secondaries, rounder radii, pill buttons that gently bounce, no HUD ticks,
+  Baloo 2 for display and Nunito for body, sentence case (never uppercase
+  wide-tracked labels), a small ♥ before section headings, and a `✦`
+  sparkle animation on any `.status.status-ok`. Student names on seating
+  charts and group cards stay large, high-contrast, and readable on a
+  projector — pink is only for accents and chrome, never body text on white.
+
+Storage & flow:
+
+- **`profiles.theme text default 'jarvis'`**. Attached to
+  `session.user.theme` at sign-in (via `resolveUsernameToProfile`) and
+  preserved through refreshes.
+- **`shared.js`**: `THEMES` (the registry), `applyTheme(id)` (attribute +
+  localStorage + `teacherpal:theme` event), `currentTheme()`,
+  `setMyTheme(id)` (also calls `set_my_theme` RPC to persist server-side).
+- **Head script.** Every page has a tiny synchronous `<script>` in `<head>`
+  before the stylesheet link — it reads `localStorage['teacherpal.theme']`
+  and sets `data-theme` on `<html>` so the correct tokens apply *before*
+  the CSS parses. No flash of the wrong theme even on the login page.
+- **Settings menu.** `nav.js` renders a small gear-icon `<details>` widget
+  in the top bar. Inside: radio-style theme options from `THEMES`. Changing
+  the selection calls `setMyTheme` immediately. Available on every page,
+  including login (where the choice is only local until sign-in).
+
+To add a new theme:
+
+1. Add `{ id: 'my-theme', label: 'My Theme' }` to `THEMES` in `shared.js`.
+2. Copy the `:root[data-theme="marwa"] { … }` token block in `style.css` and
+   rename the selector to `:root[data-theme="my-theme"]`. Swap values.
+3. If the theme needs behaviour beyond token overrides (hide the corner
+   ticks, add a decorative pseudo-element, change body background, etc.),
+   add a scoped section at the bottom of `style.css` under the `marwa`
+   overrides block using the same `:root[data-theme="my-theme"] …`
+   selector prefix.
+4. Add both new Google Fonts (if any) to the shared fonts URL in the
+   `<link>` on every page — the browser only downloads a family when a
+   `font-family` rule actually matches something in the DOM, so extra
+   families are near-free until the theme is active.
+5. Test at 1366×768, 1080p, 4K and 375px, and on the projector.
+
+The `set_my_theme(text)` RPC validates `^[a-z0-9_-]+$` and length ≤ 40 so
+any junk name is rejected at the server. Unknown ids on the client just
+fall back to the default (no matching `:root[data-theme=…]` block); harmless.
+
+### Marwa mascots
+
+Marwa ships an original cast of 5 characters (nothing copied from Sanrio /
+Hello Kitty / any existing IP — all drawn from simple geometric primitives
+in the theme's palette). All 48×48 viewBox, flat fills, minimal face,
+consistent style so they read as one family:
+
+| id         | Character                              | Where it appears by default |
+|------------|----------------------------------------|-----------------------------|
+| `cat`      | round pink cat with a small bow        | `.list-empty`, login-page hero |
+| `cloud`    | sleepy lavender cloud                  | `.lesson-empty` |
+| `star`     | 5-point cream star                     | (available — none by default) |
+| `bunny`    | cream bunny with long ears             | `.chart-empty`, hub launcher corner |
+| `mushroom` | pink cap + cream stem                  | `.empty-state` |
+
+Two smaller decorative motifs live alongside them: `--marwa-heart` (used
+before every card heading) and `--marwa-sparkle` (top-right corner
+flourish on hub panels + the save-success animation).
+
+All eight are CSS variables inside the `:root[data-theme="marwa"]` token
+block near the top of the Marwa section in `style.css`.
+
+**Drop a mascot anywhere in HTML** with the utility class:
+
+```html
+<span class="marwa-mascot" data-mascot="bunny"></span>
+<div class="marwa-mascot" data-mascot="star" style="width:5rem;height:5rem"></div>
+```
+
+Defaults to 3rem square; size via inline style or a wrapping rule. In any
+other theme (`data-theme="jarvis"`, etc.) the element collapses to
+`display:none` so it takes no space — no need to gate it in HTML.
+
+**Use one on a pseudo-element** (headings, empty states, decorative
+flourishes) by reading the variable:
+
+```css
+:root[data-theme="marwa"] .my-empty-state::before {
+  content: "";
+  display: block;
+  width: 4rem; height: 4rem;
+  background: var(--marwa-mascot-star) no-repeat center / contain;
+}
+```
+
+**To add a new mascot** (e.g. `moon`):
+
+1. Draw it in a 48×48 SVG. Keep to the style rules: rounded shapes, flat
+   fills, no gradients, minimal face (2 dot eyes + small mouth + optional
+   soft blush), colours only from the marwa palette (pinks, lavender,
+   mint, cream, deep-plum `#5C3D50` for eyes/mouth). Should read at 24px.
+2. URL-encode it as a data URI and add a variable in the mascot block:
+   `--marwa-mascot-moon: url("data:image/svg+xml;utf8,<svg …>…</svg>");`
+   (Escape `#` as `%23`; keep single-quoted attributes so the outer CSS
+   double quotes don't need escaping.)
+3. Add one line to the `.marwa-mascot` utility class list:
+   `:root[data-theme="marwa"] .marwa-mascot[data-mascot="moon"] { background-image: var(--marwa-mascot-moon); }`
+4. Optionally add scoped rules to place it on a specific pseudo-element
+   (empty state, corner, heading).
+5. Update the table above and test at 24px and 200px.
+
 ## Design rules — dark premium dashboard (pink)
 
 Reference: `design-ref.png` (a dark fintech dashboard) with its blue swapped
@@ -456,13 +599,17 @@ for a subtle pink. Deep plum-navy ground with a soft radial glow, near-black
 cards with 24px corners, faint 1px borders with a pink glow line along the top
 edge, white medium-weight card titles with a square outlined ↗ button at the
 top-right, bordered pill chips, outlined percentage badges, slim progress
-bars, muted gray secondary text. Single dark theme — there is no light mode
-and no theme toggle. All styling lives in `style.css`; pages carry almost no
-inline styling.
+bars, muted gray secondary text. This is the **jarvis theme**, the default.
+See the Themes section below for the per-user switcher and the `marwa` theme.
+All styling lives in `style.css`; pages carry almost no inline styling.
 
-- **Tokens first.** Every color, gradient, shadow, font size/weight, spacing
-  step and radius is a CSS variable at the top of `style.css`. Never
-  hard-code a hex color, radius or shadow anywhere else.
+- **Tokens first, per theme.** Every color, gradient, shadow, font, radius and
+  typographic track is a CSS variable defined inside a
+  `:root[data-theme="<id>"] { ... }` block. Structural tokens (spacing,
+  font sizes, transition, touch, page-pad) live in the shared `:root {…}`
+  block. `:root, :root[data-theme="jarvis"]` share the same values, so an
+  unstyled page (no `data-theme` attribute yet) still renders correctly.
+  Never hard-code a hex color, radius or shadow anywhere else.
 - **Palette.** Ground `--bg-0 #151320` → `--bg-1 #1E1A2E` (radial glow on
   `body`, plus a faint pink glow at the top). Surfaces `--card #0D0B14`,
   `--card-2 #15121F` (inputs, chips, wells, rows), `--card-3 #1C1828`
@@ -556,7 +703,7 @@ inline styling.
     `.period-title`, `GROUP N` labels, hub tool names, the nav tabs
     (0.6rem), dialog titles (Formula, Import, Today's roster, the
     "can't all hold" warning), `.hud-key` labels, the front-of-room marker,
-    empty-state lines and Wordle tiles. **Never** for paragraphs, lists,
+    empty-state lines. **Never** for paragraphs, lists,
     names, or anything longer than a few words — it gets unreadable fast.
   - `--font-mono` **Share Tech Mono** (fallback JetBrains Mono → system
     mono; `--hud-mono` aliases it): every figure and technical label —
@@ -614,9 +761,8 @@ inline styling.
     4-column grid of `.hud-panel` links (3 columns under 1100px, 2 under
     800px, 1 under 480px), `max-width: 82rem`, centred vertically and
     horizontally, rows `clamp(11rem, 32vh, 17rem)`, gap `clamp(1rem, 2vw,
-    1.75rem)` — eight panels make two even rows of four. Order: Attendance,
-    Lesson Plans, Create Groups, Seating, Bathroom, Wordle (`.soon`),
-    Schedule, Rosters last (`.setup`, dashed, quieter). Each panel is only a
+    1.75rem)`. Order: Attendance, Lesson Plans, Create Groups, Seating,
+    Bathroom, Schedule, Rosters last (`.setup`, dashed, quieter). Each panel is only a
     thin-line SVG icon, the tracked `.hud-name` and one mono `.hud-sub`
     line — **no live data, no counts, no Supabase** (the only requests on the
     page are nav.js's readouts, as on every page). Don't put dashboards back
@@ -668,10 +814,12 @@ inline styling.
     `onChange` lets the week view mirror edits. `follow: true` (track
     `teacherpal:period`) exists but is unused now.
   - The nav order is fixed in `NAV_ITEMS` in `nav.js`: Hub, Attendance,
-    Lesson Plans, Create Groups, Seating, Bathroom, Wordle, Schedule, then
+    Lesson Plans, Create Groups, Seating, Bathroom, Schedule, then
     Rosters as `setup`. Add a screen there and every page's nav updates.
-    Nine items fit one row at 1366px because the brand text collapses to its
-    mark below 1400px and the tabs tighten.
+    All items fit one row at 1366px because the brand text collapses to its
+    mark below 1400px and the tabs tighten; if it ever overflows, the
+    nav-links wrap to their own row below the readouts (see the 1500px
+    breakpoint in `style.css`).
 - **Lesson Plans screen** (`lessons.html`): `.lessons-layout` = `.week-box`
   (58%) + `#lesson` editor (42%). The week grid (`.week-grid`, sticky day
   headers, `9rem` period column + 5 day columns, rows `minmax(5.2rem,1fr)`)
