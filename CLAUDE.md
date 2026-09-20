@@ -11,8 +11,11 @@ Dark dashboard look with a subtle pink accent (see design-ref.png).
 - **Supabase** (Postgres + PostgREST) as the backend, called directly over the
   REST API with `fetch`. No `@supabase/supabase-js` client.
 - **Vercel** static hosting. Deploys the repo root as-is; no `vercel.json` needed.
-- **No login yet.** The anon key is used for every request. Auth will be added
-  later — see the rules below for how that is kept cheap.
+- **Supabase Auth (email/password), no public sign-up.** Accounts are created
+  in the Supabase dashboard; every request goes as an authenticated user with
+  a Bearer access token. The anon key is still shipped (harmless — RLS blocks
+  it) so the student-facing Wordle page can hit its own narrow-policy tables
+  without a login. See the Auth section below.
 
 ## Screens
 
@@ -40,6 +43,8 @@ full-screen toggle. There is no sidebar; every page uses the full width.
 
 | File           | Purpose |
 |----------------|---------|
+| `login.html`   | Sign-in page (`body.hub.no-auth`): HUD-styled email/password form; loads only `shared.js` and calls `signIn(email, password)`. Redirects back to `?from=…` on success, else `index.html` |
+| `migration-auth.sql` | One-off migration that adds `owner_id` to every table, backfills existing rows to Khalid's uuid, drops the "TEMP anon full access" policies and creates per-owner select/insert/update/delete policies. Run in the Supabase SQL editor before deploying the auth code |
 | `index.html`   | Hub launcher (`body.hub.launcher`): static `.hub-panels.launcher` grid of `.hud-panel` links; loads only `shared.js`, `schedule.js`, `nav.js` (top bar **without** nav links — the panels are the nav) |
 | `attendance.html` | Attendance screen: `#attendance` in **full** mode — big chart + side column with counts, lists, Copy, Reset, date |
 | `nav.js`       | Shared top bar: renders brand + nav links + readouts + full-screen button into `<header class="topbar">`, marks the active page, runs the clock / bell status (`teacherpal:tick`), exposes `navReady` (periods, overrides, teaches, byNumber). Loaded on every page after `shared.js` + `schedule.js`. |
@@ -77,9 +82,61 @@ on Lesson Plans; `bathroom.js` on Bathroom; nothing on the hub; an inline
 `<script>` elsewhere). Pages should have a `<div id="status" class="status"></div>` so
 `setStatus()` / `showError()` have somewhere to write.
 
+## Auth — multi-tenant model
+
+TeacherPal is multi-user. Every teacher has their own periods, students, room,
+seating, attendance, lessons, bathroom log and schedule overrides — nothing is
+shared across accounts.
+
+- **Supabase email/password underneath, username on the surface.** Create
+  accounts in the Supabase dashboard → Authentication → Users (still by
+  email), then add a row to `public.profiles` mapping the chosen username
+  to that account's email (`migration-usernames.sql` sets up the table and
+  seeds Khalid's row; add other users by inserting into `profiles`).
+  `login.html` calls `signIn(username, password)` in `shared.js`, which
+  looks the username up in `profiles` and then POSTs to
+  `/auth/v1/token?grant_type=password` with the resolved email. The session
+  is stored in `localStorage['teacherpal.session']` = `{ access_token,
+  refresh_token, expires_at, user: { id, email, username } }`. Usernames
+  are unique **case-insensitively** (`unique index on lower(username)`).
+- **Session-first page load.** `shared.js` runs synchronously at the top of
+  every page: it reads the stored session, and if there is none — and the
+  page does not carry `body.no-auth` — hides the page (`visibility: hidden`)
+  and `location.replace('login.html?from=…')`. Every page therefore either
+  has a session by the time its own scripts run, or is already navigating
+  away. Silent 401s are impossible: `sb()` refreshes on demand and, if the
+  refresh fails, clears the session and redirects to login with the same
+  `from`.
+- **`shared.js` is the only auth surface.** `authHeaders()` picks the access
+  token when signed in (the anon key otherwise), `sb()` refreshes 60s before
+  expiry and after any 401, and pages never touch `/auth/v1/*` directly.
+  Exposed helpers: `signIn(username, password)` (resolves username → email
+  via `profiles` first), `resolveUsernameToEmail(username)`, `signOut()`
+  (POSTs `/auth/v1/logout`, clears storage, redirects to login),
+  `refreshSession()`, `hasSession()`, `currentUser()` →
+  `{ id, email, username }`.
+- **Top-bar account chip + sign-out** (`nav.js`): every page except the hub
+  shows `USER <email>` and a small door-arrow icon-button; on the hub the
+  chip still appears in the readout row. Both hide on `body.no-auth` pages.
+- **`body.no-auth`** — the one escape hatch. Pages carrying this class skip
+  the auth check and stay accessible to anonymous visitors. Today only
+  `login.html` and `wordle.html` use it. The student-facing Wordle page has
+  no login by design; when it grows tables of its own, give those tables
+  their own narrow anon policies (anon can `insert` a result, `select` only
+  the day's word, and nothing else — never grant anon access to any of the
+  teacher-owned tables).
+- **Session storage sits in `localStorage`, not cookies.** Two tabs share
+  the session; a sign-out in one tab logs the other out on its next
+  request (the refresh fails → redirect).
+
 ## Database schema
 
 All tables live in `public`. Ids are `uuid` with `gen_random_uuid()` defaults.
+**Every table has `owner_id uuid not null default auth.uid() references
+auth.users(id) on delete cascade`** — the tables below omit it from the
+column list for brevity, but it is there on every row. Reads are RLS-filtered
+to `owner_id = auth.uid()`; INSERTs get the owner from the column default
+(the client never sends `owner_id`).
 
 ### `periods`
 | column       | type        | notes |
@@ -98,11 +155,11 @@ All tables live in `public`. Ids are `uuid` with `gen_random_uuid()` defaults.
 | `sort_order` | integer     | display order within period, default 0 |
 | `created_at` | timestamptz | default now() |
 
-### `room_layouts` — one shared room (the same physical classroom for every period)
+### `room_layouts` — one shared room **per owner** (the same physical classroom for every period, but each teacher has their own row)
 | column       | type        | notes |
 |--------------|-------------|-------|
 | `id`         | uuid        | PK |
-| `key`        | text        | **UNIQUE**, default `'default'` — the app only ever uses this one row |
+| `key`        | text        | default `'default'`; **UNIQUE (key, owner_id)** — the app only ever uses this one row per owner |
 | `layout`     | jsonb       | `{ version: 2, grid: 24, front: { x, y, w, h }, pieces: [{ id, type, x, y, rotation }] }` |
 | `updated_at` | timestamptz | set by the client on save |
 
@@ -125,7 +182,7 @@ shapes can be tuned without a migration.
 
 Seat ids are derived from the piece (`<piece.id>:<index into TYPES[type].seats>`),
 so switching periods keeps the desks and swaps the names. Both saves are
-upserts (`on_conflict=key` / `on_conflict=period_id` with
+upserts (`on_conflict=key,owner_id` / `on_conflict=period_id` with
 `Prefer: resolution=merge-duplicates`). The old grid table `seating_charts`
 is unused; `migration-room-builder.sql` creates the two tables above and has
 an optional, commented-out `drop table` for it.
@@ -204,23 +261,36 @@ per-browser settings (`teacherpal.bathroom.settings`).
 | column        | type        | notes |
 |---------------|-------------|-------|
 | `id`          | uuid        | PK |
-| `date`        | date        | **UNIQUE** — the calendar day (local) |
+| `date`        | date        | **UNIQUE (date, owner_id)** — the calendar day (local) |
 | `schedule`    | text        | `early_release` \| `regular` \| `minimum` \| `double_second` \| `homecoming` \| `finals` \| `no_school` (check constraint) |
 | `finals_pair` | text        | `'1-2'` \| `'3-4'` \| `'5-6'`; **required iff** `schedule = 'finals'` (check constraint) |
 | `note`        | text        | optional, shown in the override list |
 | `created_at`  | timestamptz | default now() |
 
 The bell schedules themselves are **not** in the database — they are data in
-`schedule.js`. This table only maps a date to one of them. Upsert is
-`POST /schedule_overrides?on_conflict=date`. `schema.sql` and the migration
-seed the known finals dates (2026-12-16/17/18 and 2027-05-25/26/27 as
-1/2, 3/4, 5/6) with `on conflict (date) do nothing`.
+`schedule.js`. This table only maps a date to one of them (**per owner** — each
+teacher has their own override calendar). Upsert is
+`POST /schedule_overrides?on_conflict=date,owner_id`. The historical seed of
+finals dates only exists in old projects backfilled to Khalid; new accounts
+add their own on `schedule.html`.
 
 ### RLS
 RLS is enabled on every table (the project enables it automatically, and
-`schema.sql` enables it explicitly too). Each table currently has one policy
-named **`TEMP anon full access`** (`for all to anon using (true) with check (true)`).
-These are placeholders until login exists.
+`schema.sql` enables it explicitly too). Each teacher-owned table has four
+policies — `<table> owner select`, `<table> owner insert`,
+`<table> owner update`, `<table> owner delete` — all for the `authenticated`
+role, all keyed to `owner_id = auth.uid()`. Nothing here is readable by
+anon; the old `TEMP anon full access` policies were removed in
+`migration-auth.sql`. When you add a new table, follow the same pattern:
+`owner_id uuid not null default auth.uid() references auth.users(id) on
+delete cascade`, enable RLS, add the four per-owner policies in a `DO $$`
+block (never `CREATE POLICY IF NOT EXISTS` — not valid Postgres), and put
+`owner_id` in any per-user uniqueness constraint.
+
+The future student-facing Wordle tables are the one exception: those live
+outside this ownership model and get their own narrow anon policies — anon
+can `insert` a submitted result and `select` only the day's word, nothing
+else. Never grant anon access to any of the teacher-owned tables.
 
 ## `shared.js` API
 
@@ -228,17 +298,34 @@ Low level: `sb(table, { method, params, body, prefer })` — one wrapper around
 `fetch` to `${SUPABASE_URL}/rest/v1/<table>`. `params` become PostgREST query
 params (`{ id: 'eq.<uuid>', select: '*', order: 'name.asc' }`). Writes default
 to `Prefer: return=representation` so inserted/updated rows come back.
+Refreshes the access token 60s before expiry, and on any 401 tries a refresh
+once then retries; a failed refresh clears the session and redirects to
+`login.html`.
 
-Data helpers:
+Auth:
+- `signIn(email, password)` → stores session; `signOut()` → clears storage,
+  POSTs `/auth/v1/logout`, redirects to login.
+- `refreshSession()` → uses the stored refresh token; returns the new
+  session or `null` on failure.
+- `hasSession()`, `currentUser()` → `{ id, email }` or `null`,
+  `currentSession()` → the whole record (`access_token`, `refresh_token`,
+  `expires_at`, `user`).
+- `authHeaders()` — picks the access token when signed in, else the anon
+  key. Only `sb()` calls this.
+- `body.no-auth` — a page carrying this class opts out of the login
+  redirect (currently `login.html` and `wordle.html`).
+
+Data helpers (owner_id is filled by the DB default, so no helper here ever
+sends it):
 - `getPeriods()`, `createPeriod(name, sortOrder)`, `renamePeriod(id, name)`, `deletePeriod(id)`
 - `getStudents(periodId)`, `addStudents(periodId, names[], startSortOrder)`, `updateStudent(id, fields)`, `deleteStudent(id)`, `countStudents()` (all periods, ids only)
-- `getRoomLayout()` → layout object or `null`; `saveRoomLayout(layout)` (upsert on `key`)
+- `getRoomLayout()` → layout object or `null`; `saveRoomLayout(layout)` (upsert on `key,owner_id`)
 - `getSeatAssignments(periodId)` → `{}` when none; `saveSeatAssignments(periodId, assignments)` (upsert on `period_id`)
 - `getAttendance(periodId, date)` → `{ marks, updatedAt }` or `null`; `saveAttendance(periodId, date, marks)` (upsert on `period_id,date`). Plus the same-browser cache helpers `readAbsentCache(periodId)` / `writeAbsentCache(periodId, ids)` (`teacherpal.absent.<periodId>` = `{ date, ids }`, today only), `absentIdsOf(marks)` and `todayKey()`.
 - `getAttendanceForDate(date)` → `[{ period_id, marks }]` for every period; `countStudentsByPeriod()` → `Map<periodId, n>`
 - `getLessonPlan(periodId, date)` → row or `null`; `getLessonPlansRange(from, to)` (week view); `saveLessonPlan(periodId, date, plan)` (upsert on `period_id,date`); `deleteLessonPlan(periodId, date)`; `EMPTY_PLAN()`
 - `getBathroomLog(periodId, date)`, `getBathroomHistory(periodId)` (all dates, newest first, ≤2000), `bathroomSignOut(periodId, studentId, date)` → row, `bathroomSignIn(id)` → row, `deleteBathroomTrip(id)`, `setManualTally(periodId, studentId, quarter, count)` (read-then-write because the uniqueness is a partial index; count 0 deletes)
-- `getScheduleOverrides()` → rows ordered by date; `saveScheduleOverride({ date, schedule, finals_pair, note })` (upsert on `date`; `finals_pair` is nulled unless `schedule === 'finals'`); `deleteScheduleOverride(id)`
+- `getScheduleOverrides()` → rows ordered by date; `saveScheduleOverride({ date, schedule, finals_pair, note })` (upsert on `date,owner_id`; `finals_pair` is nulled unless `schedule === 'finals'`); `deleteScheduleOverride(id)`
 - `getFormulaRules(periodId, scope)` → `{ rules, useFormula }` for **that scope only**; `saveFormulaRules(periodId, scope, rules, useFormula)` (upsert on `period_id,scope`). `scope` must be `'seating'` or `'grouping'` (`assertScope` throws otherwise). No helper reads or writes both scopes in one operation.
 
 Full screen: `toggleFullscreen()` / `enterFullscreen()` / `exitFullscreen()`,
@@ -258,18 +345,26 @@ last-used period in `localStorage`), `getLastPeriodId()` / `setLastPeriodId()`,
    Everything in `shared.js` is a global on purpose.
 2. **All Supabase access goes through `shared.js`.** (`formula.js` is UI +
    solver only and takes rules in/out through callbacks.) Pages never call `fetch`
-   on the Supabase URL, never touch the anon key, never build REST URLs. Add a
-   helper in `shared.js` instead. When login is added, `authHeaders()` is the
-   single place that changes.
+   on the Supabase URL, never touch `/auth/v1/*` themselves, never touch the
+   anon key, never build REST URLs. Add a helper in `shared.js` instead.
+   `authHeaders()` is the one place that decides which bearer to send.
 3. **The anon key is public by design** (it is shipped to browsers). Security
    comes from RLS policies, not from hiding the key. Never put a service-role
    key anywhere in this repo.
 4. **`schema.sql` must stay idempotent**: `create table if not exists`, and
    policies wrapped in `DO $$ ... END $$` blocks that check `pg_policies`
    first. **Never use `CREATE POLICY IF NOT EXISTS`** (not valid Postgres).
-5. **Every table needs RLS policies** or the anon key silently gets nothing.
-   New tables: enable RLS, add a `TEMP anon full access` policy in the same
-   DO-block style, and label it TEMPORARY in a comment.
+5. **Every teacher-owned table needs `owner_id` + four per-owner policies.**
+   `owner_id uuid not null default auth.uid() references auth.users(id) on
+   delete cascade`, then RLS enabled, then select/insert/update/delete
+   policies for the `authenticated` role, all keyed to
+   `owner_id = auth.uid()` (see the DO block at the bottom of `schema.sql`).
+   Any per-user uniqueness constraint must include `owner_id` (`(key,
+   owner_id)`, `(date, owner_id)`, …). Client helpers **never** send
+   `owner_id` — the DB default fills it. The **only** exception is future
+   student-facing Wordle tables, which get their own narrow anon policies
+   and live outside the ownership model; anon must never be able to touch a
+   teacher-owned table.
 6. **Keep the table/column listing comment at the top of `schema.sql`** in
    sync with the tables, and keep the schema tables in this file in sync too.
 7. **Projector-first UI.** Fluid root font (14–22px, scales with the screen), large buttons, high contrast. There is

@@ -28,6 +28,8 @@ function currentPage() {
   return file === '' ? 'index.html' : file;
 }
 
+const SIGN_OUT_ICON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="m16 17 5-5-5-5"/><path d="M21 12H9"/></svg>';
+
 function renderTopNav() {
   const header = document.querySelector('header.topbar');
   if (!header) return;
@@ -39,6 +41,8 @@ function renderTopNav() {
   // the hub (body.launcher) shows no links — its panels are the navigation;
   // every other page keeps the full nav, and the wordmark always links home
   const noLinks = document.body.classList.contains('launcher');
+  const user = typeof currentUser === 'function' ? currentUser() : null;
+  const showAccount = !!user;   // pages without a session (wordle) hide it
   header.classList.add('hud-bar', 'topnav');
   header.classList.toggle('no-links', noLinks);
   header.innerHTML = `
@@ -51,7 +55,12 @@ function renderTopNav() {
       <a class="hud-stat hud-link" href="schedule.html" title="Bell schedules and overrides"><span class="hud-key">SCHED</span><span class="hud-val" id="hud-sched">—</span></a>
       <span class="hud-stat"><span class="hud-key">NOW</span><span class="hud-val" id="hud-now">—</span></span>
     </div>
+    ${showAccount ? `<span class="hud-stat hud-account" title="Signed in as ${escapeHtml(user.username || user.email || '')}${user.username && user.email ? ' (' + escapeHtml(user.email) + ')' : ''}"><span class="hud-key">USER</span><span class="hud-val" id="hud-user">${escapeHtml(user.username || user.email || '')}</span></span>` : ''}
+    ${showAccount ? `<button type="button" class="icon-btn signout-btn" id="signout-btn" title="Sign out" aria-label="Sign out">${SIGN_OUT_ICON}</button>` : ''}
     <button type="button" class="icon-btn fs-btn" data-fullscreen aria-pressed="false" title="Full screen (F)" aria-label="Toggle full screen"><span class="when-off">${FS_ICON_ENTER}</span><span class="when-on">${FS_ICON_EXIT}</span></button>`;
+
+  const soBtn = header.querySelector('#signout-btn');
+  if (soBtn) soBtn.addEventListener('click', () => { if (typeof signOut === 'function') signOut(); });
 }
 
 // today's schedule, re-resolved only when the date rolls over

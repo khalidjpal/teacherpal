@@ -1,61 +1,243 @@
 // shared.js — the ONLY file that talks to Supabase.
 //
-// Every page loads this first. When login is added, change authHeaders()
-// (and the TEMP policies in schema.sql) and nothing else has to move.
+// Loaded first on every page. Owns:
+//   • Supabase REST client (`sb()`)
+//   • Auth: sign in / out, session storage, token refresh, redirect-if-missing
+//   • Data helpers (periods, students, room, attendance, lessons, bathroom, …)
+//   • Full-screen system
+//
+// Multi-tenant: every table has an owner_id column with a default of
+// auth.uid() at the DB level, so INSERTs from an authenticated session get
+// the right owner for free. Reads are filtered by RLS; the client just
+// queries as normal.
 
 // ---------------------------------------------------------------------------
 // Config — paste your project values here (Supabase dashboard > Settings > API)
-// The anon key is a public key; it is safe to ship in client-side code as
-// long as RLS policies are in place.
+// The anon key is public — it's safe to ship. Security comes from RLS.
 // ---------------------------------------------------------------------------
 const SUPABASE_URL = 'https://pnkgblhdagusaysvclka.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBua2dibGhkYWd1c2F5c3ZjbGthIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODk1OTA4OTgsImV4cCI6MjEwNTE2Njg5OH0.KqzPdCtU2kIl-i9qHGOOkotqlVlGS53jx5DcHydTmL4';
 
 // ---------------------------------------------------------------------------
-// Low-level REST client
+// Auth — Supabase email/password, no public sign-up (accounts created in the
+// Supabase dashboard). Session persists in localStorage and refreshes itself
+// silently. Pages without `body.no-auth` are redirected to login.html when
+// there is no session (or the refresh fails).
 // ---------------------------------------------------------------------------
+
+const SESSION_KEY = 'teacherpal.session';
+const LOGIN_PAGE = 'login.html';
 
 function isConfigured() {
   return SUPABASE_URL.startsWith('http') && !SUPABASE_ANON_KEY.startsWith('PASTE_');
 }
 
-// Single place where auth is decided. Later: swap the bearer for the
-// logged-in user's access token.
-function authHeaders() {
+// Pages that don't require a session (login itself, student-facing Wordle).
+function pageAllowsAnon() {
+  const b = document.body;
+  if (!b) return false;
+  if (b.classList.contains('no-auth')) return true;
+  const file = (location.pathname.split('/').pop() || '').toLowerCase();
+  return file === LOGIN_PAGE;
+}
+
+let _session = null; // { access_token, refresh_token, expires_at (ms), user: { id, email } }
+
+function readStoredSession() {
+  try {
+    const raw = localStorage.getItem(SESSION_KEY);
+    if (!raw) return null;
+    const s = JSON.parse(raw);
+    if (!s || !s.access_token || !s.refresh_token) return null;
+    return s;
+  } catch { return null; }
+}
+
+function saveSession(s) {
+  _session = s;
+  try {
+    if (s) localStorage.setItem(SESSION_KEY, JSON.stringify(s));
+    else localStorage.removeItem(SESSION_KEY);
+  } catch { /* ignore */ }
+}
+
+function currentSession() { return _session; }
+function currentUser() { return _session ? _session.user : null; }
+function hasSession() { return !!_session; }
+
+// Turn Supabase's token response into our stored shape. Preserves the
+// username we attached at sign-in (it doesn't come back from the token
+// endpoint) across refreshes.
+function normalizeSession(raw) {
+  const expiresInMs = (raw.expires_in || 3600) * 1000;
+  const prevUser = _session ? _session.user : null;
+  const user = raw.user
+    ? { id: raw.user.id, email: raw.user.email, username: prevUser && prevUser.username || null }
+    : prevUser;
   return {
-    apikey: SUPABASE_ANON_KEY,
-    Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+    access_token: raw.access_token,
+    refresh_token: raw.refresh_token,
+    expires_at: Date.now() + expiresInMs,
+    user,
   };
+}
+
+// Resolve a username to the account's email so we can call Supabase's
+// email+password auth underneath. Reads the `profiles` table (anon-readable).
+// Returns null when the username doesn't exist — the caller reports a
+// generic "Sign-in failed" either way, so usernames can't be enumerated.
+async function resolveUsernameToEmail(username) {
+  const u = String(username || '').trim();
+  if (!u) return null;
+  const url = new URL(`${SUPABASE_URL}/rest/v1/profiles`);
+  url.searchParams.set('select', 'email');
+  url.searchParams.set('username', `ilike.${u}`);
+  url.searchParams.set('limit', '1');
+  const res = await fetch(url, {
+    headers: { apikey: SUPABASE_ANON_KEY, Authorization: `Bearer ${SUPABASE_ANON_KEY}` },
+  });
+  if (!res.ok) return null;
+  const rows = await res.json().catch(() => []);
+  return (rows[0] && rows[0].email) || null;
+}
+
+async function signIn(username, password) {
+  const trimmed = String(username || '').trim();
+  const email = await resolveUsernameToEmail(trimmed);
+  if (!email) throw new Error('Sign-in failed.');
+  const res = await fetch(`${SUPABASE_URL}/auth/v1/token?grant_type=password`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', apikey: SUPABASE_ANON_KEY },
+    body: JSON.stringify({ email, password }),
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error('Sign-in failed.');   // generic on purpose — no enumeration
+  const session = normalizeSession(data);
+  if (session && session.user) session.user.username = trimmed;
+  saveSession(session);
+  return _session;
+}
+
+async function signOut() {
+  const s = _session;
+  saveSession(null);
+  if (s) {
+    // Best effort — the local session is already cleared.
+    try {
+      await fetch(`${SUPABASE_URL}/auth/v1/logout`, {
+        method: 'POST',
+        headers: { apikey: SUPABASE_ANON_KEY, Authorization: `Bearer ${s.access_token}` },
+      });
+    } catch { /* ignore */ }
+  }
+  redirectToLogin();
+}
+
+let _refreshInFlight = null;
+async function refreshSession() {
+  if (!_session || !_session.refresh_token) return null;
+  // Coalesce concurrent callers — Supabase invalidates the refresh token
+  // after use, so two parallel POSTs would 401 the second one.
+  if (_refreshInFlight) return _refreshInFlight;
+  _refreshInFlight = (async () => {
+    try {
+      const res = await fetch(`${SUPABASE_URL}/auth/v1/token?grant_type=refresh_token`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', apikey: SUPABASE_ANON_KEY },
+        body: JSON.stringify({ refresh_token: _session.refresh_token }),
+      });
+      if (!res.ok) { saveSession(null); return null; }
+      const data = await res.json();
+      saveSession(normalizeSession(data));
+      return _session;
+    } finally {
+      _refreshInFlight = null;
+    }
+  })();
+  return _refreshInFlight;
+}
+
+function redirectToLogin() {
+  if (pageAllowsAnon()) return;
+  const here = location.pathname.split('/').pop() || 'index.html';
+  const from = here.toLowerCase() === LOGIN_PAGE ? '' : `?from=${encodeURIComponent(here + location.search)}`;
+  location.replace(LOGIN_PAGE + from);
+}
+
+// Loaded synchronously at the top of the file so page scripts don't try to
+// hit Supabase without a session. Also kicks off a silent refresh if the
+// token is close to expiring.
+_session = readStoredSession();
+if (isConfigured()) {
+  if (!_session && !pageAllowsAnon()) {
+    // Hide the page while we bounce to /login so the user doesn't see a flash.
+    if (document.documentElement) document.documentElement.style.visibility = 'hidden';
+    redirectToLogin();
+  } else if (_session && _session.expires_at && Date.now() > _session.expires_at - 60_000) {
+    // Fire and forget — sb() will also refresh on demand.
+    refreshSession().catch(() => { /* handled inside */ });
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Low-level REST client
+// ---------------------------------------------------------------------------
+
+// The bearer is the user's access token when signed in, otherwise the anon
+// key (so unauthenticated pages like Wordle can still hit their own tables).
+function authHeaders() {
+  const bearer = (_session && _session.access_token) || SUPABASE_ANON_KEY;
+  return { apikey: SUPABASE_ANON_KEY, Authorization: `Bearer ${bearer}` };
 }
 
 // sb('students', { params: { select: '*', period_id: 'eq.<uuid>' } })
 // sb('students', { method: 'POST', body: [...] })
 // sb('students', { method: 'PATCH', params: { id: 'eq.<uuid>' }, body: {...} })
 // sb('students', { method: 'DELETE', params: { id: 'eq.<uuid>' } })
-async function sb(table, { method = 'GET', params, body, prefer } = {}) {
+async function sb(table, opts = {}) {
   if (!isConfigured()) {
     throw new Error('Supabase is not configured. Paste your URL and anon key into shared.js.');
   }
-  const url = new URL(`${SUPABASE_URL}/rest/v1/${table}`);
-  if (params) {
-    for (const [k, v] of Object.entries(params)) url.searchParams.set(k, v);
+  // Refresh proactively when the access token is within 60s of expiring.
+  if (_session && _session.expires_at && Date.now() > _session.expires_at - 60_000) {
+    await refreshSession().catch(() => { /* handled below */ });
   }
+  const res = await sbFetch(table, opts);
+  if (res.status === 401 && _session) {
+    // Token was rejected — try once to refresh, then retry the request.
+    const refreshed = await refreshSession().catch(() => null);
+    if (refreshed) {
+      const retry = await sbFetch(table, opts);
+      if (retry.ok) return retry.data;
+      if (retry.status === 401) {
+        saveSession(null);
+        redirectToLogin();
+        throw new Error('Your session expired. Please sign in again.');
+      }
+      throw new Error(`${opts.method || 'GET'} ${table} failed (${retry.status}): ${retry.raw}`);
+    }
+    saveSession(null);
+    redirectToLogin();
+    throw new Error('Your session expired. Please sign in again.');
+  }
+  if (!res.ok) throw new Error(`${opts.method || 'GET'} ${table} failed (${res.status}): ${res.raw}`);
+  return res.data;
+}
+
+async function sbFetch(table, { method = 'GET', params, body, prefer } = {}) {
+  const url = new URL(`${SUPABASE_URL}/rest/v1/${table}`);
+  if (params) for (const [k, v] of Object.entries(params)) url.searchParams.set(k, v);
   const headers = { ...authHeaders(), 'Content-Type': 'application/json' };
-  // Return the affected rows on writes so callers get ids back.
   const preferValue = prefer || (method === 'GET' ? '' : 'return=representation');
   if (preferValue) headers.Prefer = preferValue;
-
   const res = await fetch(url, {
     method,
     headers,
     body: body === undefined ? undefined : JSON.stringify(body),
   });
-  if (!res.ok) {
-    const text = await res.text();
-    throw new Error(`${method} ${table} failed (${res.status}): ${text}`);
-  }
-  const text = await res.text();
-  return text ? JSON.parse(text) : null;
+  const raw = await res.text();
+  const data = raw ? (() => { try { return JSON.parse(raw); } catch { return raw; } })() : null;
+  return { ok: res.ok, status: res.status, raw, data };
 }
 
 // ---------------------------------------------------------------------------
@@ -141,9 +323,11 @@ async function getRoomLayout() {
 }
 
 async function saveRoomLayout(layout) {
+  // (key, owner_id) is the per-owner unique index — owner_id defaults to
+  // auth.uid() at the DB, so we don't send it here.
   const saved = await sb('room_layouts', {
     method: 'POST',
-    params: { on_conflict: 'key' },
+    params: { on_conflict: 'key,owner_id' },
     prefer: 'resolution=merge-duplicates,return=representation',
     body: { key: ROOM_KEY, layout, updated_at: new Date().toISOString() },
   });
@@ -362,7 +546,7 @@ async function getScheduleOverrides() {
 async function saveScheduleOverride({ date, schedule, finals_pair = null, note = null }) {
   const saved = await sb('schedule_overrides', {
     method: 'POST',
-    params: { on_conflict: 'date' },
+    params: { on_conflict: 'date,owner_id' },
     prefer: 'resolution=merge-duplicates,return=representation',
     body: { date, schedule, finals_pair: schedule === 'finals' ? finals_pair : null, note },
   });

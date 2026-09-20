@@ -647,6 +647,12 @@ a.hud-link:hover, a.hud-link:focus-visible { border-bottom-color: var(--hud); ou
 /* the live status line: passing / lunch / before-after school read quieter than a period */
 #hud-now[data-state="passing"], #hud-now[data-state="break"], #hud-now[data-state="before"] { color: var(--text-2); }
 #hud-now[data-state="after"], #hud-now[data-state="weekend"], #hud-now[data-state="no-school"] { color: var(--text-muted); }
+/* signed-in account chip + sign-out icon, sit just before the full-screen button */
+.hud-account { max-width: 14rem; }
+.hud-account .hud-val { overflow: hidden; text-overflow: ellipsis; }
+.signout-btn { width: 2.3rem; height: 2.3rem; padding: 0; display: inline-flex; align-items: center; justify-content: center; }
+.signout-btn:hover { border-color: var(--danger); color: var(--danger); }
+@media (max-width: 1400px) { .hud-account { display: none; } }
 
 /* ---------- panels ---------- */
 .hud-page { padding: clamp(24px, 5vh, 64px) var(--page-pad) var(--space-5); display: flex; flex-direction: column; }

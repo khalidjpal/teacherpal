@@ -1,29 +1,46 @@
 -- ============================================================================
 -- TeacherPal schema — run this in the Supabase SQL editor.
 --
+-- **Multi-tenant.** Every table has owner_id (uuid → auth.users.id, default
+-- auth.uid()), and RLS restricts each authenticated user to their own rows.
+-- The anon role has no access to any table in this file. Login flow lives
+-- in shared.js (Supabase Auth email/password); accounts are created in the
+-- Supabase dashboard (no public sign-up).
+--
+-- Any NEW table added later MUST:
+--   1. include  owner_id uuid not null default auth.uid() references auth.users(id) on delete cascade
+--   2. enable RLS
+--   3. add the four per-owner policies (see the DO block at the bottom)
+--   4. include owner_id in any per-user uniqueness constraint
+--
 -- Tables and columns:
 --
 --   periods
 --     id          uuid        primary key
+--     owner_id    uuid        -> auth.users.id (cascade delete)
 --     name        text        e.g. "Period 3", "Block B"
 --     sort_order  integer     display order on selectors
 --     created_at  timestamptz
 --
 --   students
 --     id          uuid        primary key
+--     owner_id    uuid        -> auth.users.id (cascade delete)
 --     period_id   uuid        -> periods.id (cascade delete)
 --     name        text
 --     sort_order  integer     display order within the period
 --     created_at  timestamptz
 --
---   room_layouts                (one shared room; key = 'default')
+--   room_layouts                (one shared room per OWNER; key = 'default'
+--                                per (key, owner_id) — teachers don't share)
 --     id          uuid        primary key
---     key         text        UNIQUE, default 'default'
+--     owner_id    uuid        -> auth.users.id (cascade delete)
+--     key         text        default 'default'; UNIQUE (key, owner_id)
 --     layout      jsonb       { version, grid, front: {x,y,w,h}, pieces: [{ id, type, x, y, rotation }] }
 --     updated_at  timestamptz
 --
 --   seat_assignments            (one row per period)
 --     id          uuid        primary key
+--     owner_id    uuid        -> auth.users.id (cascade delete)
 --     period_id   uuid        -> periods.id (cascade delete), UNIQUE
 --     assignments jsonb       { "<pieceId>:<seatIndex>": "<student uuid>", ... }
 --     updated_at  timestamptz
@@ -31,6 +48,7 @@
 --   seating_rules               (one row per period AND scope — seating rules and
 --                                grouping rules are separate data sets)
 --     id          uuid        primary key
+--     owner_id    uuid        -> auth.users.id (cascade delete)
 --     period_id   uuid        -> periods.id (cascade delete)
 --     scope       text        'seating' | 'grouping'; UNIQUE (period_id, scope)
 --     rules       jsonb       [{ id, type, a, b?, hard }] in priority order
@@ -42,6 +60,7 @@
 --   attendance                  (one row per period AND date; present students
 --                                are not stored)
 --     id          uuid        primary key
+--     owner_id    uuid        -> auth.users.id (cascade delete)
 --     period_id   uuid        -> periods.id (cascade delete)
 --     date        date        UNIQUE (period_id, date)
 --     marks       jsonb       { "<student uuid>": { status: 'absent'|'tardy', at: ISO } }
@@ -49,6 +68,7 @@
 --
 --   lesson_plans                (one row per period AND date)
 --     id          uuid        primary key
+--     owner_id    uuid        -> auth.users.id (cascade delete)
 --     period_id   uuid        -> periods.id (cascade delete)
 --     date        date        UNIQUE (period_id, date)
 --     objective   text
@@ -60,6 +80,7 @@
 --
 --   bathroom_log                (one row per trip; in_at null while out)
 --     id          uuid        primary key
+--     owner_id    uuid        -> auth.users.id (cascade delete)
 --     period_id   uuid        -> periods.id (cascade delete)
 --     student_id  uuid        -> students.id (cascade delete)
 --     date        date
@@ -70,17 +91,21 @@
 --     count       integer     passes used (manual rows); 1 for trips
 --     created_at  timestamptz
 --
---   schedule_overrides          (one row per date that does not follow the
---                                weekday default bell schedule; see schedule.js)
---     id          uuid        primary key
---     date        date        UNIQUE
---     schedule    text        early_release | regular | minimum | double_second |
---                             homecoming | finals | no_school
---     finals_pair text        '1-2' | '3-4' | '5-6' — required iff schedule = finals
---     note        text
---     created_at  timestamptz
+--   schedule_overrides          (one row per date PER OWNER that doesn't
+--                                follow the weekday default bell schedule)
+--     id           uuid        primary key
+--     owner_id     uuid        -> auth.users.id (cascade delete)
+--     date         date        UNIQUE (date, owner_id)
+--     schedule     text        early_release | regular | minimum | double_second |
+--                              homecoming | finals | no_school
+--     finals_pair  text        '1-2' | '3-4' | '5-6' — required iff schedule = finals
+--     note         text
+--     created_at   timestamptz
 --
--- Safe to re-run: uses IF NOT EXISTS for tables and DO blocks for policies.
+-- Safe to re-run: uses IF NOT EXISTS for tables, indexes, and DO blocks for
+-- policies. This file is the canonical *current* state. If you already have
+-- a project running the old anon-only schema, use migration-auth.sql to
+-- upgrade in place rather than dropping tables.
 -- ============================================================================
 
 create extension if not exists pgcrypto;
@@ -91,245 +116,170 @@ create extension if not exists pgcrypto;
 
 create table if not exists public.periods (
   id          uuid primary key default gen_random_uuid(),
+  owner_id    uuid not null default auth.uid() references auth.users(id) on delete cascade,
   name        text not null,
   sort_order  integer not null default 0,
   created_at  timestamptz not null default now()
 );
+create index if not exists periods_owner_idx on public.periods(owner_id);
 
 create table if not exists public.students (
   id          uuid primary key default gen_random_uuid(),
+  owner_id    uuid not null default auth.uid() references auth.users(id) on delete cascade,
   period_id   uuid not null references public.periods(id) on delete cascade,
   name        text not null,
   sort_order  integer not null default 0,
   created_at  timestamptz not null default now()
 );
-
 create index if not exists students_period_id_idx on public.students(period_id);
+create index if not exists students_owner_idx on public.students(owner_id);
 
 create table if not exists public.room_layouts (
   id          uuid primary key default gen_random_uuid(),
-  key         text not null unique default 'default',
+  owner_id    uuid not null default auth.uid() references auth.users(id) on delete cascade,
+  key         text not null default 'default',
   layout      jsonb not null default '{}'::jsonb,
   updated_at  timestamptz not null default now()
 );
+create unique index if not exists room_layouts_key_owner_uidx on public.room_layouts (key, owner_id);
+create index if not exists room_layouts_owner_idx on public.room_layouts(owner_id);
 
 create table if not exists public.seat_assignments (
   id           uuid primary key default gen_random_uuid(),
+  owner_id     uuid not null default auth.uid() references auth.users(id) on delete cascade,
   period_id    uuid not null unique references public.periods(id) on delete cascade,
   assignments  jsonb not null default '{}'::jsonb,
   updated_at   timestamptz not null default now()
 );
+create index if not exists seat_assignments_owner_idx on public.seat_assignments(owner_id);
 
 create table if not exists public.seating_rules (
   id           uuid primary key default gen_random_uuid(),
+  owner_id     uuid not null default auth.uid() references auth.users(id) on delete cascade,
   period_id    uuid not null references public.periods(id) on delete cascade,
   scope        text not null default 'seating' check (scope in ('seating', 'grouping')),
   rules        jsonb not null default '[]'::jsonb,
-  use_formula  boolean not null default false,        -- this scope's "Formula on/off" toggle
+  use_formula  boolean not null default false,
   updated_at   timestamptz not null default now(),
   unique (period_id, scope)
 );
+create index if not exists seating_rules_owner_idx on public.seating_rules(owner_id);
 
 create table if not exists public.attendance (
   id          uuid primary key default gen_random_uuid(),
+  owner_id    uuid not null default auth.uid() references auth.users(id) on delete cascade,
   period_id   uuid not null references public.periods(id) on delete cascade,
   date        date not null,
-  marks       jsonb not null default '{}'::jsonb,   -- only absences + tardies
+  marks       jsonb not null default '{}'::jsonb,
   updated_at  timestamptz not null default now(),
   unique (period_id, date)
 );
-create index if not exists attendance_date_idx on public.attendance (date);
+create index if not exists attendance_date_idx  on public.attendance (date);
+create index if not exists attendance_owner_idx on public.attendance (owner_id);
 
 create table if not exists public.lesson_plans (
   id          uuid primary key default gen_random_uuid(),
+  owner_id    uuid not null default auth.uid() references auth.users(id) on delete cascade,
   period_id   uuid not null references public.periods(id) on delete cascade,
   date        date not null,
   objective   text not null default '',
-  agenda      jsonb not null default '[]'::jsonb,   -- [{ id, text, minutes|null, done }]
+  agenda      jsonb not null default '[]'::jsonb,
   materials   text not null default '',
   homework    text not null default '',
   notes       text not null default '',
   updated_at  timestamptz not null default now(),
   unique (period_id, date)
 );
-create index if not exists lesson_plans_date_idx on public.lesson_plans (date);
+create index if not exists lesson_plans_date_idx  on public.lesson_plans (date);
+create index if not exists lesson_plans_owner_idx on public.lesson_plans (owner_id);
 
 create table if not exists public.bathroom_log (
   id          uuid primary key default gen_random_uuid(),
+  owner_id    uuid not null default auth.uid() references auth.users(id) on delete cascade,
   period_id   uuid not null references public.periods(id) on delete cascade,
   student_id  uuid not null references public.students(id) on delete cascade,
   date        date not null,
   out_at      timestamptz not null default now(),
-  in_at       timestamptz,                          -- null while the student is out
-  manual      boolean not null default false,       -- tally from the paper tracker, not a timed trip
-  quarter     text check (quarter in ('Q1', 'Q2', 'Q3', 'Q4')),   -- set on manual rows
-  count       integer not null default 1 check (count >= 0),     -- passes used (manual rows)
+  in_at       timestamptz,
+  manual      boolean not null default false,
+  quarter     text check (quarter in ('Q1', 'Q2', 'Q3', 'Q4')),
+  count       integer not null default 1 check (count >= 0),
   created_at  timestamptz not null default now()
 );
 create index if not exists bathroom_log_period_date_idx on public.bathroom_log (period_id, date);
 create index if not exists bathroom_log_student_idx on public.bathroom_log (student_id);
-create unique index if not exists bathroom_log_manual_uidx on public.bathroom_log (student_id, quarter) where manual;
+create index if not exists bathroom_log_owner_idx   on public.bathroom_log (owner_id);
+create unique index if not exists bathroom_log_manual_owner_uidx
+  on public.bathroom_log (owner_id, student_id, quarter) where manual;
 
 create table if not exists public.schedule_overrides (
   id           uuid primary key default gen_random_uuid(),
-  date         date not null unique,
+  owner_id     uuid not null default auth.uid() references auth.users(id) on delete cascade,
+  date         date not null,
   schedule     text not null check (schedule in (
                  'early_release', 'regular', 'minimum', 'double_second',
                  'homecoming', 'finals', 'no_school')),
-  finals_pair  text check (finals_pair in ('1-2', '3-4', '5-6')),  -- only for finals
+  finals_pair  text check (finals_pair in ('1-2', '3-4', '5-6')),
   note         text,
   created_at   timestamptz not null default now(),
   check ((schedule = 'finals') = (finals_pair is not null))
 );
+create unique index if not exists schedule_overrides_date_owner_uidx on public.schedule_overrides (date, owner_id);
+create index if not exists schedule_overrides_owner_idx on public.schedule_overrides (owner_id);
 
 -- ---------------------------------------------------------------------------
--- Row Level Security
--- RLS is enabled on every table. Without a policy, the anon key can do nothing.
+-- Row Level Security. Every table locks down to authenticated users, filtered
+-- by owner_id = auth.uid(). No anon access anywhere in this file — the
+-- future student-facing Wordle tables live outside this schema and get
+-- their own narrow anon policies.
 -- ---------------------------------------------------------------------------
 
-alter table public.periods        enable row level security;
-alter table public.students       enable row level security;
-alter table public.room_layouts     enable row level security;
-alter table public.seat_assignments enable row level security;
-alter table public.seating_rules    enable row level security;
-alter table public.attendance       enable row level security;
-alter table public.lesson_plans     enable row level security;
-alter table public.bathroom_log     enable row level security;
+alter table public.periods            enable row level security;
+alter table public.students           enable row level security;
+alter table public.room_layouts       enable row level security;
+alter table public.seat_assignments   enable row level security;
+alter table public.seating_rules      enable row level security;
+alter table public.attendance         enable row level security;
+alter table public.lesson_plans       enable row level security;
+alter table public.bathroom_log       enable row level security;
 alter table public.schedule_overrides enable row level security;
 
--- ===========================================================================
--- TEMPORARY POLICIES — no login yet.
--- These give the anon role full select/insert/update/delete on every table.
--- REPLACE these with per-user policies (auth.uid() = owner_id, etc.) when
--- authentication is added. To remove:
---   drop policy "TEMP anon full access" on public.periods;
---   drop policy "TEMP anon full access" on public.students;
---   drop policy "TEMP anon full access" on public.room_layouts;
---   drop policy "TEMP anon full access" on public.seat_assignments;
---   drop policy "TEMP anon full access" on public.seating_rules;
---   drop policy "TEMP anon full access" on public.attendance;
---   drop policy "TEMP anon full access" on public.lesson_plans;
---   drop policy "TEMP anon full access" on public.bathroom_log;
---   drop policy "TEMP anon full access" on public.schedule_overrides;
--- ===========================================================================
-
 do $$
+declare
+  t text;
+  policy_name text;
 begin
-  if not exists (
-    select 1 from pg_policies
-    where schemaname = 'public' and tablename = 'periods'
-      and policyname = 'TEMP anon full access'
-  ) then
-    create policy "TEMP anon full access" on public.periods
-      for all to anon using (true) with check (true);
-  end if;
+  foreach t in array array[
+    'periods','students','room_layouts','seat_assignments','seating_rules',
+    'attendance','lesson_plans','bathroom_log','schedule_overrides'
+  ] loop
+    policy_name := format('%s owner select', t);
+    if not exists (select 1 from pg_policies where schemaname='public' and tablename=t and policyname=policy_name) then
+      execute format(
+        'create policy %I on public.%I for select to authenticated using (owner_id = auth.uid())',
+        policy_name, t
+      );
+    end if;
+    policy_name := format('%s owner insert', t);
+    if not exists (select 1 from pg_policies where schemaname='public' and tablename=t and policyname=policy_name) then
+      execute format(
+        'create policy %I on public.%I for insert to authenticated with check (owner_id = auth.uid())',
+        policy_name, t
+      );
+    end if;
+    policy_name := format('%s owner update', t);
+    if not exists (select 1 from pg_policies where schemaname='public' and tablename=t and policyname=policy_name) then
+      execute format(
+        'create policy %I on public.%I for update to authenticated using (owner_id = auth.uid()) with check (owner_id = auth.uid())',
+        policy_name, t
+      );
+    end if;
+    policy_name := format('%s owner delete', t);
+    if not exists (select 1 from pg_policies where schemaname='public' and tablename=t and policyname=policy_name) then
+      execute format(
+        'create policy %I on public.%I for delete to authenticated using (owner_id = auth.uid())',
+        policy_name, t
+      );
+    end if;
+  end loop;
 end $$;
-
-do $$
-begin
-  if not exists (
-    select 1 from pg_policies
-    where schemaname = 'public' and tablename = 'students'
-      and policyname = 'TEMP anon full access'
-  ) then
-    create policy "TEMP anon full access" on public.students
-      for all to anon using (true) with check (true);
-  end if;
-end $$;
-
-do $$
-begin
-  if not exists (
-    select 1 from pg_policies
-    where schemaname = 'public' and tablename = 'room_layouts'
-      and policyname = 'TEMP anon full access'
-  ) then
-    create policy "TEMP anon full access" on public.room_layouts
-      for all to anon using (true) with check (true);
-  end if;
-end $$;
-
-do $$
-begin
-  if not exists (
-    select 1 from pg_policies
-    where schemaname = 'public' and tablename = 'seat_assignments'
-      and policyname = 'TEMP anon full access'
-  ) then
-    create policy "TEMP anon full access" on public.seat_assignments
-      for all to anon using (true) with check (true);
-  end if;
-end $$;
-
-do $$
-begin
-  if not exists (
-    select 1 from pg_policies
-    where schemaname = 'public' and tablename = 'seating_rules'
-      and policyname = 'TEMP anon full access'
-  ) then
-    create policy "TEMP anon full access" on public.seating_rules
-      for all to anon using (true) with check (true);
-  end if;
-end $$;
-
-do $$
-begin
-  if not exists (
-    select 1 from pg_policies
-    where schemaname = 'public' and tablename = 'attendance'
-      and policyname = 'TEMP anon full access'
-  ) then
-    create policy "TEMP anon full access" on public.attendance
-      for all to anon using (true) with check (true);
-  end if;
-end $$;
-
-do $$
-begin
-  if not exists (
-    select 1 from pg_policies
-    where schemaname = 'public' and tablename = 'lesson_plans'
-      and policyname = 'TEMP anon full access'
-  ) then
-    create policy "TEMP anon full access" on public.lesson_plans
-      for all to anon using (true) with check (true);
-  end if;
-end $$;
-
-do $$
-begin
-  if not exists (
-    select 1 from pg_policies
-    where schemaname = 'public' and tablename = 'bathroom_log'
-      and policyname = 'TEMP anon full access'
-  ) then
-    create policy "TEMP anon full access" on public.bathroom_log
-      for all to anon using (true) with check (true);
-  end if;
-end $$;
-
-do $$
-begin
-  if not exists (
-    select 1 from pg_policies
-    where schemaname = 'public' and tablename = 'schedule_overrides'
-      and policyname = 'TEMP anon full access'
-  ) then
-    create policy "TEMP anon full access" on public.schedule_overrides
-      for all to anon using (true) with check (true);
-  end if;
-end $$;
-
--- ---------------------------------------------------------------------------
--- Seed data: known finals dates (1/2, 3/4, 5/6 order each term)
--- ---------------------------------------------------------------------------
-
-insert into public.schedule_overrides (date, schedule, finals_pair, note) values
-  ('2026-12-16', 'finals', '1-2', 'Fall finals'),
-  ('2026-12-17', 'finals', '3-4', 'Fall finals'),
-  ('2026-12-18', 'finals', '5-6', 'Fall finals'),
-  ('2027-05-25', 'finals', '1-2', 'Spring finals'),
-  ('2027-05-26', 'finals', '3-4', 'Spring finals'),
-  ('2027-05-27', 'finals', '5-6', 'Spring finals')
-on conflict (date) do nothing;
