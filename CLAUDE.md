@@ -42,11 +42,12 @@ full-screen toggle. There is no sidebar; every page uses the full width.
 
 | File           | Purpose |
 |----------------|---------|
-| `login.html`   | Sign-in page (`body.hub.no-auth`): HUD-styled username/password form; loads only `shared.js` and calls `signIn(username, password)`. Redirects back to `?from=…` on success, else `index.html` |
-| `admin.html`   | Admin-only user management: create user (username + email + password → auth user + profiles row in one shot) and reset password. **No delete button** — deleting an auth user cascades and destroys all their data. Guarded client-side (`isAdmin()` → redirect) and server-side (every RPC checks `profiles.is_admin`). Loads `shared.js`, `schedule.js`, `nav.js` |
+| `login.html`   | Sign-in page (`body.hub.no-auth`): HUD-styled email/password form; loads only `shared.js` and calls `signIn(email, password)`. Redirects back to `?from=…` on success, else `index.html` |
+| `admin.html`   | Admin-only read-only user list. Users are created and passwords set in the Supabase dashboard. Guarded client-side (`isAdmin()` → redirect). Loads `shared.js`, `schedule.js`, `nav.js` |
 | `migration-auth.sql` | One-off migration that adds `owner_id` to every table, backfills existing rows to Khalid's uuid, drops the "TEMP anon full access" policies and creates per-owner select/insert/update/delete policies. Run in the Supabase SQL editor before deploying the auth code |
-| `migration-usernames.sql` | One-off migration that adds the `profiles` table (user_id, username, email) so `login.html` can resolve username → email against Supabase Auth. Anon-readable |
-| `migration-admin.sql` | One-off migration that adds `profiles.is_admin` (seeded to true for `khalid`) and creates the SECURITY DEFINER RPCs `admin_create_user`, `admin_reset_password`, `admin_list_users`. Each one gates on the caller's `profiles.is_admin`. Depends on Supabase-internal `auth.users` / `auth.identities` shape — see the file's fragility note |
+| `migration-usernames.sql` | Historical: added the `profiles` table (user_id, username, email). Username-based sign-in is retired; the column is now nullable and only used as an optional display name |
+| `migration-admin.sql` | Historical: added `profiles.is_admin` and the admin RPCs. The write RPCs (`admin_create_user`, `admin_reset_password`) are dropped by `migration-simplify-auth.sql`; `admin_list_users` stays, and `profiles.is_admin` stays |
+| `migration-simplify-auth.sql` | Drops the admin write RPCs, adds `on_auth_user_created` + `on_auth_user_email_change` triggers so every dashboard-created user gets a profiles row automatically, makes `profiles.username` nullable, and backfills missing profiles rows |
 | `migration-rekey-owner.sql` | One-off migration for when the auth user was deleted and recreated: repoints every `owner_id` from the old UID to the new one and rebuilds the `profiles.khalid` row |
 | `migration-themes.sql` | One-off migration that adds `profiles.theme text default 'jarvis'` and the `set_my_theme(text)` SECURITY DEFINER RPC (validated `^[a-z0-9_-]+$`, updates only the caller's own row) |
 | `migration-teaches-periods.sql` | One-off migration that adds `profiles.teaches_periods integer[]` (each entry 0-7) and the `set_my_teaches_periods(int[])` RPC. Seeds `khalid` to `{1,2,3,5,6}` and `marwa` to `{2,3,4,5,6}` |
@@ -92,37 +93,39 @@ TeacherPal is multi-user. Every teacher has their own periods, students, room,
 seating, attendance, lessons, bathroom log and schedule overrides — nothing is
 shared across accounts.
 
-- **Supabase email/password underneath, username on the surface.** Create
-  accounts in the Supabase dashboard → Authentication → Users (still by
-  email), then add a row to `public.profiles` mapping the chosen username
-  to that account's email (`migration-usernames.sql` sets up the table and
-  seeds Khalid's row; add other users by inserting into `profiles`).
-  `login.html` calls `signIn(username, password)` in `shared.js`, which
-  looks the username up in `profiles` and then POSTs to
-  `/auth/v1/token?grant_type=password` with the resolved email. The session
-  is stored in `localStorage['teacherpal.session']` = `{ access_token,
-  refresh_token, expires_at, user: { id, email, username } }`. Usernames
-  are unique **case-insensitively** (`unique index on lower(username)`).
-- **Session-first page load.** `shared.js` runs synchronously at the top of
-  every page: it reads the stored session, and if there is none — and the
-  page does not carry `body.no-auth` — hides the page (`visibility: hidden`)
-  and `location.replace('login.html?from=…')`. Every page therefore either
-  has a session by the time its own scripts run, or is already navigating
-  away. Silent 401s are impossible: `sb()` refreshes on demand and, if the
-  refresh fails, clears the session and redirects to login with the same
-  `from`.
-- **`shared.js` is the only auth surface.** `authHeaders()` picks the access
-  token when signed in (the anon key otherwise), `sb()` refreshes 60s before
-  expiry and after any 401, and pages never touch `/auth/v1/*` directly.
-  Exposed helpers: `signIn(username, password)` (resolves username → profile
-  via `profiles` first, so it also picks up `is_admin`),
-  `resolveUsernameToProfile(username)` / `resolveUsernameToEmail(username)`,
-  `signOut()` (POSTs `/auth/v1/logout`, clears storage, redirects to login),
-  `refreshSession()`, `hasSession()`, `isAdmin()`, `currentUser()` →
-  `{ id, email, username, is_admin }`.
-  Admin RPCs: `adminCreateUser(username, password)` → new user id (email is
-  minted by `syntheticEmailFor(username)` inside the helper),
-  `adminResetPassword(userId, password)`, `adminListUsers()` →
+- **Plain Supabase Auth: email + password.** Accounts are created and
+  passwords set entirely in the Supabase dashboard → Authentication →
+  Users. There is no in-app create-user or reset-password flow. If a
+  teacher forgets their password, the admin resets it from the dashboard
+  (or from an SQL editor via Supabase's Auth Admin API); Supabase's
+  own email-recovery flow also works if you leave Site URL / Redirect
+  URLs configured (see below), because we don't intercept it any more.
+  `login.html` posts email + password to
+  `/auth/v1/token?grant_type=password`; on success the session is stored
+  in `localStorage['teacherpal.session']` = `{ access_token,
+  refresh_token, expires_at, user: { id, email, username, is_admin, theme,
+  teaches_periods } }`. `hydrateProfileIntoSession()` runs right after the
+  token exchange and fills in the profile fields.
+- **Automatic profiles row per auth user.** `migration-simplify-auth.sql`
+  installs a trigger `on_auth_user_created` on `auth.users` that inserts a
+  matching `profiles` row (defaults: `is_admin=false`, `theme='jarvis'`,
+  `teaches_periods={0..7}`) whenever the dashboard creates a user. A
+  companion trigger `on_auth_user_email_change` keeps `profiles.email` in
+  sync when the dashboard email is edited. `profiles.username` is
+  nullable — set it manually if you want a display name, otherwise the
+  app falls back to the email local part.
+- **Session-first page load.** `shared.js` runs at the top of every page:
+  it reads the stored session, and if there is none — and the page does
+  not carry `body.no-auth` — hides the page (`visibility: hidden`) and
+  `location.replace('login.html?from=…')`. `sb()` refreshes 60s before
+  expiry and after any 401; a failed refresh clears the session and
+  redirects to login with the same `from`.
+- **`shared.js` is the only auth surface.** Exposed helpers:
+  `signIn(email, password)`, `signOut()` (POSTs `/auth/v1/logout`, clears
+  storage, redirects to login), `refreshSession()`, `hasSession()`,
+  `isAdmin()`, `currentUser()` → `{ id, email, username, is_admin, theme,
+  teaches_periods }`, `hydrateProfileIntoSession()`.
+  Read-only admin RPC: `adminListUsers()` →
   `[{ user_id, email, username, is_admin, created_at, last_sign_in_at }]`.
   Theme: `THEMES` (registry), `applyTheme(id)`, `currentTheme()`,
   `setMyTheme(id)` (applies locally + POSTs `set_my_theme` RPC to persist
@@ -132,71 +135,44 @@ shared across accounts.
   updates local session, dispatches `teacherpal:teachesPeriods`, POSTs
   `set_my_teaches_periods` RPC).
 - **Top-bar account chip + sign-out** (`nav.js`): every page except the hub
-  shows `USER <email>` and a small door-arrow icon-button; on the hub the
-  chip still appears in the readout row. Both hide on `body.no-auth` pages.
+  shows `USER <username or email>` and a small door-arrow icon-button; on
+  the hub the chip still appears in the readout row. Both hide on
+  `body.no-auth` pages.
 - **`body.no-auth`** — the one escape hatch. Pages carrying this class skip
   the auth check and stay accessible to anonymous visitors. Today only
-  `login.html` uses it. Any future student-facing page (a shared classroom
-  activity, etc.) should carry this class and get its own narrow anon RLS
-  policies on its own tables — never grant anon access to any of the
-  teacher-owned tables.
+  `login.html` uses it. Any future student-facing page should carry this
+  class and get its own narrow anon RLS policies on its own tables —
+  never grant anon access to any of the teacher-owned tables.
 - **Session storage sits in `localStorage`, not cookies.** Two tabs share
   the session; a sign-out in one tab logs the other out on its next
   request (the refresh fails → redirect).
-- **Admin flag.** `profiles.is_admin boolean` (default false, `khalid` seeded
-  true). Attached to `session.user.is_admin` at sign-in; `isAdmin()` reads
-  it. Purely UI: the source-of-truth check lives in the RPC functions
-  themselves (see below). `nav.js` filters entries marked `admin: true`
-  out of the top nav for non-admins.
+- **Admin flag.** `profiles.is_admin boolean` (default false). Attached to
+  `session.user.is_admin` at sign-in; `isAdmin()` reads it.
+  Set the flag manually for admins in the SQL editor:
+  `update public.profiles set is_admin = true where email = '…';`
+  `nav.js` filters entries marked `admin: true` out of the top nav for
+  non-admins. `admin.html` is a read-only user list; user creation and
+  password reset happen in the Supabase dashboard.
 - **Teaches-periods.** `profiles.teaches_periods integer[]` (each 0-7,
-  default all eight; seeded `khalid={1,2,3,5,6}`, `marwa={2,3,4,5,6}`).
-  Attached to `session.user.teaches_periods`; `currentTeachesPeriods()`
-  returns the sorted array. **This is the source of truth for which bell
-  periods count as "yours" vs "prep":**
-    - `teachingMap(periods, teachesPeriods)` (schedule.js) is now
+  default all eight). Attached to `session.user.teaches_periods`;
+  `currentTeachesPeriods()` returns the sorted array. **Source of truth
+  for which bell periods count as "yours" vs "prep":**
+    - `teachingMap(periods, teachesPeriods)` (schedule.js) is
       seeded from `teaches_periods` first, then overlaid with course
       names from any matching roster entry (`parsePeriodName`). A bell
       number in the map is "taught"; missing → `scheduleStatus`
-      renders it as `PREP` in the hub NOW line and in the bell-table.
+      renders it as `PREP`.
     - `fillPeriodSelect(select, periods)` (shared.js) filters roster
-      entries whose parsed bell number isn't in `teaches_periods` so
-      selectors on Attendance / Groups / Seating / Bathroom hide them
-      too. Entries whose name has no bell number always pass through
-      (safety for weird/legacy names).
+      entries whose parsed bell number isn't in `teaches_periods`.
+      Entries whose name has no bell number always pass through.
     - The bell schedule itself (`SCHEDULES` in schedule.js) still
-      contains every period — it's the real school timetable. Only
-      the *display* of "mine vs prep" is filtered.
+      contains every period — real school timetable. Only display
+      of "mine vs prep" is filtered.
   Change it in the top-bar gear menu → **Periods I teach** (0-7
   checkboxes). Toggling any checkbox calls `setMyTeachesPeriods(arr)`,
   which broadcasts `teacherpal:teachesPeriods`; `nav.js` listens and
-  rebuilds `navState.teaches` on the fly so the NOW readout updates
-  without a page reload.
-- **Admin user-management uses Postgres RPCs, not an Edge Function.**
-  `admin_create_user`, `admin_reset_password`, `admin_list_users` are
-  SECURITY DEFINER (`migration-admin.sql`); each starts with an
-  `if not exists (select 1 from profiles where user_id = auth.uid() and
-  is_admin) then raise exception 'not authorized'` guard. That means a
-  non-admin who bypasses the client-side gate still gets rejected. The
-  functions insert directly into `auth.users` + `auth.identities`
-  (bcrypt-hashed password, email already confirmed) — this couples us to
-  Supabase's internal auth schema, so a future release could require a
-  migration. The alternative — an Edge Function using the service_role
-  key — would be more future-proof but needs the Supabase CLI + a Deno
-  function deploy, which conflicts with the "plain HTML, no build step"
-  rule. **Never** put the service_role key in client code; the RPC
-  pattern keeps it out of the repo entirely.
-- **Synthetic emails for admin-created accounts.** The admin form only
-  asks for a username and password. Supabase still needs an email
-  internally (`/auth/v1/token?grant_type=password` requires one), so
-  `shared.js` mints `<username>@teacherpal.local` — see
-  `syntheticEmailFor()` and `SYNTHETIC_EMAIL_DOMAIN`. **Consequence:**
-  Supabase's password-reset-by-email flow doesn't work for these
-  accounts (nothing routes `*.teacherpal.local`). Admins reset passwords
-  from `admin.html` instead, which calls `admin_reset_password` and
-  updates `auth.users.encrypted_password` directly. If a teacher ever
-  needs a real email address (e.g. to receive Supabase auth emails), you
-  can update `profiles.email` and `auth.users.email` by hand in the SQL
-  editor — nothing else in the app depends on the local domain.
+  rebuilds `navState.teaches` so the NOW readout updates without a
+  page reload.
 
 ## Database schema
 
@@ -497,7 +473,7 @@ TeacherPal ships two themes, one per teacher's taste:
 Storage & flow:
 
 - **`profiles.theme text default 'jarvis'`**. Attached to
-  `session.user.theme` at sign-in (via `resolveUsernameToProfile`) and
+  `session.user.theme` at sign-in (via `hydrateProfileIntoSession`) and
   preserved through refreshes.
 - **`shared.js`**: `THEMES` (the registry), `applyTheme(id)` (attribute +
   localStorage + `teacherpal:theme` event), `currentTheme()`,

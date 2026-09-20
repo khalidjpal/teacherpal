@@ -110,8 +110,8 @@
 
       <div class="login-form">
         <div class="login-field">
-          <label for="login-username">Username</label>
-          <input type="text" id="login-username" name="username" autocomplete="username" spellcheck="false" autocapitalize="off" required autofocus>
+          <label for="login-email">Email</label>
+          <input type="email" id="login-email" name="email" autocomplete="username" spellcheck="false" autocapitalize="off" required autofocus>
         </div>
         <div class="login-field">
           <label for="login-password">Password</label>
@@ -121,221 +121,50 @@
         <button type="submit" class="primary login-submit" id="login-submit">Sign in</button>
       </div>
 
-      <p class="login-foot">Accounts are created in the Supabase dashboard. If you don't have one, ask Khalid.</p>
+      <p class="login-foot">Accounts are managed in the Supabase dashboard. Forgot your password? Ask Khalid to reset it.</p>
     </form>
-
-    <!-- Shown when a password-recovery link brings the user here. Hidden by default. -->
-    <form class="login-box" id="recovery-form" novalidate hidden>
-      <div class="login-brand"><span class="login-brand-mark" aria-hidden="true"></span>TeacherPal</div>
-      <p class="login-title">Set a new password</p>
-      <h1 class="login-hero">Almost there.</h1>
-
-      <div class="login-form">
-        <div class="login-field">
-          <label for="rec-pw">New password</label>
-          <input type="password" id="rec-pw" minlength="6" autocomplete="new-password" required autofocus>
-        </div>
-        <div class="login-field">
-          <label for="rec-pw2">Confirm password</label>
-          <input type="password" id="rec-pw2" minlength="6" autocomplete="new-password" required>
-        </div>
-        <div class="login-msg" id="rec-msg" role="status" aria-live="polite"></div>
-        <button type="submit" class="primary login-submit" id="rec-submit">Save password</button>
-      </div>
-      <p class="login-foot">Link expired? <a href="login.html">Back to sign in</a></p>
-    </form>
-
-    <!-- Shown when the recovery link is malformed or expired. -->
-    <div class="login-box" id="recovery-error" hidden style="text-align:center">
-      <div class="login-brand" style="justify-content:center"><span class="login-brand-mark" aria-hidden="true"></span>TeacherPal</div>
-      <p class="login-title">Reset link problem</p>
-      <p class="login-msg" id="rec-err-msg" style="min-height:auto;margin:0 0 var(--space-4)"></p>
-      <p class="login-foot"><a href="login.html">Back to sign in</a></p>
-    </div>
   </main>
 
   <script src="shared.js"></script>
   <script>
     (function () {
-      // --- Recovery detection ------------------------------------------
-      // Supabase can hand us three shapes depending on the project's auth
-      // flow. We handle all three so the same page works regardless.
-      const recovery = parseRecoveryFromUrl();
-      if (recovery) {
-        // Strip sensitive tokens from the URL bar immediately; we hold them
-        // in memory for this session.
-        history.replaceState(null, '', location.pathname);
-        if (recovery.error) return showRecoveryError(recovery.error);
-        return showRecoveryForm(recovery);
-      }
-
-      // --- Normal sign-in ----------------------------------------------
       const form = document.getElementById('login-form');
-      const userEl = document.getElementById('login-username');
+      const emailEl = document.getElementById('login-email');
       const pwEl = document.getElementById('login-password');
       const msgEl = document.getElementById('login-msg');
       const submitBtn = document.getElementById('login-submit');
 
-      // If already signed in, jump straight to wherever they were headed.
       if (hasSession()) redirectAfterLogin();
 
       form.addEventListener('submit', async (e) => {
         e.preventDefault();
-        const username = userEl.value.trim();
+        const email = emailEl.value.trim();
         const password = pwEl.value;
-        if (!username || !password) { setMsg(msgEl, 'Enter your username and password.'); return; }
-        setMsg(msgEl, '');
+        if (!email || !password) { setMsg('Enter your email and password.'); return; }
+        setMsg('');
         submitBtn.disabled = true;
         submitBtn.textContent = 'Signing in…';
         try {
-          await signIn(username, password);
-          setMsg(msgEl, 'Signed in.', 'ok');
+          await signIn(email, password);
+          setMsg('Signed in.', 'ok');
           redirectAfterLogin();
         } catch (err) {
-          setMsg(msgEl, err.message || 'Sign-in failed.');
+          setMsg(err.message || 'Sign-in failed.');
         } finally {
           submitBtn.disabled = false;
           submitBtn.textContent = 'Sign in';
         }
       });
 
-      // --- Helpers -----------------------------------------------------
-      function setMsg(el, text, kind) {
-        el.textContent = text || '';
-        el.classList.toggle('ok', kind === 'ok');
+      function setMsg(text, kind) {
+        msgEl.textContent = text || '';
+        msgEl.classList.toggle('ok', kind === 'ok');
       }
       function redirectAfterLogin() {
         const params = new URLSearchParams(location.search);
         const from = params.get('from');
         const safe = from && !/^(?:[a-z]+:|\/\/)/i.test(from) ? from : 'index.html';
         location.replace(safe);
-      }
-
-      function parseRecoveryFromUrl() {
-        const h = (location.hash && location.hash.length > 1)
-          ? new URLSearchParams(location.hash.slice(1)) : new URLSearchParams();
-        const q = new URLSearchParams(location.search);
-
-        // TEMP diagnostic — remove once recovery flow is confirmed working.
-        console.info('[login] parseRecoveryFromUrl', {
-          hash_keys:  Array.from(h.keys()),
-          query_keys: Array.from(q.keys()),
-        });
-
-        // Errors first — Supabase drops these into either the hash or the
-        // query depending on the flow.
-        const err = h.get('error') || h.get('error_description') || h.get('error_code')
-                 || q.get('error') || q.get('error_description') || q.get('error_code');
-        if (err && !h.get('access_token') && !q.get('code') && !q.get('token_hash')) {
-          return { error: humanErr(h.get('error_description') || q.get('error_description') || err) };
-        }
-
-        // Implicit flow — any hash with access_token is treated as a recovery
-        // (or magic-link) callback; some Supabase configs omit `type=recovery`.
-        if (h.get('access_token')) {
-          return {
-            kind: 'implicit',
-            access_token: h.get('access_token'),
-            refresh_token: h.get('refresh_token') || null,
-            expires_in: Number(h.get('expires_in') || 3600),
-            type: h.get('type') || 'recovery',
-          };
-        }
-        // PKCE flow — a bare ?code=... is what Supabase's newer default sends.
-        if (q.get('code')) return { kind: 'code', code: q.get('code') };
-        // Legacy verify flow — ?token_hash=...
-        if (q.get('token_hash')) {
-          return { kind: 'verify', token_hash: q.get('token_hash'), type: q.get('type') || 'recovery' };
-        }
-        return null;
-      }
-
-      function humanErr(msg) {
-        if (!msg) return 'The reset link is invalid.';
-        const s = String(msg).replace(/\+/g, ' ');
-        if (/expired/i.test(s)) return 'This reset link has expired. Request a new one.';
-        if (/invalid/i.test(s)) return 'This reset link is invalid. Request a new one.';
-        return s;
-      }
-
-      function showRecoveryError(text) {
-        document.getElementById('login-form').hidden = true;
-        document.getElementById('rec-err-msg').textContent = text;
-        document.getElementById('recovery-error').hidden = false;
-      }
-
-      function showRecoveryForm(recovery) {
-        document.getElementById('login-form').hidden = true;
-        const form = document.getElementById('recovery-form');
-        form.hidden = false;
-        const pw = document.getElementById('rec-pw');
-        const pw2 = document.getElementById('rec-pw2');
-        const msg = document.getElementById('rec-msg');
-        const btn = document.getElementById('rec-submit');
-
-        form.addEventListener('submit', async (e) => {
-          e.preventDefault();
-          if (pw.value.length < 6) { setMsg(msg, 'Password must be at least 6 characters.'); return; }
-          if (pw.value !== pw2.value) { setMsg(msg, "Passwords don't match."); return; }
-          setMsg(msg, '');
-          btn.disabled = true;
-          btn.textContent = 'Saving…';
-          try {
-            const tokens = await tokensFromRecovery(recovery);
-            const user   = await updatePasswordWithToken(tokens.access_token, pw.value);
-            const profile = await resolveEmailToProfile(user.email);
-            if (!profile) throw new Error("Password saved, but there is no profile for this account. Ask Khalid to add one.");
-            // Sign in fresh with the new password so the session is clean.
-            await signIn(profile.username, pw.value);
-            setMsg(msg, 'Signed in.', 'ok');
-            location.replace('index.html');
-          } catch (err) {
-            setMsg(msg, err.message || 'Could not save the new password.');
-            btn.disabled = false;
-            btn.textContent = 'Save password';
-          }
-        });
-      }
-
-      // Turn any of the three recovery-URL shapes into {access_token, …}.
-      async function tokensFromRecovery(rec) {
-        if (rec.kind === 'implicit') return rec;
-        if (rec.kind === 'code') {
-          const res = await fetch(`${SUPABASE_URL}/auth/v1/token?grant_type=pkce`, {
-            method: 'POST',
-            headers: { apikey: SUPABASE_ANON_KEY, 'Content-Type': 'application/json' },
-            body: JSON.stringify({ auth_code: rec.code }),
-          });
-          const data = await res.json().catch(() => ({}));
-          if (!res.ok) throw new Error(data.error_description || data.msg || 'Recovery link exchange failed.');
-          return data;
-        }
-        if (rec.kind === 'verify') {
-          const res = await fetch(`${SUPABASE_URL}/auth/v1/verify`, {
-            method: 'POST',
-            headers: { apikey: SUPABASE_ANON_KEY, 'Content-Type': 'application/json' },
-            body: JSON.stringify({ type: 'recovery', token_hash: rec.token_hash }),
-          });
-          const data = await res.json().catch(() => ({}));
-          if (!res.ok) throw new Error(data.error_description || data.msg || 'Recovery verify failed.');
-          return data;
-        }
-        throw new Error('Unknown recovery link.');
-      }
-
-      async function updatePasswordWithToken(accessToken, password) {
-        const res = await fetch(`${SUPABASE_URL}/auth/v1/user`, {
-          method: 'PUT',
-          headers: {
-            apikey: SUPABASE_ANON_KEY,
-            Authorization: `Bearer ${accessToken}`,
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({ password }),
-        });
-        const data = await res.json().catch(() => ({}));
-        if (!res.ok) throw new Error(data.msg || data.error_description || 'Password update failed.');
-        return data;
       }
     })();
   </script>

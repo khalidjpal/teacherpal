@@ -28,48 +28,6 @@ const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
 const SESSION_KEY = 'teacherpal.session';
 const LOGIN_PAGE = 'login.html';
 
-// Recovery / magic-link bounce — runs synchronously at script parse time.
-// If any page (other than login.html itself) lands with a Supabase auth
-// redirect in the URL, hand the tokens off to login.html preserving the
-// full search + hash. This has to fire *before* the "no session → redirect
-// to login" logic below, because redirectToLogin() only preserves the
-// query string and would strip the recovery token from the hash.
-//
-// Detection is deliberately permissive — any of these params in the hash
-// or query is enough to treat the URL as an auth callback:
-//   hash:  access_token, refresh_token, provider_token, error, error_code
-//   query: code, token_hash, error, error_code
-// This covers implicit, PKCE, verify, and magic-link flows equally.
-(function recoveryBounce() {
-  if (typeof location === 'undefined') return;
-  const onLoginPage = /(^|\/)login\.html$/i.test(location.pathname);
-
-  const hashParams  = (location.hash && location.hash.length > 1)
-    ? new URLSearchParams(location.hash.slice(1)) : new URLSearchParams();
-  const queryParams = new URLSearchParams(location.search || '');
-
-  const hashLooksAuth = ['access_token', 'refresh_token', 'provider_token', 'error', 'error_code']
-    .some((k) => hashParams.get(k));
-  const queryLooksAuth = ['code', 'token_hash', 'error', 'error_code']
-    .some((k) => queryParams.get(k));
-  const looksLikeAuthRedirect = hashLooksAuth || queryLooksAuth;
-
-  // TEMP diagnostic: keep until recovery flow is confirmed working end-to-end.
-  if (looksLikeAuthRedirect || location.hash) {
-    console.info('[recoveryBounce]', {
-      path: location.pathname,
-      hash_keys: Array.from(hashParams.keys()),
-      query_keys: Array.from(queryParams.keys()),
-      onLoginPage,
-      willBounce: looksLikeAuthRedirect && !onLoginPage,
-    });
-  }
-
-  if (looksLikeAuthRedirect && !onLoginPage) {
-    location.replace(`${LOGIN_PAGE}${location.search}${location.hash}`);
-  }
-})();
-
 function isConfigured() {
   return SUPABASE_URL.startsWith('http') && !SUPABASE_ANON_KEY.startsWith('PASTE_');
 }
@@ -134,89 +92,54 @@ function normalizeSession(raw) {
   };
 }
 
-// Resolve a username to the account's profile row so we can call Supabase's
-// email+password auth underneath *and* pick up is_admin in the same fetch.
-// Reads the `profiles` table (anon-readable). Returns null when the username
-// doesn't exist — the caller reports a generic "Sign-in failed" either way,
-// so usernames can't be enumerated.
-async function resolveUsernameToProfile(username) {
-  const u = String(username || '').trim();
-  if (!u) return null;
-  const url = new URL(`${SUPABASE_URL}/rest/v1/profiles`);
-  url.searchParams.set('select', 'user_id,username,email,is_admin,theme,teaches_periods');
-  url.searchParams.set('username', `ilike.${u}`);
-  url.searchParams.set('limit', '1');
-  const res = await fetch(url, {
-    headers: { apikey: SUPABASE_ANON_KEY, Authorization: `Bearer ${SUPABASE_ANON_KEY}` },
-  });
-  // TEMP diagnostic: shows the profile lookup status until sign-in is confirmed working.
-  console.info('[signIn] profile lookup', { username: u, status: res.status, ok: res.ok });
-  if (!res.ok) return null;
-  const rows = await res.json().catch(() => []);
-  console.info('[signIn] profile row', rows[0] || null);
-  return rows[0] || null;
-}
+// Plain Supabase Auth: email + password. Accounts are created in the
+// Supabase dashboard (no in-app admin flow); passwords are set from the
+// dashboard too. After a successful token exchange, we fetch the profile
+// row (created for us by the on_auth_user_created trigger) to hydrate
+// is_admin / theme / teaches_periods into the session.
+async function signIn(email, password) {
+  const cleanEmail = String(email || '').trim().toLowerCase();
+  if (!cleanEmail || !password) throw new Error('Enter your email and password.');
 
-// Back-compat alias — some code may still want just the email.
-async function resolveUsernameToEmail(username) {
-  const p = await resolveUsernameToProfile(username);
-  return p ? p.email : null;
-}
-
-// Look up a profile row by email. Used by the recovery flow to convert a
-// GoTrue user (which we only know by email) back into a TeacherPal
-// username so we can call signIn() normally after resetting the password.
-async function resolveEmailToProfile(email) {
-  const e = String(email || '').trim().toLowerCase();
-  if (!e) return null;
-  const url = new URL(`${SUPABASE_URL}/rest/v1/profiles`);
-  url.searchParams.set('select', 'user_id,username,email,is_admin,theme,teaches_periods');
-  url.searchParams.set('email', `eq.${e}`);
-  url.searchParams.set('limit', '1');
-  const res = await fetch(url, {
-    headers: { apikey: SUPABASE_ANON_KEY, Authorization: `Bearer ${SUPABASE_ANON_KEY}` },
-  });
-  if (!res.ok) return null;
-  const rows = await res.json().catch(() => []);
-  return rows[0] || null;
-}
-
-async function signIn(username, password) {
-  const trimmed = String(username || '').trim();
-  const profile = await resolveUsernameToProfile(trimmed);
-  if (!profile) {
-    console.error('[signIn] no profile for username', trimmed);
-    throw new Error('Sign-in failed.');
-  }
   const res = await fetch(`${SUPABASE_URL}/auth/v1/token?grant_type=password`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', apikey: SUPABASE_ANON_KEY },
-    body: JSON.stringify({ email: profile.email, password }),
+    body: JSON.stringify({ email: cleanEmail, password }),
   });
   const data = await res.json().catch(() => ({}));
   if (!res.ok) {
-    // TEMP diagnostic: surface Supabase's real error so we can see WHY the
-    // token endpoint rejected the credentials. Remove once sign-in works.
-    console.error('[signIn] /auth/v1/token failed', {
-      status: res.status,
-      sent_email: profile.email,
-      supabase_response: data,
-      profile_user_id: profile.user_id,
-    });
-    throw new Error('Sign-in failed.');
+    const msg = data.error_description || data.msg || data.message || 'Sign-in failed.';
+    throw new Error(msg);
   }
-  const session = normalizeSession(data);
-  if (session && session.user) {
-    session.user.username = profile.username || trimmed;
-    session.user.is_admin = !!profile.is_admin;
-    session.user.theme    = profile.theme || DEFAULT_THEME;
-    session.user.teaches_periods = Array.isArray(profile.teaches_periods)
-      ? profile.teaches_periods.slice()
-      : [0, 1, 2, 3, 4, 5, 6, 7];
-  }
-  saveSession(session);
-  applyTheme(session && session.user ? session.user.theme : DEFAULT_THEME);
+  saveSession(normalizeSession(data));
+  await hydrateProfileIntoSession();
+  applyTheme((_session && _session.user && _session.user.theme) || DEFAULT_THEME);
   return _session;
+}
+
+// After sign-in, fill session.user with is_admin / theme / teaches_periods
+// from the profiles row (which the trigger keeps in sync with auth.users).
+async function hydrateProfileIntoSession() {
+  if (!_session || !_session.user) return;
+  try {
+    const rows = await sb('profiles', {
+      params: {
+        user_id: `eq.${_session.user.id}`,
+        select:  'username,email,is_admin,theme,teaches_periods',
+        limit:   '1',
+      },
+    });
+    const p = rows && rows[0] ? rows[0] : {};
+    _session.user.username        = p.username || null;
+    _session.user.is_admin        = !!p.is_admin;
+    _session.user.theme           = p.theme || DEFAULT_THEME;
+    _session.user.teaches_periods = Array.isArray(p.teaches_periods)
+      ? p.teaches_periods.slice()
+      : [0, 1, 2, 3, 4, 5, 6, 7];
+    saveSession(_session);
+  } catch (err) {
+    console.error('profile hydrate failed', err);
+  }
 }
 
 const isAdmin = () => !!(_session && _session.user && _session.user.is_admin);
@@ -373,60 +296,10 @@ async function sbFetch(table, { method = 'GET', params, body, prefer } = {}) {
 }
 
 // ---------------------------------------------------------------------------
-// Admin RPCs — call the SECURITY DEFINER functions in migration-admin.sql.
-// The functions themselves check that auth.uid() belongs to an admin, so a
-// non-admin who bypasses the client-side gate still gets 'not authorized'.
-// PostgREST maps RPCs to POST /rest/v1/rpc/<function_name> with a JSON body
-// of named parameters. sb() handles the auth/refresh/401 flow the same as
-// table calls.
+// Admin read RPC — the users list on admin.html. Users are created and
+// their passwords managed in the Supabase dashboard directly; there is no
+// in-app create/reset flow anymore.
 // ---------------------------------------------------------------------------
-
-// Synthetic email for admin-created accounts. Supabase Auth needs one
-// internally (email+password grant), but TeacherPal signs in by username, so
-// we don't ask the admin for a real address — we mint <username>@teacherpal.local
-// deterministically. Password reset via email won't work for these accounts;
-// use the admin page instead.
-const SYNTHETIC_EMAIL_DOMAIN = 'teacherpal.local';
-function syntheticEmailFor(username) {
-  const local = String(username || '').trim().toLowerCase().replace(/[^a-z0-9._-]+/g, '-');
-  return `${local}@${SYNTHETIC_EMAIL_DOMAIN}`;
-}
-
-// The write RPCs (create + reset) go through the admin-users Edge Function
-// so passwords are hashed by GoTrue's admin API (the only reliable way —
-// SQL-based bcrypt via pgcrypto proved incompatible in practice). The
-// service_role key stays server-side inside the function. The read RPC
-// (list) stays as a Postgres SECURITY DEFINER function because it doesn't
-// need service_role.
-async function callAdminFn(body) {
-  if (!_session || !_session.access_token) throw new Error('not signed in');
-  const res = await fetch(`${SUPABASE_URL}/functions/v1/admin-users`, {
-    method: 'POST',
-    headers: {
-      apikey: SUPABASE_ANON_KEY,
-      Authorization: `Bearer ${_session.access_token}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify(body),
-  });
-  const data = await res.json().catch(() => ({}));
-  if (!res.ok) throw new Error(data.error || `admin-users failed (${res.status})`);
-  return data;
-}
-
-async function adminCreateUser(username, password) {
-  const { user_id } = await callAdminFn({
-    action:   'create',
-    username,
-    email:    syntheticEmailFor(username),
-    password,
-  });
-  return user_id;
-}
-
-async function adminResetPassword(userId, password) {
-  await callAdminFn({ action: 'reset', user_id: userId, password });
-}
 
 async function adminListUsers() {
   return sb('rpc/admin_list_users', { method: 'POST', body: {} });

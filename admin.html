@@ -111,25 +111,9 @@
     <header class="topbar"></header>
 
     <main class="page admin-page" hidden id="admin-main">
-      <section class="admin-card">
-        <h2>Create user</h2>
-        <form class="admin-form" id="create-form" novalidate>
-          <div class="admin-field">
-            <label for="new-username">Username</label>
-            <input type="text" id="new-username" name="username" autocomplete="off" spellcheck="false" autocapitalize="off" required>
-          </div>
-          <div class="admin-field">
-            <label for="new-password">Password</label>
-            <input type="text" id="new-password" name="password" autocomplete="off" spellcheck="false" minlength="6" required>
-          </div>
-          <div class="admin-msg" id="create-msg" role="status" aria-live="polite"></div>
-          <button type="submit" class="primary" id="create-submit">Create user</button>
-        </form>
-      </section>
-
-      <section class="admin-card">
+      <section class="admin-card" style="grid-column: 1 / -1">
         <h2>Users</h2>
-        <p class="list-note">No delete button — deleting an auth user cascades and destroys all their data.</p>
+        <p class="list-note">Users are created and their passwords set in the Supabase dashboard (Authentication → Users). This page is read-only.</p>
         <div id="user-list"><p class="list-empty">Loading…</p></div>
       </section>
 
@@ -142,42 +126,14 @@
   <script src="nav.js"></script>
   <script>
     (function () {
-      // Client-side gate. The server-side check (in the SECURITY DEFINER
-      // functions) is the real one — this just avoids showing the UI to
-      // non-admins.
       if (!hasSession()) return;   // shared.js already handled the redirect
       if (!isAdmin()) { location.replace('index.html'); return; }
       document.getElementById('admin-main').hidden = false;
 
-      const createForm = document.getElementById('create-form');
-      const uEl = document.getElementById('new-username');
-      const pEl = document.getElementById('new-password');
-      const msg = document.getElementById('create-msg');
-      const submit = document.getElementById('create-submit');
       const list = document.getElementById('user-list');
       const me = currentUser();
 
-      createForm.addEventListener('submit', async (e) => {
-        e.preventDefault();
-        const username = uEl.value.trim();
-        const password = pEl.value;
-        if (!username || !password) { setMsg(msg, 'Fill every field.'); return; }
-        if (password.length < 6) { setMsg(msg, 'Password must be at least 6 characters.'); return; }
-        submit.disabled = true;
-        submit.textContent = 'Creating…';
-        setMsg(msg, '');
-        try {
-          await adminCreateUser(username, password);
-          setMsg(msg, `Created ${username}.`, 'ok');
-          uEl.value = ''; pEl.value = '';
-          await loadUsers();
-        } catch (err) {
-          setMsg(msg, humanErr(err));
-        } finally {
-          submit.disabled = false;
-          submit.textContent = 'Create user';
-        }
-      });
+      loadUsers();
 
       async function loadUsers() {
         try {
@@ -193,55 +149,31 @@
         const rows = users.map((u) => {
           const isMe = me && u.user_id === me.id;
           const admin = u.is_admin ? ' <span class="badge-admin">ADMIN</span>' : '';
+          const display = u.username || u.email.split('@')[0];
           const last = u.last_sign_in_at
             ? new Date(u.last_sign_in_at).toLocaleString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })
             : '—';
           return `
             <tr>
               <td>
-                <div class="u-name">${escapeHtml(u.username)}${admin}${isMe ? ' <span class="u-email">(you)</span>' : ''}</div>
+                <div class="u-name">${escapeHtml(display)}${admin}${isMe ? ' <span class="u-email">(you)</span>' : ''}</div>
                 <div class="u-email">${escapeHtml(u.email)}</div>
               </td>
               <td class="u-when">${escapeHtml(last)}</td>
-              <td class="actions">
-                <button type="button" class="small" data-reset="${escapeHtml(u.user_id)}" data-name="${escapeHtml(u.username)}">Reset password</button>
-              </td>
             </tr>`;
         }).join('');
         list.innerHTML = `
           <table class="user-table">
-            <thead><tr><th>User</th><th>Last sign-in</th><th></th></tr></thead>
+            <thead><tr><th>User</th><th>Last sign-in</th></tr></thead>
             <tbody>${rows}</tbody>
           </table>`;
-        list.querySelectorAll('[data-reset]').forEach((btn) => {
-          btn.addEventListener('click', () => resetFor(btn.dataset.reset, btn.dataset.name));
-        });
       }
 
-      async function resetFor(userId, username) {
-        const pw = prompt(`New password for ${username}?`);
-        if (pw === null) return;
-        if (pw.length < 6) { showError(new Error('Password must be at least 6 characters.')); return; }
-        try {
-          await adminResetPassword(userId, pw);
-          setStatus(`Password reset for ${username}.`, 'ok');
-        } catch (err) {
-          showError(new Error(humanErr(err)));
-        }
-      }
-
-      function setMsg(el, text, kind) {
-        el.textContent = text || '';
-        el.classList.toggle('ok', kind === 'ok');
-      }
       function humanErr(err) {
         const m = (err && err.message) || String(err);
-        // sb() wraps the raw response — try to pull PostgREST's { message } out.
         const match = m.match(/\{[^{}]*"message"\s*:\s*"([^"]+)"/);
         return match ? match[1] : m;
       }
-
-      loadUsers();
     })();
   </script>
 </body>
