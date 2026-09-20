@@ -28,6 +28,37 @@ const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
 const SESSION_KEY = 'teacherpal.session';
 const LOGIN_PAGE = 'login.html';
 
+// Recovery / magic-link bounce — runs synchronously at script parse time
+// so any page that receives a Supabase auth redirect hands the tokens off
+// to login.html (which knows how to complete the flow) before the rest of
+// the page tries to load a session. Covers all three redirect shapes the
+// project might use, depending on Supabase auth-flow config:
+//   • Implicit  → `#access_token=…&type=recovery&…`
+//   • PKCE      → `?code=…`
+//   • Verify    → `?token_hash=…&type=recovery`
+(function recoveryBounce() {
+  if (typeof location === 'undefined') return;
+  const onLoginPage = /(^|\/)login\.html$/i.test(location.pathname);
+  if (onLoginPage) return;
+
+  let looksLikeAuthRedirect = false;
+  if (location.hash && location.hash.length > 1) {
+    const h = new URLSearchParams(location.hash.slice(1));
+    if ((h.get('type') === 'recovery' && h.get('access_token')) || h.get('error')) {
+      looksLikeAuthRedirect = true;
+    }
+  }
+  if (!looksLikeAuthRedirect && location.search) {
+    const q = new URLSearchParams(location.search);
+    if (q.get('code') || (q.get('type') === 'recovery' && q.get('token_hash')) || q.get('error')) {
+      looksLikeAuthRedirect = true;
+    }
+  }
+  if (looksLikeAuthRedirect) {
+    location.replace(`${LOGIN_PAGE}${location.search}${location.hash}`);
+  }
+})();
+
 function isConfigured() {
   return SUPABASE_URL.startsWith('http') && !SUPABASE_ANON_KEY.startsWith('PASTE_');
 }
@@ -107,8 +138,11 @@ async function resolveUsernameToProfile(username) {
   const res = await fetch(url, {
     headers: { apikey: SUPABASE_ANON_KEY, Authorization: `Bearer ${SUPABASE_ANON_KEY}` },
   });
+  // TEMP diagnostic: shows the profile lookup status until sign-in is confirmed working.
+  console.info('[signIn] profile lookup', { username: u, status: res.status, ok: res.ok });
   if (!res.ok) return null;
   const rows = await res.json().catch(() => []);
+  console.info('[signIn] profile row', rows[0] || null);
   return rows[0] || null;
 }
 
@@ -118,17 +152,48 @@ async function resolveUsernameToEmail(username) {
   return p ? p.email : null;
 }
 
+// Look up a profile row by email. Used by the recovery flow to convert a
+// GoTrue user (which we only know by email) back into a TeacherPal
+// username so we can call signIn() normally after resetting the password.
+async function resolveEmailToProfile(email) {
+  const e = String(email || '').trim().toLowerCase();
+  if (!e) return null;
+  const url = new URL(`${SUPABASE_URL}/rest/v1/profiles`);
+  url.searchParams.set('select', 'user_id,username,email,is_admin,theme,teaches_periods');
+  url.searchParams.set('email', `eq.${e}`);
+  url.searchParams.set('limit', '1');
+  const res = await fetch(url, {
+    headers: { apikey: SUPABASE_ANON_KEY, Authorization: `Bearer ${SUPABASE_ANON_KEY}` },
+  });
+  if (!res.ok) return null;
+  const rows = await res.json().catch(() => []);
+  return rows[0] || null;
+}
+
 async function signIn(username, password) {
   const trimmed = String(username || '').trim();
   const profile = await resolveUsernameToProfile(trimmed);
-  if (!profile) throw new Error('Sign-in failed.');
+  if (!profile) {
+    console.error('[signIn] no profile for username', trimmed);
+    throw new Error('Sign-in failed.');
+  }
   const res = await fetch(`${SUPABASE_URL}/auth/v1/token?grant_type=password`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', apikey: SUPABASE_ANON_KEY },
     body: JSON.stringify({ email: profile.email, password }),
   });
   const data = await res.json().catch(() => ({}));
-  if (!res.ok) throw new Error('Sign-in failed.');   // generic on purpose — no enumeration
+  if (!res.ok) {
+    // TEMP diagnostic: surface Supabase's real error so we can see WHY the
+    // token endpoint rejected the credentials. Remove once sign-in works.
+    console.error('[signIn] /auth/v1/token failed', {
+      status: res.status,
+      sent_email: profile.email,
+      supabase_response: data,
+      profile_user_id: profile.user_id,
+    });
+    throw new Error('Sign-in failed.');
+  }
   const session = normalizeSession(data);
   if (session && session.user) {
     session.user.username = profile.username || trimmed;
@@ -316,22 +381,40 @@ function syntheticEmailFor(username) {
   return `${local}@${SYNTHETIC_EMAIL_DOMAIN}`;
 }
 
-async function adminCreateUser(username, password) {
-  return sb('rpc/admin_create_user', {
+// The write RPCs (create + reset) go through the admin-users Edge Function
+// so passwords are hashed by GoTrue's admin API (the only reliable way —
+// SQL-based bcrypt via pgcrypto proved incompatible in practice). The
+// service_role key stays server-side inside the function. The read RPC
+// (list) stays as a Postgres SECURITY DEFINER function because it doesn't
+// need service_role.
+async function callAdminFn(body) {
+  if (!_session || !_session.access_token) throw new Error('not signed in');
+  const res = await fetch(`${SUPABASE_URL}/functions/v1/admin-users`, {
     method: 'POST',
-    body: {
-      p_username: username,
-      p_email:    syntheticEmailFor(username),
-      p_password: password,
+    headers: {
+      apikey: SUPABASE_ANON_KEY,
+      Authorization: `Bearer ${_session.access_token}`,
+      'Content-Type': 'application/json',
     },
+    body: JSON.stringify(body),
   });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data.error || `admin-users failed (${res.status})`);
+  return data;
+}
+
+async function adminCreateUser(username, password) {
+  const { user_id } = await callAdminFn({
+    action:   'create',
+    username,
+    email:    syntheticEmailFor(username),
+    password,
+  });
+  return user_id;
 }
 
 async function adminResetPassword(userId, password) {
-  return sb('rpc/admin_reset_password', {
-    method: 'POST',
-    body: { p_user_id: userId, p_password: password },
-  });
+  await callAdminFn({ action: 'reset', user_id: userId, password });
 }
 
 async function adminListUsers() {
