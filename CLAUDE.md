@@ -19,10 +19,10 @@ Dark dashboard look with a subtle pink accent (see design-ref.png).
 
 ## Screens
 
-Nine screens, one horizontal top nav (built by `nav.js` on every page):
-**Hub · Attendance · Lesson Plans · Create Groups · Timer · Seating · Bathroom ·
-Schedule · | Rosters** (Rosters is the quiet "setup" item after a
-divider). The active
+Ten screens, one horizontal top nav (built by `nav.js` on every page):
+**Hub · Attendance · Lesson Plans · Create Groups · Timer · Noise Meter ·
+Seating · Bathroom · Schedule · | Rosters** (Rosters is the quiet "setup"
+item after a divider). The active
 screen gets `aria-current="page"` (pink fill). The nav bar also carries
 the live readouts — clock, date, SCHED, NOW period + countdown — and the
 full-screen toggle. There is no sidebar; every page uses the full width.
@@ -34,6 +34,7 @@ full-screen toggle. There is no sidebar; every page uses the full width.
 | Lesson Plans | `lessons.html` | Writing plans: a Mon–Fri week grid across all periods (jump to any date, ← → ↑ ↓ to move) with the full editor for the selected cell beside it |
 | Create Groups | `groups.html` | Random / formula groups, projector view in full screen |
 | Timer | `timer.html` | Classroom countdown / stopwatch: big digits, presets, ±1 min, mute, pop-out + Picture-in-Picture for the projector while another tab is active |
+| Noise Meter | `noise.html` | Room volume from the laptop mic: big green/amber/red meter, three zones with activity presets, "Too loud" hold + chime, pop-out for the projector. Mic only while you hold it on |
 | Seating | `seating.html` | Room builder + seat assignment |
 | Bathroom | `bathroom.html` | Bathroom tracker: click a card → confirm → Start timer; live Out-now strip with End timer, per-student pass checkboxes, red flag past the limit; settings + log/history collapsed out of the main view |
 | Rosters | `roster.html` | Setup: periods + students |
@@ -52,6 +53,7 @@ full-screen toggle. There is no sidebar; every page uses the full width.
 | `migration-rekey-owner.sql` | One-off migration for when the auth user was deleted and recreated: repoints every `owner_id` from the old UID to the new one and rebuilds the `profiles.khalid` row |
 | `migration-themes.sql` | One-off migration that adds `profiles.theme text default 'jarvis'` and the `set_my_theme(text)` SECURITY DEFINER RPC (validated `^[a-z0-9_-]+$`, updates only the caller's own row) |
 | `migration-teaches-periods.sql` | One-off migration that adds `profiles.teaches_periods integer[]` (each entry 0-7) and the `set_my_teaches_periods(int[])` RPC. Seeds `khalid` to `{1,2,3,5,6}` and `marwa` to `{2,3,4,5,6}` |
+| `migration-display-name.sql` | One-off migration that adds `profiles.display_name text` (how the teacher is addressed — the top-bar USER chip) and seeds `khalid` → "Mr. Pal", `marwa` → "Ms. Mohammadi" |
 | `index.html`   | Hub launcher (`body.hub.launcher`): `.hub-sections` — four labelled sections (Daily, Teacher tools, Planning, System) each with its own `.hub-panels` row of `.hud-panel` links; loads only `shared.js`, `schedule.js`, `nav.js` (top bar **without** nav links — the panels are the nav) |
 | `attendance.html` | Attendance screen: `#attendance` in **full** mode — big chart + side column with counts, lists, Copy, Reset, date |
 | `nav.js`       | Shared top bar: renders brand + nav links + readouts + full-screen button into `<header class="topbar">`, marks the active page, runs the clock / bell status (`teacherpal:tick`), exposes `navReady` (periods, overrides, teaches, byNumber). Loaded on every page after `shared.js` + `schedule.js`. |
@@ -61,6 +63,9 @@ full-screen toggle. There is no sidebar; every page uses the full width.
 | `bathroom.js`  | `initBathroom()` — the bathroom tracker (tiles, sign out/in, live elapsed, flag + cap settings in localStorage, log, history). |
 | `timer.html`   | Timer screen: the `.timer-stage` (mode toggle, label, big display + ring, presets, custom min/sec, start/reset/±1, mute, Pop out, PiP, full screen) — loads `timer.js`. |
 | `timer.js`     | Countdown + stopwatch logic. **End-timestamp model**: state is `{ mode, running, paused, label, muted, targetMs, endsAt, remainingAtPause, startedAt, elapsedAtPause }` in `localStorage['teacherpal.timer.state']`; every window computes the display from `Date.now()` against `endsAt`/`startedAt`, so tab-throttling doesn't drift. `BroadcastChannel('teacherpal-timer')` syncs main ↔ pop-out ↔ PiP. Web Audio API beep on zero (respects mute). `documentPictureInPicture.requestWindow()` on Chrome for an always-on-top floating display. Space toggles start/pause. |
+| `noise.html`   | Noise Meter screen: the `.noise-stage` (activity presets, big reading + bar + zone word, Start/Stop, chime mute, Pop out, full screen, the two zone sliders, privacy line) — loads `noise.js`. |
+| `noise.js`     | Mic → `AnalyserNode` → RMS → a 35–95 relative "dB" reading, 500ms rolling average, three zones, "Too loud" after 3s in the red, optional chime. Polls on `setInterval` (**not** rAF — rAF freezes in a background window and the pop-out would stall). `BroadcastChannel('teacherpal-noise')` feeds the pop-out. Opens the mic only on Start; stops every track on Stop and on `pagehide`. Nothing is recorded or sent anywhere. |
+| `noise-popout.html` | Read-only projector pop-out (`body.noise-popout`): reading + bar + zone word, fed over BroadcastChannel. Never opens a mic of its own; says so when the main window isn't answering. |
 | `timer-popout.html` | Minimal read-only pop-out window (`body.timer-popout`): label + display + ring, no controls, listens for state via BroadcastChannel and falls back to `localStorage` if the main window is gone. |
 | `migration-lessons-bathroom.sql` | One-off migration creating `lesson_plans` + `bathroom_log` (incl. the manual-tally columns; run in the Supabase SQL editor) |
 | `seed-bathroom-q1.sql` | Seed: Q1 used-pass tallies from the paper tracker — name-matches students per period, creates three missing students, upserts manual tallies, reports unmatched names in its last result set |
@@ -71,7 +76,7 @@ full-screen toggle. There is no sidebar; every page uses the full width.
 | `formula.js`   | Shared Formula **algorithms and modal only** — never rule data: type metadata per scope (`RULE_TYPES`, `SCOPE_TYPES`, `KEY_TYPES`), priorities (`sortByPriority`, `priorityWeight`, `planRules`), feasibility (`findImpossibleHard`, `confirmImpossible`), the `annealAssign()` solver, `groupWithFormula()`, `summarizeRun()`, `absentTodayFor()`, `createFormulaModal({ scope, … })`. No Supabase calls. |
 | `style.css`    | Shared styling for every page (dark pink dashboard theme; all tokens at the top) |
 | `roster.html`  | Two-panel roster: period panel (search, sort, add, import modal, edit mode, full screen) + name-card grid with undo-toast remove |
-| `groups.html`  | **Create Groups**: slim toolbar (period, present-count, Edit Roster, live preview, prominent Create Groups button, Formula, gear, full screen). Group mode / number / first-names / Formula on-off toggle live in the `.groups-settings-dialog` opened from the gear. FLIP-animated pool → group cards |
+| `groups.html`  | **Create Groups**: header row = page title + control bar (period, Edit Roster, group mode + number, Formula, gear, full screen); the big Create Groups / Reshuffle button is centred between the name pool and the group cards, in normal flow (nothing sticky or fixed). First names / Formula on-off toggle live in the `.groups-settings-dialog` opened from the gear. FLIP-animated pool → group cards |
 | `seating.html` | Freeform room builder: palette of desk pieces on a zoomable dot-grid canvas (Arrange Room), then drag names onto seats (Assign Seats); layout shared, seats per period, autosave, full screen |
 | `migration-room-builder.sql` | One-off migration for the room builder tables (run in the Supabase SQL editor) |
 | `migration-seating-rules.sql` | One-off migration creating the formula rules table (run in the Supabase SQL editor) |
@@ -108,9 +113,22 @@ shared across accounts.
   `login.html` posts email + password to
   `/auth/v1/token?grant_type=password`; on success the session is stored
   in `localStorage['teacherpal.session']` = `{ access_token,
-  refresh_token, expires_at, user: { id, email, username, is_admin, theme,
+  refresh_token, expires_at, user: { id, email, username, display_name,
+  is_admin, theme,
   teaches_periods } }`. `hydrateProfileIntoSession()` runs right after the
   token exchange and fills in the profile fields.
+- **The stored session is only a cache of the profile.**
+  `hydrateProfileIntoSession()` therefore also runs **once on every page
+  load** (fire-and-forget, from the bootstrap at the bottom of
+  `shared.js`), so a `display_name` / `theme` / `is_admin` /
+  `teaches_periods` changed in the SQL editor or dashboard shows up on the
+  next page view instead of waiting for a sign-out. The page paints from
+  the cached values first; if anything differs the helper saves the
+  session, re-applies the theme, and dispatches `teacherpal:profile`
+  (`detail.user`) — plus `teacherpal:teachesPeriods` when that array moved.
+  `nav.js` listens and repaints the USER chip in place (it does **not**
+  re-render the bar — that would re-wire the settings menu's document
+  listeners).
 - **Automatic profiles row per auth user.** `migration-simplify-auth.sql`
   installs a trigger `on_auth_user_created` on `auth.users` that inserts a
   matching `profiles` row (defaults: `is_admin=false`, `theme='jarvis'`,
@@ -128,8 +146,10 @@ shared across accounts.
 - **`shared.js` is the only auth surface.** Exposed helpers:
   `signIn(email, password)`, `signOut()` (POSTs `/auth/v1/logout`, clears
   storage, redirects to login), `refreshSession()`, `hasSession()`,
-  `isAdmin()`, `currentUser()` → `{ id, email, username, is_admin, theme,
-  teaches_periods }`, `hydrateProfileIntoSession()`.
+  `isAdmin()`, `currentUser()` → `{ id, email, username, display_name,
+  is_admin, theme, teaches_periods }`, `hydrateProfileIntoSession()`,
+  `displayName()` → `display_name` → `username` → email local part (`''`
+  with no session); the app only ever reads it, names are set in SQL.
   Read-only admin RPC: `adminListUsers()` →
   `[{ user_id, email, username, is_admin, created_at, last_sign_in_at }]`.
   Theme: `THEMES` (registry), `applyTheme(id)`, `currentTheme()`,
@@ -140,7 +160,9 @@ shared across accounts.
   updates local session, dispatches `teacherpal:teachesPeriods`, POSTs
   `set_my_teaches_periods` RPC).
 - **Top-bar account chip + sign-out** (`nav.js`): every page except the hub
-  shows `USER <username or email>` and a small door-arrow icon-button; on
+  shows `USER <displayName()>` — display_name → username → email local
+  part (`accountLabel()` in `nav.js` wraps it) — and a small door-arrow
+  icon-button; on
   the hub the chip still appears in the readout row. Both hide on
   `body.no-auth` pages.
 - **`body.no-auth`** — the one escape hatch. Pages carrying this class skip
@@ -158,6 +180,14 @@ shared across accounts.
   `nav.js` filters entries marked `admin: true` out of the top nav for
   non-admins. `admin.html` is a read-only user list; user creation and
   password reset happen in the Supabase dashboard.
+- **Display name.** `profiles.display_name text` (nullable) — how the
+  teacher is addressed: "Mr. Pal", "Ms. Mohammadi". Attached to
+  `session.user.display_name`; `displayName()` falls back to `username`,
+  then the email's local part. Set it in the SQL editor
+  (`migration-display-name.sql` seeds the two accounts); there is no
+  in-app editor and no RPC — the client only reads it. Shown in the top-bar
+  USER chip; a change lands on the next page load via the profile refresh
+  above, no sign-out needed.
 - **Teaches-periods.** `profiles.teaches_periods integer[]` (each 0-7,
   default all eight). Attached to `session.user.teaches_periods`;
   `currentTeachesPeriods()` returns the sorted array. **Source of truth
@@ -360,6 +390,8 @@ Auth:
 - `hasSession()`, `currentUser()` → `{ id, email }` or `null`,
   `currentSession()` → the whole record (`access_token`, `refresh_token`,
   `expires_at`, `user`).
+- `displayName()` → the teacher's name for UI copy (`profiles.display_name`,
+  else `username`, else the email's local part; `''` with no session).
 - `authHeaders()` — picks the access token when signed in, else the anon
   key. Only `sb()` calls this.
 - `body.no-auth` — a page carrying this class opts out of the login
@@ -700,12 +732,12 @@ All styling lives in `style.css`; pages carry almost no inline styling.
     `flex: 1 1 15rem; max-width: 20rem; min-height: clamp(9.5rem, 20vh, 12.5rem)`
     so 1..N cards flow naturally without an outer grid template. Sections
     in order: **Daily** (Attendance, Bathroom), **Teacher tools**
-    (Create Groups), **Planning** (Lesson Plans, Seating), **System**
+    (Create Groups, Timer, Noise Meter), **Planning** (Lesson Plans, Seating), **System**
     (Schedule, Rosters — both `.setup` dashed + quieter). Adding a tool
     means one `<a class="hud-panel">` inside the right `<section>`; no
-    CSS grid template to reflow. Each panel is only a thin-line SVG
-    icon, the tracked `.hud-name` and one mono `.hud-sub` line —
-    **no live data, no counts, no Supabase** (the only requests on the
+    CSS grid template to reflow. Each panel is only a thin-line SVG icon
+    (2.6rem) and the tracked `.hud-name` under it, centred as a pair —
+    **no sub-line, no live data, no counts, no Supabase** (the only requests on the
     page are nav.js's readouts, as on every page). Don't put dashboards
     back on the hub; a tool that needs a summary shows it on its own
     screen. Marwa scopes a mascot per section (bunny / star / cloud /
@@ -757,8 +789,8 @@ All styling lives in `style.css`; pages carry almost no inline styling.
     `onChange` lets the week view mirror edits. `follow: true` (track
     `teacherpal:period`) exists but is unused now.
   - The nav order is fixed in `NAV_ITEMS` in `nav.js`: Hub, Attendance,
-    Lesson Plans, Create Groups, Seating, Bathroom, Schedule, then
-    Rosters as `setup`. Add a screen there and every page's nav updates.
+    Lesson Plans, Create Groups, Timer, Noise Meter, Seating, Bathroom,
+    Schedule, then Rosters as `setup`. Add a screen there and every page's nav updates.
     All items fit one row at 1366px because the brand text collapses to its
     mark below 1400px and the tabs tighten; if it ever overflows, the
     nav-links wrap to their own row below the readouts (see the 1500px
@@ -819,9 +851,11 @@ All styling lives in `style.css`; pages carry almost no inline styling.
   `seed-bathroom-q1.sql` (match rules: normalised exact → first + last
   word → first name + a shared surname, each only when unique in the
   period).
-  - Don't add taglines or descriptions to the tool panels beyond the mono
-    sub-line — if a tool needs explaining, fix the tool. Don't reuse the HUD
-    look on tool pages.
+  - Don't add taglines, descriptions or sub-lines to the tool panels — the
+    icon and the name are the whole card; if a tool needs explaining, fix
+    the tool. (`.hud-sub` still exists in the stylesheet for the unused
+    `.hud-panel.compact` variant; the hub doesn't use it.) Don't reuse the
+    HUD look on tool pages.
 - **Timer** (`timer.html` + `timer.js`). One `.timer-stage` `.hud-box`
   centred on the page: mode segmented control (Countdown / Stopwatch), a
   40-char label input, then the display — a `.timer-display-wrap` holding
@@ -852,6 +886,41 @@ All styling lives in `style.css`; pages carry almost no inline styling.
   outlives a page unload via localStorage. Space toggles start/pause when
   not typing. In full screen the mode row / setup / actions / extras hide
   and the display fills the screen.
+- **Noise Meter** (`noise.html` + `noise-popout.html` + `noise.js`). One
+  `.noise-stage` `.hud-box`: the `.seg` of activity presets (Silent work /
+  Partner talk / Group work — each moves both zone handles), then the
+  `.noise-meter` (huge mono reading + `dB≈` unit, a pill `.noise-bar` whose
+  `.noise-fill` grows and recolours, boundary marks on the track, the
+  QUIET / OK / TOO LOUD scale, and the zone word), then Start/Stop, the
+  chime `role="switch"`, Pop out, full screen, the two range handles
+  ("Quiet up to" / "Too loud above") and the privacy line.
+  **Measurement**: `getUserMedia({ audio: { echoCancellation: false,
+  noiseSuppression: false, autoGainControl: false } })` — those three would
+  normalise away the thing being measured — into an `AnalyserNode`
+  (`fftSize` 2048). Each poll takes the RMS of `getFloatTimeDomainData`,
+  converts to dBFS, and maps −70..0 dBFS onto a **35..95 display scale**
+  (`DB_MIN`/`DB_MAX`); thresholds use the same units. It is a repeatable
+  relative level, **not calibrated SPL**, and the page says so.
+  **Smoothing** is a 500ms rolling average (`SMOOTH_MS`) so a cough or a
+  dropped book doesn't spike the room. **Zones**: below `quiet` →
+  `quiet`, below `loud` → `ok`, else `loud`; `data-zone` on `.noise-meter`
+  drives every colour (`--noise-quiet/ok/loud`, defined per theme).
+  **"Too loud"** needs `LOUD_HOLD_MS` 3000 of continuous red before
+  `data-alert="1"` (flashing red reading + ringed bar) and a two-note Web
+  Audio chime, rate-limited to one per 12s and skipped when muted.
+  **Polling is `setInterval(50ms)`, never rAF** — rAF stops in a
+  backgrounded window, which is exactly the pop-out-on-the-projector case;
+  a timer only throttles to ~1s there. **Pop-out**
+  (`window.open('noise-popout.html', …)`) is read-only and fed over
+  `BroadcastChannel('teacherpal-noise')` at ~10/s; it never opens a mic of
+  its own and shows "Press Start on the Noise Meter tab" when no state has
+  arrived for 2s. **Mic lifecycle**: opens only on Start; Stop and
+  `pagehide`/`beforeunload` stop every track and close the AudioContext.
+  Nothing is recorded, buffered or uploaded — each poll reads the live
+  signal and discards it. Settings (preset, both handles, mute) live in
+  `teacherpal.noise.settings`; dragging a handle sets the preset to
+  `custom`. Full screen hides the chrome (`.no-present`) and scales the
+  reading/bar/zone word for the room.
 - **Attendance view (`attendance.js`) — the Attendance screen.**
   `.attendance[data-mode="full"]` is a grid `minmax(0,1fr) clamp(19rem, 26vw,
   26rem)` — the `.att-chart` box on the left, `.att-side` (counts card with
@@ -972,13 +1041,46 @@ All styling lives in `style.css`; pages carry almost no inline styling.
   second. If the table is missing the page shows a "run
   migration-schedule-overrides.sql" error and still renders the reference.
 - **Create Groups page** (`groups.html`; the nav tab and hub panel also say
-  "Create Groups"). Everything sits in one compact `.groups-bar` (a `.card`
-  with `--ctl: 2.1rem` control height, one row at 1366px, wraps below):
-  period select, "N present · M absent" chip, **Edit Roster**, `.seg.mode-seg`
-  toggle "Groups" / "Per group", the number input (its meaning lives in
-  `aria-label` + the `.preview` text "31 → 6 groups of 5–6"), a "First names"
-  `role="switch"`, **Create Groups** (reads **Reshuffle** after the first
-  run), and the full-screen icon button. Attendance lives in
+  "Create Groups"). **Header row** `.groups-head` (`.no-present`): the
+  `.page-title` on the left and the whole `.groups-bar` (a `.card` with
+  `--ctl: 2.1rem` control height, `flex: 1 1 24rem`) on the same line —
+  period select, **Edit Roster**, a `.bar-spacer` (flex filler) that pushes
+  the rest right, `.seg.mode-seg` toggle "Groups" / "Per group", the number
+  input (its meaning lives in the `aria-label` / `title`, kept in sync by
+  `updateSummary()`, which also sets `min` 1 vs 2), **Formula**, the
+  settings gear and the full-screen icon button. There is no second
+  toolbar row. **The primary action is not in the bar**: `#btn-shuffle`
+  sits alone in a centred `.shuffle-row` **in the middle of the stage,
+  between the pool and the results** (15rem × 3.4rem, accent glow), reading
+  **Create Groups** and then **Reshuffle** after the first run.
+  **`.stage` is a three-row grid** — `.pool-area` / `.shuffle-row` /
+  `.results` — with **every row content-sized**. Two things must stay out
+  of it or the page grows a viewport-tall void under the content: `.stage`
+  must not stretch (`flex: 0 0 auto`, never `flex: 1` inside the
+  `main.page` flex column) and no row may be `1fr` (an empty `.results`
+  row would eat the slack). Once the groups are up the pool is empty, so
+  `.stage.has-groups .pool-area { display: none }` drops it rather than
+  leaving a blank box. **Consequence to keep in mind:** the button sits
+  under the pool before the first run and directly above the cards after
+  it — one shift, by the pool's height — and then never moves again, so
+  repeated Reshuffle clicks stay in one place. Reserving the pool's height
+  to kill that one shift was tried and rejected: it reads as dead space.
+  `.groups-page` sets `scrollbar-gutter: stable` so the scrollbar
+  appearing with the cards can't nudge the centred button sideways.
+  **Nothing inside `.stage` may get an `overflow`** — the FLIP chips cross
+  all three rows and a scroll container clips them mid-flight (that is
+  exactly how the animation got lost once); the page scrolls, the stage
+  doesn't. For the same reason `flipTo()` sets `main.page`'s
+  `scrollTop = 0` before measuring First: First and Last measured at
+  different scroll offsets would send every chip flying from the wrong
+  place. **No counts and no preview line**: how many groups you get is the
+  number you typed, and any problem (no students, everyone absent,
+  number < 1) is reported by `doShuffle()` through `setStatus()` when you
+  press the button. First names / Follow Formula are the only fields in the
+  gear's `.groups-settings-dialog`. Full screen is unchanged: the header
+  row and `.shuffle-row` hide, and the `.present-only` `#present-bar`
+  (big Reshuffle + "Space reshuffles · Esc exits") takes over above the
+  stage. Attendance lives in
   `<dialog id="attendance-dialog">`. On load, today's `attendance` row
   (`getAttendance(periodId, todayKey())`) wins: its absent ids become the
   `absent` set (tardy = present) and the cache is refreshed; without a row
@@ -1004,19 +1106,30 @@ All styling lives in `style.css`; pages carry almost no inline styling.
   check → confirm → solve → summarize flow.
 - **Create Groups animation (FLIP, plain CSS + JS).** `#stage` holds one
   `.name-chip` element per present student (kept in a `chips` Map) — first
-  loose in `.name-pool`, then moved into `.group > .group-names`; the same
+  loose in `.name-pool` (top row), then moved into `.group > .group-names`
+  inside `#results` (bottom row), flying past the button between them; the same
   element is a pill in the pool and a big white row in a group. `flipTo()`
-  measures First rects, calls `mountGroups()` (new `.group.enter` cards, chips
-  appended), measures Last, inverts with `translate(...) scale(...)`, forces
+  measures First rects, calls `mountGroups()` (new `.group.enter` cards built
+  into `#results` only; adding `.has-groups` hides the empty pool row in the
+  same frame, which is fine — Last is measured after), inverts with
+  `translate(...) scale(...)`, forces
   a reflow, then plays with `transform 520ms cubic-bezier(.34,1.56,.64,1)`
   and a per-chip delay (`120ms + i * min(18ms, 600/n)`, shuffled order) so the
   total stays ≈1–1.5s; cards drop `.enter` (opacity/scale 260ms) before names
   arrive. A reshuffle first adds `.shuffling` (chips lift/wiggle 320ms) and
   then flies chips from old card to new. `setAnimating()` disables the
   buttons/select while running. Under `prefers-reduced-motion` the stage
-  simply fades. Full screen uses the same stage; Space reshuffles. To test
-  the flight in headless Edge on this machine (OS animations off) pass
-  `--blink-settings=prefersReducedMotion=false`.
+  simply fades. Full screen uses the same stage; Space reshuffles.
+  **Two things quietly kill the flight, so don't reintroduce them:** an
+  `overflow` on `#stage` or any ancestor between it and `main.page` (the
+  chips are clipped mid-flight), and starting a run at a non-zero
+  `main.page.scrollTop` (First and Last get measured from different
+  origins) — `flipTo()` zeroes the scroll before measuring for exactly
+  that reason. To test the flight in headless Edge on this machine (OS
+  animations off) pass `--blink-settings=prefersReducedMotion=false`;
+  note the animation clock is frozen under `--virtual-time-budget`, so
+  screenshots show start/end states only — check
+  `document.getAnimations()` instead of trying to catch a frame.
 - **Seating Chart = freeform room builder** (`seating.html`). Compact
   `.seat-bar` (period, **Arrange Room / Assign Seats** `.seg` toggle,
   mode-specific tools, undo/redo, zoom −/%/+/Fit, Saved indicator, full screen)

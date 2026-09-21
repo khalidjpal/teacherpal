@@ -249,6 +249,14 @@
   /* attendance overlays — recomputed off marwa's danger + amber for equivalent visibility on white */
   --att-absent-soft: rgba(214, 55, 87, 0.10);
   --att-tardy-soft:  rgba(245, 184, 75, 0.22);
+
+  /* noise zones — darker green/amber so the fill reads on the cream ground */
+  --noise-quiet: #2F9E6E;
+  --noise-ok:    #D99412;
+  --noise-loud:  var(--danger);
+  --noise-quiet-soft: rgba(47, 158, 110, 0.14);
+  --noise-ok-soft:    rgba(217, 148, 18, 0.16);
+  --noise-loud-soft:  rgba(214, 55, 87, 0.12);
 }
 
 /* ==========================================================================
@@ -716,6 +724,13 @@ button:active, .neu-btn:active, .tab:active, summary:active, .seg label:active s
   --att-absent-soft: rgba(255, 122, 138, 0.14);
   --att-tardy: #F5B84B;                 /* amber — tardy outline + badge */
   --att-tardy-soft: rgba(245, 184, 75, 0.16);
+  /* noise meter zones — green → amber → red, bright enough for a projector */
+  --noise-quiet: var(--ok);
+  --noise-ok:    var(--att-tardy);
+  --noise-loud:  var(--danger);
+  --noise-quiet-soft: rgba(111, 211, 166, 0.16);
+  --noise-ok-soft:    rgba(245, 184, 75, 0.16);
+  --noise-loud-soft:  rgba(255, 122, 138, 0.16);
 }
 
 body.hub {
@@ -1438,6 +1453,23 @@ body.editing .student .name { cursor: text; }
   .schedule-layout > .card { max-height: none; overflow: visible; }
 }
 
+/* Reserve the scrollbar space at all times: when the group cards make the
+   page scroll, the gutter appearing would otherwise narrow the content and
+   nudge the centred Create Groups button sideways. */
+.groups-page { scrollbar-gutter: stable; }
+
+/* Header row: "Create Groups" on the left, the control bar filling the rest
+   of the line. Both hide together in full screen (.no-present on the row). */
+.groups-head {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--space-3) clamp(0.75rem, 2vw, 1.5rem);
+  margin-bottom: var(--space-4);
+}
+.groups-head .page-title { margin: 0; flex: none; }
+.groups-head .groups-bar { flex: 1 1 24rem; margin-bottom: 0; }
+
 .groups-bar {
   --ctl: 2.1rem;                    /* control height inside the bar */
   display: flex;
@@ -1462,39 +1494,32 @@ body.editing .student .name { cursor: text; }
 .groups-bar .bar-sep { width: 1px; height: 1.4rem; background: var(--border-strong); }
 .groups-bar .mode-seg { grid-template-columns: auto auto; padding: 0.15rem; gap: 0.15rem; }
 .groups-bar .mode-seg span { padding: 0.3rem 0.6rem; font-size: var(--fs-xs); white-space: nowrap; }
-.groups-bar .preview {
-  flex: 1;
-  min-width: 0;
-  margin: 0;
-  padding: 0;
-  border: 0;
-  background: none;
-  color: var(--text-muted);
-  font-size: var(--fs-xs);
-  font-weight: var(--fw-medium);
-  text-align: right;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-.groups-bar #btn-shuffle { min-width: 8rem; font-weight: var(--fw-semibold); }
+/* pushes the mode / number / Formula cluster to the right of the bar */
+.groups-bar .bar-spacer { flex: 1 1 0; min-width: 0; }
 .groups-bar .icon-btn { width: var(--ctl); height: var(--ctl); padding: 0; }
 .groups-bar .icon-btn svg { width: 1rem; height: 1rem; }
 
-/* Create Groups is the primary action on this page — make it obvious.
-   Bigger padding, accent glow, prominent shadow. */
-.groups-bar .groups-primary {
-  min-height: 2.55rem;
-  padding: 0 1.3rem;
-  font-size: var(--fs-sm);
-  font-weight: var(--fw-bold);
-  letter-spacing: 0.02em;
-  border-radius: var(--radius-md);
-  box-shadow: 0 4px 14px var(--accent-glow);
+/* Create Groups / Reshuffle: centred in the stage's middle row, between the
+   pool and the results. Its row is `auto`, and the pool row above it holds a
+   fixed height, so the button never moves when groups appear. */
+.shuffle-row {
+  display: flex;
+  justify-content: center;
+  padding: var(--space-2) 0;
 }
-.groups-bar .groups-primary:hover { transform: translateY(-1px); }
+.shuffle-row .groups-primary {
+  min-width: 15rem;
+  min-height: 3.4rem;
+  padding: 0 2.2rem;
+  font-size: var(--fs-lg);
+  font-weight: var(--fw-bold);
+  letter-spacing: 0.04em;
+  border-radius: var(--radius-md);
+  box-shadow: 0 6px 20px var(--accent-glow);
+}
+.shuffle-row .groups-primary:hover { transform: translateY(-1px); }
 
-/* --- Settings dialog (mode / number / first names / formula toggle) --- */
+/* --- Settings dialog (first names / formula toggle) --- */
 dialog.groups-settings-dialog {
   width: min(26rem, 94vw);
   padding: var(--space-5);
@@ -1510,15 +1535,9 @@ dialog.groups-settings-dialog .gs-note { margin: 0 0 var(--space-4); color: var(
 .gs-field { display: grid; gap: 0.4rem; padding: var(--space-3) 0; border-top: 1px solid var(--border); }
 .gs-field:first-of-type { border-top: 0; padding-top: 0; }
 .gs-label { font-weight: var(--fw-semibold); font-size: 0.9rem; color: var(--text-2); }
-.gs-inline { display: flex; align-items: center; gap: var(--space-3); }
-.gs-inline input[type="number"] { min-height: 2.4rem; width: 5rem; text-align: center; font-size: 1rem; }
 .gs-hint { color: var(--text-muted); font-size: 0.8rem; line-height: 1.4; margin-left: 3.4rem; }
 .gs-actions { display: flex; justify-content: flex-end; margin-top: var(--space-3); }
 .gs-actions button { min-height: 2.4rem; padding: 0 var(--space-4); }
-/* Mode segmented control in the dialog: full-width pair */
-dialog.groups-settings-dialog .mode-seg { display: grid; grid-template-columns: 1fr 1fr; gap: 0.15rem; padding: 0.2rem; background: var(--card-2); border: 1px solid var(--border-strong); border-radius: var(--radius-pill); }
-dialog.groups-settings-dialog .mode-seg label { display: flex; align-items: center; justify-content: center; }
-dialog.groups-settings-dialog .mode-seg span { padding: 0.5rem 0.75rem; font-size: 0.9rem; text-align: center; border-radius: var(--radius-pill); }
 /* Pill-switch (First names / Follow Formula) */
 .gs-switch {
   display: inline-flex;
@@ -1557,16 +1576,30 @@ dialog.groups-settings-dialog .mode-seg span { padding: 0.5rem 0.75rem; font-siz
 
 /* ---------- Stage ---------- */
 
+/* Pool on top, the primary action in the middle, results below — all three
+   rows sized by their content, so the page just flows: header, controls,
+   pool, button, groups. The stage must NOT stretch (no `flex: 1`) and no row
+   may be `1fr`: either one leaves a viewport-tall void under the content
+   before the groups exist.
+   Nothing in here may get an `overflow`: the chips fly across all three rows
+   and a scroll container would clip them mid-flight. */
 .stage {
-  flex: 1;
-  min-height: 0;
+  flex: 0 0 auto;
   position: relative;
+  display: grid;
+  grid-template-rows: auto auto auto;
+  gap: var(--space-3);
+}
+/* Once the groups are up the pool is empty — drop it entirely rather than
+   leave an empty box above the button. */
+.stage.has-groups .pool-area { display: none; }
+
+.results {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr));
   align-content: start;
   gap: var(--space-4);
 }
-.stage:not(.has-groups) { grid-template-columns: 1fr; }
 
 /* The pool: every present student as a chip, loosely wrapped */
 .name-pool {
@@ -1697,7 +1730,7 @@ dialog.groups-settings-dialog .mode-seg span { padding: 0.5rem 0.75rem; font-siz
 .attendance-actions .spacer { flex: 1; }
 
 @media (max-width: 900px) {
-  .groups-bar .preview { flex-basis: 100%; text-align: left; }
+  .groups-bar .bar-spacer { display: none; }   /* wrap tight instead of spreading */
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -1760,7 +1793,7 @@ body.present .topnav .nav-links { display: none; }
 body.present .app { grid-template-columns: 1fr; }
 body.present main.page { grid-column: 1; }
 body.present header.topbar { min-height: 2.8rem; padding: var(--space-1) var(--page-pad); }
-body.present .stage.has-groups { grid-template-columns: repeat(auto-fit, minmax(20rem, 1fr)); gap: var(--space-5); }
+body.present .results { grid-template-columns: repeat(auto-fit, minmax(20rem, 1fr)); gap: var(--space-5); }
 body.present .group .name-chip { font-size: var(--fs-2xl); padding: 0.4rem 0; }
 body.present .name-pool .name-chip { font-size: var(--fs-lg); }
 body.present .group h3 { font-size: var(--fs-sm); }
@@ -2348,7 +2381,7 @@ button, .btn, .neu-btn { font-weight: var(--fw-semibold); }
 
 /* --- mono: every figure and technical label --- */
 .hud-stat, .hud-key, .hud-val, .hud-sub, .hud-idx, .hud-chip, .save-state, .dash-legend, .att-names li .at,
-.stat .value, .att-counts b, .att-counts i, #exp-counts, .chip, .list-count, .groups-bar .preview, .seat-bar .zoom-pct,
+.stat .value, .att-counts b, .att-counts i, #exp-counts, .chip, .list-count, .seat-bar .zoom-pct,
 .seat-bar .save-state, .period-links, .import-meta, .formula-keys kbd, .rule-type kbd, kbd,
 .bell-table td:nth-child(2), .bell-table th, .ov-date, .today-line span, .dash-field input[type="date"],
 .hud-panel.compact .hud-sub, .status, .toast, .fd-absent, .fd-count, .formula-warnings, .student .num, .rot-label, .seat-bar .save-state {
@@ -2371,7 +2404,6 @@ button, .btn, .neu-btn { font-weight: var(--fw-semibold); }
 .att-list h3 .hud-val { font-size: 0.9rem; }
 .stat .value { letter-spacing: 0.02em; }
 .chip, .list-count { font-size: 0.78rem; letter-spacing: 0.06em; }
-.groups-bar .preview { font-size: 0.8rem; letter-spacing: 0.04em; }
 .status { font-size: 0.82rem; letter-spacing: 0.03em; }
 .toast { letter-spacing: 0.03em; }
 .bell-table th { font-family: var(--font-display); font-size: 0.6rem; letter-spacing: 0.16em; }
@@ -2899,12 +2931,22 @@ dialog.br-settings-dialog .br-settings-grid { display: grid; gap: var(--space-3)
   grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr));
   gap: clamp(1rem, 2vw, 1.5rem);
 }
+/* Icon + name only: centre them as a pair rather than leaving the bottom-
+   aligned stack the subtitle used to sit in, and drop the height that held
+   that third line. */
 .hub-section .hud-panel {
-  min-height: clamp(9.5rem, 20vh, 12.5rem);
-  padding: 1.4rem 1.5rem 1.3rem;
+  min-height: clamp(6.5rem, 13vh, 8.5rem);
+  padding: 1.35rem 1.25rem;
+  justify-content: center;
+  align-items: center;
+  text-align: center;
+  gap: var(--space-2);
 }
-.hub-section .hud-panel .hud-icon { width: 2rem; height: 2rem; }
-.hub-section .hud-panel .hud-name { font-size: 0.95rem; }
+.hub-section .hud-panel .hud-icon {
+  width: 2.6rem; height: 2.6rem;   /* bigger, to carry the card on its own */
+  margin-bottom: 0;                /* base rule uses margin-bottom:auto to push the text down */
+}
+.hub-section .hud-panel .hud-name { font-size: 1rem; }
 .hub-section .hud-panel .hud-sub { font-size: 0.66rem; }
 .hub-section .hud-panel.setup { border-style: dashed; }
 
@@ -3183,3 +3225,159 @@ body.timer-popout .timer-display-wrap {
 }
 body.timer-popout .timer-display { font-size: clamp(4rem, 26vmin, 14rem); }
 body.timer-popout .timer-label { font-size: clamp(1rem, 3.6vmin, 2rem); }
+
+/* ============================================================================
+   Noise Meter (noise.html + noise-popout.html)
+   One stage box: presets, the meter (big number + bar + zone word), controls,
+   the two zone handles, and the privacy line. Zone colour comes from
+   data-zone on .noise-meter, so the pop-out and full screen reuse the same
+   rules. Colours are the --noise-* tokens (defined per theme).
+   ============================================================================ */
+.noise-page {
+  display: grid; place-items: center;
+  padding: var(--space-3) var(--space-4);
+  min-height: 0;
+}
+.noise-stage {
+  width: min(56rem, 96vw);
+  max-height: calc(100dvh - 5.5rem);
+  display: grid;
+  gap: var(--space-4);
+  padding: var(--space-4) var(--space-5);
+  justify-items: center;
+  text-align: center;
+}
+.noise-preset-seg { grid-template-columns: repeat(3, auto); }
+
+.noise-meter { width: 100%; display: grid; gap: var(--space-2); justify-items: center; }
+.noise-read { display: flex; align-items: baseline; gap: 0.4rem; }
+.noise-db {
+  font: var(--fw-regular) clamp(3rem, 13vh, 6rem)/1 var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  color: var(--text);
+  letter-spacing: 0.02em;
+  text-shadow: 0 0 24px var(--shadow-text);
+}
+.noise-unit {
+  font-family: var(--font-mono);
+  font-size: clamp(0.8rem, 1.6vh, 1.05rem);
+  letter-spacing: 0.12em;
+  color: var(--text-muted);
+  text-transform: uppercase;
+}
+.noise-unit .approx { margin-left: 0.1em; }
+
+.noise-bar {
+  position: relative;
+  width: 100%;
+  height: clamp(2rem, 6vh, 3.2rem);
+  border-radius: var(--radius-pill);
+  background: var(--card-2);
+  border: 1px solid var(--border-strong);
+  overflow: hidden;
+}
+.noise-fill {
+  height: 100%;
+  width: 0%;
+  border-radius: inherit;
+  background: var(--text-muted);
+  transition: width 120ms linear, background-color 260ms ease;
+}
+/* zone boundary handles, drawn on the track so the scale is legible */
+.noise-mark {
+  position: absolute; top: 0; bottom: 0;
+  width: 2px; margin-left: -1px;
+  background: var(--border-hover);
+}
+.noise-scale {
+  display: flex; justify-content: space-between;
+  width: 100%;
+  font-family: var(--font-mono);
+  font-size: 0.66rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+.noise-zone {
+  font: var(--fw-semibold) clamp(1.1rem, 3.2vh, 1.9rem)/1 var(--font-display);
+  letter-spacing: var(--track-display);
+  text-transform: var(--label-transform);
+  color: var(--text-2);
+}
+
+/* zone colours — fill, zone word, and (in the red) the bar outline */
+.noise-meter[data-zone="quiet"] .noise-fill { background: var(--noise-quiet); }
+.noise-meter[data-zone="ok"]    .noise-fill { background: var(--noise-ok); }
+.noise-meter[data-zone="loud"]  .noise-fill { background: var(--noise-loud); }
+.noise-meter[data-zone="quiet"] .noise-zone { color: var(--noise-quiet); }
+.noise-meter[data-zone="ok"]    .noise-zone { color: var(--noise-ok); }
+.noise-meter[data-zone="loud"]  .noise-zone { color: var(--noise-loud); }
+.noise-meter[data-running="0"] .noise-zone { color: var(--text-muted); }
+
+/* held in the red: the whole meter states it, not just the colour */
+.noise-meter[data-alert="1"] .noise-bar {
+  border-color: var(--noise-loud);
+  box-shadow: 0 0 0 2px var(--noise-loud-soft), 0 0 22px var(--noise-loud-soft);
+}
+.noise-meter[data-alert="1"] .noise-zone,
+.noise-meter[data-alert="1"] .noise-db {
+  color: var(--noise-loud);
+  animation: noise-flash 1100ms ease-in-out infinite;
+}
+@keyframes noise-flash {
+  0%, 100% { opacity: 1; }
+  50%      { opacity: 0.5; }
+}
+
+.noise-controls { display: flex; flex-wrap: wrap; gap: var(--space-2); align-items: center; justify-content: center; width: 100%; }
+.noise-controls .spacer { flex: 1; }
+.noise-controls .primary.big { min-width: 9rem; min-height: 2.8rem; padding: 0.5rem 1.6rem; font-size: var(--fs-lg); letter-spacing: 0.08em; }
+.noise-controls button { min-height: 2.4rem; padding: 0.4rem 1rem; }
+.noise-controls .icon-btn { width: 2.4rem; padding: 0; }
+.noise-controls .when-off, .noise-controls .when-on { display: inline; }
+.noise-controls button[aria-checked="false"] .when-on { display: none; }
+.noise-controls button[aria-checked="true"]  .when-off { display: none; }
+
+.noise-zones { display: grid; gap: var(--space-2); width: min(34rem, 100%); }
+.noise-zone-field { display: grid; grid-template-columns: 9.5rem 1fr 2.5rem; align-items: center; gap: var(--space-3); }
+.noise-zone-field .hud-key { text-align: left; }
+.noise-zone-field input[type="range"] { width: 100%; accent-color: var(--accent); }
+.noise-out { font-family: var(--font-mono); font-variant-numeric: tabular-nums; color: var(--text-2); text-align: right; }
+
+.noise-privacy {
+  margin: 0;
+  max-width: 44rem;
+  font-size: var(--fs-xs);
+  line-height: 1.5;
+  color: var(--text-muted);
+}
+
+/* Full screen: chrome goes (.no-present), the meter takes the room */
+body.present .noise-stage { border: none; box-shadow: none; background: transparent; max-height: none; width: 96vw; }
+body.present .noise-db { font-size: clamp(6rem, 30vh, 18rem); }
+body.present .noise-bar { height: clamp(3.5rem, 12vh, 7rem); border-width: 2px; }
+body.present .noise-zone { font-size: clamp(2rem, 7vh, 4.5rem); }
+body.present .noise-scale { font-size: clamp(0.8rem, 1.6vh, 1.1rem); }
+
+/* Pop-out window — meter only, no app chrome */
+body.noise-popout {
+  margin: 0; min-height: 100vh; min-height: 100dvh;
+  background: var(--bg-0);
+  display: grid; place-items: center;
+  overflow: hidden;
+}
+body.noise-popout .noise-popout-inner {
+  width: min(94vw, 60rem);
+  display: grid; place-items: center; gap: 0.9rem;
+}
+body.noise-popout .noise-db { font-size: clamp(4rem, 22vmin, 12rem); }
+body.noise-popout .noise-bar { height: clamp(2.5rem, 9vmin, 5rem); }
+body.noise-popout .noise-zone { font-size: clamp(1.2rem, 5vmin, 3rem); }
+.noise-link { margin: 0; font-size: var(--fs-sm); color: var(--text-muted); }
+.noise-link[hidden] { display: none; }
+
+@media (prefers-reduced-motion: reduce) {
+  .noise-fill { transition: width 200ms linear; }
+  .noise-meter[data-alert="1"] .noise-zone,
+  .noise-meter[data-alert="1"] .noise-db { animation: none; }
+}

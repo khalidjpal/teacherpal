@@ -14,6 +14,7 @@ const NAV_ITEMS = [
   { href: 'lessons.html', label: 'Lesson Plans' },
   { href: 'groups.html', label: 'Create Groups' },
   { href: 'timer.html', label: 'Timer' },
+  { href: 'noise.html', label: 'Noise Meter' },
   { href: 'seating.html', label: 'Seating' },
   { href: 'bathroom.html', label: 'Bathroom' },
   { href: 'schedule.html', label: 'Schedule' },
@@ -48,10 +49,8 @@ function renderTopNav() {
   const noLinks = document.body.classList.contains('launcher');
   const user = typeof currentUser === 'function' ? currentUser() : null;
   const showAccount = !!user;   // pages without a session hide it
-  // Short display name: profile username → local part of email → email.
-  const shortName = user
-    ? (user.username || (user.email ? user.email.split('@')[0] : ''))
-    : '';
+  // How to address them: profiles.display_name → username → email local part.
+  const shortName = accountLabel();
   const fullEmail = user ? (user.email || '') : '';
   header.classList.add('hud-bar', 'topnav');
   header.classList.toggle('no-links', noLinks);
@@ -149,6 +148,30 @@ function wireSettingsMenu(header) {
     });
   });
 }
+
+// The name in the top-bar USER chip: display_name ("Mr. Pal"), else the
+// username, else the email's local part.
+function accountLabel() {
+  if (typeof displayName === 'function') return displayName();
+  const u = typeof currentUser === 'function' ? currentUser() : null;
+  if (!u) return '';
+  return u.username || (u.email ? u.email.split('@')[0] : '');
+}
+
+// shared.js re-reads the profile on every page load; when a field actually
+// changed (a display_name set in SQL, say) repaint the USER chip in place
+// rather than rebuilding the whole bar — re-rendering would re-wire the
+// settings menu's document listeners.
+document.addEventListener('teacherpal:profile', () => {
+  const el = document.getElementById('hud-user');
+  if (el) {
+    const name = accountLabel();
+    el.textContent = name;
+    const chip = el.closest('.hud-account');
+    const email = (typeof currentUser === 'function' && currentUser() && currentUser().email) || '';
+    if (chip) chip.title = `Signed in as ${name}${email && email !== name ? ' (' + email + ')' : ''}`;
+  }
+});
 
 // today's schedule, re-resolved only when the date rolls over
 function navSchedFor(d) {

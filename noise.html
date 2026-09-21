@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Noise Meter — TeacherPal</title>
+  <meta name="color-scheme" content="dark">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Comfortaa:wght@400;500;600;700&family=Quicksand:wght@400;500;600;700&family=JetBrains+Mono&family=Nunito:wght@400;600;700&family=Orbitron:wght@500;600;700&family=Rajdhani:wght@500;600;700&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+  <script>(function(){try{var t=localStorage.getItem('teacherpal.theme')||'jarvis';document.documentElement.setAttribute('data-theme',t);}catch(e){document.documentElement.setAttribute('data-theme','jarvis');}})();</script>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body class="hub">
+  <div class="app">
+    <header class="topbar"></header>
+
+    <main class="page hud-page noise-page">
+      <div id="status" class="status"></div>
+
+      <section class="noise-stage hud-box" aria-label="Noise meter">
+        <span class="tick tl" aria-hidden="true"></span><span class="tick tr" aria-hidden="true"></span><span class="tick bl" aria-hidden="true"></span><span class="tick br" aria-hidden="true"></span>
+
+        <!-- Activity presets: each one moves both zone handles -->
+        <div class="noise-presets no-present">
+          <div class="seg noise-preset-seg" role="radiogroup" aria-label="Activity preset">
+            <label><input type="radio" name="noise-preset" value="silent"><span>Silent work</span></label>
+            <label><input type="radio" name="noise-preset" value="partner"><span>Partner talk</span></label>
+            <label><input type="radio" name="noise-preset" value="group"><span>Group work</span></label>
+          </div>
+        </div>
+
+        <!-- The meter itself: readable from the back of the room -->
+        <div class="noise-meter" id="noise-meter" data-zone="off" data-alert="0" data-running="0">
+          <div class="noise-read">
+            <span class="noise-db" id="noise-db">—</span>
+            <span class="noise-unit">dB<span class="approx">≈</span></span>
+          </div>
+          <div class="noise-bar" id="noise-bar" role="meter" aria-label="Room volume" aria-valuemin="35" aria-valuemax="95" aria-valuenow="35">
+            <div class="noise-fill" id="noise-fill"></div>
+            <span class="noise-mark" id="mark-quiet" aria-hidden="true"></span>
+            <span class="noise-mark" id="mark-loud" aria-hidden="true"></span>
+          </div>
+          <div class="noise-scale" aria-hidden="true">
+            <span>Quiet</span><span>OK</span><span>Too loud</span>
+          </div>
+          <div class="noise-zone" id="noise-zone" aria-live="polite">Mic off</div>
+        </div>
+
+        <div class="noise-controls no-present">
+          <button type="button" id="noise-start" class="primary big" aria-pressed="false">Start</button>
+          <button type="button" id="noise-mute" role="switch" aria-checked="false" title="Chime when the room stays too loud">
+            <span class="when-off">Chime on</span>
+            <span class="when-on">Chime muted</span>
+          </button>
+          <button type="button" id="noise-popout-btn">Pop out ↗</button>
+          <span class="spacer"></span>
+          <button type="button" class="icon-btn" data-fullscreen aria-pressed="false" title="Full screen (F)" aria-label="Toggle full screen"><span class="when-off"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 3H5a2 2 0 0 0-2 2v3M16 3h3a2 2 0 0 1 2 2v3M8 21H5a2 2 0 0 1-2-2v-3M16 21h3a2 2 0 0 0 2-2v-3"/></svg></span><span class="when-on"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 3v3a2 2 0 0 1-2 2H3M21 8h-3a2 2 0 0 1-2-2V3M3 16h3a2 2 0 0 1 2 2v3M16 21v-3a2 2 0 0 1 2-2h3"/></svg></span></button>
+        </div>
+
+        <!-- Zone handles. Same units as the big reading. -->
+        <div class="noise-zones no-present">
+          <label class="noise-zone-field">
+            <span class="hud-key">Quiet up to</span>
+            <input type="range" id="noise-quiet" min="35" max="95" step="1" value="58">
+            <output class="noise-out" id="noise-quiet-out">58</output>
+          </label>
+          <label class="noise-zone-field">
+            <span class="hud-key">Too loud above</span>
+            <input type="range" id="noise-loud" min="35" max="95" step="1" value="70">
+            <output class="noise-out" id="noise-loud-out">70</output>
+          </label>
+        </div>
+
+        <p class="noise-privacy no-present">
+          Audio is analysed live in this browser only — never recorded, stored, or sent anywhere.
+          The microphone opens when you press Start and closes when you press Stop or leave the page.
+          Browser mics aren't calibrated, so the number is a relative level, not true decibels.
+        </p>
+      </section>
+    </main>
+  </div>
+
+  <script src="shared.js"></script>
+  <script src="schedule.js"></script>
+  <script src="nav.js"></script>
+  <script src="noise.js"></script>
+</body>
+</html>

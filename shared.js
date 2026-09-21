@@ -77,6 +77,7 @@ function normalizeSession(raw) {
         id: raw.user.id,
         email: raw.user.email,
         username: prevUser && prevUser.username || null,
+        display_name: prevUser && prevUser.display_name || null,
         is_admin: !!(prevUser && prevUser.is_admin),
         theme:    prevUser && prevUser.theme || null,
         teaches_periods: (prevUser && Array.isArray(prevUser.teaches_periods))
@@ -142,32 +143,68 @@ async function lookupEmailByUsername(username) {
   return (rows[0] && rows[0].email) || null;
 }
 
-// After sign-in, fill session.user with is_admin / theme / teaches_periods
-// from the profiles row (which the trigger keeps in sync with auth.users).
+// Fill session.user with username / display_name / is_admin / theme /
+// teaches_periods from the profiles row (which the trigger keeps in sync with
+// auth.users). Runs at sign-in AND on every page load (see the bootstrap at
+// the bottom of this file) — the session in localStorage is only a cache, so
+// a profile edited in the SQL editor shows up on the next page view instead
+// of waiting for a sign-out. Broadcasts what changed:
+//   'teacherpal:profile'        — any field (nav.js repaints the USER chip)
+//   'teacherpal:teachesPeriods' — the array changed (nav.js rebuilds the
+//                                 teaches map so NOW / PREP stays right)
+// and re-applies the theme if it was changed elsewhere.
 async function hydrateProfileIntoSession() {
   if (!_session || !_session.user) return;
   try {
     const rows = await sb('profiles', {
       params: {
         user_id: `eq.${_session.user.id}`,
-        select:  'username,email,is_admin,theme,teaches_periods',
+        select:  'username,display_name,email,is_admin,theme,teaches_periods',
         limit:   '1',
       },
     });
     const p = rows && rows[0] ? rows[0] : {};
+    const before = JSON.stringify(_session.user);
+    const prevTeaches = JSON.stringify(_session.user.teaches_periods || null);
+
     _session.user.username        = p.username || null;
+    _session.user.display_name    = p.display_name || null;
     _session.user.is_admin        = !!p.is_admin;
     _session.user.theme           = p.theme || DEFAULT_THEME;
     _session.user.teaches_periods = Array.isArray(p.teaches_periods)
       ? p.teaches_periods.slice()
       : [0, 1, 2, 3, 4, 5, 6, 7];
+
+    if (JSON.stringify(_session.user) === before) return;   // nothing moved
     saveSession(_session);
+    if (currentTheme() !== _session.user.theme) applyTheme(_session.user.theme);
+    if (JSON.stringify(_session.user.teaches_periods) !== prevTeaches) {
+      document.dispatchEvent(new CustomEvent('teacherpal:teachesPeriods', {
+        detail: { teachesPeriods: _session.user.teaches_periods.slice() },
+      }));
+    }
+    document.dispatchEvent(new CustomEvent('teacherpal:profile', {
+      detail: { user: _session.user },
+    }));
   } catch (err) {
     console.error('profile hydrate failed', err);
   }
 }
 
 const isAdmin = () => !!(_session && _session.user && _session.user.is_admin);
+
+// How to address the signed-in teacher: profiles.display_name ("Mr. Pal"),
+// falling back to the username, then the local part of the email. Returns ''
+// when there's no session. Set display_name in the SQL editor — the app
+// never writes it.
+function displayName() {
+  const u = _session && _session.user;
+  if (!u) return '';
+  const dn = String(u.display_name || '').trim();
+  if (dn) return dn;
+  if (u.username) return u.username;
+  return u.email ? u.email.split('@')[0] : '';
+}
 
 // Bell periods the signed-in user teaches (0..7). Returns a sorted array of
 // ints. Null means "not configured" — callers should treat that as
@@ -893,6 +930,15 @@ async function setMyTheme(theme) {
 // If we already have a stored session with a theme, apply it now so pages
 // come up in the right theme even before the head script runs.
 if (_session && _session.user && _session.user.theme) applyTheme(_session.user.theme);
+
+// Re-read the profile once per page load. The stored session is a cache;
+// this is what makes a display_name / theme / is_admin / teaches_periods
+// change made in the Supabase dashboard or SQL editor appear without
+// signing out. Fire and forget — the page renders from the cached values
+// immediately and repaints from 'teacherpal:profile' if anything differs.
+if (isConfigured() && _session && !pageAllowsAnon()) {
+  hydrateProfileIntoSession().catch(() => { /* logged inside */ });
+}
 
 document.addEventListener('DOMContentLoaded', () => {
   // Warn loudly if shared.js still has placeholder config.

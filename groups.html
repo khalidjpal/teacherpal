@@ -16,23 +16,30 @@
   <header class="topbar"></header>
 
 
-  <main class="page">
-    <h1 class="page-title no-present">Create Groups</h1>
+  <main class="page groups-page">
+    <!-- ---------- Header row: page title on the left, every control on the
+         same line to its right. The primary action is NOT here — it sits
+         under the stage (.shuffle-row) so it never moves. ---------- -->
+    <div class="groups-head no-present">
+    <h1 class="page-title">Create Groups</h1>
 
-    <!-- ---------- Slim toolbar. Only essentials live here; group-mode /
-         number / first-names / Formula toggle moved to Settings gear. ---------- -->
-    <div class="groups-bar card no-present" role="toolbar" aria-label="Create Groups controls">
+    <div class="groups-bar card" role="toolbar" aria-label="Create Groups controls">
       <label class="bar-field">
         <span class="lbl">Period</span>
         <select id="period-select"></select>
       </label>
 
-      <span class="chip" id="present-chip"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg><span id="present-count">—</span></span>
       <button type="button" id="btn-attendance" title="Mark who is absent today (roster is not changed)">Edit Roster</button>
 
-      <span class="preview" id="preview">Pick a period to begin.</span>
+      <span class="bar-spacer"></span>
 
-      <button id="btn-shuffle" class="primary groups-primary" title="Create Groups (or Reshuffle)">Create Groups</button>
+      <!-- What the number means depends on the mode, so it lives in the
+           input's aria-label (kept in sync by updateSummary). -->
+      <div class="seg mode-seg" role="radiogroup" aria-label="Group mode">
+        <label><input type="radio" name="mode" value="count"><span>Groups</span></label>
+        <label><input type="radio" name="mode" value="size"><span>Per group</span></label>
+      </div>
+      <input type="number" id="group-n" min="1" value="6" inputmode="numeric" aria-label="How many groups?">
 
       <button type="button" id="btn-formula" title="Seating & grouping rules for this period">Formula</button>
       <button type="button" class="icon-btn" id="btn-groups-settings" title="Group settings" aria-label="Group settings">
@@ -40,27 +47,14 @@
       </button>
       <button type="button" class="icon-btn" data-fullscreen aria-pressed="false" title="Present full screen (F) · Space reshuffles" aria-label="Present full screen"><span class="when-off"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 3H5a2 2 0 0 0-2 2v3M16 3h3a2 2 0 0 1 2 2v3M8 21H5a2 2 0 0 1-2-2v-3M16 21h3a2 2 0 0 0 2-2v-3"/></svg></span><span class="when-on"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 3v3a2 2 0 0 1-2 2H3M21 8h-3a2 2 0 0 1-2-2V3M3 16h3a2 2 0 0 1 2 2v3M16 21v-3a2 2 0 0 1 2-2h3"/></svg></span></button>
     </div>
+    </div>
 
-    <!-- ---------- Settings dialog (mode / number / first names / formula toggle) ---------- -->
+    <!-- ---------- Settings dialog (first names / formula toggle; mode and
+         number live on the toolbar) ---------- -->
     <dialog id="groups-settings-dialog" class="groups-settings-dialog">
       <form method="dialog">
         <h3>Group settings</h3>
         <p class="gs-note">Choices save automatically per browser.</p>
-
-        <div class="gs-field">
-          <span class="gs-label">Mode</span>
-          <div class="seg mode-seg" role="radiogroup" aria-label="Group mode">
-            <label><input type="radio" name="mode" value="count"><span>By number of groups</span></label>
-            <label><input type="radio" name="mode" value="size"><span>By people per group</span></label>
-          </div>
-        </div>
-
-        <div class="gs-field">
-          <label class="gs-inline" for="group-n">
-            <span class="gs-label" id="gs-n-label">How many groups?</span>
-            <input type="number" id="group-n" min="1" value="6" inputmode="numeric">
-          </label>
-        </div>
 
         <div class="gs-field">
           <button type="button" id="btn-firstnames" class="gs-switch" role="switch" aria-checked="false">
@@ -91,10 +85,22 @@
       <span class="hint">Space reshuffles · Esc exits</span>
     </div>
 
-    <!-- Results stage: the same .name-chip elements live in the pool first,
-         then get moved into group cards (FLIP-animated). -->
+    <!-- Stage = pool on top, the primary action in the middle, results below.
+         The same .name-chip elements live in the pool first and then get
+         moved into group cards (FLIP-animated), flying past the button.
+         Every row is content-sized and the pool row is dropped once the
+         groups are up, so the page flows with no dead space.
+         Nothing here may get an `overflow` — it would clip chips in flight. -->
     <div id="stage" class="stage">
-      <div id="pool" class="name-pool" aria-label="Present students"></div>
+      <div class="pool-area" id="pool-area">
+        <div id="pool" class="name-pool" aria-label="Present students"></div>
+      </div>
+
+      <div class="shuffle-row no-present">
+        <button id="btn-shuffle" class="primary groups-primary" title="Create Groups (or Reshuffle)">Create Groups</button>
+      </div>
+
+      <div class="results" id="results"></div>
     </div>
     <div id="empty" class="empty" hidden>Pick a period with students, then create groups.</div>
 
@@ -126,9 +132,9 @@
     const periodSelect = document.getElementById('period-select');
     const stage = document.getElementById('stage');
     const poolEl = document.getElementById('pool');
+    const resultsEl = document.getElementById('results');
     const emptyEl = document.getElementById('empty');
     const nInput = document.getElementById('group-n');
-    const previewEl = document.getElementById('preview');
     const firstNamesBtn = document.getElementById('btn-firstnames');
     const shuffleBtn = document.getElementById('btn-shuffle');
     const shuffleBtn2 = document.getElementById('btn-shuffle-2');
@@ -322,33 +328,21 @@
     // ---------- Pool (starting state) ----------
     function renderPool() {
       lastGroups = [];
-      stage.innerHTML = '';
+      resultsEl.innerHTML = '';
       poolEl.innerHTML = '';
       for (const s of presentStudents()) poolEl.appendChild(chipFor(s));
-      stage.appendChild(poolEl);
       stage.classList.remove('has-groups');
       shuffleBtn.textContent = 'Create Groups';
       emptyEl.hidden = !(currentPeriodId && students.length === 0);
     }
 
-    // ---------- Summary + live preview ----------
+    // ---------- Number input: its meaning follows the mode ----------
+    // (No counts or preview line on the bar — doShuffle reports any problem
+    // through setStatus when you actually press Create Groups.)
     function updateSummary() {
-      const P = presentStudents().length;
-      const A = absent.size;
-      document.getElementById('present-count').textContent = currentPeriodId ? `${P} present · ${A} absent` : '—';
       nInput.setAttribute('aria-label', mode === 'size' ? 'How many people per group?' : 'How many groups?');
+      nInput.title = mode === 'size' ? 'People per group' : 'Number of groups';
       nInput.min = mode === 'size' ? 2 : 1;
-
-      const n = parseInt(nInput.value, 10);
-      const g = groupCountFor(P, n);
-      if (!currentPeriodId) previewEl.textContent = 'Pick a period to begin.';
-      else if (students.length === 0) previewEl.textContent = 'No students yet — add some in Roster.';
-      else if (P === 0) previewEl.textContent = 'Everyone is marked absent.';
-      else if (!g) previewEl.textContent = 'Enter a number greater than 0.';
-      else {
-        const base = Math.floor(P / g), extra = P % g;
-        previewEl.textContent = `${P} → ${g} group${g === 1 ? '' : 's'} of ${extra ? `${base}–${base + 1}` : base}`;
-      }
     }
 
     document.querySelectorAll('input[name="mode"]').forEach((r) => {
@@ -358,8 +352,6 @@
           const saved = JSON.parse(localStorage.getItem(N_KEY) || '{}');
           nInput.value = saved[mode] || (mode === 'size' ? 4 : 6);
         } catch { nInput.value = mode === 'size' ? 4 : 6; }
-        const nLbl = document.getElementById('gs-n-label');
-        if (nLbl) nLbl.textContent = mode === 'size' ? 'How many per group?' : 'How many groups?';
         saveSettings();
         updateSummary();
       });
@@ -432,14 +424,23 @@
         members.forEach((s) => names.appendChild(chipFor(s)));
         frag.appendChild(card);
       });
-      stage.innerHTML = '';
-      stage.appendChild(frag);
+      // Only the results row is replaced — the pool row keeps its reserved
+      // height (it just empties out as the chips move into the cards), so the
+      // button between them doesn't shift.
+      resultsEl.innerHTML = '';
+      resultsEl.appendChild(frag);
       stage.classList.add('has-groups');
     }
 
     // FLIP: measure First, mutate, measure Last, Invert with a transform, Play.
     // Chips fly one after another with a springy ease; cards fade/scale in first.
     async function flipTo(groups, { beat = false } = {}) {
+      // Measure First and Last from the same scroll origin — otherwise every
+      // chip flies from a spot that is off by the old scrollTop — and keep
+      // the take-off points on screen.
+      const pageEl = stage.closest('main.page');
+      if (pageEl) pageEl.scrollTop = 0;
+
       const all = [...stage.querySelectorAll('.name-chip')];
       const order = shuffle(all);                                   // scattered take-off order
       const n = order.length;
@@ -540,12 +541,9 @@
     shuffleBtn.addEventListener('click', doShuffle);
     shuffleBtn2.addEventListener('click', doShuffle);
 
-    // Settings dialog (mode / number / first names / formula toggle live inside)
+    // Settings dialog (first names / formula toggle live inside)
     const groupsSettingsDialog = document.getElementById('groups-settings-dialog');
     document.getElementById('btn-groups-settings').addEventListener('click', () => {
-      // sync the number-input label to the current mode
-      const nLbl = document.getElementById('gs-n-label');
-      if (nLbl) nLbl.textContent = mode === 'size' ? 'How many per group?' : 'How many groups?';
       groupsSettingsDialog.showModal();
     });
 
