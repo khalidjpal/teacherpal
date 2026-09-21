@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Timer — TeacherPal</title>
+  <meta name="color-scheme" content="dark">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Comfortaa:wght@400;500;600;700&family=Quicksand:wght@400;500;600;700&family=JetBrains+Mono&family=Nunito:wght@400;600;700&family=Orbitron:wght@500;600;700&family=Rajdhani:wght@500;600;700&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+  <script>(function(){try{var t=localStorage.getItem('teacherpal.theme')||'jarvis';document.documentElement.setAttribute('data-theme',t);}catch(e){document.documentElement.setAttribute('data-theme','jarvis');}})();</script>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body class="hub">
+  <div class="app">
+    <header class="topbar"></header>
+
+    <main class="page hud-page timer-page">
+      <div id="status" class="status"></div>
+
+      <section class="timer-stage hud-box" aria-label="Timer">
+        <span class="tick tl" aria-hidden="true"></span><span class="tick tr" aria-hidden="true"></span><span class="tick bl" aria-hidden="true"></span><span class="tick br" aria-hidden="true"></span>
+
+        <div class="timer-mode-row">
+          <div class="seg timer-mode-seg" role="radiogroup" aria-label="Mode">
+            <label><input type="radio" name="timer-mode" value="countdown" checked><span>Countdown</span></label>
+            <label><input type="radio" name="timer-mode" value="stopwatch"><span>Stopwatch</span></label>
+          </div>
+          <input type="text" id="timer-label-in" class="timer-label-in" placeholder="Label (optional)" maxlength="40" aria-label="Label">
+        </div>
+
+        <div class="timer-label" id="timer-label"></div>
+
+        <div class="timer-display-wrap">
+          <div class="timer-display" id="timer-display" aria-live="polite">00:00</div>
+          <svg class="timer-ring" id="timer-ring" viewBox="0 0 100 100" aria-hidden="true">
+            <circle class="timer-ring-bg" cx="50" cy="50" r="46"/>
+            <circle class="timer-ring-fg" id="timer-ring-fg" cx="50" cy="50" r="46" pathLength="1"/>
+          </svg>
+        </div>
+
+        <div class="timer-actions">
+          <button type="button" id="timer-start" class="primary big">Start</button>
+          <button type="button" id="timer-reset">Reset</button>
+          <button type="button" id="timer-minus" class="running-only" hidden>−1 min</button>
+          <button type="button" id="timer-plus"  class="running-only" hidden>+1 min</button>
+        </div>
+
+        <div class="timer-setup" id="timer-setup">
+          <div class="timer-custom">
+            <label><span class="hud-key">Min</span><input type="number" id="timer-mins" min="0" max="180" value="5" inputmode="numeric"></label>
+            <span class="timer-colon">:</span>
+            <label><span class="hud-key">Sec</span><input type="number" id="timer-secs" min="0" max="59" value="0" inputmode="numeric"></label>
+          </div>
+          <div class="timer-presets" aria-label="Quick presets">
+            <button type="button" data-preset="60">1 min</button>
+            <button type="button" data-preset="180">3 min</button>
+            <button type="button" data-preset="300">5 min</button>
+            <button type="button" data-preset="600">10 min</button>
+            <button type="button" data-preset="900">15 min</button>
+          </div>
+        </div>
+
+        <div class="timer-extras">
+          <button type="button" id="timer-mute" role="switch" aria-checked="false" title="Sound on zero">
+            <span class="when-off">🔊 Sound on</span>
+            <span class="when-on">🔇 Muted</span>
+          </button>
+          <button type="button" id="timer-popout">Pop out ↗</button>
+          <button type="button" id="timer-pip" hidden>Picture-in-Picture</button>
+          <span class="spacer"></span>
+          <button type="button" class="icon-btn" data-fullscreen aria-pressed="false" title="Full screen (F)" aria-label="Toggle full screen"><span class="when-off"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 3H5a2 2 0 0 0-2 2v3M16 3h3a2 2 0 0 1 2 2v3M8 21H5a2 2 0 0 1-2-2v-3M16 21h3a2 2 0 0 0 2-2v-3"/></svg></span><span class="when-on"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 3v3a2 2 0 0 1-2 2H3M21 8h-3a2 2 0 0 1-2-2V3M3 16h3a2 2 0 0 1 2 2v3M16 21v-3a2 2 0 0 1 2-2h3"/></svg></span></button>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <script src="shared.js"></script>
+  <script src="schedule.js"></script>
+  <script src="nav.js"></script>
+  <script src="timer.js"></script>
+</body>
+</html>

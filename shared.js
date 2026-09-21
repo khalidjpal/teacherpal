@@ -92,19 +92,26 @@ function normalizeSession(raw) {
   };
 }
 
-// Plain Supabase Auth: email + password. Accounts are created in the
-// Supabase dashboard (no in-app admin flow); passwords are set from the
-// dashboard too. After a successful token exchange, we fetch the profile
-// row (created for us by the on_auth_user_created trigger) to hydrate
-// is_admin / theme / teaches_periods into the session.
-async function signIn(email, password) {
-  const cleanEmail = String(email || '').trim().toLowerCase();
-  if (!cleanEmail || !password) throw new Error('Enter your email and password.');
+// Plain Supabase Auth: email + password underneath. The login form accepts
+// either an email OR a username — if the input contains "@" we treat it as
+// the email, otherwise we look it up in profiles.username (case-insensitive)
+// to find the matching email. Password verification is Supabase's own; we
+// never touch hashes. If the username isn't found we throw the same generic
+// "Sign-in failed" so callers can't enumerate usernames.
+async function signIn(usernameOrEmail, password) {
+  const raw = String(usernameOrEmail || '').trim();
+  if (!raw || !password) throw new Error('Enter your username (or email) and password.');
+
+  let email = raw.toLowerCase();
+  if (!raw.includes('@')) {
+    email = await lookupEmailByUsername(raw);
+    if (!email) throw new Error('Sign-in failed.');
+  }
 
   const res = await fetch(`${SUPABASE_URL}/auth/v1/token?grant_type=password`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', apikey: SUPABASE_ANON_KEY },
-    body: JSON.stringify({ email: cleanEmail, password }),
+    body: JSON.stringify({ email, password }),
   });
   const data = await res.json().catch(() => ({}));
   if (!res.ok) {
@@ -115,6 +122,24 @@ async function signIn(email, password) {
   await hydrateProfileIntoSession();
   applyTheme((_session && _session.user && _session.user.theme) || DEFAULT_THEME);
   return _session;
+}
+
+// Anon-readable username → email lookup so people can log in with just
+// "khalid" instead of the full address. Returns null when the username
+// isn't in profiles (the caller reports a generic error either way).
+async function lookupEmailByUsername(username) {
+  const u = String(username || '').trim();
+  if (!u) return null;
+  const url = new URL(`${SUPABASE_URL}/rest/v1/profiles`);
+  url.searchParams.set('select', 'email');
+  url.searchParams.set('username', `ilike.${u}`);
+  url.searchParams.set('limit', '1');
+  const res = await fetch(url, {
+    headers: { apikey: SUPABASE_ANON_KEY, Authorization: `Bearer ${SUPABASE_ANON_KEY}` },
+  });
+  if (!res.ok) return null;
+  const rows = await res.json().catch(() => []);
+  return (rows[0] && rows[0].email) || null;
 }
 
 // After sign-in, fill session.user with is_admin / theme / teaches_periods
@@ -572,6 +597,24 @@ async function bathroomSignIn(id) {
 
 async function deleteBathroomTrip(id) {
   return sb('bathroom_log', { method: 'DELETE', params: { id: `eq.${id}` } });
+}
+
+// Backfill a past trip by hand — used by the Bathroom settings dialog when
+// entering paper-tracker records. out_at is required; in_at may be null
+// (still-out) or a later ISO. date is the calendar day the trip belongs
+// to (used for quarter attribution).
+async function insertBathroomTrip({ periodId, studentId, date, outAt, inAt = null }) {
+  const rows = await sb('bathroom_log', {
+    method: 'POST',
+    body: {
+      period_id:  periodId,
+      student_id: studentId,
+      date,
+      out_at:     outAt,
+      in_at:      inAt,
+    },
+  });
+  return rows[0];
 }
 
 // Manual tallies (paper tracker / adjustments): one row per (student, quarter)

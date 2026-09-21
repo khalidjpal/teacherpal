@@ -138,7 +138,7 @@
 
     const currentPeriod = () => periods.find((p) => p.id === currentPeriodId) || null;
 
-    // "1st Period - English 9" â†’ { title: "1st Period", course: "English 9" }
+    // "1st Period - English 9" → { title: "1st Period", course: "English 9" }
     function splitPeriodName(name) {
       const m = String(name || '').match(/^(.*?)\s*(?:[-–—:|]|\(|,)\s*(.+?)\)?\s*$/);
       return m ? { title: m[1], course: m[2] } : { title: name || '', course: '' };
@@ -275,7 +275,7 @@
       editBtn.setAttribute('aria-pressed', String(on));
     }
 
-    // Click a name in edit mode â†’ inline inset input
+    // Click a name in edit mode → inline inset input
     gridEl.addEventListener('click', (e) => {
       if (!editMode) return;
       const nameEl = e.target.closest('.name');

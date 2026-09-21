@@ -13,6 +13,7 @@ const NAV_ITEMS = [
   { href: 'attendance.html', label: 'Attendance' },
   { href: 'lessons.html', label: 'Lesson Plans' },
   { href: 'groups.html', label: 'Create Groups' },
+  { href: 'timer.html', label: 'Timer' },
   { href: 'seating.html', label: 'Seating' },
   { href: 'bathroom.html', label: 'Bathroom' },
   { href: 'schedule.html', label: 'Schedule' },
@@ -47,22 +48,28 @@ function renderTopNav() {
   const noLinks = document.body.classList.contains('launcher');
   const user = typeof currentUser === 'function' ? currentUser() : null;
   const showAccount = !!user;   // pages without a session hide it
+  // Short display name: profile username → local part of email → email.
+  const shortName = user
+    ? (user.username || (user.email ? user.email.split('@')[0] : ''))
+    : '';
+  const fullEmail = user ? (user.email || '') : '';
   header.classList.add('hud-bar', 'topnav');
   header.classList.toggle('no-links', noLinks);
   header.innerHTML = `
     <a class="hud-brand" href="index.html"><span class="hud-brand-mark" aria-hidden="true"></span>TeacherPal</a>
     ${noLinks ? '' : `<nav class="nav-links" aria-label="Screens">${links}</nav>`}
-    <span class="spacer"></span>
+    <div class="hud-tail">
+      ${showAccount ? `<span class="hud-stat hud-account" title="Signed in as ${escapeHtml(shortName)}${fullEmail && fullEmail !== shortName ? ' (' + escapeHtml(fullEmail) + ')' : ''}"><span class="hud-key">USER</span><span class="hud-val" id="hud-user">${escapeHtml(shortName)}</span></span>` : ''}
+      ${renderSettingsMenu()}
+      ${showAccount ? `<button type="button" class="icon-btn signout-btn" id="signout-btn" title="Sign out" aria-label="Sign out">${SIGN_OUT_ICON}</button>` : ''}
+      <button type="button" class="icon-btn fs-btn" data-fullscreen aria-pressed="false" title="Full screen (F)" aria-label="Toggle full screen"><span class="when-off">${FS_ICON_ENTER}</span><span class="when-on">${FS_ICON_EXIT}</span></button>
+    </div>
     <div class="hud-status" aria-live="off">
       <span class="hud-stat"><span class="hud-key">TIME</span><span class="hud-val" id="hud-time">--:--:--</span></span>
       <span class="hud-stat"><span class="hud-key">DATE</span><span class="hud-val" id="hud-date">—</span></span>
       <a class="hud-stat hud-link" href="schedule.html" title="Bell schedules and overrides"><span class="hud-key">SCHED</span><span class="hud-val" id="hud-sched">—</span></a>
       <span class="hud-stat"><span class="hud-key">NOW</span><span class="hud-val" id="hud-now">—</span></span>
-    </div>
-    ${showAccount ? `<span class="hud-stat hud-account" title="Signed in as ${escapeHtml(user.username || user.email || '')}${user.username && user.email ? ' (' + escapeHtml(user.email) + ')' : ''}"><span class="hud-key">USER</span><span class="hud-val" id="hud-user">${escapeHtml(user.username || user.email || '')}</span></span>` : ''}
-    ${renderSettingsMenu()}
-    ${showAccount ? `<button type="button" class="icon-btn signout-btn" id="signout-btn" title="Sign out" aria-label="Sign out">${SIGN_OUT_ICON}</button>` : ''}
-    <button type="button" class="icon-btn fs-btn" data-fullscreen aria-pressed="false" title="Full screen (F)" aria-label="Toggle full screen"><span class="when-off">${FS_ICON_ENTER}</span><span class="when-on">${FS_ICON_EXIT}</span></button>`;
+    </div>`;
 
   const soBtn = header.querySelector('#signout-btn');
   if (soBtn) soBtn.addEventListener('click', () => { if (typeof signOut === 'function') signOut(); });

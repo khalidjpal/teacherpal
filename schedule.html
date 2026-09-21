@@ -143,7 +143,7 @@
         overrides = overrides.filter((o) => o.date !== date).concat(saved).sort((a, b) => a.date.localeCompare(b.date));
         renderList(); renderToday();
         $('ov-note').value = '';
-        setStatus(`${fmtDate(date)} â†’ ${scheduleFor(schedule, finals_pair).name}.`, 'ok');
+        setStatus(`${fmtDate(date)} → ${scheduleFor(schedule, finals_pair).name}.`, 'ok');
       } catch (err) { showError(err); }
       finally { $('ov-save').disabled = false; }
     });

@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Timer</title>
+  <meta name="color-scheme" content="dark">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;600;700&family=Rajdhani:wght@500;600;700&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+  <script>(function(){try{var t=localStorage.getItem('teacherpal.theme')||'jarvis';document.documentElement.setAttribute('data-theme',t);}catch(e){document.documentElement.setAttribute('data-theme','jarvis');}})();</script>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body class="timer-popout">
+  <div class="timer-popout-inner">
+    <div class="timer-label" id="timer-label"></div>
+    <div class="timer-display-wrap">
+      <div class="timer-display" id="timer-display">00:00</div>
+      <svg class="timer-ring" id="timer-ring" viewBox="0 0 100 100" aria-hidden="true">
+        <circle class="timer-ring-bg" cx="50" cy="50" r="46"/>
+        <circle class="timer-ring-fg" id="timer-ring-fg" cx="50" cy="50" r="46" pathLength="1"/>
+      </svg>
+    </div>
+  </div>
+  <script src="timer.js"></script>
+</body>
+</html>

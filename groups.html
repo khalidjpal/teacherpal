@@ -19,8 +19,9 @@
   <main class="page">
     <h1 class="page-title no-present">Create Groups</h1>
 
-    <!-- ---------- Compact toolbar ---------- -->
-    <div class="groups-bar card no-present" role="toolbar" aria-label="Group settings">
+    <!-- ---------- Slim toolbar. Only essentials live here; group-mode /
+         number / first-names / Formula toggle moved to Settings gear. ---------- -->
+    <div class="groups-bar card no-present" role="toolbar" aria-label="Create Groups controls">
       <label class="bar-field">
         <span class="lbl">Period</span>
         <select id="period-select"></select>
@@ -29,29 +30,59 @@
       <span class="chip" id="present-chip"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg><span id="present-count">—</span></span>
       <button type="button" id="btn-attendance" title="Mark who is absent today (roster is not changed)">Edit Roster</button>
 
-      <span class="bar-sep" aria-hidden="true"></span>
-
-      <div class="seg mode-seg" role="radiogroup" aria-label="Group mode">
-        <label><input type="radio" name="mode" value="count"><span>Groups</span></label>
-        <label><input type="radio" name="mode" value="size"><span>Per group</span></label>
-      </div>
-      <input type="number" id="group-n" min="1" value="6" inputmode="numeric" aria-label="How many groups?" aria-describedby="preview">
-      <button type="button" id="btn-firstnames" role="switch" aria-checked="false" title="Show first names only">
-        <span class="when-off">First names</span>
-        <span class="when-on">âœ“ First names</span>
-      </button>
-
       <span class="preview" id="preview">Pick a period to begin.</span>
 
-      <button id="btn-shuffle" class="primary">Create Groups</button>
-      <button type="button" id="btn-use-formula" class="toggle" role="switch" aria-checked="false" title="When on, Create Groups / Reshuffle follow this period's formula (shared with Seating)">
-        <span class="toggle-dot" aria-hidden="true"></span>
-        <span class="when-off">Formula off</span>
-        <span class="when-on">Formula on</span>
-      </button>
+      <button id="btn-shuffle" class="primary groups-primary" title="Create Groups (or Reshuffle)">Create Groups</button>
+
       <button type="button" id="btn-formula" title="Seating & grouping rules for this period">Formula</button>
+      <button type="button" class="icon-btn" id="btn-groups-settings" title="Group settings" aria-label="Group settings">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+      </button>
       <button type="button" class="icon-btn" data-fullscreen aria-pressed="false" title="Present full screen (F) · Space reshuffles" aria-label="Present full screen"><span class="when-off"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 3H5a2 2 0 0 0-2 2v3M16 3h3a2 2 0 0 1 2 2v3M8 21H5a2 2 0 0 1-2-2v-3M16 21h3a2 2 0 0 0 2-2v-3"/></svg></span><span class="when-on"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 3v3a2 2 0 0 1-2 2H3M21 8h-3a2 2 0 0 1-2-2V3M3 16h3a2 2 0 0 1 2 2v3M16 21v-3a2 2 0 0 1 2-2h3"/></svg></span></button>
     </div>
+
+    <!-- ---------- Settings dialog (mode / number / first names / formula toggle) ---------- -->
+    <dialog id="groups-settings-dialog" class="groups-settings-dialog">
+      <form method="dialog">
+        <h3>Group settings</h3>
+        <p class="gs-note">Choices save automatically per browser.</p>
+
+        <div class="gs-field">
+          <span class="gs-label">Mode</span>
+          <div class="seg mode-seg" role="radiogroup" aria-label="Group mode">
+            <label><input type="radio" name="mode" value="count"><span>By number of groups</span></label>
+            <label><input type="radio" name="mode" value="size"><span>By people per group</span></label>
+          </div>
+        </div>
+
+        <div class="gs-field">
+          <label class="gs-inline" for="group-n">
+            <span class="gs-label" id="gs-n-label">How many groups?</span>
+            <input type="number" id="group-n" min="1" value="6" inputmode="numeric">
+          </label>
+        </div>
+
+        <div class="gs-field">
+          <button type="button" id="btn-firstnames" class="gs-switch" role="switch" aria-checked="false">
+            <span class="gs-switch-track"><span class="gs-switch-dot"></span></span>
+            <span class="gs-switch-label">First names only</span>
+          </button>
+          <small class="gs-hint">Show first names; add a last-name initial if two students share one.</small>
+        </div>
+
+        <div class="gs-field">
+          <button type="button" id="btn-use-formula" class="gs-switch" role="switch" aria-checked="false">
+            <span class="gs-switch-track"><span class="gs-switch-dot"></span></span>
+            <span class="gs-switch-label">Follow Formula rules</span>
+          </button>
+          <small class="gs-hint">Create Groups will obey this period's grouping rules instead of random.</small>
+        </div>
+
+        <div class="gs-actions">
+          <button value="cancel" class="primary">Done</button>
+        </div>
+      </form>
+    </dialog>
 
     <div id="status" class="status"></div>
 
@@ -118,7 +149,7 @@
     let rules = [];                    // grouping rules for the period (separate from Seating's)
     let useFormula = false;            // this scope's toggle, saved per period
     let rulesSaveTimer = null;
-    const chips = new Map();      // student id â†’ .name-chip element (persist across pool/groups)
+    const chips = new Map();      // student id → .name-chip element (persist across pool/groups)
 
     const reduceMotion = () => window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     const wait = (ms) => new Promise((r) => setTimeout(r, ms));
@@ -316,7 +347,7 @@
       else if (!g) previewEl.textContent = 'Enter a number greater than 0.';
       else {
         const base = Math.floor(P / g), extra = P % g;
-        previewEl.textContent = `${P} â†’ ${g} group${g === 1 ? '' : 's'} of ${extra ? `${base}–${base + 1}` : base}`;
+        previewEl.textContent = `${P} → ${g} group${g === 1 ? '' : 's'} of ${extra ? `${base}–${base + 1}` : base}`;
       }
     }
 
@@ -327,6 +358,8 @@
           const saved = JSON.parse(localStorage.getItem(N_KEY) || '{}');
           nInput.value = saved[mode] || (mode === 'size' ? 4 : 6);
         } catch { nInput.value = mode === 'size' ? 4 : 6; }
+        const nLbl = document.getElementById('gs-n-label');
+        if (nLbl) nLbl.textContent = mode === 'size' ? 'How many per group?' : 'How many groups?';
         saveSettings();
         updateSummary();
       });
@@ -376,7 +409,7 @@
       updateSummary();
     });
     document.getElementById('attendance-done').addEventListener('click', () => attendanceDialog.close());
-    // Attendance changed â†’ back to the pool with today's present students
+    // Attendance changed → back to the pool with today's present students
     attendanceDialog.addEventListener('close', () => { renderPool(); updateSummary(); });
 
     // ---------- Grouping ----------
@@ -506,6 +539,15 @@
 
     shuffleBtn.addEventListener('click', doShuffle);
     shuffleBtn2.addEventListener('click', doShuffle);
+
+    // Settings dialog (mode / number / first names / formula toggle live inside)
+    const groupsSettingsDialog = document.getElementById('groups-settings-dialog');
+    document.getElementById('btn-groups-settings').addEventListener('click', () => {
+      // sync the number-input label to the current mode
+      const nLbl = document.getElementById('gs-n-label');
+      if (nLbl) nLbl.textContent = mode === 'size' ? 'How many per group?' : 'How many groups?';
+      groupsSettingsDialog.showModal();
+    });
 
     // ---------- Big screen mode (shared full-screen system in shared.js) ----------
     // Full screen IS the projector view: big group cards, animations intact, Space reshuffles.

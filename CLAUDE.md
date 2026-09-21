@@ -19,8 +19,8 @@ Dark dashboard look with a subtle pink accent (see design-ref.png).
 
 ## Screens
 
-Eight screens, one horizontal top nav (built by `nav.js` on every page):
-**Hub · Attendance · Lesson Plans · Create Groups · Seating · Bathroom ·
+Nine screens, one horizontal top nav (built by `nav.js` on every page):
+**Hub · Attendance · Lesson Plans · Create Groups · Timer · Seating · Bathroom ·
 Schedule · | Rosters** (Rosters is the quiet "setup" item after a
 divider). The active
 screen gets `aria-current="page"` (pink fill). The nav bar also carries
@@ -33,8 +33,9 @@ full-screen toggle. There is no sidebar; every page uses the full width.
 | Attendance | `attendance.html` | Taking roll: the seating chart large and central with click-to-cycle, counts, absent/tardy lists, Copy list, Reset, date control; the screen to project |
 | Lesson Plans | `lessons.html` | Writing plans: a Mon–Fri week grid across all periods (jump to any date, ← → ↑ ↓ to move) with the full editor for the selected cell beside it |
 | Create Groups | `groups.html` | Random / formula groups, projector view in full screen |
+| Timer | `timer.html` | Classroom countdown / stopwatch: big digits, presets, ±1 min, mute, pop-out + Picture-in-Picture for the projector while another tab is active |
 | Seating | `seating.html` | Room builder + seat assignment |
-| Bathroom | `bathroom.html` | Bathroom tracker: click a student to sign out (timestamped) / back in, live elapsed time, "too long" flag, max-out cap, today's log, per-student history |
+| Bathroom | `bathroom.html` | Bathroom tracker: click a card → confirm → Start timer; live Out-now strip with End timer, per-student pass checkboxes, red flag past the limit; settings + log/history collapsed out of the main view |
 | Rosters | `roster.html` | Setup: periods + students |
 | Schedule | `schedule.html` | Setup: bell-schedule overrides + reference |
 
@@ -51,13 +52,16 @@ full-screen toggle. There is no sidebar; every page uses the full width.
 | `migration-rekey-owner.sql` | One-off migration for when the auth user was deleted and recreated: repoints every `owner_id` from the old UID to the new one and rebuilds the `profiles.khalid` row |
 | `migration-themes.sql` | One-off migration that adds `profiles.theme text default 'jarvis'` and the `set_my_theme(text)` SECURITY DEFINER RPC (validated `^[a-z0-9_-]+$`, updates only the caller's own row) |
 | `migration-teaches-periods.sql` | One-off migration that adds `profiles.teaches_periods integer[]` (each entry 0-7) and the `set_my_teaches_periods(int[])` RPC. Seeds `khalid` to `{1,2,3,5,6}` and `marwa` to `{2,3,4,5,6}` |
-| `index.html`   | Hub launcher (`body.hub.launcher`): static `.hub-panels.launcher` grid of `.hud-panel` links; loads only `shared.js`, `schedule.js`, `nav.js` (top bar **without** nav links — the panels are the nav) |
+| `index.html`   | Hub launcher (`body.hub.launcher`): `.hub-sections` — four labelled sections (Daily, Teacher tools, Planning, System) each with its own `.hub-panels` row of `.hud-panel` links; loads only `shared.js`, `schedule.js`, `nav.js` (top bar **without** nav links — the panels are the nav) |
 | `attendance.html` | Attendance screen: `#attendance` in **full** mode — big chart + side column with counts, lists, Copy, Reset, date |
 | `nav.js`       | Shared top bar: renders brand + nav links + readouts + full-screen button into `<header class="topbar">`, marks the active page, runs the clock / bell status (`teacherpal:tick`), exposes `navReady` (periods, overrides, teaches, byNumber). Loaded on every page after `shared.js` + `schedule.js`. |
 | `lessons.html` | Lesson Plans screen: week grid (inline script) + `#lesson` editor from `lesson.js` |
 | `bathroom.html` | Bathroom Tracker screen: `#bathroom` built by `bathroom.js` |
 | `lesson.js`    | `initLessonPanel({ mount, follow, onChange })` — the lesson-plan editor (objective, checkable agenda with minutes, materials, homework, notes; inline editing, 800ms autosave, empty state, Copy from period / Copy yesterday). `follow: true` tracks `teacherpal:period` (hub); otherwise `panel.show(periodId, date)`. |
 | `bathroom.js`  | `initBathroom()` — the bathroom tracker (tiles, sign out/in, live elapsed, flag + cap settings in localStorage, log, history). |
+| `timer.html`   | Timer screen: the `.timer-stage` (mode toggle, label, big display + ring, presets, custom min/sec, start/reset/±1, mute, Pop out, PiP, full screen) — loads `timer.js`. |
+| `timer.js`     | Countdown + stopwatch logic. **End-timestamp model**: state is `{ mode, running, paused, label, muted, targetMs, endsAt, remainingAtPause, startedAt, elapsedAtPause }` in `localStorage['teacherpal.timer.state']`; every window computes the display from `Date.now()` against `endsAt`/`startedAt`, so tab-throttling doesn't drift. `BroadcastChannel('teacherpal-timer')` syncs main ↔ pop-out ↔ PiP. Web Audio API beep on zero (respects mute). `documentPictureInPicture.requestWindow()` on Chrome for an always-on-top floating display. Space toggles start/pause. |
+| `timer-popout.html` | Minimal read-only pop-out window (`body.timer-popout`): label + display + ring, no controls, listens for state via BroadcastChannel and falls back to `localStorage` if the main window is gone. |
 | `migration-lessons-bathroom.sql` | One-off migration creating `lesson_plans` + `bathroom_log` (incl. the manual-tally columns; run in the Supabase SQL editor) |
 | `seed-bathroom-q1.sql` | Seed: Q1 used-pass tallies from the paper tracker — name-matches students per period, creates three missing students, upserts manual tallies, reports unmatched names in its last result set |
 | `attendance.js` | `initAttendance({ mode: 'full' \| 'compact' })` builds and runs the attendance view (chart or tiles, click-to-cycle, AUTO period, date, counts, lists, Copy, Reset, autosave). Data only via `shared.js`; bell data via `navReady`. |
@@ -67,7 +71,7 @@ full-screen toggle. There is no sidebar; every page uses the full width.
 | `formula.js`   | Shared Formula **algorithms and modal only** — never rule data: type metadata per scope (`RULE_TYPES`, `SCOPE_TYPES`, `KEY_TYPES`), priorities (`sortByPriority`, `priorityWeight`, `planRules`), feasibility (`findImpossibleHard`, `confirmImpossible`), the `annealAssign()` solver, `groupWithFormula()`, `summarizeRun()`, `absentTodayFor()`, `createFormulaModal({ scope, … })`. No Supabase calls. |
 | `style.css`    | Shared styling for every page (dark pink dashboard theme; all tokens at the top) |
 | `roster.html`  | Two-panel roster: period panel (search, sort, add, import modal, edit mode, full screen) + name-card grid with undo-toast remove |
-| `groups.html`  | **Create Groups**: compact toolbar (period, attendance panel, mode toggle, first-names, Formula on/off + Formula modal), FLIP-animated pool → group cards, full screen |
+| `groups.html`  | **Create Groups**: slim toolbar (period, present-count, Edit Roster, live preview, prominent Create Groups button, Formula, gear, full screen). Group mode / number / first-names / Formula on-off toggle live in the `.groups-settings-dialog` opened from the gear. FLIP-animated pool → group cards |
 | `seating.html` | Freeform room builder: palette of desk pieces on a zoomable dot-grid canvas (Arrange Room), then drag names onto seats (Assign Seats); layout shared, seats per period, autosave, full screen |
 | `migration-room-builder.sql` | One-off migration for the room builder tables (run in the Supabase SQL editor) |
 | `migration-seating-rules.sql` | One-off migration creating the formula rules table (run in the Supabase SQL editor) |
@@ -83,9 +87,10 @@ Every page: `<link rel="stylesheet" href="style.css">`, an **empty**
 `<body>`: `shared.js`, `schedule.js`, (`formula.js` on Seating and Create
 Groups, `room.js` on Seating / hub / attendance), `nav.js`, then the page's
 own script (`attendance.js` + `initAttendance()` on Attendance; `lesson.js`
-on Lesson Plans; `bathroom.js` on Bathroom; nothing on the hub; an inline
-`<script>` elsewhere). Pages should have a `<div id="status" class="status"></div>` so
-`setStatus()` / `showError()` have somewhere to write.
+on Lesson Plans; `bathroom.js` on Bathroom; `timer.js` on Timer; nothing on
+the hub; an inline `<script>` elsewhere). Pages should have a
+`<div id="status" class="status"></div>` so `setStatus()` / `showError()`
+have somewhere to write.
 
 ## Auth — multi-tenant model
 
@@ -461,14 +466,17 @@ TeacherPal ships two themes, one per teacher's taste:
 - **`jarvis`** — the original dark HUD (deep plum-navy, near-black cards,
   subtle pink accent, Orbitron uppercase labels, corner ticks). Default for
   every account and every logged-out page. See the Design rules below.
-- **`marwa`** — soft cream-pink background with a tiny heart pattern, white
-  cards, bubblegum pink accent (`#FF5FA2`), deep-plum text, lavender/mint
-  secondaries, rounder radii, pill buttons that gently bounce, no HUD ticks,
-  Baloo 2 for display and Nunito for body, sentence case (never uppercase
-  wide-tracked labels), a small ♥ before section headings, and a `✦`
-  sparkle animation on any `.status.status-ok`. Student names on seating
-  charts and group cards stay large, high-contrast, and readable on a
-  projector — pink is only for accents and chrome, never body text on white.
+- **`marwa`** — a **pure colour swap of jarvis** with two tiny extras. Same
+  layout, spacing, radii, borders, fonts, weights, tracks, shadows,
+  animations and components: only palette tokens differ (light cream-pink
+  ground, white cards, deep-plum text, bubblegum-pink accent) with
+  equivalent contrast. Two intentional additions: **12-hour clock with
+  AM/PM** in the topbar (`fmtWallClock({ hour12: true })` when
+  `currentTheme() === 'marwa'`) and the **original mascot set** (bunny,
+  axolotl, cat, cloud, star) used on empty states, the login hero and a
+  hub-corner flourish. No HUD tick suppression, no heart pattern, no
+  sentence-case override, no separate fonts, no rounded-card overrides —
+  layout changes to jarvis carry into marwa automatically.
 
 Storage & flow:
 
@@ -490,18 +498,11 @@ Storage & flow:
 To add a new theme:
 
 1. Add `{ id: 'my-theme', label: 'My Theme' }` to `THEMES` in `shared.js`.
-2. Copy the `:root[data-theme="marwa"] { … }` token block in `style.css` and
-   rename the selector to `:root[data-theme="my-theme"]`. Swap values.
-3. If the theme needs behaviour beyond token overrides (hide the corner
-   ticks, add a decorative pseudo-element, change body background, etc.),
-   add a scoped section at the bottom of `style.css` under the `marwa`
-   overrides block using the same `:root[data-theme="my-theme"] …`
-   selector prefix.
-4. Add both new Google Fonts (if any) to the shared fonts URL in the
-   `<link>` on every page — the browser only downloads a family when a
-   `font-family` rule actually matches something in the DOM, so extra
-   families are near-free until the theme is active.
-5. Test at 1366×768, 1080p, 4K and 375px, and on the projector.
+2. Copy the `:root[data-theme="marwa"] { … }` colour block in `style.css`
+   and rename the selector to `:root[data-theme="my-theme"]`. Swap the
+   colour values only — leave structural tokens (fonts, radii, tracks,
+   spacing, font-weights) alone so the layout stays identical.
+3. Test at 1366×768, 1080p, 4K and 375px, and on the projector.
 
 The `set_my_theme(text)` RPC validates `^[a-z0-9_-]+$` and length ≤ 40 so
 any junk name is rejected at the server. Unknown ids on the client just
@@ -510,63 +511,21 @@ fall back to the default (no matching `:root[data-theme=…]` block); harmless.
 ### Marwa mascots
 
 Marwa ships an original cast of 5 characters (nothing copied from Sanrio /
-Hello Kitty / any existing IP — all drawn from simple geometric primitives
-in the theme's palette). All 48×48 viewBox, flat fills, minimal face,
-consistent style so they read as one family:
+Hello Kitty / Miffy / any existing IP — drawn from simple geometric
+primitives in the palette). All 48×48 viewBox, bold sticker style, each a
+CSS variable inside the marwa token block:
 
-| id         | Character                              | Where it appears by default |
-|------------|----------------------------------------|-----------------------------|
-| `cat`      | round pink cat with a small bow        | `.list-empty`, login-page hero |
-| `cloud`    | sleepy lavender cloud                  | `.lesson-empty` |
-| `star`     | 5-point cream star                     | (available — none by default) |
-| `bunny`    | cream bunny with long ears             | `.chart-empty`, hub launcher corner |
-| `mushroom` | pink cap + cream stem                  | `.empty-state` |
+| id        | Character                              | Where it appears |
+|-----------|----------------------------------------|------------------|
+| `bunny`   | round bunny with a bow                 | `.chart-empty`, hub-launcher corner flourish |
+| `axolotl` | smiling axolotl with rose feather gills| `.empty-state`, login hero |
+| `cat`     | round cat with a bow                   | `.list-empty` |
+| `cloud`   | sleepy cloud, closed-arc eyes          | (available via `.marwa-mascot`) |
+| `star`    | 5-point star                           | `.lesson-empty` |
 
-Two smaller decorative motifs live alongside them: `--marwa-heart` (used
-before every card heading) and `--marwa-sparkle` (top-right corner
-flourish on hub panels + the save-success animation).
-
-All eight are CSS variables inside the `:root[data-theme="marwa"]` token
-block near the top of the Marwa section in `style.css`.
-
-**Drop a mascot anywhere in HTML** with the utility class:
-
-```html
-<span class="marwa-mascot" data-mascot="bunny"></span>
-<div class="marwa-mascot" data-mascot="star" style="width:5rem;height:5rem"></div>
-```
-
-Defaults to 3rem square; size via inline style or a wrapping rule. In any
-other theme (`data-theme="jarvis"`, etc.) the element collapses to
-`display:none` so it takes no space — no need to gate it in HTML.
-
-**Use one on a pseudo-element** (headings, empty states, decorative
-flourishes) by reading the variable:
-
-```css
-:root[data-theme="marwa"] .my-empty-state::before {
-  content: "";
-  display: block;
-  width: 4rem; height: 4rem;
-  background: var(--marwa-mascot-star) no-repeat center / contain;
-}
-```
-
-**To add a new mascot** (e.g. `moon`):
-
-1. Draw it in a 48×48 SVG. Keep to the style rules: rounded shapes, flat
-   fills, no gradients, minimal face (2 dot eyes + small mouth + optional
-   soft blush), colours only from the marwa palette (pinks, lavender,
-   mint, cream, deep-plum `#5C3D50` for eyes/mouth). Should read at 24px.
-2. URL-encode it as a data URI and add a variable in the mascot block:
-   `--marwa-mascot-moon: url("data:image/svg+xml;utf8,<svg …>…</svg>");`
-   (Escape `#` as `%23`; keep single-quoted attributes so the outer CSS
-   double quotes don't need escaping.)
-3. Add one line to the `.marwa-mascot` utility class list:
-   `:root[data-theme="marwa"] .marwa-mascot[data-mascot="moon"] { background-image: var(--marwa-mascot-moon); }`
-4. Optionally add scoped rules to place it on a specific pseudo-element
-   (empty state, corner, heading).
-5. Update the table above and test at 24px and 200px.
+Drop one anywhere with `<span class="marwa-mascot" data-mascot="bunny"></span>`
+(defaults 3rem square; hidden in other themes). In any theme other than
+`marwa` the element collapses to `display:none`.
 
 ## Design rules — dark premium dashboard (pink)
 
@@ -733,16 +692,24 @@ All styling lives in `style.css`; pages carry almost no inline styling.
     `::before` layer with the grid + 3px scanlines, radially masked so it
     fades toward the edges and never sits above content (`z-index: 0`,
     `body.hub .app` is `z-index: 1`). `attendance.html` shares `body.hub`.
-  - **Hub = launcher** (`.launcher-page` > `.hub-panels.launcher`): a
-    4-column grid of `.hud-panel` links (3 columns under 1100px, 2 under
-    800px, 1 under 480px), `max-width: 82rem`, centred vertically and
-    horizontally, rows `clamp(11rem, 32vh, 17rem)`, gap `clamp(1rem, 2vw,
-    1.75rem)`. Order: Attendance, Lesson Plans, Create Groups, Seating,
-    Bathroom, Schedule, Rosters last (`.setup`, dashed, quieter). Each panel is only a
-    thin-line SVG icon, the tracked `.hud-name` and one mono `.hud-sub`
-    line — **no live data, no counts, no Supabase** (the only requests on the
-    page are nav.js's readouts, as on every page). Don't put dashboards back
-    on the hub; a tool that needs a summary shows it on its own screen.
+  - **Hub = launcher** (`.launcher-page` > `.hub-sections`): a vertical
+    stack of `.hub-section` groups, each with a small `.hub-section-title`
+    heading + a `.hub-panels` flex-wrap row of `.hud-panel` links.
+    `max-width: 82rem`, centred, `gap` between sections
+    `clamp(1.5rem, 3vw, 2.5rem)`. Cards inside a section have
+    `flex: 1 1 15rem; max-width: 20rem; min-height: clamp(9.5rem, 20vh, 12.5rem)`
+    so 1..N cards flow naturally without an outer grid template. Sections
+    in order: **Daily** (Attendance, Bathroom), **Teacher tools**
+    (Create Groups), **Planning** (Lesson Plans, Seating), **System**
+    (Schedule, Rosters — both `.setup` dashed + quieter). Adding a tool
+    means one `<a class="hud-panel">` inside the right `<section>`; no
+    CSS grid template to reflow. Each panel is only a thin-line SVG
+    icon, the tracked `.hud-name` and one mono `.hud-sub` line —
+    **no live data, no counts, no Supabase** (the only requests on the
+    page are nav.js's readouts, as on every page). Don't put dashboards
+    back on the hub; a tool that needs a summary shows it on its own
+    screen. Marwa scopes a mascot per section (bunny / star / cloud /
+    cat) as an accent glyph before the section title.
     The hub's top bar has **no nav links** (`body.launcher` → `nav.js` skips
     them and adds `.topnav.no-links`, which also keeps the wordmark text
     visible at every width); every other page keeps the full nav, and the
@@ -806,30 +773,85 @@ All styling lives in `style.css`; pages carry almost no inline styling.
   with `getLessonPlansRange`; `panel.show(pid, date)` opens the editor and
   its `onChange` updates the cell live. Opens on the bell's current period,
   today.
-- **Bathroom Tracker** (`bathroom.html` + `bathroom.js`): `.bathroom` =
-  `.br-main` (period select + AUTO, date + TODAY, FLAG AFTER n MIN, MAX OUT
-  n, EXPAND; an OUT NOW n OF max line; the `.br-tiles` roster grid) and a
-  `.br-side` column (OUT NOW list with live elapsed, today's LOG with out →
-  in · duration and a hover × to delete a trip, HISTORY = trips · days ·
-  minutes per student across all dates for this period, click a name for
-  their trip list). Click a tile: not out → `bathroomSignOut` (refused with
-  a status line when `maxOut` are already out); out → `bathroomSignIn`.
-  `.br-tile.out` = amber outline + live `m:ss`; `.flagged` (elapsed ≥
-  flag minutes) = red pulsing outline + "TOO LONG". Elapsed times and flags
-  refresh every second. **Quarter allowance**: every tile shows
-  `used/limit` for the quarter of the viewed date (`quarterOf(date)`);
-  `.last` (one left) turns the count amber, `.blocked` (used ≥ limit) is
-  dashed red "NO PASSES" and a sign-out is refused with a status line (raise
-  PASSES / Qn in the header to override). HISTORY is per quarter:
-  `used/limit · n timed · min · n manual`, red at the limit; a student's
-  history box has −/+ buttons for the quarter's manual tally
-  (`setManualTally`). Settings persist in `teacherpal.bathroom.settings`
-  (`{ flagMinutes: 8, maxOut: 2, passLimit: 4 }`). Seeding from paper:
-  `seed-bathroom-q1.sql` (match rules: normalised exact → first + last word
-  → first name + a shared surname, each only when unique in the period).
+- **Bathroom Tracker** (`bathroom.html` + `bathroom.js`). Layout is a single
+  column: `.br-top` control bar → `.br-mode-row` (Quick tap / Timer toggle
+  + one-line hint) → `.br-out-strip` (only when someone's out in timer
+  mode) → `.br-search-row` → `.br-grid` of student cards →
+  `<details class="br-log-panel">` collapsible log + history at the
+  bottom. Settings live in a `<dialog>` reached from the gear button in
+  the top bar — the main view stays clean.
+  **Two sign-out modes** (segmented pill on the main view, saved per
+  period in `localStorage['teacherpal.bathroom.modes']`):
+    - **Timer** (default): click a card → `bathroomSignOut` runs
+      immediately (no confirmation), the student appears in the out-now
+      strip with a live m:ss timer, and a 6-second undo bubble shows in
+      case of a mistap. Each `.br-out-card` has an **End timer** button
+      that calls `bathroomSignIn` — that's when the next `.br-pass`
+      checkbox on the grid card fills. Past the flag limit the out-now
+      card turns red and pulses.
+    - **Quick tap**: one tap on a card immediately calls
+      `insertBathroomTrip` with `out_at = in_at = now`, which counts as a
+      completed pass (fills the checkbox on the spot). No confirmation,
+      no out-now strip entry, no timer. The card flashes green for
+      ~800 ms and a floating undo toast (`.br-undo-toast`, bottom-centre)
+      offers **Undo** for 6 s — undo calls `deleteBathroomTrip`.
+      The `maxOut` cap doesn't apply here (nobody is "out"); the
+      per-quarter pass limit and existing-out-student blocks still do.
+  Both modes write to the same `bathroom_log` rows, so log entries and
+  quarter counts stay consistent. The active mode changes only the click
+  handler branch and the card tooltip; everything else (grid, search,
+  log/history, settings) is mode-agnostic. **States**: `.br-card.out` = dimmed + `Out` badge
+  (can't be signed out twice); `.br-card.locked` = passes used ≥ limit,
+  dashed red border + `No passes` badge (raise passes-per-quarter in the
+  settings dialog to override). Grid `.br-pass` boxes: filled solid =
+  completed pass, dashed = pending (their current in-progress trip),
+  empty = unused. **Settings dialog** (`#br-settings-dialog`) holds
+  Flag-after min, Max out at once, Passes per quarter, and per-quarter
+  start/end date overrides. Quarter overrides live in
+  `teacherpal.bathroom.quarters` (localStorage; only affects the bathroom
+  page's `quarterFor()` — the rest of the app still uses
+  `schedule.js`'s `QUARTERS`). Other settings in
+  `teacherpal.bathroom.settings` (`{ flagMinutes: 8, maxOut: 2, passLimit: 4 }`).
+  **Log & History** collapsible: two tabs. Today's log = chronological
+  trips with hover-× delete. History = quarter-scoped summary per
+  student, click a name for the detail view (per-quarter manual tally
+  with −/+, list of timed trips across all dates). Seeding from paper:
+  `seed-bathroom-q1.sql` (match rules: normalised exact → first + last
+  word → first name + a shared surname, each only when unique in the
+  period).
   - Don't add taglines or descriptions to the tool panels beyond the mono
     sub-line — if a tool needs explaining, fix the tool. Don't reuse the HUD
     look on tool pages.
+- **Timer** (`timer.html` + `timer.js`). One `.timer-stage` `.hud-box`
+  centred on the page: mode segmented control (Countdown / Stopwatch), a
+  40-char label input, then the display — a `.timer-display-wrap` holding
+  the huge mono digits (`clamp(4rem, 18vw, 12rem)`, tabular-nums), an
+  optional overhead label, and a countdown SVG ring
+  (`pathLength=1`, stroke drains as time elapses). Under it: preset chips
+  (1/3/5/10/15 min) + custom min/sec inputs (hidden while running), Start
+  → Pause → Resume, Reset, ±1 min (visible only while running/paused),
+  and an extras row with Mute (`aria-checked`), Pop out, Picture-in-Picture
+  (Chrome only — button hidden without `documentPictureInPicture`) and
+  the full-screen icon. **Countdown accuracy**: the source of truth is
+  `state.endsAt = Date.now() + remaining` (or `state.startedAt` in
+  stopwatch mode); every window renders from `Date.now()` against those
+  anchors, so a background-throttled tab never drifts. Last minute pulls
+  the display to `--accent` (warn); at zero it flips to `--danger`, plays a
+  three-note beep via Web Audio (respects mute) and auto-pauses. **Cross-window
+  sync** on `BroadcastChannel('teacherpal-timer')`: the main window is the
+  only writer, popouts and PiP request state on open and re-render from
+  broadcasts; if the main window is gone, the popout falls back to
+  `localStorage['teacherpal.timer.state']`. **Pop out**
+  (`window.open('timer-popout.html', 'teacherpal-timer', 'popup=yes,720×420')`)
+  is a bare `body.timer-popout` — label + display + ring, no controls,
+  loads the same `timer.js` in popout mode. **Picture-in-Picture**
+  (`documentPictureInPicture.requestWindow({ width: 420, height: 260 })`)
+  clones the same markup into the always-on-top window and copies the
+  parent's `data-theme` so tokens carry over. Closing pop-out or PiP does
+  not stop the timer — it keeps running in the main window and its state
+  outlives a page unload via localStorage. Space toggles start/pause when
+  not typing. In full screen the mode row / setup / actions / extras hide
+  and the display fills the screen.
 - **Attendance view (`attendance.js`) — the Attendance screen.**
   `.attendance[data-mode="full"]` is a grid `minmax(0,1fr) clamp(19rem, 26vw,
   26rem)` — the `.att-chart` box on the left, `.att-side` (counts card with
