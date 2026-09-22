@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Name Wheel — TeacherPal</title>
+  <meta name="color-scheme" content="dark">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Comfortaa:wght@400;500;600;700&family=Quicksand:wght@400;500;600;700&family=JetBrains+Mono&family=Nunito:wght@400;600;700&family=Orbitron:wght@500;600;700&family=Rajdhani:wght@500;600;700&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+  <script>(function(){try{var t=localStorage.getItem('teacherpal.theme')||'jarvis';document.documentElement.setAttribute('data-theme',t);}catch(e){document.documentElement.setAttribute('data-theme','jarvis');}})();</script>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body class="hub">
+  <div class="app">
+    <header class="topbar"></header>
+
+    <main class="page hud-page wheel-page">
+      <div id="status" class="status"></div>
+
+      <!-- Two columns: the machine on the left, the result and every control
+           on the right. Stacks under 900px. -->
+      <div class="wheel-layout">
+      <div class="wheel-stage hud-box" id="wheel-stage" data-state="">
+        <span class="tick tl" aria-hidden="true"></span><span class="tick tr" aria-hidden="true"></span><span class="tick bl" aria-hidden="true"></span><span class="tick br" aria-hidden="true"></span>
+
+        <div class="wheel-wrap">
+          <!-- One SVG: housing ring, wheel face, axle hub and the pointer on
+               its bracket - no stand. Sharp chevron in jarvis, rounded drop
+               in marwa (CSS swaps them). -->
+          <svg class="wheel-svg" viewBox="0 0 100 100" aria-hidden="true">
+            <defs>
+              <radialGradient id="wheel-face-grad" cx="36%" cy="30%" r="78%">
+                <stop class="face-hi" offset="0%"/>
+                <stop class="face-lo" offset="100%"/>
+              </radialGradient>
+              <radialGradient id="wheel-ish" cx="50%" cy="50%" r="50%">
+                <stop class="ish-clear" offset="74%"/>
+                <stop class="ish-mid" offset="93%"/>
+                <stop class="ish-edge" offset="100%"/>
+              </radialGradient>
+            </defs>
+
+            <circle class="housing" cx="50" cy="50" r="48.6"/>
+            <path class="housing-foot" d="M9.9 77 A48.6 48.6 0 0 0 90.1 77"/>
+
+            <g id="wheel-rotor"></g>
+            <circle class="face-sheen" cx="50" cy="50" r="46"/>
+            <circle class="face-ish" cx="50" cy="50" r="46"/>
+            <circle class="wheel-rim" cx="50" cy="50" r="46"/>
+            <g class="wheel-dial" id="wheel-dial"></g>
+
+            <!-- no hub disc here: the Spin button IS the hub on this page
+                 (the pop-out keeps its disc for the winner's name) -->
+            <!-- bolts ring the hub button (radius 18, clear of its 14 + hover) -->
+            <g class="wheel-axle">
+              <circle class="bolt" cx="62.7" cy="37.3" r="1.15"/>
+              <circle class="bolt" cx="62.7" cy="62.7" r="1.15"/>
+              <circle class="bolt" cx="37.3" cy="62.7" r="1.15"/>
+              <circle class="bolt" cx="37.3" cy="37.3" r="1.15"/>
+            </g>
+
+            <g class="pointer-mount">
+              <rect class="bracket" x="45" y="0.4" width="10" height="6.4" rx="1.6"/>
+              <rect class="bracket-hi" x="45" y="0.4" width="10" height="1.1" rx="0.55"/>
+              <g class="pointer-arm" id="wheel-pointer">
+                <path class="pointer-hud" d="M45.4 5 L50 15.4 L54.6 5"/>
+                <path class="pointer-soft" d="M50 15.8 C46.2 10.6 44.6 8.6 44.6 6.9 A5.4 5.4 0 0 1 55.4 6.9 C55.4 8.6 53.8 10.6 50 15.8 Z"/>
+              </g>
+            </g>
+          </svg>
+          <!-- the hub is the Spin button; the wheel turns around it -->
+          <button type="button" id="wheel-spin" class="wheel-hub-btn">Spin</button>
+          <p class="wheel-empty" id="wheel-empty" hidden>Nobody on the wheel — everyone is absent, sitting out, or already called.</p>
+        </div>
+
+        <!-- marwa only: reacts when a name lands -->
+        <span class="wheel-mascot marwa-mascot" id="wheel-mascot" data-mascot="bunny" data-mood="idle"></span>
+      </div>
+
+      <!-- Right column: the result, then the controls -->
+      <section class="wheel-side no-present">
+        <div class="wheel-result" id="wheel-result" data-state="empty">
+          <span class="wheel-glow" aria-hidden="true"></span>
+          <span class="wheel-sparks" id="wheel-sparks" aria-hidden="true"></span>
+
+          <!-- tucked in the corner so the name owns the middle -->
+          <div class="wheel-result-actions">
+            <button type="button" class="wheel-mini" id="wheel-back" title="Put this student back on the wheel">Put back</button>
+            <button type="button" class="wheel-mini" id="wheel-remove" title="Take this student off the wheel">Take off</button>
+          </div>
+
+          <p class="wheel-placeholder">Spin to pick a student</p>
+          <p class="wheel-result-name" id="wheel-result-name" aria-live="polite"></p>
+        </div>
+
+        <div class="wheel-controls">
+          <span class="wheel-hint">Press the hub or Space to spin</span>
+
+          <div class="wheel-control-row">
+            <label class="bar-field">
+              <span class="lbl">Period</span>
+              <select id="period-select"></select>
+            </label>
+            <button type="button" class="hud-chip" id="btn-auto" aria-pressed="true" title="Follow the bell schedule">AUTO</button>
+          </div>
+
+          <div class="wheel-control-row">
+            <button type="button" id="wheel-norepeat" role="switch" aria-checked="true" title="Take each name off the wheel until everyone has been called">No repeats</button>
+            <button type="button" id="wheel-mute" role="switch" aria-checked="false" title="Tick sound while spinning">
+              <span class="when-off">Tick on</span>
+              <span class="when-on">Tick muted</span>
+            </button>
+            <button type="button" id="wheel-firstnames" role="switch" aria-checked="true" title="Show first names only (shared with Create Groups)">First names</button>
+            <button type="button" id="wheel-reset" title="Put everyone back on the wheel">Reset</button>
+            <button type="button" id="wheel-popout-btn">Pop out ↗</button>
+            <button type="button" class="icon-btn" data-fullscreen aria-pressed="false" title="Full screen (F)" aria-label="Toggle full screen"><span class="when-off"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 3H5a2 2 0 0 0-2 2v3M16 3h3a2 2 0 0 1 2 2v3M8 21H5a2 2 0 0 1-2-2v-3M16 21h3a2 2 0 0 0 2-2v-3"/></svg></span><span class="when-on"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 3v3a2 2 0 0 1-2 2H3M21 8h-3a2 2 0 0 1-2-2V3M3 16h3a2 2 0 0 1 2 2v3M16 21v-3a2 2 0 0 1 2-2h3"/></svg></span></button>
+          </div>
+
+          <div class="wheel-called" id="wheel-called" hidden></div>
+        </div>
+      </section>
+      </div>
+    </main>
+  </div>
+
+  <script src="shared.js"></script>
+  <script src="schedule.js"></script>
+  <script src="nav.js"></script>
+  <script src="wheel.js"></script>
+</body>
+</html>

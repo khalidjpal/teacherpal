@@ -19,10 +19,11 @@ Dark dashboard look with a subtle pink accent (see design-ref.png).
 
 ## Screens
 
-Ten screens, one horizontal top nav (built by `nav.js` on every page):
-**Hub · Attendance · Lesson Plans · Create Groups · Timer · Noise Meter ·
-Seating · Bathroom · Schedule · | Rosters** (Rosters is the quiet "setup"
-item after a divider). The active
+Eleven screens behind **four grouped dropdowns** in the top nav (built by
+`nav.js` on every page), mirroring the hub's sections: **Daily**
+(Attendance, Bathroom) · **Teacher Tools** (Create Groups, Timer, Noise
+Meter, Name Wheel) · **Planning** (Lesson Plans, Seating) · **System**
+(Schedule, Rosters, Admin). The brand at the left is the link to the hub. The active
 screen gets `aria-current="page"` (pink fill). The nav bar also carries
 the live readouts — clock, date, SCHED, NOW period + countdown — and the
 full-screen toggle. There is no sidebar; every page uses the full width.
@@ -34,6 +35,7 @@ full-screen toggle. There is no sidebar; every page uses the full width.
 | Lesson Plans | `lessons.html` | Writing plans: a Mon–Fri week grid across all periods (jump to any date, ← → ↑ ↓ to move) with the full editor for the selected cell beside it |
 | Create Groups | `groups.html` | Random / formula groups, projector view in full screen |
 | Timer | `timer.html` | Classroom countdown / stopwatch: big digits, presets, ±1 min, mute, pop-out + Picture-in-Picture for the projector while another tab is active |
+| Name Wheel | `wheel.html` | Cold-calling: spin a wheel of the period's present students, big name in the middle, no-repeats mode, projector pop-out |
 | Noise Meter | `noise.html` | Room volume from the laptop mic: big green/amber/red meter, three zones with activity presets, "Too loud" hold + chime, pop-out for the projector. Mic only while you hold it on |
 | Seating | `seating.html` | Room builder + seat assignment |
 | Bathroom | `bathroom.html` | Bathroom tracker: click a card → confirm → Start timer; live Out-now strip with End timer, per-student pass checkboxes, red flag past the limit; settings + log/history collapsed out of the main view |
@@ -65,6 +67,9 @@ full-screen toggle. There is no sidebar; every page uses the full width.
 | `timer.js`     | Countdown + stopwatch logic, plus `buildDial()` / `paintDial()` for the themed dial. **End-timestamp model**: state is `{ mode, running, paused, label, muted, targetMs, endsAt, remainingAtPause, startedAt, elapsedAtPause, zeroed }` in `localStorage['teacherpal.timer.state']`; every window computes the display from `Date.now()` against `endsAt`/`startedAt`, so tab-throttling doesn't drift. `BroadcastChannel('teacherpal-timer')` syncs main ↔ pop-out ↔ PiP. Web Audio API beep on zero (respects mute). `documentPictureInPicture.requestWindow()` on Chrome for an always-on-top floating display. Space toggles start/pause. |
 | `noise.html`   | Noise Meter screen: the `.noise-stage` (activity presets, big reading + bar + zone word, Start/Stop, chime mute, Pop out, full screen, the two zone sliders, privacy line) — loads `noise.js`. |
 | `noise.js`     | Mic → `AnalyserNode` → RMS → a 35–95 relative "dB" reading, 500ms rolling average, three zones, "Too loud" after 3s in the red, optional chime. Polls on `setInterval` (**not** rAF — rAF freezes in a background window and the pop-out would stall). `BroadcastChannel('teacherpal-noise')` feeds the pop-out. Opens the mic only on Start; stops every track on Stop and on `pagehide`. Nothing is recorded or sent anywhere. |
+| `wheel.html`   | Name Wheel screen: control row (period, AUTO, count, First names / No repeats / Reset / tick mute / Pop out / full screen) then the wheel, Spin, the picked-student actions and the called strip — loads `wheel.js`. |
+| `wheel.js`     | The wheel: draws the slices as SVG into `#wheel-rotor` (the only thing that spins), runs the spin on rAF with an ease-out, ticks as each slice passes the pointer, and syncs the pop-out over `BroadcastChannel('teacherpal-wheel')`. **Winner is drawn first** (`crypto.getRandomValues`), then the landing rotation is computed — the animation can't bias it. |
+| `wheel-popout.html` | Read-only projector wheel (`body.wheel-popout`): same dial filling the window, fed by broadcast, no controls. |
 | `noise-popout.html` | Read-only projector pop-out (`body.noise-popout`): reading + bar + zone word, fed over BroadcastChannel. Never opens a mic of its own; says so when the main window isn't answering. |
 | `timer-popout.html` | Minimal read-only pop-out window (`body.timer-popout`): label + display + the same themed dial filling the window, no controls; listens for state via BroadcastChannel. |
 | `migration-lessons-bathroom.sql` | One-off migration creating `lesson_plans` + `bathroom_log` (incl. the manual-tally columns; run in the Supabase SQL editor) |
@@ -76,7 +81,7 @@ full-screen toggle. There is no sidebar; every page uses the full width.
 | `formula.js`   | Shared Formula **algorithms and modal only** — never rule data: type metadata per scope (`RULE_TYPES`, `SCOPE_TYPES`, `KEY_TYPES`), priorities (`sortByPriority`, `priorityWeight`, `planRules`), feasibility (`findImpossibleHard`, `confirmImpossible`), the `annealAssign()` solver, `groupWithFormula()`, `summarizeRun()`, `absentTodayFor()`, `createFormulaModal({ scope, … })`. No Supabase calls. |
 | `style.css`    | Shared styling for every page (dark pink dashboard theme; all tokens at the top) |
 | `roster.html`  | Two-panel roster: period panel (search, sort, add, import modal, edit mode, full screen) + name-card grid with undo-toast remove |
-| `groups.html`  | **Create Groups**: header row = page title + control bar (period, Edit Roster, group mode + number, Formula, gear, full screen); the big Create Groups / Reshuffle button is centred between the name pool and the group cards, in normal flow (nothing sticky or fixed). First names / Formula on-off toggle live in the `.groups-settings-dialog` opened from the gear. FLIP-animated pool → group cards |
+| `groups.html`  | **Create Groups**: three panels across the top — **Group size** (mode toggle + number), **Roster** (period, one-line summary, Edit Roster → the roster modal) and **Create** (big Create Groups / Reshuffle button, Formula, Follow-rules switch, gear, full screen) — with the group cards filling everything below. First names is the only field left in the `.groups-settings-dialog`. FLIP-animated: names fly out of the Roster panel on Create and between cards on Reshuffle |
 | `seating.html` | Freeform room builder: palette of desk pieces on a zoomable dot-grid canvas (Arrange Room), then drag names onto seats (Assign Seats); layout shared, seats per period, autosave, full screen |
 | `migration-room-builder.sql` | One-off migration for the room builder tables (run in the Supabase SQL editor) |
 | `migration-seating-rules.sql` | One-off migration creating the formula rules table (run in the Supabase SQL editor) |
@@ -756,7 +761,7 @@ All styling lives in `style.css`; pages carry almost no inline styling.
     `flex: 1 1 15rem; max-width: 20rem; min-height: clamp(9.5rem, 20vh, 12.5rem)`
     so 1..N cards flow naturally without an outer grid template. Sections
     in order: **Daily** (Attendance, Bathroom), **Teacher tools**
-    (Create Groups, Timer, Noise Meter), **Planning** (Lesson Plans, Seating), **System**
+    (Create Groups, Timer, Noise Meter, Name Wheel), **Planning** (Lesson Plans, Seating), **System**
     (Schedule, Rosters — both `.setup` dashed + quieter). Adding a tool
     means one `<a class="hud-panel">` inside the right `<section>`; no
     CSS grid template to reflow. Each panel is only a thin-line SVG icon
@@ -773,9 +778,9 @@ All styling lives in `style.css`; pages carry almost no inline styling.
     button is hidden on the hub since there are no links to show.
   - **Top bar = nav + readouts on every page** (`header.topbar.hud-bar.topnav`,
     rendered by `nav.js`): brand "TeacherPal" left in 0.32em-tracked caps
-    with a small rotated pink square; then `.nav-links` of `.tab`s (Orbitron
-    0.6rem; active = `aria-current="page"`; `.tab.setup` Rosters + Schedule
-    muted after a hairline divider); right side is `.hud-status` of
+    with a small rotated pink square; then `.nav-links` holding the four
+    `.nav-group` dropdowns (see the nav bullet below); right side is
+    `.hud-status` of
     `.hud-stat` pairs (`.hud-key` muted tracked label + `.hud-val` tabular
     mono): TIME (hh:mm:ss), DATE, **SCHED** (today's schedule `short` name,
     `*` when it comes from an override; an `a.hud-link` to `schedule.html`),
@@ -783,8 +788,11 @@ All styling lives in `style.css`; pages carry almost no inline styling.
     together with the clock — see the Schedule model below), then the
     `.fs-btn` full-screen toggle. `#hud-now[data-state]` dims passing /
     break / before-school lines to `--text-2` and after-school / weekend /
-    no-school to muted. Below 1500px the readout key labels drop, below
-    1200px the date; under 900px the links wrap to a second row. Periods +
+    no-school to muted. **Everything shares one row** — grouping the nav
+    into four triggers freed the space, so `header.topnav` is a single
+    `"brand nav read tail"` grid; below 1100px the readouts drop to their
+    own row again. Below 1600px the readout key labels drop, below
+    1200px the date, below 900px SCHED. Periods +
     overrides are fetched once per page load (`navReady`); the schedule is
     re-resolved only when the date key rolls over; every second nav.js
     dispatches `teacherpal:tick { now, sched, status }`.
@@ -812,9 +820,23 @@ All styling lives in `style.css`; pages carry almost no inline styling.
     previous weekday; both confirm before replacing a non-empty plan.
     `onChange` lets the week view mirror edits. `follow: true` (track
     `teacherpal:period`) exists but is unused now.
-  - The nav order is fixed in `NAV_ITEMS` in `nav.js`: Hub, Attendance,
-    Lesson Plans, Create Groups, Timer, Noise Meter, Seating, Bathroom,
-    Schedule, then Rosters as `setup`. Add a screen there and every page's nav updates.
+  - **The nav is four grouped dropdowns**, defined by `NAV_SECTIONS` in
+    `nav.js` (Daily · Teacher Tools · Planning · System — the hub's own
+    sections). Add a screen to the right section there and every page's nav
+    updates; `NAV_ITEMS` is still derived from it as a flat list. Each
+    section is a `.nav-group` holding a `.tab.nav-trigger` button and an
+    absolutely-positioned `.nav-menu` panel, so **opening a menu never
+    shifts the bar**. The trigger for the section containing the current
+    page carries `data-here="1"` (pink fill); the page's own item inside
+    carries `aria-current="page"`.
+    **Interaction** (`wireNavMenus`): hover opens after `NAV_OPEN_MS` 120
+    and closes after `NAV_CLOSE_MS` 280, and because the panel lives
+    *inside* `.nav-group`, travelling to it counts as staying hovered.
+    Click/tap toggles (hover handlers skip `pointerType === 'touch'`), a
+    document click outside closes, and keyboard is full: Enter/Space/↓ opens
+    to the first item, ↑ opens to the last, ↑/↓/Home/End move within the
+    menu, Esc closes and returns focus to the trigger, Tab closes behind
+    you, and focus leaving the group closes it. Add a screen there and every page's nav updates.
     All items fit one row at 1366px because the brand text collapses to its
     mark below 1400px and the tabs tighten; if it ever overflows, the
     nav-links wrap to their own row below the readouts (see the 1500px
@@ -935,6 +957,144 @@ All styling lives in `style.css`; pages carry almost no inline styling.
   outlives a page unload via localStorage. Space toggles start/pause when
   not typing. In full screen the mode row / setup / actions / extras hide
   and the display fills the screen.
+- **Name Wheel** (`wheel.html` + `wheel-popout.html` + `wheel.js`).
+  **Two columns** (`.wheel-layout`, `1.1fr / 0.9fr`, stacking to one column
+  under 900px): the machine fills the left (`.wheel-stage` > `.wheel-wrap`,
+  sized by height so it fills its column without ever scrolling the page),
+  and `.wheel-side` on the right holds the result over the controls.
+  **`.wheel-result`** shows "Spin to pick a student" until the first spin,
+  then the winner large and bold: `result-in` scales it up from 0.45 with a
+  spring overshoot as it fades in, plus a `.wheel-glow` flash (jarvis) or
+  `.wheel-sparks` hearts and stars flying outward (marwa). The name **stays
+  until the next spin**, when `result-out` shrinks it away — which is why
+  `renderWinner()` leaves the text in place while `spin` is set instead of
+  clearing it (clearing would leave nothing to animate). Under it sits the
+  small `.wheel-result-sub`: the remaining count and the contextual
+  put-back / take-off button. Controls follow below: the "press the hub or
+  Space" hint, period + AUTO, then the toggles (No repeats, tick mute,
+  First names, Reset, Pop out, full screen) and the `.wheel-called` chips.
+  **The hub IS the Spin button** (`.wheel-hub-btn`, `#wheel-spin`): a small
+  disc at the centre, 28% of the wrap = radius 14 in viewBox units, with
+  hover (accent ring + glow + a nudge up in scale), pressed (scale down,
+  inset shadow) and disabled states. It sits **outside `#wheel-rotor`**, so
+  the wheel turns around it while it stays put, and `renderControls()` keeps
+  its label fixed and flips `disabled` + `data-spinning` instead of
+  rewording it. Space still calls `startSpin()` directly. There is no
+  separate Spin button any more. The page's SVG carries no hub disc (the
+  button is the disc) and no name — that lives in the result panel; only
+  the pop-out fills `.wheel-hub-name`, since the projector has no right
+  column and no button. The smaller page hub also buys label room:
+  `drawWheel` uses `R - 18` for the page and `R - 24` for the pop-out's
+  larger disc.
+  **Fairness is structural**: `startSpin()` draws the winner first with
+  `crypto.getRandomValues` (rejection-sampled so every index is equally
+  likely), *then* solves for the rotation that parks that slice under the
+  pointer — `to = 270 − centre − jitter`, plus 5-7 whole turns. The
+  animation is a picture of a decision already made, so nothing about the
+  easing or the frame rate can skew it.
+  **Spin physics** (`runSpin()`): a **CSS transition** on `#wheel-rotor`
+  (`transform`, 4500ms, `cubic-bezier(0.17, 0.67, 0.12, 0.99)`) — fast off
+  the line, then a long tail where the last degrees crawl. It aims 4°
+  *past* the mark and a second 460ms transition corrects back to `to`, which
+  is the settle bounce. The rotor therefore uses a **CSS transform**, not
+  the SVG `transform` attribute (attributes don't transition), turning about
+  an explicit `transform-box: view-box` + `transform-origin: 50px 50px` so
+  it can't wobble off centre. Under `prefers-reduced-motion` it collapses to
+  a 400ms move with no overshoot.
+  **`rotation` is a running total that only ever increases** — never wrapped
+  back into 0-360. Each spin is built as `from + (5-6 whole turns) + the
+  offset that lands the slice`, so `to` is always far past `from`; wrapping
+  it (an earlier version normalised at the end) is exactly what lets a
+  second spin target an angle the wheel is already sitting on and appear
+  dead. `finishSpin()` leaves the transform where the settle put it and just
+  records `rotation = s.to`, so nothing snaps at either end.
+  **The reduced-motion trap (this cost a debugging round).** The app-wide
+  rule `@media (prefers-reduced-motion: reduce) { * { transition: none
+  !important } }` **outranks inline styles**, so on a machine with Windows
+  animation effects off the rotor's inline transition never ran: the wheel
+  teleported to the answer and looked like a dead button. The spin is the
+  tool's entire function and only runs on an explicit click, so `#wheel-rotor`
+  is exempted in that media query — and because `!important` wins, `wheel.js`
+  drives the timing through `--wheel-dur` / `--wheel-ease` custom properties
+  (set by `setTransition()` alongside the shorthand) which the exemption
+  reads. Reduced motion still drops the bounce, the ring pulse, the hub
+  pop-in and the mascot. **Any future inline-transition animation faces the
+  same trap** — check `getComputedStyle().transitionDuration`, not the
+  inline value, when an animation mysteriously doesn't run.
+  **Nothing may touch the wheel mid-spin**: `syncWheel()`, `rebuildPool()`'s
+  redraw and `autoPick()` all bail while `spin` is set (the next
+  `startSpin()` re-syncs), and `applyRotation()` — which kills the
+  transition to place the resting wheel — bails too. A stuck `spin` can
+  never wedge the button either: `startSpin()` settles a spin whose end time
+  has already passed and carries on with the click.
+  **Ticks** are scheduled, not polled: `scheduleTicks()` inverts the easing
+  curve (`bezier().timeAt`) to find when each slice crosses the pointer, so
+  the ticks spread out exactly as the wheel slows (measured: ~48ms apart at
+  the start, 300-1000ms at the end), with a 40ms floor so the opening burst
+  doesn't machine-gun. The Spin button is disabled for the whole run and
+  **the hub name only appears in `finishSpin()`**, after everything has
+  stopped.
+  **Who's on it**: the period's roster minus today's absentees (the
+  `attendance` table, falling back to `readAbsentCache`) minus
+  `readSitOutCache` — the same two exclusions Create Groups uses. AUTO
+  follows the bell via `suggestedPeriod()`, exactly like Attendance.
+  **No repeats** (default on) drops each pick into `called`
+  (`teacherpal.wheel.called.<periodId>`, date-keyed so it clears overnight);
+  when the pool empties it refills automatically. The count chip reads
+  "N left of M". Picked students can be removed or put back from the row
+  under the wheel, or restored by clicking their chip in the called strip.
+  **`displayList` lags `pool` by one spin on purpose** — the winner stays on
+  the wheel under the pointer until the next spin starts, otherwise the
+  landing you just watched vanishes instantly.
+  **Labels**: first names by default with the growing last-name prefix (the
+  same rule as Create Groups, sharing `teacherpal.groups.firstNames`), drawn
+  along each slice's middle radius and mirrored on the left half so nothing
+  reads upside down. Font size is fitted **deterministically** from slice
+  count *and* name length against the rim-to-hub gap — measuring with
+  `getComputedTextLength()` is unreliable because the webfont usually hasn't
+  loaded yet, and marwa's wider Comfortaa would run under the hub.
+  **It is drawn as a machine, not a flat circle.** One square SVG
+  (`viewBox="0 0 100 100"`, no stand): a `.housing` ring around the rim with
+  a thicker `.housing-foot` arc across the bottom, a `.wheel-axle` of four
+  bolts on the diagonals (clear of the name), and the pointer on a
+  `.bracket` at the top. Depth comes from two overlay circles —
+  `.face-sheen` (a radial gradient across the face) and `.face-ish` (an
+  inner shadow at the rim). The wheel **fills its column**: `height: 100%`
+  with `aspect-ratio: 1/1` and `max-width: 100%`, so it takes the column's
+  height and clamps to its width when that is tighter; `.wheel-stage`'s
+  small padding is the only margin. At 1280×720 that lands it at ~96% of the
+  column height (a little less in marwa, which gives the mascot a row).
+  **Slices** take a graduated ramp: `rampIndex()` alternates between the
+  dark half (`--wheel-r0…r3`) and the light half (`r4…r7`), so each slice is
+  an obvious step from its neighbour while the wheel still reads as one
+  family, and an odd count pushes the last slice clear of the first. Names
+  are near-white with a dark outline (`stroke` + `paint-order: stroke`) so
+  they carry on every step, sized to fit the rim-to-hub gap and **shortened
+  with an ellipsis** once that would take them under 2.6 units rather than
+  running into the hub.
+  **The pointer flicks** on the same schedule as the ticks (a 130ms
+  `pointer-flick` keyframe, added even when muted), so it reads as being
+  knocked by each passing segment and slows with the wheel.
+  **Two skins, all from tokens** (no hard-coded colours in either):
+    - **jarvis** — magenta ramp on a dark metal frame, mono uppercase names,
+      a static `#wheel-dial` instrument ring outside the rim (degree ticks
+      every 10°, longer every 30°, four corner brackets; built by
+      `buildDialRing()` *outside* the rotor so it never spins), a sharp
+      accent chevron pointer, a dark hub with the winner in the display
+      face. Spinning adds a motion glow to the rim; landing lights the
+      winning slice with `--wheel-won` and pulses the ring once. The stage
+      is a `.hud-box` with corner ticks like the other jarvis pages.
+    - **marwa** — the same machine in rose porcelain (`--wheel-metal`,
+      `--wheel-housing`, rounder legs and bracket), pastel slice ramp,
+      Comfortaa sentence-case names with a light halo, no instrument ring,
+      a rounded drop pointer, a white hub with an accent ring, and a mascot
+      under the wheel that wiggles while spinning and hops when a name
+      lands. It also gets a slightly smaller wheel, since the mascot row
+      costs height and the page still has to fit 1280×720.
+  A Web Audio tick fires as each slice crosses the pointer (mute toggle,
+  main window only so the pop-out doesn't double it), and the pop-out gets
+  `{ list, rotation, spin, winnerId }` over `BroadcastChannel` and runs the
+  same `runSpin()` descriptor, so both windows follow the same curve.
 - **Noise Meter** (`noise.html` + `noise-popout.html` + `noise.js`). One
   `.noise-stage` `.hud-box`: the `.seg` of activity presets (Silent work /
   Partner talk / Group work — each moves both zone handles), then the
@@ -1090,44 +1250,49 @@ All styling lives in `style.css`; pages carry almost no inline styling.
   second. If the table is missing the page shows a "run
   migration-schedule-overrides.sql" error and still renders the reference.
 - **Create Groups page** (`groups.html`; the nav tab and hub panel also say
-  "Create Groups"). **Header row** `.groups-head` (`.no-present`): the
-  `.page-title` on the left and the whole `.groups-bar` (a `.card` with
-  `--ctl: 2.1rem` control height, `flex: 1 1 24rem`) on the same line —
-  period select, **Edit Roster**, a `.bar-spacer` (flex filler) that pushes
-  the rest right, `.seg.mode-seg` toggle "Groups" / "Per group", the number
-  input (its meaning lives in the `aria-label` / `title`, kept in sync by
-  `updateSummary()`, which also sets `min` 1 vs 2), **Formula**, the
-  settings gear and the full-screen icon button. There is no second
-  toolbar row. **The primary action is not in the bar**: `#btn-shuffle`
-  sits alone in a centred `.shuffle-row` **in the middle of the stage,
-  between the pool and the results** (15rem × 3.4rem, accent glow), reading
-  **Create Groups** and then **Reshuffle** after the first run.
-  **`.stage` is a three-row grid** — `.pool-area` / `.shuffle-row` /
-  `.results` — with **every row content-sized**. Two things must stay out
-  of it or the page grows a viewport-tall void under the content: `.stage`
-  must not stretch (`flex: 0 0 auto`, never `flex: 1` inside the
-  `main.page` flex column) and no row may be `1fr` (an empty `.results`
-  row would eat the slack). Once the groups are up the pool is empty, so
-  `.stage.has-groups .pool-area { display: none }` drops it rather than
-  leaving a blank box. **Consequence to keep in mind:** the button sits
-  under the pool before the first run and directly above the cards after
-  it — one shift, by the pool's height — and then never moves again, so
-  repeated Reshuffle clicks stay in one place. Reserving the pool's height
-  to kill that one shift was tried and rejected: it reads as dead space.
-  `.groups-page` sets `scrollbar-gutter: stable` so the scrollbar
-  appearing with the cards can't nudge the centred button sideways.
-  **Nothing inside `.stage` may get an `overflow`** — the FLIP chips cross
-  all three rows and a scroll container clips them mid-flight (that is
-  exactly how the animation got lost once); the page scrolls, the stage
-  doesn't. For the same reason `flipTo()` sets `main.page`'s
-  `scrollTop = 0` before measuring First: First and Last measured at
-  different scroll offsets would send every chip flying from the wrong
-  place. **No counts and no preview line**: how many groups you get is the
-  number you typed, and any problem (no students, everyone absent,
-  number < 1) is reported by `doShuffle()` through `setStatus()` when you
-  press the button. First names / Follow Formula are the only fields in the
-  gear's `.groups-settings-dialog`. Full screen is unchanged: the header
-  row and `.shuffle-row` hide, and the `.present-only` `#present-bar`
+  "Create Groups"). **Three panels across the top, results below.**
+  `.groups-panels` (`.no-present`) is a 3-column grid (`--ctl: 2.2rem`,
+  one column under 900px) of `.gp-panel` cards, each headed by a small
+  tracked `.gp-title`:
+    1. **Group size** — the `.seg.mode-seg` "Groups" / "Per group" toggle
+       and the number input, nothing else. The number's meaning lives in
+       its `aria-label` / `title`, kept in sync by `updateSummary()`,
+       which also sets `min` 1 vs 2.
+    2. **Roster** — the period select, the one-line `#roster-summary`
+       ("26 present · 1 absent · 2 sitting out", also written by
+       `updateSummary()`) and **Edit Roster**. **The roster list itself is
+       not on the page**: the full per-student panel lives in
+       `<dialog id="attendance-dialog">` and closing it returns to the
+       summary.
+    3. **Create** — `#btn-shuffle` full-width (3.2rem, accent glow),
+       reading **Create Groups** then **Reshuffle**; under it a `.gp-row`
+       with **Formula**, the **Follow rules** `role="switch"`
+       (`#btn-use-formula`, moved out of the settings dialog), the gear
+       and the full-screen button.
+  `.gp-panel > :last-child { margin-top: auto }` drops each panel's last
+  control onto a common bottom line.
+  **`.stage` is just the results** and takes every pixel under the panels
+  (`flex: 1 1 auto`, one `1fr` row) so the group cards are the focus.
+  `.results` is `repeat(auto-fit, minmax(11rem, 1fr))` — auto-fit collapses
+  the tracks it doesn't need, so six groups land on **one row** and the
+  page fits 1280×720 without scrolling (full screen uses the same minimum
+  for the same reason). `.stage.has-groups .results` switches to
+  `align-content: stretch` so the cards share the height. Empty, `.results`
+  shows a dashed box with "PRESS CREATE GROUPS" (suppressed by
+  `.stage.no-students` when the `#empty` line is already saying it).
+  `.groups-page` sets `scrollbar-gutter: stable` and hides its empty
+  `.status`. **Nothing inside `.stage` may get an `overflow`** — the FLIP
+  chips fly in from the Roster panel *above* the stage and a scroll
+  container clips them mid-flight (that is exactly how the animation got
+  lost once); the page scrolls, the stage doesn't. For the same reason
+  `flipTo()` sets `main.page`'s `scrollTop = 0` before measuring First:
+  First and Last measured at different scroll offsets would send every
+  chip flying from the wrong place. **No counts on the bar and no preview
+  line**: how many groups you get is the number you typed, and any problem
+  (no students, everyone absent, number < 1) is reported by `doShuffle()`
+  through `setStatus()` when you press the button. **First names only** is
+  now the single field in the gear's `.groups-settings-dialog`. Full
+  screen hides `.groups-panels` and the `.present-only` `#present-bar`
   (big Reshuffle + "Space reshuffles · Esc exits") takes over above the
   stage. Attendance lives in
   `<dialog id="attendance-dialog">`. On load, today's `attendance` row
@@ -1144,20 +1309,19 @@ All styling lives in `style.css`; pages carry almost no inline styling.
   `teacherpal.sitout.<periodId>` via `readSitOutCache` / `writeSitOutCache`,
   is keyed by date so it clears overnight, is per browser, and **never
   touches the attendance table or the absent cache**. Two helpers split the
-  roster: `presentStudents()` (not absent — drives the pool and the
-  first-name disambiguation set) and `groupingStudents()` (not absent and
-  not sitting out — drives `doShuffle`, the group count and the Formula
-  run). Toggling: **click a name in the pool** (chips carry
-  `role="button"` + `tabindex` while they're in the pool; Enter/Space work
-  too), or the per-student **Sit out** button in `<dialog
-  id="attendance-dialog">`, where each row now has an absent checkbox *and*
+  roster: `presentStudents()` (not absent — drives the roster summary and
+  the first-name disambiguation set) and `groupingStudents()` (not absent
+  and not sitting out — drives `doShuffle`, the group count and the
+  Formula run). Toggling: the per-student **Sit out** button in `<dialog
+  id="attendance-dialog">`, where each row has an absent checkbox *and*
   a sit-out toggle (disabled when the student is already absent) and the
-  header counts `N present · N absent · N sitting out`; "Everyone in"
-  clears both. Sitting-out chips are dimmed + struck through
-  (`.name-chip.sitting-out`) and stay in the pool after a run — the pool
-  row survives as a "SITTING OUT · n" strip above the button
-  (`.stage.has-groups:not(.has-sitout) .pool-area { display: none }`), so
-  you can see and un-sit them. Toggling while groups are on screen says
+  header counts `N present · N absent · N sitting out` ("Everyone in"
+  clears both), or **click a name in a group card** (chips carry
+  `role="button"` + `tabindex`; Enter/Space work too) — that one is off
+  in full screen so a stray click on the projector can't drop someone.
+  Sitting-out names are dimmed + struck through
+  (`.name-chip.sitting-out`); since there is no pool they simply don't
+  appear in the cards. Toggling while groups are on screen says
   "press Reshuffle to rebuild". **Formula rules involving someone sitting
   out are dropped for that run** exactly like an absence — `doShuffle`
   passes the `groupingStudents()` ids into `rulesForPresent` /
@@ -1166,8 +1330,8 @@ All styling lives in `style.css`; pages carry almost no inline styling.
   Mode / number / first-names are remembered in `teacherpal.groups.*`. "First names only" =
   text before the first space; present students sharing one get a growing
   last-name prefix ("Maria G.", "Brandon Ce." / "Brandon Cl.").
-  **Formula on Create Groups**: the toolbar has the same "Formula on/off"
-  `.toggle` (saved per period as the grouping row's `use_formula`) and a Formula button
+  **Formula on Create Groups**: the Create panel has the same "Formula on/off"
+  switch (saved per period as the grouping row's `use_formula`) and a Formula button
   opening the shared modal (`scope: 'grouping'` → grouping types and labels,
   footer button "Create Groups"), reading/writing only grouping-scope rules
   via `getFormulaRules(periodId, 'grouping')` / `saveFormulaRules(…)`. With the toggle on, `doShuffle()` first runs
@@ -1179,21 +1343,22 @@ All styling lives in `style.css`; pages carry almost no inline styling.
   animation. Seating's `populateWithFormula()` follows the identical
   check → confirm → solve → summarize flow.
 - **Create Groups animation (FLIP, plain CSS + JS).** `#stage` holds one
-  `.name-chip` element per present student (kept in a `chips` Map) — first
-  loose in `.name-pool` (top row), then moved into `.group > .group-names`
-  inside `#results` (bottom row), flying past the button between them; the same
-  element is a pill in the pool and a big white row in a group. `flipTo()`
-  measures First rects, calls `mountGroups()` (new `.group.enter` cards built
-  into `#results` only; adding `.has-groups` hides the empty pool row in the
-  same frame, which is fine — Last is measured after), inverts with
-  `translate(...) scale(...)`, forces
+  `.name-chip` element per grouped student (kept in a `chips` Map) inside
+  `.group > .group-names`. There is no pool any more, so there are **two
+  take-off points**: a chip that was already in a card flies from where it
+  stood (Reshuffle), and a chip appearing for the first time flies out of
+  the **Roster panel** — `transformOrigin: center`, `scale(0.35)` and
+  `opacity: 0` → 1 (the first Create). `flipTo()` measures First rects and
+  the Roster panel's box, calls `mountGroups()` (new `.group.enter` cards
+  built into `#results`), inverts with `translate(...) scale(...)`, forces
   a reflow, then plays with `transform 520ms cubic-bezier(.34,1.56,.64,1)`
-  and a per-chip delay (`120ms + i * min(18ms, 600/n)`, shuffled order) so the
-  total stays ≈1–1.5s; cards drop `.enter` (opacity/scale 260ms) before names
-  arrive. A reshuffle first adds `.shuffling` (chips lift/wiggle 320ms) and
-  then flies chips from old card to new. `setAnimating()` disables the
-  buttons/select while running. Under `prefers-reduced-motion` the stage
-  simply fades. Full screen uses the same stage; Space reshuffles.
+  (+ `opacity 240ms`) and a per-chip delay (`120ms + i * min(18ms, 600/n)`,
+  shuffled order) so the total stays ≈1–1.5s; cards drop `.enter`
+  (opacity/scale 260ms) before names arrive. A reshuffle first adds
+  `.shuffling` (chips lift/wiggle 320ms — skipped when there is nothing on
+  screen yet) and then flies chips from old card to new. `setAnimating()`
+  disables the buttons/select while running. Under `prefers-reduced-motion`
+  the stage simply fades. Full screen uses the same stage; Space reshuffles.
   **Two things quietly kill the flight, so don't reintroduce them:** an
   `overflow` on `#stage` or any ancestor between it and `main.page` (the
   chips are clipped mid-flight), and starting a run at a non-zero

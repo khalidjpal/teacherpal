@@ -257,6 +257,27 @@
   --att-absent-soft: rgba(214, 55, 87, 0.10);
   --att-tardy-soft:  rgba(245, 184, 75, 0.22);
 
+  /* wheel slices — candy pastels, light enough for the deep-plum labels */
+  --wheel-r0: #FFC2D6;
+  --wheel-r1: #D9C2F5;
+  --wheel-r2: #A8E6C9;
+  --wheel-r3: #FFE0A3;
+  --wheel-r4: #FFD6E4;
+  --wheel-r5: #E7D8FA;
+  --wheel-r6: #C6F0DC;
+  --wheel-r7: #FFEDC7;
+  --wheel-divider: #FFFFFF;
+  --wheel-ink: #3D2433;
+  --wheel-ink-shadow: rgba(255, 255, 255, 0.55);
+  --wheel-won: #FF9EC4;
+  /* the machine: soft rounded frame in rose porcelain */
+  --wheel-metal:    #F6DCE8;
+  --wheel-metal-2:  #EFC9DC;
+  --wheel-metal-hi: rgba(232, 70, 124, 0.45);
+  --wheel-housing:  #F9E4EE;
+  --wheel-face-hi:  rgba(255, 255, 255, 0.55);
+  --wheel-face-lo:  rgba(232, 70, 124, 0.06);
+
   /* noise zones — darker green/amber so the fill reads on the cream ground */
   --noise-quiet: #2F9E6E;
   --noise-ok:    #D99412;
@@ -696,7 +717,7 @@ button:active, .neu-btn:active, .tab:active, summary:active, .seg label:active s
   min-height: 1.5rem;
   margin: 0 0 var(--space-4);
 }
-.hud-page > .status:empty { display: none; }
+.hud-page > .status:empty, .groups-page > .status:empty { display: none; }
 .status {
   border-radius: var(--radius-sm);
   font-size: var(--fs-sm);
@@ -737,6 +758,30 @@ button:active, .neu-btn:active, .tab:active, summary:active, .seg label:active s
   --att-absent-soft: rgba(255, 122, 138, 0.14);
   --att-tardy: #F5B84B;                 /* amber — tardy outline + badge */
   --att-tardy-soft: rgba(245, 184, 75, 0.16);
+  /* Name wheel - a graduated pink/magenta ramp. wheel.js alternates between
+     the dark half (r0-r3) and the light half (r4-r7) so every boundary is an
+     obvious step while the set still reads as one family. Names sit on top in
+     near-white with a dark outline, so they carry on any of them. */
+  --wheel-r0: #3E1028;
+  --wheel-r1: #5A1739;
+  --wheel-r2: #78204B;
+  --wheel-r3: #952B5E;
+  --wheel-r4: #B03A72;
+  --wheel-r5: #C44D85;
+  --wheel-r6: #D66199;
+  --wheel-r7: #E67CAE;
+  --wheel-divider: rgba(255, 255, 255, 0.55);
+  --wheel-ink:        #FFFFFF;       /* slice label */
+  --wheel-ink-shadow: rgba(10, 6, 16, 0.6);
+  --wheel-won:        #FFD9EC;       /* winning slice lights up */
+  /* the machine: dark metal frame with thin accent edges */
+  --wheel-metal:    #1C1828;
+  --wheel-metal-2:  #14111E;
+  --wheel-metal-hi: rgba(240, 127, 174, 0.55);
+  --wheel-housing:  #221D31;
+  --wheel-face-hi:  rgba(255, 255, 255, 0.10);
+  --wheel-face-lo:  rgba(0, 0, 0, 0.35);
+
   /* noise meter zones — green → amber → red, bright enough for a projector */
   --noise-quiet: var(--ok);
   --noise-ok:    var(--att-tardy);
@@ -787,10 +832,8 @@ body.hub .app { position: relative; z-index: 1; }
    -------------------------------------------------------------------------- */
 header.topnav {
   display: grid;
-  grid-template-columns: auto minmax(0, 1fr) auto;
-  grid-template-areas:
-    "brand nav       tail"
-    "read  read      read";
+  grid-template-columns: auto auto minmax(0, 1fr) auto;
+  grid-template-areas: "brand nav read tail";
   align-items: center;
   column-gap: var(--space-3);
   row-gap: 0.15rem;
@@ -798,6 +841,16 @@ header.topnav {
   padding: var(--space-2) var(--page-pad);
   min-width: 0;
   border-bottom: 1px solid var(--hud-line);
+}
+/* Four grouped triggers leave room for the readouts on the same row; below
+   1100px they drop back to their own row rather than colliding. */
+@media (max-width: 1100px) {
+  header.topnav {
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    grid-template-areas:
+      "brand nav  tail"
+      "read  read read";
+  }
 }
 .topnav .hud-brand  { grid-area: brand; }
 .topnav .nav-links {
@@ -817,6 +870,63 @@ header.topnav {
   flex-shrink: 0;
   justify-self: end;
 }
+/* ---- grouped nav: four triggers, each with a dropdown ---- */
+.nav-group { position: relative; display: inline-flex; }
+.nav-trigger {
+  display: inline-flex; align-items: center; gap: 0.3rem;
+  background: none;
+  cursor: pointer;
+}
+.nav-caret { width: 0.75rem; height: 0.75rem; opacity: 0.7; transition: transform 160ms ease; }
+.nav-group[data-open="1"] .nav-caret { transform: rotate(180deg); }
+/* the section holding the current page */
+.topnav .nav-links .tab.nav-trigger[data-here="1"] {
+  background: var(--gradient-accent), transparent;
+  border-color: var(--hud-line-strong);
+  box-shadow: var(--hud-glow-soft);
+  color: var(--text);
+}
+.nav-group[data-open="1"] > .nav-trigger { border-color: var(--hud-line-strong); color: var(--text); }
+
+/* the panel is absolutely positioned, so opening it never shifts the bar */
+.nav-menu {
+  position: absolute;
+  top: calc(100% + 0.35rem);
+  left: 0;
+  z-index: 60;
+  min-width: max(100%, 10.5rem);
+  display: flex; flex-direction: column; gap: 0.1rem;
+  padding: 0.3rem;
+  background: var(--card);
+  border: 1px solid var(--hud-line-strong);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-pop), var(--hud-glow-soft);
+  animation: nav-drop 140ms ease;
+}
+@keyframes nav-drop {
+  from { opacity: 0; transform: translateY(-0.3rem); }
+  to   { opacity: 1; transform: none; }
+}
+.nav-item {
+  display: block;
+  padding: 0.42rem 0.75rem;
+  border-radius: var(--radius-sm);
+  color: var(--text-2);
+  text-decoration: none;
+  font-family: var(--font-body);
+  font-size: var(--fs-xs);
+  font-weight: var(--fw-semibold);
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+}
+.nav-item:hover, .nav-item:focus-visible { background: var(--card-3); color: var(--text); outline: none; }
+.nav-item[aria-current="page"] {
+  background: var(--gradient-accent), transparent;
+  color: var(--text);
+  box-shadow: inset 0 0 0 1px var(--hud-line-strong);
+}
+@media (prefers-reduced-motion: reduce) { .nav-menu { animation: none; } }
+
 .topnav .hud-status {
   grid-area: read;
   justify-self: end;
@@ -1469,71 +1579,85 @@ body.editing .student .name { cursor: text; }
   .schedule-layout > .card { max-height: none; overflow: visible; }
 }
 
-/* Reserve the scrollbar space at all times: when the group cards make the
-   page scroll, the gutter appearing would otherwise narrow the content and
-   nudge the centred Create Groups button sideways. */
+/* Reserve the scrollbar space at all times so a page that grows tall enough
+   to scroll doesn't narrow the panels sideways as the gutter appears. */
 .groups-page { scrollbar-gutter: stable; }
 
-/* Header row: "Create Groups" on the left, the control bar filling the rest
-   of the line. Both hide together in full screen (.no-present on the row). */
-.groups-head {
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: var(--space-3) clamp(0.75rem, 2vw, 1.5rem);
+/* ---------- The three panels across the top ---------- */
+/* Group size · Roster · Create. Equal columns, content-height, and they all
+   hide together in full screen (.no-present on the row) so the projector
+   sees only the group cards. */
+.groups-panels {
+  --ctl: 2.2rem;                    /* control height inside a panel */
+  flex: 0 0 auto;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--space-4);
   margin-bottom: var(--space-4);
 }
-.groups-head .page-title { margin: 0; flex: none; }
-.groups-head .groups-bar { flex: 1 1 24rem; margin-bottom: 0; }
-
-.groups-bar {
-  --ctl: 2.1rem;                    /* control height inside the bar */
+.gp-panel {
   display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 0.5rem 0.75rem;
-  padding: 0.6rem 0.9rem;
-  border-radius: var(--radius-md);
-  margin-bottom: var(--space-4);
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.55rem;
+  padding: var(--space-3) var(--space-4) var(--space-4);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: var(--card);
+  box-shadow: var(--shadow-card);
+  min-width: 0;
 }
-.groups-bar::before { display: none; }         /* no glow line on the bar */
-.groups-bar button, .groups-bar select, .groups-bar input, .groups-bar .chip {
+.gp-title {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 0.7rem;
+  font-weight: var(--fw-semibold);
+  letter-spacing: var(--track-label);
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+.gp-panel button, .gp-panel select, .gp-panel input {
   min-height: var(--ctl);
-  padding-top: 0.25rem;
-  padding-bottom: 0.25rem;
   font-size: var(--fs-xs);
 }
-.groups-bar select { min-width: 9.5rem; padding-right: 2rem; }
-.groups-bar input[type="number"] { width: 4rem; }
-.groups-bar .bar-field { display: inline-flex; align-items: center; gap: 0.45rem; min-width: 0; }
-.groups-bar .bar-field > .lbl { white-space: nowrap; }
-.groups-bar .bar-sep { width: 1px; height: 1.4rem; background: var(--border-strong); }
-.groups-bar .mode-seg { grid-template-columns: auto auto; padding: 0.15rem; gap: 0.15rem; }
-.groups-bar .mode-seg span { padding: 0.3rem 0.6rem; font-size: var(--fs-xs); white-space: nowrap; }
-/* pushes the mode / number / Formula cluster to the right of the bar */
-.groups-bar .bar-spacer { flex: 1 1 0; min-width: 0; }
-.groups-bar .icon-btn { width: var(--ctl); height: var(--ctl); padding: 0; }
-.groups-bar .icon-btn svg { width: 1rem; height: 1rem; }
-
-/* Create Groups / Reshuffle: centred in the stage's middle row, between the
-   pool and the results. Its row is `auto`, and the pool row above it holds a
-   fixed height, so the button never moves when groups appear. */
-.shuffle-row {
-  display: flex;
-  justify-content: center;
-  padding: var(--space-2) 0;
+.gp-panel select { min-width: 9.5rem; max-width: 100%; padding-right: 2rem; }
+.gp-panel input[type="number"] { width: 4.5rem; text-align: center; }
+.gp-panel .bar-field { display: inline-flex; align-items: center; gap: 0.45rem; min-width: 0; max-width: 100%; }
+.gp-panel .bar-field > .lbl { white-space: nowrap; }
+.gp-panel .mode-seg { grid-template-columns: auto auto; padding: 0.15rem; gap: 0.15rem; }
+.gp-panel .mode-seg span { padding: 0.32rem 0.7rem; font-size: var(--fs-xs); white-space: nowrap; }
+.gp-panel .icon-btn { width: var(--ctl); height: var(--ctl); padding: 0; flex: none; }
+.gp-panel .icon-btn svg { width: 1rem; height: 1rem; }
+/* the roster line that replaced the old toolbar counts */
+.gp-summary {
+  margin: 0;
+  font-family: var(--font-mono);
+  font-size: 0.82rem;
+  color: var(--text-2);
+  font-variant-numeric: tabular-nums;
 }
-.shuffle-row .groups-primary {
-  min-width: 15rem;
-  min-height: 3.4rem;
-  padding: 0 2.2rem;
+/* Create panel: the big button owns the width, the extras sit under it */
+.gp-create { align-items: stretch; }
+.gp-create .groups-primary {
+  width: 100%;
+  min-height: 3.2rem;
   font-size: var(--fs-lg);
   font-weight: var(--fw-bold);
   letter-spacing: 0.04em;
   border-radius: var(--radius-md);
   box-shadow: 0 6px 20px var(--accent-glow);
 }
-.shuffle-row .groups-primary:hover { transform: translateY(-1px); }
+.gp-create .groups-primary:hover:not(:disabled) { transform: translateY(-1px); }
+.gp-row { display: flex; align-items: center; flex-wrap: wrap; gap: 0.4rem; width: 100%; }
+.gp-spacer { flex: 1 1 0; min-width: 0; }
+.gp-toggle { white-space: nowrap; }
+/* the three panels are the same height (grid stretch) — sit each panel's last
+   control on the bottom line so they read as one row of controls */
+.gp-panel > :last-child { margin-top: auto; }
+
+@media (max-width: 900px) {
+  .groups-panels { grid-template-columns: 1fr; }
+}
 
 /* --- Settings dialog (first names / formula toggle) --- */
 dialog.groups-settings-dialog {
@@ -1592,67 +1716,58 @@ dialog.groups-settings-dialog .gs-note { margin: 0 0 var(--space-4); color: var(
 
 /* ---------- Stage ---------- */
 
-/* Pool on top, the primary action in the middle, results below — all three
-   rows sized by their content, so the page just flows: header, controls,
-   pool, button, groups. The stage must NOT stretch (no `flex: 1`) and no row
-   may be `1fr`: either one leaves a viewport-tall void under the content
-   before the groups exist.
-   Nothing in here may get an `overflow`: the chips fly across all three rows
-   and a scroll container would clip them mid-flight. */
+/* The stage is only the results now — it takes every pixel under the three
+   panels so the group cards are the focus of the page. Before the first
+   Create it is empty and the `#empty` hint sits inside that space.
+   Nothing in here may get an `overflow`: the chips fly in from the Roster
+   panel above and a scroll container would clip them mid-flight. */
 .stage {
-  flex: 0 0 auto;
+  flex: 1 1 auto;
   position: relative;
   display: grid;
-  grid-template-rows: auto auto auto;
-  gap: var(--space-3);
+  grid-template-rows: 1fr;
+  min-height: 0;
 }
-/* Once the groups are up the pool is empty — drop it entirely rather than
-   leave an empty box above the button. It stays when someone is sitting out,
-   so you can still see (and click) who was left out. */
-.stage.has-groups:not(.has-sitout) .pool-area { display: none; }
-/* (when grouped, the only chips left in the pool ARE the sitting-out ones —
-   the rest have moved into the cards, so nothing needs hiding here) */
-.stage.has-groups .name-pool { border-style: solid; border-color: var(--border); }
 
 /* Sitting out (grouping only — never an attendance state) */
-.pool-note {
-  margin: 0 0 var(--space-2);
-  font-family: var(--font-mono);
-  font-size: 0.68rem;
-  letter-spacing: 0.16em;
-  text-transform: uppercase;
-  color: var(--text-muted);
-}
 .name-chip.sitting-out {
   opacity: 0.45;
   text-decoration: line-through;
   border-style: dashed;
   color: var(--text-2);
 }
-.name-pool .name-chip { cursor: pointer; }
-.name-pool .name-chip:hover { border-color: var(--accent); }
-.name-pool .name-chip:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 
+/* Cards flow into as many columns as there are groups (auto-fit collapses the
+   tracks it doesn't need), so six groups land on one row rather than two —
+   that is what keeps the whole page on one screen at 1280x720. Full screen
+   widens the minimum again for projector-sized type. */
 .results {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(11rem, 1fr));
   align-content: start;
   gap: var(--space-4);
 }
-
-/* The pool: every present student as a chip, loosely wrapped */
-.name-pool {
-  display: flex;
-  flex-wrap: wrap;
-  align-content: flex-start;
-  gap: 0.6rem 0.7rem;
-  padding: var(--space-4);
+/* once there are cards, let them share the height the stage was given */
+.stage.has-groups .results { align-content: stretch; }
+/* before the first Create the stage is a big empty board — say what fills it */
+.results:empty {
+  display: grid;
+  place-content: center;
   border: 1px dashed var(--border-strong);
   border-radius: var(--radius-lg);
-  min-height: 8rem;
 }
+.results:empty::before {
+  content: 'Press Create Groups';
+  font-family: var(--font-display);
+  font-size: 0.72rem;
+  letter-spacing: var(--track-label);
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+body.present .results:empty { border: 0; }
+.stage.no-students .results:empty { display: none; }   /* the #empty line says it instead */
 
-/* One element, two looks: a pill in the pool, a big row inside a group */
+/* One element, two looks: a pill on its own, a big row inside a group */
 .name-chip {
   display: inline-flex;
   align-items: center;
@@ -1680,6 +1795,10 @@ dialog.groups-settings-dialog .gs-note { margin: 0 0 var(--space-4); color: var(
   white-space: normal;
 }
 .group .name-chip:last-child { border-bottom: 0; }
+/* click a name in a card to sit them out — off while projecting */
+body:not(.present) .group .name-chip { cursor: pointer; }
+body:not(.present) .group .name-chip:hover { background: var(--card-2); }
+.group .name-chip:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 .name-chip.flying { position: relative; z-index: 2; will-change: transform; }
 
 /* Group cards fade + scale in just before their names arrive */
@@ -1789,7 +1908,7 @@ dialog.groups-settings-dialog .gs-note { margin: 0 0 var(--space-4); color: var(
 .attendance-actions .spacer { flex: 1; }
 
 @media (max-width: 900px) {
-  .groups-bar .bar-spacer { display: none; }   /* wrap tight instead of spreading */
+  .gp-panel .gp-spacer { display: none; }   /* wrap tight instead of spreading */
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -1852,9 +1971,10 @@ body.present .topnav .nav-links { display: none; }
 body.present .app { grid-template-columns: 1fr; }
 body.present main.page { grid-column: 1; }
 body.present header.topbar { min-height: 2.8rem; padding: var(--space-1) var(--page-pad); }
-body.present .results { grid-template-columns: repeat(auto-fit, minmax(20rem, 1fr)); gap: var(--space-5); }
+/* one card per group on a single row wherever it fits — six groups across a
+   1280px projector still beats two rows the class has to scroll past */
+body.present .results { grid-template-columns: repeat(auto-fit, minmax(11rem, 1fr)); gap: var(--space-5); }
 body.present .group .name-chip { font-size: var(--fs-2xl); padding: 0.4rem 0; }
-body.present .name-pool .name-chip { font-size: var(--fs-lg); }
 body.present .group h3 { font-size: var(--fs-sm); }
 
 /* Roster present mode */
@@ -2475,7 +2595,6 @@ button, .btn, .neu-btn { font-weight: var(--fw-semibold); }
 .name-chip { font-size: 1.12rem; font-weight: 600; }
 .group .name-chip { font-size: 1.7rem; font-weight: 700; line-height: 1.25; }
 body.present .group .name-chip { font-size: 2.1rem; }
-body.present .name-pool .name-chip { font-size: 1.35rem; }
 .seat-label { font-family: var(--font-body); font-weight: 700; letter-spacing: 0.01em; font-size: 11px; }
 .hub-room .seat-label { font-size: 14px; }
 body.present .hub-room .seat-label { font-size: 15px; }
@@ -3615,4 +3734,488 @@ body.noise-popout .noise-zone { font-size: clamp(1.2rem, 5vmin, 3rem); }
   .noise-fill { transition: width 200ms linear; }
   .noise-meter[data-alert="1"] .noise-zone,
   .noise-meter[data-alert="1"] .noise-db { animation: none; }
+}
+
+/* ============================================================================
+   Name Wheel (wheel.html + wheel-popout.html)
+   The wheel is the page: a control row on top, then the dial filling the rest.
+   Slices are drawn by wheel.js into #wheel-rotor (the only thing that spins);
+   the pointer, rim and hub sit still on top of it.
+   ============================================================================ */
+.wheel-page { display: flex; flex-direction: column; min-height: 0; padding: var(--space-3) var(--page-pad) var(--space-4); }
+
+.wheel-bar {
+  --ctl: 2.1rem;
+  display: flex; align-items: center; flex-wrap: wrap;
+  gap: 0.5rem 0.75rem;
+  padding: 0.6rem 0.9rem;
+  border-radius: var(--radius-md);
+  margin-bottom: var(--space-3);
+}
+.wheel-bar::before { display: none; }
+.wheel-bar button, .wheel-bar select, .wheel-bar .chip {
+  min-height: var(--ctl); padding-top: 0.25rem; padding-bottom: 0.25rem; font-size: var(--fs-xs);
+}
+.wheel-bar select { min-width: 9.5rem; padding-right: 2rem; }
+.wheel-bar .bar-field { display: inline-flex; align-items: center; gap: 0.45rem; min-width: 0; }
+.wheel-bar .bar-spacer { flex: 1 1 0; min-width: 0; }
+.wheel-bar .icon-btn { width: var(--ctl); height: var(--ctl); padding: 0; }
+.wheel-bar .icon-btn svg { width: 1rem; height: 1rem; }
+.wheel-bar button[aria-checked="true"] { border-color: var(--accent); color: var(--accent); background: var(--accent-soft); }
+.wheel-bar .when-off, .wheel-bar .when-on { display: inline; }
+.wheel-bar button[aria-checked="false"] .when-on { display: none; }
+.wheel-bar button[aria-checked="true"] .when-off { display: none; }
+
+/* Two columns: the machine fills the left, the result + controls the right.
+   Both have to fit 1280x720 without scrolling, so everything is sized off the
+   row height rather than allowed to grow. */
+.wheel-layout {
+  flex: 1; min-height: 0;
+  display: grid;
+  grid-template-columns: minmax(0, 1.1fr) minmax(17rem, 0.9fr);
+  gap: var(--space-4);
+  align-items: center;
+}
+@media (max-width: 900px) {
+  .wheel-layout { grid-template-columns: 1fr; align-items: start; overflow-y: auto; }
+}
+
+.wheel-stage {
+  height: 100%; min-height: 0;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: var(--space-2);
+  padding: var(--space-2);          /* the wheel's only margin - it fills the rest */
+}
+/* Square SVG (no stand), sized to fill its column: take the column's height,
+   derive the width from the 1:1 ratio, and clamp to the column's width when
+   that is the tighter of the two. The stage's own padding is the margin. */
+.wheel-wrap {
+  position: relative;
+  width: auto;
+  height: 100%;
+  max-width: 100%;
+  aspect-ratio: 1 / 1;
+  margin: 0 auto;
+}
+.wheel-svg { width: 100%; height: 100%; overflow: visible; }
+/* the rotor is the ONLY thing that spins; CSS transform so the spin can run
+   as a transition (see wheel.js runSpin) */
+/* transform-box + an explicit origin in user units: the rotor must turn about
+   the exact centre of the 100x100 viewBox (50,50), not the bounding box of
+   whatever happens to be drawn in it, or the wheel wobbles as it spins. */
+#wheel-rotor {
+  transform-box: view-box;
+  transform-origin: 50px 50px;
+  will-change: transform;
+}
+
+.slice { stroke: none; transition: fill 260ms ease; }
+.slice.r0 { fill: var(--wheel-r0); }
+.slice.r1 { fill: var(--wheel-r1); }
+.slice.r2 { fill: var(--wheel-r2); }
+.slice.r3 { fill: var(--wheel-r3); }
+.slice.r4 { fill: var(--wheel-r4); }
+.slice.r5 { fill: var(--wheel-r5); }
+.slice.r6 { fill: var(--wheel-r6); }
+.slice.r7 { fill: var(--wheel-r7); }
+.slice.won { fill: var(--wheel-won); }
+/* thin bright dividers between slices */
+.slice-dividers line { stroke: var(--wheel-divider); stroke-width: 0.3; }
+/* names ride their slice, in near-white over a dark outline so they read on
+   every step of the ramp (paint-order puts the stroke behind the fill) */
+.slice-label {
+  fill: var(--wheel-ink);
+  stroke: var(--wheel-ink-shadow);
+  stroke-width: 0.55;
+  paint-order: stroke;
+  stroke-linejoin: round;
+  font-family: var(--font-mono);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+/* ---- depth: a sheen across the face and an inner shadow at the rim ---- */
+.face-sheen { fill: url(#wheel-face-grad); pointer-events: none; }
+.face-ish { fill: url(#wheel-ish); pointer-events: none; }
+#wheel-face-grad .face-hi { stop-color: var(--wheel-face-hi); }
+#wheel-face-grad .face-lo { stop-color: var(--wheel-face-lo); }
+#wheel-ish .ish-clear { stop-color: rgba(0, 0, 0, 0); }
+#wheel-ish .ish-mid { stop-color: rgba(0, 0, 0, 0.16); }
+#wheel-ish .ish-edge { stop-color: rgba(0, 0, 0, 0.42); }
+
+.wheel-rim { fill: none; stroke: var(--hud-line); stroke-width: 0.6; transition: filter 300ms ease; }
+.wheel-hub { fill: var(--card); stroke: none; }
+.wheel-hub-ring { fill: none; stroke: var(--hud-line-strong); stroke-width: 0.5; }
+.wheel-axle .bolt { fill: var(--wheel-metal-2); stroke: var(--wheel-metal-hi); stroke-width: 0.25; }
+
+/* ---- the machine: housing, legs, base plate ---- */
+.housing { fill: none; stroke: var(--wheel-housing); stroke-width: 4.4; }
+.housing-foot { fill: none; stroke: var(--wheel-housing); stroke-width: 7.4; stroke-linecap: round; }
+
+/* ---- pointer on its bracket, knocked by each passing segment ---- */
+.bracket { fill: var(--wheel-metal); }
+.bracket-hi { fill: var(--wheel-metal-hi); opacity: 0.8; }
+.pointer-arm {
+  transform-box: view-box;
+  transform-origin: 50px 4px;
+  filter: drop-shadow(0 0 1.2px var(--accent-glow));
+}
+.pointer-arm.flick { animation: pointer-flick 130ms ease-out; }
+@keyframes pointer-flick {
+  0%   { transform: rotate(0deg); }
+  35%  { transform: rotate(-7deg); }
+  100% { transform: rotate(0deg); }
+}
+.pointer-hud { fill: none; stroke: var(--accent); stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round; }
+.pointer-soft { display: none; fill: var(--accent); stroke: none; }
+
+/* instrument ring outside the wheel: degree ticks + corner brackets */
+.wheel-dial line { stroke: var(--hud-line); stroke-width: 0.35; }
+.wheel-dial line.long { stroke: var(--hud-line-strong); stroke-width: 0.55; }
+.wheel-dial .bracket { fill: none; stroke: var(--accent); stroke-width: 0.7; opacity: 0.75; }
+
+/* while spinning the rim picks up a faint motion glow; on landing it pulses
+   once and the winning slice keeps its accent wash */
+.wheel-stage[data-state="spinning"] .wheel-rim { filter: drop-shadow(0 0 4px var(--accent-glow)); }
+.wheel-stage[data-state="picked"] .wheel-rim { animation: wheel-ring-pulse 700ms ease-out 1; }
+@keyframes wheel-ring-pulse {
+  0%   { filter: drop-shadow(0 0 10px var(--accent)); }
+  100% { filter: drop-shadow(0 0 0 transparent); }
+}
+
+
+/* the picked name, centred in the hub and readable across the room */
+/* ---- the hub IS the Spin button (page only; the pop-out keeps a disc) ----
+   It sits outside #wheel-rotor, so the wheel turns around it while it stays
+   still. 28% of the wrap = radius 14 in viewBox units, just inside the bolt
+   circle at 15.6. */
+.wheel-hub-btn {
+  position: absolute;
+  left: 50%; top: 50%;
+  transform: translate(-50%, -50%);
+  width: 28%; height: 28%;
+  display: grid; place-items: center;
+  border-radius: 50%;
+  border: 1px solid var(--hud-line-strong);
+  background: var(--card);
+  color: var(--text);
+  font-family: var(--font-display);
+  text-transform: var(--label-transform);
+  letter-spacing: var(--track-display);
+  font-weight: var(--fw-semibold);
+  font-size: clamp(0.7rem, 2.2vh, 1.15rem);
+  cursor: pointer;
+  box-shadow: inset 0 0 0 1px var(--hud-line), 0 0 14px var(--shadow-text);
+  transition: border-color 160ms ease, box-shadow 160ms ease, color 160ms ease, transform 120ms ease;
+}
+.wheel-hub-btn:hover:not(:disabled) {
+  border-color: var(--accent);
+  color: var(--accent);
+  box-shadow: inset 0 0 0 1px var(--accent-soft), 0 0 22px var(--accent-glow);
+  transform: translate(-50%, -50%) scale(1.04);
+}
+.wheel-hub-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+.wheel-hub-btn:active:not(:disabled) {
+  transform: translate(-50%, -50%) scale(0.95);
+  background: var(--card-2);
+  box-shadow: inset 0 2px 8px var(--shadow-text);
+}
+.wheel-hub-btn:disabled {
+  cursor: default;
+  color: var(--text-muted);
+  border-color: var(--border-strong);
+  box-shadow: none;
+}
+.wheel-hub-btn[data-spinning="1"] { color: var(--accent); border-color: var(--hud-line); opacity: 0.75; }
+
+/* The viewBox is square, so the wheel's centre is the box's centre. */
+.wheel-hub-text {
+  position: absolute; left: 0; right: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  display: grid; place-items: center;
+  pointer-events: none;
+  padding: 0 24%;
+  text-align: center;
+}
+.wheel-hub-name {
+  font-family: var(--font-display);
+  text-transform: var(--label-transform);
+  letter-spacing: var(--track-display);
+  font-weight: var(--fw-semibold);
+  font-size: clamp(0.85rem, 3.2vh, 1.7rem);
+  line-height: 1.2;
+  color: var(--text);
+  overflow-wrap: anywhere;
+  text-shadow: 0 0 18px var(--accent-glow);
+}
+.wheel-hub-name[data-len="long"] { font-size: clamp(0.72rem, 2.4vh, 1.2rem); letter-spacing: 0.04em; }
+.wheel-stage[data-state="picked"] .wheel-hub-name { animation: wheel-pop 420ms cubic-bezier(.34,1.56,.64,1); }
+@keyframes wheel-pop { from { transform: scale(0.7); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+
+.wheel-empty {
+  position: absolute; inset: auto 8% 8%;
+  margin: 0; text-align: center;
+  color: var(--text-muted); font-size: var(--fs-sm);
+}
+
+/* ---- right column: result panel over the controls ---- */
+.wheel-side {
+  height: 100%; min-height: 0;
+  display: flex; flex-direction: column;
+  gap: var(--space-3);
+  justify-content: center;
+}
+
+.wheel-result {
+  position: relative;
+  flex: 1 1 auto; min-height: 9rem;
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  gap: var(--space-2);
+  padding: var(--space-4) var(--space-3);
+  border: 1px solid var(--hud-line);
+  border-radius: var(--radius-lg);
+  background: var(--panel-bg);
+  overflow: hidden;
+  text-align: center;
+}
+.wheel-placeholder {
+  margin: 0;
+  font-family: var(--font-display);
+  text-transform: var(--label-transform);
+  letter-spacing: var(--track-label);
+  font-size: 0.74rem;
+  color: var(--text-muted);
+}
+.wheel-result[data-state="picked"] .wheel-placeholder,
+.wheel-result[data-state="spinning"] .wheel-placeholder { display: none; }
+
+.wheel-result-name {
+  margin: 0;
+  font-family: var(--font-display);
+  text-transform: var(--label-transform);
+  letter-spacing: var(--track-display);
+  font-weight: var(--fw-bold);
+  font-size: clamp(1.6rem, 5.4vh, 3.2rem);
+  line-height: 1.1;
+  color: var(--text);
+  overflow-wrap: anywhere;
+  opacity: 0;
+}
+.wheel-result-name[data-len="long"] { font-size: clamp(1.2rem, 3.8vh, 2.2rem); }
+/* in: scales up from small with a spring overshoot as it fades in. The
+   picked state sets opacity itself, so the animation is pure enhancement -
+   if it never runs (reduced motion, a dropped frame), the name is still
+   there rather than stuck at opacity 0. */
+.wheel-result[data-state="picked"] .wheel-result-name {
+  opacity: 1;
+  animation: result-in 520ms cubic-bezier(.34, 1.56, .64, 1);
+}
+/* out: shrinks away as the next spin starts */
+.wheel-result[data-state="spinning"] .wheel-result-name {
+  animation: result-out 260ms ease-in forwards;
+}
+@keyframes result-in {
+  0%   { opacity: 0; transform: scale(0.45); }
+  100% { opacity: 1; transform: scale(1); }
+}
+@keyframes result-out {
+  0%   { opacity: 1; transform: scale(1); }
+  100% { opacity: 0; transform: scale(0.8); }
+}
+
+/* the flash behind the name (jarvis) */
+.wheel-glow {
+  position: absolute; inset: 0;
+  pointer-events: none; opacity: 0;
+  background: radial-gradient(circle at 50% 45%, var(--accent-soft) 0%, transparent 62%);
+}
+.wheel-result[data-state="picked"] .wheel-glow { animation: result-glow 900ms ease-out 1; }
+@keyframes result-glow {
+  0%   { opacity: 0; }
+  25%  { opacity: 1; }
+  100% { opacity: 0; }
+}
+/* sparkles (marwa) - hidden in jarvis, which uses the glow alone */
+.wheel-sparks { position: absolute; inset: 0; pointer-events: none; display: none; }
+.wheel-sparks i {
+  position: absolute; left: 50%; top: 45%;
+  width: 0.9rem; height: 0.9rem; margin: -0.45rem 0 0 -0.45rem;
+  opacity: 0;
+  background: no-repeat center / contain;
+}
+
+/* corner actions - deliberately quiet so the name stays the focus */
+.wheel-result-actions {
+  position: absolute; top: var(--space-2); right: var(--space-2);
+  display: flex; gap: 0.3rem;
+}
+.wheel-mini {
+  min-height: 1.6rem; padding: 0.1rem 0.55rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-pill);
+  background: transparent;
+  color: var(--text-muted);
+  font-size: 0.68rem; letter-spacing: 0.04em;
+}
+.wheel-mini:hover { color: var(--accent); border-color: var(--accent); }
+
+.wheel-controls { flex: none; display: flex; flex-direction: column; gap: var(--space-2); align-items: center; }
+.wheel-control-row {
+  display: flex; flex-wrap: wrap; gap: 0.4rem;
+  align-items: center; justify-content: center;
+  width: 100%;
+}
+.wheel-control-row button, .wheel-control-row select {
+  min-height: 2rem; padding: 0.25rem 0.7rem; font-size: var(--fs-xs);
+}
+.wheel-control-row select { min-width: 8.5rem; padding-right: 1.8rem; }
+.wheel-control-row .bar-field { display: inline-flex; align-items: center; gap: 0.4rem; min-width: 0; }
+.wheel-control-row .icon-btn { width: 2rem; height: 2rem; padding: 0; }
+.wheel-control-row .icon-btn svg { width: 1rem; height: 1rem; }
+.wheel-control-row button[aria-checked="true"] { border-color: var(--accent); color: var(--accent); background: var(--accent-soft); }
+.wheel-control-row .when-off, .wheel-control-row .when-on { display: inline; }
+.wheel-control-row button[aria-checked="false"] .when-on { display: none; }
+.wheel-control-row button[aria-checked="true"] .when-off { display: none; }
+
+.wheel-hint { font-family: var(--font-mono); font-size: 0.68rem; letter-spacing: 0.14em; text-transform: uppercase; color: var(--text-muted); }
+
+.wheel-picked { display: flex; align-items: center; gap: var(--space-2); flex-wrap: wrap; justify-content: center; }
+.wheel-picked-name { font-weight: var(--fw-semibold); color: var(--text-2); }
+.wheel-picked button { min-height: 2.1rem; padding: 0.3rem 0.9rem; border-radius: var(--radius-pill); font-size: var(--fs-xs); }
+
+.wheel-called { display: flex; flex-wrap: wrap; gap: 0.4rem; align-items: center; justify-content: center; max-width: 60rem; }
+.wheel-called-label {
+  font-family: var(--font-mono); font-size: 0.64rem; letter-spacing: 0.16em;
+  text-transform: uppercase; color: var(--text-muted); margin-right: 0.2rem;
+}
+.wheel-chip {
+  display: inline-flex; align-items: center; gap: 0.35rem;
+  min-height: 1.8rem; padding: 0.15rem 0.6rem;
+  border: 1px solid var(--border); border-radius: var(--radius-pill);
+  background: var(--card-2); color: var(--text-muted);
+  font-size: var(--fs-xs);
+}
+.wheel-chip:hover { color: var(--text); border-color: var(--accent); }
+.wheel-chip span { opacity: 0.7; }
+
+/* full screen: controls go, the wheel takes the room */
+body.present .wheel-wrap { width: min(80vh, 94vw); }
+body.present .wheel-hub-name { font-size: clamp(1.6rem, 6vh, 3.6rem); }
+
+/* pop-out: wheel only, flat background like the other projector views */
+body.wheel-popout {
+  margin: 0; min-height: 100vh; min-height: 100dvh;
+  background: var(--bg-0);
+  background-image: none;
+  display: grid; place-items: center;
+  overflow: hidden;
+}
+body.wheel-popout .wheel-stage { gap: var(--space-2); }
+/* the machine is 100 wide x 134 tall, so on the projector size it by HEIGHT
+   and let the aspect ratio pick the width - sizing by width overflowed */
+body.wheel-popout .wheel-wrap { width: auto; height: min(92vh, 92vw); max-width: 92vw; }
+body.wheel-popout .wheel-hub-name { font-size: clamp(1.4rem, 5.5vmin, 3.2rem); }
+body.wheel-popout .wheel-period {
+  font-family: var(--font-display); text-transform: var(--label-transform);
+  letter-spacing: var(--track-label); font-size: 0.8rem; color: var(--text-muted);
+}
+
+/* ---------------------------------------------------------------------------
+   Name Wheel - marwa skin: soft pastel segments, a rounded pointer, rounder
+   type and a mascot that celebrates the landing. No instrument ring.
+   --------------------------------------------------------------------------- */
+:root[data-theme="marwa"] .slice-dividers line { stroke-width: 0.6; }
+:root[data-theme="marwa"] .slice-label {
+  font-family: "Comfortaa", var(--font-body);
+  font-weight: 700;
+  text-transform: none;
+  letter-spacing: 0.01em;
+  stroke-width: 0.35;               /* light halo instead of a dark outline */
+}
+/* softer, rounder machine: thicker rounded legs, no hard metal edges */
+:root[data-theme="marwa"] .housing { stroke-width: 5; }
+:root[data-theme="marwa"] .housing-foot { stroke-width: 8.4; }
+:root[data-theme="marwa"] .wheel-axle .bolt { fill: #FFFFFF; stroke: var(--wheel-metal-2); stroke-width: 0.4; }
+:root[data-theme="marwa"] .bracket { rx: 2.6; }
+/* marwa carries an extra mascot row under the wheel, so it gets a little
+   less wheel to keep the page on one screen at 1280x720 */
+:root[data-theme="marwa"] .wheel-wrap { height: 100%; }
+/* the result flash becomes hearts and stars flying outward */
+:root[data-theme="marwa"] .wheel-sparks { display: block; }
+:root[data-theme="marwa"] .wheel-glow { background: radial-gradient(circle at 50% 45%, var(--accent-soft) 0%, transparent 58%); }
+:root[data-theme="marwa"] .wheel-sparks i.heart { background-image: var(--marwa-burst-heart); }
+:root[data-theme="marwa"] .wheel-sparks i.spark { background-image: var(--marwa-burst-spark); }
+:root[data-theme="marwa"] .wheel-result[data-state="picked"] .wheel-sparks i {
+  animation: result-spark 1100ms ease-out 1;
+  animation-delay: calc(var(--i) * 70ms);
+}
+@keyframes result-spark {
+  0%   { opacity: 0; transform: rotate(calc(var(--i) * 60deg)) translateY(0) scale(0.4); }
+  25%  { opacity: 1; }
+  100% { opacity: 0; transform: rotate(calc(var(--i) * 60deg)) translateY(-5.5rem) scale(1); }
+}
+:root[data-theme="marwa"] .wheel-result-name {
+  font-family: "Comfortaa", var(--font-body);
+  text-transform: none;
+  letter-spacing: 0.01em;
+}
+:root[data-theme="marwa"] .wheel-placeholder {
+  font-family: var(--font-body);
+  text-transform: none;
+  letter-spacing: 0.01em;
+  font-size: var(--fs-sm);
+}
+:root[data-theme="marwa"] .pointer-arm { filter: drop-shadow(0 1px 1.5px var(--accent-glow)); }
+:root[data-theme="marwa"] .wheel-dial { display: none; }
+:root[data-theme="marwa"] .wheel-rim { stroke: var(--border-strong); stroke-width: 1.2; }
+:root[data-theme="marwa"] .wheel-hub { fill: #FFFFFF; }
+:root[data-theme="marwa"] .wheel-hub-ring { stroke: var(--accent); stroke-width: 0.8; }
+:root[data-theme="marwa"] .wheel-hub-name {
+  font-family: "Comfortaa", var(--font-body);
+  font-weight: 700;
+  text-transform: none;
+  letter-spacing: 0.01em;
+  font-size: clamp(1rem, 3.6vh, 1.9rem);
+  text-shadow: none;
+}
+:root[data-theme="marwa"] .pointer-hud { display: none; }
+:root[data-theme="marwa"] .pointer-soft { display: block; }
+:root[data-theme="marwa"] .wheel-pointer {
+  width: 2.5rem; height: 2.7rem; margin-left: -1.25rem; top: -1rem;
+  filter: drop-shadow(0 2px 5px var(--accent-glow));
+}
+
+/* mascot beside the wheel: idle, leaning in while it spins, hopping on a win */
+:root[data-theme="marwa"] .wheel-mascot {
+  display: block;
+  width: clamp(2.4rem, 7vh, 3.6rem);
+  height: clamp(2.4rem, 7vh, 3.6rem);
+  background: var(--marwa-mascot-bunny) no-repeat center / contain;
+  filter: drop-shadow(0 3px 8px rgba(232, 70, 124, 0.18));
+}
+:root[data-theme="marwa"] .wheel-mascot[data-mood="spin"]  { animation: mascot-wiggle 600ms ease-in-out infinite; }
+:root[data-theme="marwa"] .wheel-mascot[data-mood="party"] { animation: mascot-bounce 700ms cubic-bezier(.34,1.56,.64,1) 3; }
+.wheel-mascot { display: none; }
+
+@media (prefers-reduced-motion: reduce) {
+  /* Decorative motion still goes: the pop-in, the ring pulse, the mascot. */
+  .wheel-stage[data-state="picked"] .wheel-hub-name,
+  .wheel-stage[data-state="picked"] .wheel-rim,
+  :root[data-theme="marwa"] .wheel-mascot { animation: none; }
+
+  /* ...but the SPIN stays. The app-wide `* { transition: none !important }`
+     reduced-motion rule beats inline styles, which silently killed the
+     wheel's transition and made it teleport to the answer - the spin looked
+     broken and repeated clicks looked dead. The spin is the entire point of
+     this tool and only ever runs when the teacher presses Spin, so it is
+     exempt. wheel.js drives the duration/easing through these custom
+     properties (it sets them alongside the shorthand), which is how it keeps
+     per-phase control against the !important. */
+  #wheel-rotor {
+    transition-property: transform !important;
+    transition-duration: var(--wheel-dur, 0s) !important;
+    transition-timing-function: var(--wheel-ease, linear) !important;
+  }
 }

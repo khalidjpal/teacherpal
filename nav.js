@@ -8,19 +8,36 @@
 //   'teacherpal:tick' — document event every second, detail { now, sched }
 // so pages (the attendance view) don't fetch periods/overrides twice.
 
-const NAV_ITEMS = [
-  { href: 'index.html', label: 'Hub' },
-  { href: 'attendance.html', label: 'Attendance' },
-  { href: 'lessons.html', label: 'Lesson Plans' },
-  { href: 'groups.html', label: 'Create Groups' },
-  { href: 'timer.html', label: 'Timer' },
-  { href: 'noise.html', label: 'Noise Meter' },
-  { href: 'seating.html', label: 'Seating' },
-  { href: 'bathroom.html', label: 'Bathroom' },
-  { href: 'schedule.html', label: 'Schedule' },
-  { href: 'roster.html', label: 'Rosters', setup: true },
-  { href: 'admin.html',  label: 'Admin',   setup: true, admin: true },
+// The nav mirrors the hub's sections: four triggers, each opening a menu of
+// its pages. Add a screen to the right section here and every page's nav
+// updates. The brand is the link to the hub itself.
+const NAV_SECTIONS = [
+  { id: 'daily', label: 'Daily', items: [
+    { href: 'attendance.html', label: 'Attendance' },
+    { href: 'bathroom.html', label: 'Bathroom' },
+  ] },
+  { id: 'tools', label: 'Teacher Tools', items: [
+    { href: 'groups.html', label: 'Create Groups' },
+    { href: 'timer.html', label: 'Timer' },
+    { href: 'noise.html', label: 'Noise Meter' },
+    { href: 'wheel.html', label: 'Name Wheel' },
+  ] },
+  { id: 'planning', label: 'Planning', items: [
+    { href: 'lessons.html', label: 'Lesson Plans' },
+    { href: 'seating.html', label: 'Seating' },
+  ] },
+  { id: 'system', label: 'System', items: [
+    { href: 'schedule.html', label: 'Schedule' },
+    { href: 'roster.html', label: 'Rosters' },
+    { href: 'admin.html', label: 'Admin', admin: true },
+  ] },
 ];
+// flat list kept for anything that wants "every screen"
+const NAV_ITEMS = NAV_SECTIONS.flatMap((s) => s.items);
+
+const NAV_OPEN_MS = 120;     // hover-in delay, so a passing cursor doesn't open menus
+const NAV_CLOSE_MS = 280;    // hover-out grace, so the menu survives the trip to it
+const CARET = '<svg class="nav-caret" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>';
 
 const navPad = (n) => String(n).padStart(2, '0');
 const navState = { periods: [], overrides: [], teaches: new Map(), byNumber: new Map(), today: null };
@@ -38,12 +55,23 @@ function renderTopNav() {
   if (!header) return;
   const page = currentPage();
   const admin = typeof isAdmin === 'function' && isAdmin();
-  const links = NAV_ITEMS
-    .filter((it) => !it.admin || admin)   // admin-only entries hide from non-admins
-    .map((it) => {
+  const links = NAV_SECTIONS.map((section) => {
+    const items = section.items.filter((it) => !it.admin || admin);  // admin-only entries hide
+    if (!items.length) return '';
+    const here = items.some((it) => it.href === page);               // highlight the section we're in
+    const menu = items.map((it) => {
       const cur = it.href === page ? ' aria-current="page"' : '';
-      return `<a class="tab${it.setup ? ' setup' : ''}" href="${it.href}"${cur}>${it.label}</a>`;
+      return `<a class="nav-item" role="menuitem" href="${it.href}"${cur}>${it.label}</a>`;
     }).join('');
+    return `
+      <div class="nav-group" data-section="${section.id}">
+        <button type="button" class="tab nav-trigger"${here ? ' data-here="1"' : ''}
+                aria-expanded="false" aria-haspopup="true" aria-controls="navmenu-${section.id}">
+          ${section.label}${CARET}
+        </button>
+        <div class="nav-menu" id="navmenu-${section.id}" role="menu" aria-label="${section.label}" hidden>${menu}</div>
+      </div>`;
+  }).join('');
   // the hub (body.launcher) shows no links — its panels are the navigation;
   // every other page keeps the full nav, and the wordmark always links home
   const noLinks = document.body.classList.contains('launcher');
@@ -73,6 +101,90 @@ function renderTopNav() {
   const soBtn = header.querySelector('#signout-btn');
   if (soBtn) soBtn.addEventListener('click', () => { if (typeof signOut === 'function') signOut(); });
   wireSettingsMenu(header);
+  wireNavMenus(header);
+}
+
+// Section dropdowns: hover with a short open delay and a longer close delay
+// (so the cursor can travel to the panel), click/tap to toggle, full keyboard
+// support. The panel lives inside .nav-group, so hovering it counts as
+// hovering the group and it can't vanish underneath the pointer.
+function wireNavMenus(header) {
+  const groups = [...header.querySelectorAll('.nav-group')];
+  if (!groups.length) return;
+  let openTimer = null, closeTimer = null;
+
+  const items = (g) => [...g.querySelectorAll('.nav-item')];
+  const isOpen = (g) => g.dataset.open === '1';
+
+  function open(g, { focusFirst = false } = {}) {
+    clearTimeout(openTimer); clearTimeout(closeTimer);
+    groups.forEach((other) => { if (other !== g) close(other); });
+    g.dataset.open = '1';
+    g.querySelector('.nav-trigger').setAttribute('aria-expanded', 'true');
+    g.querySelector('.nav-menu').hidden = false;
+    if (focusFirst) { const first = items(g)[0]; if (first) first.focus(); }
+  }
+  function close(g) {
+    if (!g) return;
+    g.dataset.open = '';
+    g.querySelector('.nav-trigger').setAttribute('aria-expanded', 'false');
+    g.querySelector('.nav-menu').hidden = true;
+  }
+  const closeAll = () => { clearTimeout(openTimer); clearTimeout(closeTimer); groups.forEach(close); };
+
+  groups.forEach((g) => {
+    const trigger = g.querySelector('.nav-trigger');
+    const menu = g.querySelector('.nav-menu');
+
+    g.addEventListener('pointerenter', (e) => {
+      if (e.pointerType === 'touch') return;          // touch uses tap, not hover
+      clearTimeout(closeTimer);
+      openTimer = setTimeout(() => open(g), NAV_OPEN_MS);
+    });
+    g.addEventListener('pointerleave', (e) => {
+      if (e.pointerType === 'touch') return;
+      clearTimeout(openTimer);
+      closeTimer = setTimeout(() => close(g), NAV_CLOSE_MS);
+    });
+
+    // click / tap toggles (and is the whole story on touch)
+    trigger.addEventListener('click', (e) => {
+      e.preventDefault();
+      if (isOpen(g)) close(g); else open(g);
+    });
+
+    trigger.addEventListener('keydown', (e) => {
+      if (e.key === 'ArrowDown' || e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        open(g, { focusFirst: true });
+      } else if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        open(g);
+        const list = items(g); if (list.length) list[list.length - 1].focus();
+      } else if (e.key === 'Escape') {
+        close(g);
+      }
+    });
+
+    menu.addEventListener('keydown', (e) => {
+      const list = items(g);
+      const i = list.indexOf(document.activeElement);
+      if (e.key === 'ArrowDown') { e.preventDefault(); (list[i + 1] || list[0]).focus(); }
+      else if (e.key === 'ArrowUp') { e.preventDefault(); (list[i - 1] || list[list.length - 1]).focus(); }
+      else if (e.key === 'Home') { e.preventDefault(); list[0].focus(); }
+      else if (e.key === 'End') { e.preventDefault(); list[list.length - 1].focus(); }
+      else if (e.key === 'Escape') { e.preventDefault(); close(g); trigger.focus(); }
+      else if (e.key === 'Tab') { close(g); }        // tabbing out closes behind you
+    });
+
+    // focus moving right out of the group closes it
+    g.addEventListener('focusout', () => {
+      setTimeout(() => { if (!g.contains(document.activeElement)) close(g); }, 0);
+    });
+  });
+
+  document.addEventListener('click', (e) => { if (!e.target.closest('.nav-group')) closeAll(); });
+  document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeAll(); });
 }
 
 // Small gear dropdown: theme picker + "periods I teach" checkboxes.

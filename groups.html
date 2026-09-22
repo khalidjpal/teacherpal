@@ -17,36 +17,48 @@
 
 
   <main class="page groups-page">
-    <!-- ---------- Header row: page title on the left, every control on the
-         same line to its right. The primary action is NOT here — it sits
-         under the stage (.shuffle-row) so it never moves. ---------- -->
-    <div class="groups-head no-present">
-    <h1 class="page-title">Create Groups</h1>
+    <!-- ---------- Three panels across the top; the results own everything
+         below them. The roster stays collapsed to a summary - the full list
+         lives in the Edit Roster modal. ---------- -->
+    <div class="groups-panels no-present">
+      <section class="gp-panel" aria-label="Group size">
+        <h2 class="gp-title">Group size</h2>
+        <!-- What the number means depends on the mode, so it lives in the
+             input's aria-label (kept in sync by updateSummary). -->
+        <div class="gp-row">
+          <div class="seg mode-seg" role="radiogroup" aria-label="Group mode">
+            <label><input type="radio" name="mode" value="count"><span>Groups</span></label>
+            <label><input type="radio" name="mode" value="size"><span>Per group</span></label>
+          </div>
+          <input type="number" id="group-n" min="1" value="6" inputmode="numeric" aria-label="How many groups?">
+        </div>
+      </section>
 
-    <div class="groups-bar card" role="toolbar" aria-label="Create Groups controls">
-      <label class="bar-field">
-        <span class="lbl">Period</span>
-        <select id="period-select"></select>
-      </label>
+      <section class="gp-panel" aria-label="Roster">
+        <h2 class="gp-title">Roster</h2>
+        <label class="bar-field">
+          <span class="lbl">Period</span>
+          <select id="period-select"></select>
+        </label>
+        <div class="gp-row">
+          <p class="gp-summary" id="roster-summary">—</p>
+          <span class="gp-spacer"></span>
+          <button type="button" id="btn-attendance" title="Mark who is absent or sitting out today (the saved roster never changes)">Edit Roster</button>
+        </div>
+      </section>
 
-      <button type="button" id="btn-attendance" title="Mark who is absent today (roster is not changed)">Edit Roster</button>
-
-      <span class="bar-spacer"></span>
-
-      <!-- What the number means depends on the mode, so it lives in the
-           input's aria-label (kept in sync by updateSummary). -->
-      <div class="seg mode-seg" role="radiogroup" aria-label="Group mode">
-        <label><input type="radio" name="mode" value="count"><span>Groups</span></label>
-        <label><input type="radio" name="mode" value="size"><span>Per group</span></label>
-      </div>
-      <input type="number" id="group-n" min="1" value="6" inputmode="numeric" aria-label="How many groups?">
-
-      <button type="button" id="btn-formula" title="Seating & grouping rules for this period">Formula</button>
-      <button type="button" class="icon-btn" id="btn-groups-settings" title="Group settings" aria-label="Group settings">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
-      </button>
-      <button type="button" class="icon-btn" data-fullscreen aria-pressed="false" title="Present full screen (F) · Space reshuffles" aria-label="Present full screen"><span class="when-off"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 3H5a2 2 0 0 0-2 2v3M16 3h3a2 2 0 0 1 2 2v3M8 21H5a2 2 0 0 1-2-2v-3M16 21h3a2 2 0 0 0 2-2v-3"/></svg></span><span class="when-on"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 3v3a2 2 0 0 1-2 2H3M21 8h-3a2 2 0 0 1-2-2V3M3 16h3a2 2 0 0 1 2 2v3M16 21v-3a2 2 0 0 1 2-2h3"/></svg></span></button>
-    </div>
+      <section class="gp-panel gp-create" aria-label="Create">
+        <h2 class="gp-title">Create</h2>
+        <button id="btn-shuffle" class="primary groups-primary" title="Create Groups (or Reshuffle)">Create Groups</button>
+        <div class="gp-row">
+          <button type="button" id="btn-formula" title="Grouping rules for this period">Formula</button>
+          <button type="button" id="btn-use-formula" class="gp-toggle" role="switch" aria-checked="false" title="Create Groups will obey this period's grouping rules instead of random">Follow rules</button>
+          <button type="button" class="icon-btn" id="btn-groups-settings" title="Group settings" aria-label="Group settings">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+          </button>
+          <button type="button" class="icon-btn" data-fullscreen aria-pressed="false" title="Present full screen (F) · Space reshuffles" aria-label="Present full screen"><span class="when-off"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 3H5a2 2 0 0 0-2 2v3M16 3h3a2 2 0 0 1 2 2v3M8 21H5a2 2 0 0 1-2-2v-3M16 21h3a2 2 0 0 0 2-2v-3"/></svg></span><span class="when-on"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 3v3a2 2 0 0 1-2 2H3M21 8h-3a2 2 0 0 1-2-2V3M3 16h3a2 2 0 0 1 2 2v3M16 21v-3a2 2 0 0 1 2-2h3"/></svg></span></button>
+        </div>
+      </section>
     </div>
 
     <!-- ---------- Settings dialog (first names / formula toggle; mode and
@@ -64,14 +76,6 @@
           <small class="gs-hint">Show first names; add a last-name initial if two students share one.</small>
         </div>
 
-        <div class="gs-field">
-          <button type="button" id="btn-use-formula" class="gs-switch" role="switch" aria-checked="false">
-            <span class="gs-switch-track"><span class="gs-switch-dot"></span></span>
-            <span class="gs-switch-label">Follow Formula rules</span>
-          </button>
-          <small class="gs-hint">Create Groups will obey this period's grouping rules instead of random.</small>
-        </div>
-
         <div class="gs-actions">
           <button value="cancel" class="primary">Done</button>
         </div>
@@ -85,25 +89,14 @@
       <span class="hint">Space reshuffles · Esc exits</span>
     </div>
 
-    <!-- Stage = pool on top, the primary action in the middle, results below.
-         The same .name-chip elements live in the pool first and then get
-         moved into group cards (FLIP-animated), flying past the button.
-         Every row is content-sized and the pool row is dropped once the
-         groups are up, so the page flows with no dead space.
+    <!-- Stage = the results, filling everything under the panels. The same
+         .name-chip elements are reused across reshuffles (FLIP-animated); on
+         the first Create they fly in from the Roster panel.
          Nothing here may get an `overflow` — it would clip chips in flight. -->
+    <div id="empty" class="empty" hidden>Pick a period with students, then create groups.</div>
     <div id="stage" class="stage">
-      <div class="pool-area" id="pool-area">
-        <p class="pool-note" id="pool-note" hidden>Sitting out · 0</p>
-        <div id="pool" class="name-pool" aria-label="Present students — click a name to sit them out"></div>
-      </div>
-
-      <div class="shuffle-row no-present">
-        <button id="btn-shuffle" class="primary groups-primary" title="Create Groups (or Reshuffle)">Create Groups</button>
-      </div>
-
       <div class="results" id="results"></div>
     </div>
-    <div id="empty" class="empty" hidden>Pick a period with students, then create groups.</div>
 
     <!-- Attendance panel (today only) -->
     <dialog id="attendance-dialog" class="attendance-dialog card">
@@ -132,14 +125,15 @@
     // ---------- Elements ----------
     const periodSelect = document.getElementById('period-select');
     const stage = document.getElementById('stage');
-    const poolEl = document.getElementById('pool');
-    const poolNote = document.getElementById('pool-note');
     const resultsEl = document.getElementById('results');
+    const rosterPanel = document.getElementById('roster-summary').closest('.gp-panel');
+    const rosterSummary = document.getElementById('roster-summary');
     const emptyEl = document.getElementById('empty');
     const nInput = document.getElementById('group-n');
     const firstNamesBtn = document.getElementById('btn-firstnames');
     const shuffleBtn = document.getElementById('btn-shuffle');
     const shuffleBtn2 = document.getElementById('btn-shuffle-2');
+    const useFormulaBtn = document.getElementById('btn-use-formula');
     const attendanceDialog = document.getElementById('attendance-dialog');
     const attendanceList = document.getElementById('attendance-list');
 
@@ -265,7 +259,8 @@
       return el;
     }
 
-    // Paint who is sitting out, in the pool and on the note above it.
+    // Sitting-out students are never in a group card, so this only keeps the
+    // chip titles honest for the ones that are.
     function paintSitOut() {
       for (const [id, el] of chips) {
         const out = sitOut.has(id);
@@ -273,11 +268,6 @@
         const st = students.find((x) => x.id === id);
         if (st) el.title = out ? `${st.name} — sitting out. Click to put back in.` : `${st.name} — click to sit out of grouping`;
       }
-      const n = groupingStudents().length < presentStudents().length
-        ? presentStudents().length - groupingStudents().length : 0;
-      poolNote.hidden = n === 0;
-      poolNote.textContent = n === 1 ? 'Sitting out · 1' : `Sitting out · ${n}`;
-      stage.classList.toggle('has-sitout', n > 0);
     }
     function relabelChips() {
       for (const s of presentStudents()) chipFor(s);
@@ -319,8 +309,8 @@
           useFormula = r.useFormula;
         } catch (err) { console.error(err); setStatus('Formula rules could not be loaded — run migration-rule-scopes.sql in the Supabase SQL editor.', 'error'); }
       }
-      $('btn-use-formula').setAttribute('aria-checked', String(useFormula));
-      renderPool();
+      useFormulaBtn.setAttribute('aria-checked', String(useFormula));
+      resetResults();
       updateSummary();
       // projecting already (full screen restored on load)? make the groups straight away
       if (isPresent() && students.length && lastGroups.length === 0) doShuffle();
@@ -349,15 +339,15 @@
       getRules: () => rules,
       setRules: (r) => { rules = r; saveRulesSoon(); },
       populateLabel: 'Create Groups',
-      onPopulate: () => { if (!useFormula) { useFormula = true; $('btn-use-formula').setAttribute('aria-checked', 'true'); saveRulesSoon(); } doShuffle(); },
+      onPopulate: () => { if (!useFormula) { useFormula = true; useFormulaBtn.setAttribute('aria-checked', 'true'); saveRulesSoon(); } doShuffle(); },
     });
     $('btn-formula').addEventListener('click', () => {
       if (!currentPeriodId) { setStatus('Create a period first.', 'error'); return; }
       formula.open();
     });
-    $('btn-use-formula').addEventListener('click', () => {
+    useFormulaBtn.addEventListener('click', () => {
       useFormula = !useFormula;
-      $('btn-use-formula').setAttribute('aria-checked', String(useFormula));
+      useFormulaBtn.setAttribute('aria-checked', String(useFormula));
       saveRulesSoon();
     });
 
@@ -368,44 +358,53 @@
       await loadStudents();
     });
 
-    // ---------- Pool (starting state) ----------
-    function renderPool() {
+    // ---------- Stage (starting state) ----------
+    // No name pool any more: the stage is empty until Create Groups is pressed.
+    function resetResults() {
       lastGroups = [];
       resultsEl.innerHTML = '';
-      poolEl.innerHTML = '';
-      for (const s of presentStudents()) {
-        const chip = chipFor(s);
-        chip.setAttribute('role', 'button');     // click/Enter toggles sit-out
-        chip.setAttribute('tabindex', '0');
-        poolEl.appendChild(chip);
-      }
       stage.classList.remove('has-groups');
       shuffleBtn.textContent = 'Create Groups';
       emptyEl.hidden = !(currentPeriodId && students.length === 0);
+      stage.classList.toggle('no-students', !emptyEl.hidden);   // don't show both prompts
       paintSitOut();
     }
 
-    // Click (or Enter/Space) a name in the pool to sit them out — no dialog,
-    // no attendance change.
-    poolEl.addEventListener('click', (e) => {
+    // Click (or Enter/Space) a name in a group card to sit them out — no
+    // dialog, no attendance change. Off while projecting so a stray click on
+    // the big cards can't drop someone.
+    resultsEl.addEventListener('click', (e) => {
       const chip = e.target.closest('.name-chip');
-      if (chip && !animating) toggleSitOut(chip.dataset.id);
+      if (chip && !animating && !isPresent()) toggleSitOut(chip.dataset.id);
     });
-    poolEl.addEventListener('keydown', (e) => {
+    resultsEl.addEventListener('keydown', (e) => {
       if (e.key !== 'Enter' && e.key !== ' ') return;
       const chip = e.target.closest('.name-chip');
-      if (!chip || animating) return;
+      if (!chip || animating || isPresent()) return;
       e.preventDefault();
       toggleSitOut(chip.dataset.id);
     });
 
-    // ---------- Number input: its meaning follows the mode ----------
-    // (No counts or preview line on the bar — doShuffle reports any problem
-    // through setStatus when you actually press Create Groups.)
+    // ---------- Panel summaries ----------
+    // The number input's meaning follows the mode; the Roster panel keeps the
+    // one-line count that used to sit on the toolbar.
     function updateSummary() {
       nInput.setAttribute('aria-label', mode === 'size' ? 'How many people per group?' : 'How many groups?');
       nInput.title = mode === 'size' ? 'People per group' : 'Number of groups';
       nInput.min = mode === 'size' ? 2 : 1;
+
+      let text;
+      if (!currentPeriodId) text = 'No period yet';
+      else if (!students.length) text = 'No students yet';
+      else {
+        const P = presentStudents().length;
+        const out = P - groupingStudents().length;
+        const parts = [`${P} present`];
+        if (absent.size) parts.push(`${absent.size} absent`);
+        if (out) parts.push(`${out} sitting out`);
+        text = parts.join(' · ');
+      }
+      rosterSummary.textContent = text;
     }
 
     document.querySelectorAll('input[name="mode"]').forEach((r) => {
@@ -484,9 +483,12 @@
       renderAttendance();
       updateSummary();
     });
-    document.getElementById('attendance-done').addEventListener('click', () => attendanceDialog.close());
-    // Attendance / sit-out changed → back to the pool with today's line-up
-    attendanceDialog.addEventListener('close', () => { renderPool(); updateSummary(); });
+    // Attendance / sit-out changed → clear the stage, today's line-up is new.
+    // Wired to both the button and the dialog's `close` (Esc, backdrop) —
+    // running it twice is harmless, missing it would leave stale groups up.
+    function afterRosterEdit() { resetResults(); updateSummary(); }
+    document.getElementById('attendance-done').addEventListener('click', () => { attendanceDialog.close(); afterRosterEdit(); });
+    attendanceDialog.addEventListener('close', afterRosterEdit);
 
     // ---------- Grouping ----------
     // Extra students are spread round-robin so no group is more than one larger than another.
@@ -507,15 +509,12 @@
         const names = card.querySelector('.group-names');
         members.forEach((s) => {
           const chip = chipFor(s);
-          chip.removeAttribute('role');           // only clickable while in the pool
-          chip.removeAttribute('tabindex');
+          chip.setAttribute('role', 'button');     // click/Enter sits them out
+          chip.setAttribute('tabindex', '0');
           names.appendChild(chip);
         });
         frag.appendChild(card);
       });
-      // Only the results row is replaced — the pool row keeps its reserved
-      // height (it just empties out as the chips move into the cards), so the
-      // button between them doesn't shift.
       resultsEl.innerHTML = '';
       resultsEl.appendChild(frag);
       stage.classList.add('has-groups');
@@ -523,6 +522,9 @@
 
     // FLIP: measure First, mutate, measure Last, Invert with a transform, Play.
     // Chips fly one after another with a springy ease; cards fade/scale in first.
+    // Two take-off points: a chip that was already in a card flies from where
+    // it stood (reshuffle); a chip appearing for the first time flies out of
+    // the Roster panel, small and faded (the first Create — there is no pool).
     async function flipTo(groups, { beat = false } = {}) {
       // Measure First and Last from the same scroll origin — otherwise every
       // chip flies from a spot that is off by the old scrollTop — and keep
@@ -530,9 +532,7 @@
       const pageEl = stage.closest('main.page');
       if (pageEl) pageEl.scrollTop = 0;
 
-      const all = [...stage.querySelectorAll('.name-chip')];
-      const order = shuffle(all);                                   // scattered take-off order
-      const n = order.length;
+      const before = [...stage.querySelectorAll('.name-chip')];
 
       if (reduceMotion()) {                                         // simple fade instead
         stage.style.transition = 'opacity 160ms ease';
@@ -546,36 +546,52 @@
         return;
       }
 
-      if (beat) {                                                   // quick shuffle beat: lift + wiggle
+      if (beat && before.length) {                                  // quick shuffle beat: lift + wiggle
         stage.classList.add('shuffling');
         await wait(320);
         stage.classList.remove('shuffling');
       }
 
-      const first = new Map(all.map((c) => [c, c.getBoundingClientRect()]));
+      const first = new Map(before.map((c) => [c, c.getBoundingClientRect()]));
+      const src = rosterPanel.getBoundingClientRect();               // where new names come from
+      const srcX = src.left + src.width / 2, srcY = src.top + src.height / 2;
+
       mountGroups(groups);
 
+      const order = shuffle([...stage.querySelectorAll('.name-chip')]);  // scattered take-off order
+      const n = order.length;
       const stagger = Math.min(18, 600 / Math.max(n, 1));
       const base = 120;                                             // cards begin before names arrive
       const duration = 520;
       order.forEach((c) => {
-        const f = first.get(c);
         const l = c.getBoundingClientRect();
-        if (!f || !l.width) return;
+        if (!l.width) return;
+        const f = first.get(c);
         c.style.transition = 'none';
-        c.style.transformOrigin = 'top left';
-        c.style.transform = `translate(${f.left - l.left}px, ${f.top - l.top}px) scale(${f.width / l.width}, ${f.height / l.height})`;
+        if (f) {
+          c.style.transformOrigin = 'top left';
+          c.style.transform = `translate(${f.left - l.left}px, ${f.top - l.top}px) scale(${f.width / l.width}, ${f.height / l.height})`;
+        } else {
+          c.style.transformOrigin = 'center';
+          c.style.transform = `translate(${srcX - (l.left + l.width / 2)}px, ${srcY - (l.top + l.height / 2)}px) scale(0.35)`;
+          c.style.opacity = '0';
+        }
         c.classList.add('flying');
       });
       void stage.offsetHeight;                                      // commit the inverted positions
 
       stage.querySelectorAll('.group').forEach((c) => c.classList.remove('enter'));
       order.forEach((c, i) => {
-        c.style.transition = `transform ${duration}ms cubic-bezier(0.34, 1.56, 0.64, 1) ${Math.round(base + i * stagger)}ms`;
+        const delay = Math.round(base + i * stagger);
+        c.style.transition = `transform ${duration}ms cubic-bezier(0.34, 1.56, 0.64, 1) ${delay}ms, opacity 240ms ease ${delay}ms`;
         c.style.transform = '';
+        c.style.opacity = '';
       });
       await wait(base + n * stagger + duration + 40);
-      order.forEach((c) => { c.style.transition = ''; c.style.transformOrigin = ''; c.classList.remove('flying'); });
+      order.forEach((c) => {
+        c.style.transition = ''; c.style.transformOrigin = ''; c.style.opacity = '';
+        c.classList.remove('flying');
+      });
     }
 
     function setAnimating(on) {
