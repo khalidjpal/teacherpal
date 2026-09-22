@@ -93,7 +93,8 @@
          Nothing here may get an `overflow` — it would clip chips in flight. -->
     <div id="stage" class="stage">
       <div class="pool-area" id="pool-area">
-        <div id="pool" class="name-pool" aria-label="Present students"></div>
+        <p class="pool-note" id="pool-note" hidden>Sitting out · 0</p>
+        <div id="pool" class="name-pool" aria-label="Present students — click a name to sit them out"></div>
       </div>
 
       <div class="shuffle-row no-present">
@@ -114,7 +115,7 @@
         <p class="hint">Uncheck anyone who is absent today. This never changes the saved roster.</p>
         <div id="attendance-list" class="attendance-list"></div>
         <div class="attendance-actions">
-          <button type="button" id="btn-all-present">Mark all present</button>
+          <button type="button" id="btn-all-present" title="Clear today's absences and sit-outs">Everyone in</button>
           <span class="spacer"></span>
           <button type="button" class="primary" id="attendance-done">Done</button>
         </div>
@@ -132,6 +133,7 @@
     const periodSelect = document.getElementById('period-select');
     const stage = document.getElementById('stage');
     const poolEl = document.getElementById('pool');
+    const poolNote = document.getElementById('pool-note');
     const resultsEl = document.getElementById('results');
     const emptyEl = document.getElementById('empty');
     const nInput = document.getElementById('group-n');
@@ -144,7 +146,8 @@
     // ---------- State ----------
     let students = [];            // full roster for the period (never modified here)
     let currentPeriodId = null;
-    let absent = new Set();       // student ids absent today
+    let absent = new Set();       // student ids absent today (attendance table)
+    let sitOut = new Set();       // here, but out of the grouping today — never attendance
     let attMarks = {};            // today's attendance row (absent + tardy) — shared with the hub
     let attSaveTimer = null;
     let lastGroups = [];          // array of arrays of student objects
@@ -203,8 +206,26 @@
       } catch { /* ignore */ }
     }
 
+    // Sitting out is grouping-only: no attendance write, no absent cache.
+    function saveSitOut() {
+      if (!currentPeriodId) return;
+      writeSitOutCache(currentPeriodId, sitOut);
+    }
+    function toggleSitOut(id) {
+      if (!id || absent.has(id)) return;          // absent already excludes them
+      if (sitOut.has(id)) sitOut.delete(id); else sitOut.add(id);
+      saveSitOut();
+      paintSitOut();
+      updateSummary();
+      // groups already on screen were built from the old line-up
+      if (lastGroups.length) setStatus('Sitting-out list changed — press Reshuffle to rebuild the groups.', 'info');
+    }
+
     // ---------- Names ----------
+    // present = here today (drives the pool and the name-disambiguation set)
+    // grouping = present minus the ones sitting out (drives the actual groups)
     const presentStudents = () => students.filter((s) => !absent.has(s.id));
+    const groupingStudents = () => students.filter((s) => !absent.has(s.id) && !sitOut.has(s.id));
 
     function firstName(name) { return name.trim().split(/\s+/)[0] || name; }
     function lastName(name) {
@@ -238,8 +259,25 @@
         chips.set(student.id, el);
       }
       el.textContent = displayName(student);
-      el.title = student.name;
+      el.title = sitOut.has(student.id)
+        ? `${student.name} — sitting out. Click to put back in.`
+        : `${student.name} — click to sit out of grouping`;
       return el;
+    }
+
+    // Paint who is sitting out, in the pool and on the note above it.
+    function paintSitOut() {
+      for (const [id, el] of chips) {
+        const out = sitOut.has(id);
+        el.classList.toggle('sitting-out', out);
+        const st = students.find((x) => x.id === id);
+        if (st) el.title = out ? `${st.name} — sitting out. Click to put back in.` : `${st.name} — click to sit out of grouping`;
+      }
+      const n = groupingStudents().length < presentStudents().length
+        ? presentStudents().length - groupingStudents().length : 0;
+      poolNote.hidden = n === 0;
+      poolNote.textContent = n === 1 ? 'Sitting out · 1' : `Sitting out · ${n}`;
+      stage.classList.toggle('has-sitout', n > 0);
     }
     function relabelChips() {
       for (const s of presentStudents()) chipFor(s);
@@ -270,6 +308,9 @@
         } catch (err) { console.error('attendance not loaded', err); }
       }
       absent = new Set([...absent].filter((id) => ids.has(id)));
+      // sitting out is per period, per day, this browser only
+      sitOut = currentPeriodId ? readSitOutCache(currentPeriodId) : new Set();
+      sitOut = new Set([...sitOut].filter((id) => ids.has(id)));
       rules = []; useFormula = false;
       if (currentPeriodId) {
         try {
@@ -301,7 +342,9 @@
       scope: RULE_SCOPE,
       periodName: () => periodSelect.selectedOptions[0] ? periodSelect.selectedOptions[0].textContent : '',
       students: () => students,
-      absent: () => absent,
+      // the modal marks "out today · rules ignored" — true for both states,
+      // and doShuffle drops their rules either way (rulesForPresent)
+      absent: () => new Set([...absent, ...sitOut]),
       displayName,
       getRules: () => rules,
       setRules: (r) => { rules = r; saveRulesSoon(); },
@@ -330,11 +373,31 @@
       lastGroups = [];
       resultsEl.innerHTML = '';
       poolEl.innerHTML = '';
-      for (const s of presentStudents()) poolEl.appendChild(chipFor(s));
+      for (const s of presentStudents()) {
+        const chip = chipFor(s);
+        chip.setAttribute('role', 'button');     // click/Enter toggles sit-out
+        chip.setAttribute('tabindex', '0');
+        poolEl.appendChild(chip);
+      }
       stage.classList.remove('has-groups');
       shuffleBtn.textContent = 'Create Groups';
       emptyEl.hidden = !(currentPeriodId && students.length === 0);
+      paintSitOut();
     }
+
+    // Click (or Enter/Space) a name in the pool to sit them out — no dialog,
+    // no attendance change.
+    poolEl.addEventListener('click', (e) => {
+      const chip = e.target.closest('.name-chip');
+      if (chip && !animating) toggleSitOut(chip.dataset.id);
+    });
+    poolEl.addEventListener('keydown', (e) => {
+      if (e.key !== 'Enter' && e.key !== ' ') return;
+      const chip = e.target.closest('.name-chip');
+      if (!chip || animating) return;
+      e.preventDefault();
+      toggleSitOut(chip.dataset.id);
+    });
 
     // ---------- Number input: its meaning follows the mode ----------
     // (No counts or preview line on the bar — doShuffle reports any problem
@@ -366,20 +429,39 @@
     });
 
     // ---------- Attendance panel ----------
+    // Two independent states per student: absent (writes attendance) and
+    // sitting out (grouping only — nothing is saved to attendance).
     function renderAttendance() {
       const P = presentStudents().length;
-      document.getElementById('attendance-count').textContent = `${P} present · ${absent.size} absent`;
+      const out = groupingStudents().length < P ? P - groupingStudents().length : 0;
+      document.getElementById('attendance-count').textContent =
+        `${P} present · ${absent.size} absent${out ? ` · ${out} sitting out` : ''}`;
       attendanceList.innerHTML = students
         .slice()
         .sort((a, b) => a.name.localeCompare(b.name))
-        .map((s) => `
-          <label class="attend${absent.has(s.id) ? ' is-absent' : ''}">
-            <input type="checkbox" data-id="${s.id}" ${absent.has(s.id) ? '' : 'checked'}>
-            <span class="attend-name">${escapeHtml(s.name)}</span>
-            <span class="attend-state">${absent.has(s.id) ? 'Absent' : 'Present'}</span>
-          </label>`)
+        .map((s) => {
+          const isAbsent = absent.has(s.id);
+          const isOut = sitOut.has(s.id);
+          return `
+          <div class="attend${isAbsent ? ' is-absent' : ''}${isOut && !isAbsent ? ' is-sitout' : ''}">
+            <label class="attend-main">
+              <input type="checkbox" data-id="${s.id}" ${isAbsent ? '' : 'checked'}>
+              <span class="attend-name">${escapeHtml(s.name)}</span>
+            </label>
+            <span class="attend-state">${isAbsent ? 'Absent' : (isOut ? 'Sitting out' : 'Present')}</span>
+            <button type="button" class="attend-sitout" data-sitout="${s.id}"
+                    aria-pressed="${isOut ? 'true' : 'false'}" ${isAbsent ? 'disabled' : ''}
+                    title="${isAbsent ? 'Already out — marked absent' : 'Leave out of grouping without marking absent'}">Sit out</button>
+          </div>`;
+        })
         .join('') || '<p class="hint">No students in this period.</p>';
     }
+    attendanceList.addEventListener('click', (e) => {
+      const btn = e.target.closest('[data-sitout]');
+      if (!btn || btn.disabled) return;
+      toggleSitOut(btn.dataset.sitout);
+      renderAttendance();
+    });
     attendanceList.addEventListener('change', (e) => {
       const cb = e.target.closest('input[type="checkbox"]');
       if (!cb) return;
@@ -396,12 +478,14 @@
     });
     document.getElementById('btn-all-present').addEventListener('click', () => {
       absent = new Set();
+      sitOut = new Set();          // everyone back in, both ways
       saveAbsent();
+      saveSitOut();
       renderAttendance();
       updateSummary();
     });
     document.getElementById('attendance-done').addEventListener('click', () => attendanceDialog.close());
-    // Attendance changed → back to the pool with today's present students
+    // Attendance / sit-out changed → back to the pool with today's line-up
     attendanceDialog.addEventListener('close', () => { renderPool(); updateSummary(); });
 
     // ---------- Grouping ----------
@@ -421,7 +505,12 @@
         card.className = 'group enter';
         card.innerHTML = `<h3>Group ${i + 1}</h3><div class="group-names"></div>`;
         const names = card.querySelector('.group-names');
-        members.forEach((s) => names.appendChild(chipFor(s)));
+        members.forEach((s) => {
+          const chip = chipFor(s);
+          chip.removeAttribute('role');           // only clickable while in the pool
+          chip.removeAttribute('tabindex');
+          names.appendChild(chip);
+        });
         frag.appendChild(card);
       });
       // Only the results row is replaced — the pool row keeps its reserved
@@ -500,9 +589,14 @@
     async function doShuffle() {
       if (animating) return;
       setStatus('');
-      const present = presentStudents();
+      const present = groupingStudents();      // absent AND sitting-out are left out
       if (students.length === 0) { setStatus('This period has no students yet — add some in Roster.', 'error'); return; }
-      if (present.length === 0) { setStatus('Everyone is marked absent — open Edit Roster to mark students present.', 'error'); return; }
+      if (present.length === 0) {
+        setStatus(sitOut.size
+          ? 'Nobody left to group — everyone is absent or sitting out. Click a dimmed name to put them back in.'
+          : 'Everyone is marked absent — open Edit Roster to mark students present.', 'error');
+        return;
+      }
       const g = groupCountFor(present.length, parseInt(nInput.value, 10));
       if (!g) { setStatus('Enter a number greater than 0.', 'error'); return; }
 

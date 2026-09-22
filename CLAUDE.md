@@ -62,11 +62,11 @@ full-screen toggle. There is no sidebar; every page uses the full width.
 | `lesson.js`    | `initLessonPanel({ mount, follow, onChange })` — the lesson-plan editor (objective, checkable agenda with minutes, materials, homework, notes; inline editing, 800ms autosave, empty state, Copy from period / Copy yesterday). `follow: true` tracks `teacherpal:period` (hub); otherwise `panel.show(periodId, date)`. |
 | `bathroom.js`  | `initBathroom()` — the bathroom tracker (tiles, sign out/in, live elapsed, flag + cap settings in localStorage, log, history). |
 | `timer.html`   | Timer screen: the `.timer-stage` (mode toggle, label, big display + ring, presets, custom min/sec, start/reset/±1, mute, Pop out, PiP, full screen) — loads `timer.js`. |
-| `timer.js`     | Countdown + stopwatch logic. **End-timestamp model**: state is `{ mode, running, paused, label, muted, targetMs, endsAt, remainingAtPause, startedAt, elapsedAtPause }` in `localStorage['teacherpal.timer.state']`; every window computes the display from `Date.now()` against `endsAt`/`startedAt`, so tab-throttling doesn't drift. `BroadcastChannel('teacherpal-timer')` syncs main ↔ pop-out ↔ PiP. Web Audio API beep on zero (respects mute). `documentPictureInPicture.requestWindow()` on Chrome for an always-on-top floating display. Space toggles start/pause. |
+| `timer.js`     | Countdown + stopwatch logic, plus `buildDial()` / `paintDial()` for the themed dial. **End-timestamp model**: state is `{ mode, running, paused, label, muted, targetMs, endsAt, remainingAtPause, startedAt, elapsedAtPause, zeroed }` in `localStorage['teacherpal.timer.state']`; every window computes the display from `Date.now()` against `endsAt`/`startedAt`, so tab-throttling doesn't drift. `BroadcastChannel('teacherpal-timer')` syncs main ↔ pop-out ↔ PiP. Web Audio API beep on zero (respects mute). `documentPictureInPicture.requestWindow()` on Chrome for an always-on-top floating display. Space toggles start/pause. |
 | `noise.html`   | Noise Meter screen: the `.noise-stage` (activity presets, big reading + bar + zone word, Start/Stop, chime mute, Pop out, full screen, the two zone sliders, privacy line) — loads `noise.js`. |
 | `noise.js`     | Mic → `AnalyserNode` → RMS → a 35–95 relative "dB" reading, 500ms rolling average, three zones, "Too loud" after 3s in the red, optional chime. Polls on `setInterval` (**not** rAF — rAF freezes in a background window and the pop-out would stall). `BroadcastChannel('teacherpal-noise')` feeds the pop-out. Opens the mic only on Start; stops every track on Stop and on `pagehide`. Nothing is recorded or sent anywhere. |
 | `noise-popout.html` | Read-only projector pop-out (`body.noise-popout`): reading + bar + zone word, fed over BroadcastChannel. Never opens a mic of its own; says so when the main window isn't answering. |
-| `timer-popout.html` | Minimal read-only pop-out window (`body.timer-popout`): label + display + ring, no controls, listens for state via BroadcastChannel and falls back to `localStorage` if the main window is gone. |
+| `timer-popout.html` | Minimal read-only pop-out window (`body.timer-popout`): label + display + the same themed dial filling the window, no controls; listens for state via BroadcastChannel. |
 | `migration-lessons-bathroom.sql` | One-off migration creating `lesson_plans` + `bathroom_log` (incl. the manual-tally columns; run in the Supabase SQL editor) |
 | `seed-bathroom-q1.sql` | Seed: Q1 used-pass tallies from the paper tracker — name-matches students per period, creates three missing students, upserts manual tallies, reports unmatched names in its last result set |
 | `attendance.js` | `initAttendance({ mode: 'full' \| 'compact' })` builds and runs the attendance view (chart or tiles, click-to-cycle, AUTO period, date, counts, lists, Copy, Reset, autosave). Data only via `shared.js`; bell data via `navReady`. |
@@ -404,6 +404,7 @@ sends it):
 - `getRoomLayout()` → layout object or `null`; `saveRoomLayout(layout)` (upsert on `key,owner_id`)
 - `getSeatAssignments(periodId)` → `{}` when none; `saveSeatAssignments(periodId, assignments)` (upsert on `period_id`)
 - `getAttendance(periodId, date)` → `{ marks, updatedAt }` or `null`; `saveAttendance(periodId, date, marks)` (upsert on `period_id,date`). Plus the same-browser cache helpers `readAbsentCache(periodId)` / `writeAbsentCache(periodId, ids)` (`teacherpal.absent.<periodId>` = `{ date, ids }`, today only), `absentIdsOf(marks)` and `todayKey()`.
+- `readSitOutCache(periodId)` / `writeSitOutCache(periodId, ids)` — "sitting out" for grouping (`teacherpal.sitout.<periodId>` = `{ date, ids }`, today only, this browser only). **Not attendance**: it never writes the `attendance` table or the absent cache. Used by Create Groups only.
 - `getAttendanceForDate(date)` → `[{ period_id, marks }]` for every period; `countStudentsByPeriod()` → `Map<periodId, n>`
 - `getLessonPlan(periodId, date)` → row or `null`; `getLessonPlansRange(from, to)` (week view); `saveLessonPlan(periodId, date, plan)` (upsert on `period_id,date`); `deleteLessonPlan(periodId, date)`; `EMPTY_PLAN()`
 - `getBathroomLog(periodId, date)`, `getBathroomHistory(periodId)` (all dates, newest first, ≤2000), `bathroomSignOut(periodId, studentId, date)` → row, `bathroomSignIn(id)` → row, `deleteBathroomTrip(id)`, `setManualTally(periodId, studentId, quarter, count)` (read-then-write because the uniqueness is a partial index; count 0 deletes)
@@ -479,7 +480,11 @@ last-used period in `localStorage`), `getLastPeriodId()` / `setLastPeriodId()`,
     cache of today's absentees (so Seating's Formula and Create Groups can
     read it synchronously); every page that changes attendance writes the
     table *and* the cache through the `shared.js` helpers. Tardy = present
-    for grouping/seating purposes.
+    for grouping/seating purposes. **"Sitting out" is not attendance** — it
+    is a grouping-only, same-day, same-browser list
+    (`teacherpal.sitout.<periodId>`, `read/writeSitOutCache`) and must never
+    be written into the `attendance` table or the absent cache: a student at
+    the nurse who was marked present stays present in the record.
 15. **The hub is a launcher and stays one.** It pulls no data: every tool
     loads its own data on its own screen. Cross-module events still exist
     for pages that want them — `attendance.js` broadcasts `teacherpal:period
@@ -498,17 +503,36 @@ TeacherPal ships two themes, one per teacher's taste:
 - **`jarvis`** — the original dark HUD (deep plum-navy, near-black cards,
   subtle pink accent, Orbitron uppercase labels, corner ticks). Default for
   every account and every logged-out page. See the Design rules below.
-- **`marwa`** — a **pure colour swap of jarvis** with two tiny extras. Same
+- **`marwa`** — a **pure colour swap of jarvis** with four tiny extras. Same
   layout, spacing, radii, borders, fonts, weights, tracks, shadows,
   animations and components: only palette tokens differ (light cream-pink
   ground, white cards, deep-plum text, bubblegum-pink accent) with
-  equivalent contrast. Two intentional additions: **12-hour clock with
+  equivalent contrast. The intentional additions: **12-hour clock with
   AM/PM** in the topbar (`fmtWallClock({ hour12: true })` when
-  `currentTheme() === 'marwa'`) and the **original mascot set** (bunny,
+  `currentTheme() === 'marwa'`); the **original mascot set** (bunny,
   axolotl, cat, cloud, star) used on empty states, the login hero and a
-  hub-corner flourish. No HUD tick suppression, no heart pattern, no
-  sentence-case override, no separate fonts, no rounded-card overrides —
-  layout changes to jarvis carry into marwa automatically.
+  hub-corner flourish; and **stronger hub-card outlines** — `--hud-line`
+  (0.24 alpha) is near-invisible on cream, so `.hub-section .hud-panel`
+  rests at 0.55 with hover stepping to 0.95 plus darker ticks and a rose
+  shadow over the shared lift/glow (`.setup` cards stay quieter at 0.34).
+  Scoped to the hub: tool pages' `.hud-box` keeps the quieter line.
+  And a **faint heart pattern** on the page background — see `--body-pattern`
+  below. The **Timer dial** is the one component with a real per-theme skin
+  (segment ring vs gradient arc, Comfortaa digits, sentence-case label,
+  reacting mascot, heart burst at zero) — see the Timer section. Everywhere
+  else: no HUD tick suppression, no sentence-case override, no separate
+  fonts, no rounded-card overrides — layout changes to jarvis carry into
+  marwa automatically.
+- **`--body-pattern` / `--body-pattern-size`** — the per-theme page texture,
+  wired in as the **first background layer** of `body` (and of `body.hub`,
+  which sets its own background). jarvis leaves it `none`; marwa sets an
+  inline-SVG data URI of three small hearts per 96px tile, at different
+  sizes and angles, in `#F3BFD4` at 32% — a shade off `--bg-0`, so it reads
+  as texture up close and disappears from the back of the room. It is a
+  *background layer*, so it is always behind cards and can never land on
+  text; cards are opaque in marwa, so the hearts only show in the gutters.
+  The projector pop-outs (`body.timer-popout`, `body.noise-popout`) set
+  `background-image: none` to stay flat. No image file — data URI only.
 
 Storage & flow:
 
@@ -859,9 +883,34 @@ All styling lives in `style.css`; pages carry almost no inline styling.
 - **Timer** (`timer.html` + `timer.js`). One `.timer-stage` `.hud-box`
   centred on the page: mode segmented control (Countdown / Stopwatch), a
   40-char label input, then the display — a `.timer-display-wrap` holding
-  the huge mono digits (`clamp(4rem, 18vw, 12rem)`, tabular-nums), an
-  optional overhead label, and a countdown SVG ring
-  (`pathLength=1`, stroke drains as time elapses). Under it: preset chips
+  the digits, an optional overhead label, and **the themed dial** — one SVG
+  (`.timer-dial`) with two skins, built once per document by `buildDial()`
+  and painted by `paintDial(doc, now)` (page, pop-out and PiP all call the
+  same pair):
+    - **jarvis — arc reactor.** 60 `.dial-segs` ticks around the rim, lit in
+      accent with a glow and going dark one by one as time drains
+      (`i >= round(remaining * 60)` → `.off`), over a faint `.dial-inner`
+      ring and 36 `.dial-marks` degree markings (every 3rd longer). Mono
+      digits with a glow; label above in tracked uppercase. The smooth arc
+      is hidden.
+    - **marwa — soft.** One thick `.dial-arc` (`stroke-width: 7`, round
+      caps, `pathLength=1`, `stroke-dashoffset` drains it) filled with the
+      `#timer-arc-grad` accent→lavender gradient; segments, marks and inner
+      ring hidden. Digits in **Comfortaa** (rounded), label in **sentence
+      case** — the one place marwa overrides `text-transform`. A
+      `.timer-mascot` (bunny) sits under the dial and reacts: `calm`
+      breathe → `excited` wiggle in the final minute → `party` bounce at
+      zero.
+  **States** come from `data-state` on `.timer-display-wrap`: `warn` (final
+  minute) pulses the ring in both themes; `alert` (zero) flashes the whole
+  dial via `.timer-flash` in jarvis and fires `.timer-burst` (hearts +
+  sparkles flying outward, `--marwa-burst-heart` / `-spark`) in marwa.
+  `data-mode="stopwatch"` hides the progress but keeps the dial frame.
+  **`state.zeroed`** holds the time's-up state after the auto-pause —
+  without it the celebration vanished a frame after it appeared, and the
+  display fell back to the full target instead of 0:00. Cleared by start /
+  reset / preset / +1 min / mode change.
+  Under the dial: preset chips
   (1/3/5/10/15 min) + custom min/sec inputs (hidden while running), Start
   → Pause → Resume, Reset, ±1 min (visible only while running/paused),
   and an extras row with Mute (`aria-checked`), Pop out, Picture-in-Picture
@@ -1088,8 +1137,33 @@ All styling lives in `style.css`; pages carry almost no inline styling.
   (`saveAbsent()`) writes the cache and, debounced 400ms, upserts the row —
   setting/clearing `absent` marks while keeping any tardies the hub
   recorded. So attendance taken on the hub is already reflected here and
-  vice versa; it resets tomorrow because it is keyed by date. Mode / number /
-  first-names are remembered in `teacherpal.groups.*`. "First names only" =
+  vice versa; it resets tomorrow because it is keyed by date.
+  **Absent vs sitting out — two separate states.** `absent` is attendance
+  (synced both ways, above). `sitOut` is *grouping only*: here today, but
+  out of the groups (nurse, pulled for testing, working alone). It lives in
+  `teacherpal.sitout.<periodId>` via `readSitOutCache` / `writeSitOutCache`,
+  is keyed by date so it clears overnight, is per browser, and **never
+  touches the attendance table or the absent cache**. Two helpers split the
+  roster: `presentStudents()` (not absent — drives the pool and the
+  first-name disambiguation set) and `groupingStudents()` (not absent and
+  not sitting out — drives `doShuffle`, the group count and the Formula
+  run). Toggling: **click a name in the pool** (chips carry
+  `role="button"` + `tabindex` while they're in the pool; Enter/Space work
+  too), or the per-student **Sit out** button in `<dialog
+  id="attendance-dialog">`, where each row now has an absent checkbox *and*
+  a sit-out toggle (disabled when the student is already absent) and the
+  header counts `N present · N absent · N sitting out`; "Everyone in"
+  clears both. Sitting-out chips are dimmed + struck through
+  (`.name-chip.sitting-out`) and stay in the pool after a run — the pool
+  row survives as a "SITTING OUT · n" strip above the button
+  (`.stage.has-groups:not(.has-sitout) .pool-area { display: none }`), so
+  you can see and un-sit them. Toggling while groups are on screen says
+  "press Reshuffle to rebuild". **Formula rules involving someone sitting
+  out are dropped for that run** exactly like an absence — `doShuffle`
+  passes the `groupingStudents()` ids into `rulesForPresent` /
+  `planRules`, and the modal's `absent:` callback gets the union of both
+  sets so those rules read as "out today · rules ignored".
+  Mode / number / first-names are remembered in `teacherpal.groups.*`. "First names only" =
   text before the first space; present students sharing one get a growing
   last-name prefix ("Maria G.", "Brandon Ce." / "Brandon Cl.").
   **Formula on Create Groups**: the toolbar has the same "Formula on/off"

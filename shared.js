@@ -559,6 +559,27 @@ function writeAbsentCache(periodId, ids) {
 // The ids marked absent in a marks object (tardy students count as present).
 const absentIdsOf = (marks) => new Set(Object.keys(marks || {}).filter((id) => marks[id] && marks[id].status === 'absent'));
 
+// "Sitting out" — here for today, but not in the grouping (nurse, testing,
+// working alone). Grouping-only and deliberately NOT attendance: it never
+// touches the attendance table or the absent cache, and like the absent cache
+// it is keyed by date so it clears itself tomorrow.
+// teacherpal.sitout.<periodId> = { date, ids }
+const sitOutCacheKey = (periodId) => `teacherpal.sitout.${periodId}`;
+function readSitOutCache(periodId) {
+  try {
+    const raw = JSON.parse(localStorage.getItem(sitOutCacheKey(periodId)) || 'null');
+    if (raw && raw.date === todayKey() && Array.isArray(raw.ids)) return new Set(raw.ids);
+  } catch { /* ignore */ }
+  return new Set();
+}
+function writeSitOutCache(periodId, ids) {
+  try {
+    const list = [...ids];
+    if (list.length === 0) localStorage.removeItem(sitOutCacheKey(periodId));
+    else localStorage.setItem(sitOutCacheKey(periodId), JSON.stringify({ date: todayKey(), ids: list }));
+  } catch { /* ignore */ }
+}
+
 // All periods' attendance rows for one date (the hub's period strip).
 async function getAttendanceForDate(date) {
   return sb('attendance', { params: { select: 'period_id,marks', date: `eq.${date}` } });
