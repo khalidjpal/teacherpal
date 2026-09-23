@@ -38,7 +38,7 @@ full-screen toggle. There is no sidebar; every page uses the full width.
 | Name Wheel | `wheel.html` | Cold-calling: spin a wheel of the period's present students, big name in the middle, no-repeats mode, projector pop-out |
 | Noise Meter | `noise.html` | Room volume from the laptop mic: big green/amber/red meter, three zones with activity presets, "Too loud" hold + chime, pop-out for the projector. Mic only while you hold it on |
 | Seating | `seating.html` | Room builder + seat assignment |
-| Bathroom | `bathroom.html` | Bathroom tracker: tap a card to sign out (quick tap or timer); live Out-now strip with End timer, per-student pass checkboxes, red flag past the limit; one control row (period · mode · search · gear), settings + date + log/history collapsed out of the main view |
+| Bathroom | `bathroom.html` | Bathroom tracker: tap a card to sign out (quick tap or timer); live Out-now strip with End timer, per-student pass checkboxes, red flag past the limit; one centred control island (period · mode · search · gear) over a full-width grid, settings + date + log/history collapsed out of the main view |
 | Rosters | `roster.html` | Setup: periods + students |
 | Schedule | `schedule.html` | Setup: bell-schedule overrides + reference |
 
@@ -858,10 +858,18 @@ All styling lives in `style.css`; pages carry almost no inline styling.
   bottom. Settings live in a `<dialog>` reached from the gear button on
   that row — the main view stays clean.
   **There is exactly one control row and it is deliberately almost empty.**
-  `.br-bar` sits directly under the top bar and holds, left to right: the
-  period `<select>` (**bare — no "Period" label**), the Quick tap / Timer
-  toggle, the student search box, a flex `.spacer`, and the settings gear
-  on the right. Everything else that used to sit up
+  `.br-bar` is a **centred island, not a full-width bar**: `align-self:
+  center` + `width: fit-content` inside the `.bathroom` flex column, with
+  the standard card recipe (`--card`, 1px `--border`, `--radius-lg`,
+  `--shadow-card`) so it floats as its own element over the page. It holds,
+  left to right: the period `<select>` (**bare — no "Period" label**), the
+  Quick tap / Timer toggle, the student search box and the settings gear;
+  there is no spacer, since the box shrink-wraps. **`.br-search` needs a
+  flat `width` inside it** (`.br-bar .br-search { width: 16rem }`) — its
+  default `width: min(18rem, 100%)` resolves the percentage against a
+  provisional container width and makes the island wrap to two lines.
+  The student grid underneath stays full width — it is the page's only
+  full-width element. Everything else that used to sit up
   there was removed on purpose, so don't put it back: **no AUTO chip**
   (the bell is followed automatically — `followBell` starts true and only
   a manual period change turns it off for the session, a reload follows
@@ -873,8 +881,9 @@ All styling lives in `style.css`; pages carry almost no inline styling.
   still drives the grid as well as the log, so changing it force-opens the
   panel (`$('br-log-panel').open = true`) rather than leaving the only way
   back collapsed. `.bathroom-page` pads `--space-2` at the top and
-  `.bathroom` uses `--space-3` gaps, with a `--space-2` vertical pad on
-  `.br-bar`, so the grid starts right under the row (y≈141 at 1280×720).
+  `.bathroom` uses `--space-3` gaps; the island's own
+  `margin: var(--space-2) 0 var(--space-3)` gives it air above and below,
+  landing the grid at y≈166 at 1280×720.
   **Two sign-out modes** (segmented pill on the main view, saved per
   period in `localStorage['teacherpal.bathroom.modes']`):
     - **Timer** (default): click a card → `bathroomSignOut` runs
