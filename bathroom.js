@@ -1,10 +1,13 @@
 // bathroom.js — Bathroom Tracker.
 //
 // New layout:
-//   • Top control bar: period select + AUTO, date + TODAY, quarter badge,
-//     settings gear, fullscreen. Settings (flag min, max out, passes/quarter,
-//     quarter dates) live in a dialog opened from the gear — nothing else
-//     spills onto the main view.
+//   • Top control bar: period select + settings gear, nothing else. The bell
+//     is followed automatically (no AUTO button); full screen is the top
+//     bar's job. Settings (flag min, max out, passes/quarter, quarter dates)
+//     live in a dialog opened from the gear.
+//   • Centred row above the grid: Quick tap / Timer toggle + student search.
+//   • Date + Today live inside the Log & History panel — looking at another
+//     day is the only reason to move it.
 //   • Out-now strip appears only when at least one student is out — big
 //     cards with live timer + End timer button. Flagged (past limit) →
 //     red timer.
@@ -62,21 +65,17 @@ function initBathroom({ mount = '#bathroom' } = {}) {
   root.innerHTML = `
     <div class="br-top">
       <label class="dash-field"><span class="hud-key">Period</span><select id="br-period" aria-label="Period"></select></label>
-      <button type="button" class="hud-chip" id="br-follow" aria-pressed="true" title="Follow the bell schedule">Auto</button>
-      <label class="dash-field"><span class="hud-key">Date</span><input type="date" id="br-date" aria-label="Date"></label>
-      <button type="button" class="hud-chip" id="br-today" hidden>Today</button>
       <span class="spacer"></span>
-      <span class="br-quarter-badge" id="br-quarter" title="Current quarter">Q1</span>
       <button type="button" class="icon-btn" id="br-settings-btn" title="Bathroom settings" aria-label="Bathroom settings">${SETTINGS_ICON}</button>
-      <button type="button" class="icon-btn" data-fullscreen aria-pressed="false" title="Full screen (F)" aria-label="Toggle full screen"><span class="when-off">↗</span><span class="when-on">↙</span></button>
     </div>
 
+    <!-- Mode + search on one centred row, right above the grid. -->
     <div class="br-mode-row">
       <div class="br-mode-toggle" role="tablist" aria-label="Sign-out mode">
         <button type="button" class="br-mode" role="tab" data-mode="quick">Quick tap</button>
         <button type="button" class="br-mode" role="tab" data-mode="timer">Timer</button>
       </div>
-      <span class="br-mode-hint" id="br-mode-hint"></span>
+      <input type="search" id="br-search" class="br-search" placeholder="Search students…" autocomplete="off" spellcheck="false" aria-label="Search students">
     </div>
 
     <section class="br-out-strip" id="br-out-strip" hidden aria-label="Out now">
@@ -87,9 +86,6 @@ function initBathroom({ mount = '#bathroom' } = {}) {
     </section>
 
     <section class="br-grid-wrap" aria-label="Students">
-      <div class="br-search-row">
-        <input type="search" id="br-search" class="br-search" placeholder="Search students…" autocomplete="off" spellcheck="false" aria-label="Search students">
-      </div>
       <div class="br-grid" id="br-grid"></div>
       <div class="br-search-empty" id="br-search-empty" hidden></div>
       <div class="chart-empty" id="br-empty" hidden></div>
@@ -101,9 +97,17 @@ function initBathroom({ mount = '#bathroom' } = {}) {
         <span class="hud-key" id="br-log-summary">— trips today</span>
       </summary>
       <div class="br-log-inner">
-        <div class="br-log-tabs" role="tablist">
-          <button type="button" class="br-tab active" role="tab" data-tab="log" aria-selected="true">Today's log</button>
-          <button type="button" class="br-tab" role="tab" data-tab="history" aria-selected="false">History</button>
+        <!-- The date lives here, not on the toolbar: looking at another day is
+             a log/history job, and it drives what the grid shows too. -->
+        <div class="br-log-tabs-row">
+          <div class="br-log-tabs" role="tablist">
+            <button type="button" class="br-tab active" role="tab" data-tab="log" aria-selected="true">Today's log</button>
+            <button type="button" class="br-tab" role="tab" data-tab="history" aria-selected="false">History</button>
+          </div>
+          <div class="br-log-date">
+            <label class="dash-field"><span class="hud-key">Date</span><input type="date" id="br-date" aria-label="Date"></label>
+            <button type="button" class="hud-chip" id="br-today" hidden>Today</button>
+          </div>
         </div>
         <div class="br-log-body">
           <ul class="br-list" id="br-log-list"></ul>
@@ -254,7 +258,6 @@ function initBathroom({ mount = '#bathroom' } = {}) {
     grid.hidden = false;
 
     const q = quarterFor(date);
-    $('br-quarter').textContent = q;
 
     grid.innerHTML = students.map((s) => {
       const out = outOf(s.id);
@@ -544,12 +547,6 @@ function initBathroom({ mount = '#bathroom' } = {}) {
       b.classList.toggle('active', on);
       b.setAttribute('aria-selected', String(on));
     });
-    const hint = $('br-mode-hint');
-    if (hint) {
-      hint.textContent = mode === 'quick'
-        ? 'One tap = one pass. Fills the checkbox immediately. Undo appears for 6 seconds.'
-        : 'Tap to confirm → timer starts. End timer signs the student back in.';
-    }
     hideUndoToast();
   }
   function loadModeForPeriod() {
@@ -811,8 +808,11 @@ function initBathroom({ mount = '#bathroom' } = {}) {
   });
 
   // ---------- period / date ----------
+  // The bell is followed automatically — there is no AUTO button. Picking a
+  // period by hand stops it for the rest of the session, so your choice isn't
+  // yanked away at the next bell; a reload goes back to following.
   function selectPeriod(id, { manual = false } = {}) {
-    if (manual) { followBell = false; $('br-follow').setAttribute('aria-pressed', 'false'); }
+    if (manual) followBell = false;
     if (id === periodId) { if (!id) { renderGrid(); renderOutStrip(); renderLogPanel(); } return; }
     periodId = id; $('br-period').value = id || ''; setLastPeriodId(id);
     hideUndoToast();
@@ -827,16 +827,14 @@ function initBathroom({ mount = '#bathroom' } = {}) {
   document.addEventListener('teacherpal:tick', (e) => followTheBell(e.detail.now, e.detail.sched));
 
   $('br-period').addEventListener('change', (e) => selectPeriod(e.target.value, { manual: true }));
-  $('br-follow').addEventListener('click', () => {
-    followBell = !followBell;
-    $('br-follow').setAttribute('aria-pressed', String(followBell));
-    if (followBell) { const d = new Date(); followTheBell(d, resolveSchedule(d, navState.overrides)); }
-  });
   $('br-date').value = date;
   $('br-date').addEventListener('change', (e) => {
     if (!e.target.value) return;
     date = e.target.value;
     $('br-today').hidden = isToday();
+    // The date drives the grid too, so don't let the only way back hide
+    // behind a collapsed panel while you're looking at another day.
+    if (!isToday()) $('br-log-panel').open = true;
     historyStudent = null;
     load();
   });

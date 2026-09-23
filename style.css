@@ -2617,16 +2617,18 @@ body.present .att-tile { font-size: 1.35rem; }
    simply pushes everything below it down the page rather than fighting a
    fixed-height flex container. main.page already scrolls when content
    exceeds the viewport. */
-.bathroom-page { padding: var(--space-4) var(--page-pad); display: flex; flex-direction: column; gap: var(--space-4); }
-.bathroom { display: flex; flex-direction: column; gap: var(--space-4); }
+/* Tight vertical rhythm — the student grid is the point of the page, so the
+   two control rows above it stay as short as they can. */
+.bathroom-page { padding: var(--space-3) var(--page-pad); display: flex; flex-direction: column; gap: var(--space-3); }
+.bathroom { display: flex; flex-direction: column; gap: var(--space-3); }
 
-/* Top control bar */
+/* Top control bar — period on the left, settings gear on the right */
 .br-top {
   display: flex;
   align-items: center;
   gap: var(--space-3);
   flex-wrap: wrap;
-  padding: var(--space-3) var(--space-4);
+  padding: var(--space-2) var(--space-4);
   background: var(--card);
   border: 1px solid var(--border);
   border-radius: var(--radius-lg);
@@ -2637,20 +2639,12 @@ body.present .att-tile { font-size: 1.35rem; }
 .br-top .dash-field .hud-key { color: var(--text-muted); font-size: 0.72rem; }
 .br-top .dash-field input, .br-top .dash-field select { min-height: 2.2rem; }
 .br-top .icon-btn { width: 2.4rem; height: 2.4rem; padding: 0; display: inline-flex; align-items: center; justify-content: center; }
-.br-quarter-badge {
-  display: inline-flex; align-items: center; justify-content: center;
-  min-width: 2.4rem; padding: 0.2rem 0.7rem;
-  border: 1px solid var(--accent);
-  color: var(--accent);
-  border-radius: var(--radius-pill);
-  font-family: var(--font-mono); font-size: 0.82rem; font-weight: var(--fw-semibold);
-  letter-spacing: 0.06em;
-}
 
 /* Mode toggle: prominent pill segment right on the main view. Active side
    gets the accent fill so at a glance you can't miss which mode you're
    about to tap into. */
-.br-mode-row { display: flex; align-items: center; gap: var(--space-3); flex-wrap: wrap; }
+/* Mode toggle + search share one centred row directly above the grid. */
+.br-mode-row { display: flex; align-items: center; justify-content: center; gap: var(--space-3); flex-wrap: wrap; }
 .br-mode-toggle {
   display: inline-flex;
   gap: 0.15rem;
@@ -2678,7 +2672,6 @@ body.present .att-tile { font-size: 1.35rem; }
   color: var(--card);
   box-shadow: 0 4px 12px var(--accent-glow);
 }
-.br-mode-hint { color: var(--text-muted); font-size: 0.86rem; }
 
 /* Out-now strip: only visible when at least one student is out */
 .br-out-strip {
@@ -2765,9 +2758,8 @@ body.present .att-tile { font-size: 1.35rem; }
 
 /* Student grid */
 .br-grid-wrap { min-height: 0; }
-.br-search-row { margin-bottom: var(--space-3); }
 .br-search {
-  width: min(20rem, 100%);
+  width: min(18rem, 100%);
   min-height: 2.4rem;
   padding: 0.4rem 0.9rem;
   border-radius: var(--radius-pill);
@@ -2922,7 +2914,20 @@ body.present .att-tile { font-size: 1.35rem; }
 .br-log-panel[open] > summary::after { transform: rotate(90deg); }
 .br-log-panel #br-log-summary { font-family: var(--font-mono); font-size: 0.75rem; color: var(--text-muted); letter-spacing: 0.02em; text-transform: none; font-weight: var(--fw-regular); }
 .br-log-inner { padding: 0 var(--space-4) var(--space-4); }
-.br-log-tabs { display: flex; gap: 0.25rem; padding: 0.35rem; background: var(--card-2); border-radius: var(--radius-pill); margin-bottom: var(--space-3); width: fit-content; }
+/* Tabs on the left, the date control on the right of the same line */
+.br-log-tabs-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+  margin-bottom: var(--space-3);
+}
+.br-log-date { display: inline-flex; align-items: center; gap: var(--space-2); }
+.br-log-date .dash-field { display: inline-flex; align-items: center; gap: 0.6rem; }
+.br-log-date .dash-field .hud-key { color: var(--text-muted); font-size: 0.72rem; }
+.br-log-date input { min-height: 2.2rem; }
+.br-log-tabs { display: flex; gap: 0.25rem; padding: 0.35rem; background: var(--card-2); border-radius: var(--radius-pill); width: fit-content; }
 .br-tab {
   border: 0;
   background: transparent;

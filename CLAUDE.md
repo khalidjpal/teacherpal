@@ -38,7 +38,7 @@ full-screen toggle. There is no sidebar; every page uses the full width.
 | Name Wheel | `wheel.html` | Cold-calling: spin a wheel of the period's present students, big name in the middle, no-repeats mode, projector pop-out |
 | Noise Meter | `noise.html` | Room volume from the laptop mic: big green/amber/red meter, three zones with activity presets, "Too loud" hold + chime, pop-out for the projector. Mic only while you hold it on |
 | Seating | `seating.html` | Room builder + seat assignment |
-| Bathroom | `bathroom.html` | Bathroom tracker: click a card → confirm → Start timer; live Out-now strip with End timer, per-student pass checkboxes, red flag past the limit; settings + log/history collapsed out of the main view |
+| Bathroom | `bathroom.html` | Bathroom tracker: tap a card to sign out (quick tap or timer); live Out-now strip with End timer, per-student pass checkboxes, red flag past the limit; toolbar is just period + gear, settings + date + log/history collapsed out of the main view |
 | Rosters | `roster.html` | Setup: periods + students |
 | Schedule | `schedule.html` | Setup: bell-schedule overrides + reference |
 
@@ -852,12 +852,27 @@ All styling lives in `style.css`; pages carry almost no inline styling.
   its `onChange` updates the cell live. Opens on the bell's current period,
   today.
 - **Bathroom Tracker** (`bathroom.html` + `bathroom.js`). Layout is a single
-  column: `.br-top` control bar → `.br-mode-row` (Quick tap / Timer toggle
-  + one-line hint) → `.br-out-strip` (only when someone's out in timer
-  mode) → `.br-search-row` → `.br-grid` of student cards →
+  column: `.br-top` control bar → `.br-mode-row` → `.br-out-strip` (only
+  when someone's out in timer mode) → `.br-grid` of student cards →
   `<details class="br-log-panel">` collapsible log + history at the
   bottom. Settings live in a `<dialog>` reached from the gear button in
   the top bar — the main view stays clean.
+  **The toolbar is deliberately almost empty**: `.br-top` holds the period
+  select and the settings gear, nothing else, and `.br-mode-row` is a
+  **centred** row directly above the grid with the Quick tap / Timer
+  toggle and the student search box. Everything else that used to sit up
+  there was removed on purpose, so don't put it back: **no AUTO chip**
+  (the bell is followed automatically — `followBell` starts true and only
+  a manual period change turns it off for the session, a reload follows
+  again), **no mode hint line**, **no quarter badge** (the quarter is in
+  the log panel's summary line), **no full-screen button** (the top bar
+  already has one), and **no date field** — the date + TODAY chip live
+  inside the Log & History panel (`.br-log-tabs-row`, tabs left, date
+  right), since another day is only something you look at there. The date
+  still drives the grid as well as the log, so changing it force-opens the
+  panel (`$('br-log-panel').open = true`) rather than leaving the only way
+  back collapsed. `.bathroom-page` / `.bathroom` use `--space-3` gaps and
+  `.br-top` a `--space-2` vertical pad so the grid starts high.
   **Two sign-out modes** (segmented pill on the main view, saved per
   period in `localStorage['teacherpal.bathroom.modes']`):
     - **Timer** (default): click a card → `bathroomSignOut` runs
