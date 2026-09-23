@@ -2618,12 +2618,13 @@ body.present .att-tile { font-size: 1.35rem; }
    fixed-height flex container. main.page already scrolls when content
    exceeds the viewport. */
 /* Tight vertical rhythm — the student grid is the point of the page, so the
-   two control rows above it stay as short as they can. */
-.bathroom-page { padding: var(--space-3) var(--page-pad); display: flex; flex-direction: column; gap: var(--space-3); }
+   single control row above it stays as short as it can. */
+.bathroom-page { padding: var(--space-2) var(--page-pad) var(--space-3); display: flex; flex-direction: column; gap: var(--space-3); }
 .bathroom { display: flex; flex-direction: column; gap: var(--space-3); }
 
-/* Top control bar — period on the left, settings gear on the right */
-.br-top {
+/* The one control row: period · Quick tap/Timer · search · gear (right).
+   Everything else that used to live up here is gone — see CLAUDE.md. */
+.br-bar {
   display: flex;
   align-items: center;
   gap: var(--space-3);
@@ -2634,17 +2635,13 @@ body.present .att-tile { font-size: 1.35rem; }
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-card);
 }
-.br-top .spacer { flex: 1 1 auto; }
-.br-top .dash-field { display: inline-flex; align-items: center; gap: 0.6rem; }
-.br-top .dash-field .hud-key { color: var(--text-muted); font-size: 0.72rem; }
-.br-top .dash-field input, .br-top .dash-field select { min-height: 2.2rem; }
-.br-top .icon-btn { width: 2.4rem; height: 2.4rem; padding: 0; display: inline-flex; align-items: center; justify-content: center; }
+.br-bar .spacer { flex: 1 1 auto; }
+.br-bar > select { min-height: 2.4rem; min-width: 11rem; }
+.br-bar .icon-btn { width: 2.4rem; height: 2.4rem; padding: 0; display: inline-flex; align-items: center; justify-content: center; }
 
 /* Mode toggle: prominent pill segment right on the main view. Active side
    gets the accent fill so at a glance you can't miss which mode you're
    about to tap into. */
-/* Mode toggle + search share one centred row directly above the grid. */
-.br-mode-row { display: flex; align-items: center; justify-content: center; gap: var(--space-3); flex-wrap: wrap; }
 .br-mode-toggle {
   display: inline-flex;
   gap: 0.15rem;

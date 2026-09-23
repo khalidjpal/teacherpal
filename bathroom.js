@@ -1,11 +1,11 @@
 // bathroom.js — Bathroom Tracker.
 //
 // New layout:
-//   • Top control bar: period select + settings gear, nothing else. The bell
-//     is followed automatically (no AUTO button); full screen is the top
-//     bar's job. Settings (flag min, max out, passes/quarter, quarter dates)
-//     live in a dialog opened from the gear.
-//   • Centred row above the grid: Quick tap / Timer toggle + student search.
+//   • One control row under the top bar: period select (no label), the
+//     Quick tap / Timer toggle, the student search, then the settings gear
+//     pushed right. The bell is followed automatically (no AUTO button);
+//     full screen is the top bar's job. Settings (flag min, max out,
+//     passes/quarter, quarter dates) live in a dialog opened from the gear.
 //   • Date + Today live inside the Log & History panel — looking at another
 //     day is the only reason to move it.
 //   • Out-now strip appears only when at least one student is out — big
@@ -63,19 +63,17 @@ function initBathroom({ mount = '#bathroom' } = {}) {
   const SETTINGS_ICON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>';
 
   root.innerHTML = `
-    <div class="br-top">
-      <label class="dash-field"><span class="hud-key">Period</span><select id="br-period" aria-label="Period"></select></label>
-      <span class="spacer"></span>
-      <button type="button" class="icon-btn" id="br-settings-btn" title="Bathroom settings" aria-label="Bathroom settings">${SETTINGS_ICON}</button>
-    </div>
-
-    <!-- Mode + search on one centred row, right above the grid. -->
-    <div class="br-mode-row">
+    <!-- One control row, straight under the top bar: period, mode, search,
+         gear. The grid starts immediately below it. -->
+    <div class="br-bar">
+      <select id="br-period" aria-label="Period"></select>
       <div class="br-mode-toggle" role="tablist" aria-label="Sign-out mode">
         <button type="button" class="br-mode" role="tab" data-mode="quick">Quick tap</button>
         <button type="button" class="br-mode" role="tab" data-mode="timer">Timer</button>
       </div>
       <input type="search" id="br-search" class="br-search" placeholder="Search students…" autocomplete="off" spellcheck="false" aria-label="Search students">
+      <span class="spacer"></span>
+      <button type="button" class="icon-btn" id="br-settings-btn" title="Bathroom settings" aria-label="Bathroom settings">${SETTINGS_ICON}</button>
     </div>
 
     <section class="br-out-strip" id="br-out-strip" hidden aria-label="Out now">
