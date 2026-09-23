@@ -2613,14 +2613,18 @@ body.present .att-tile { font-size: 1.35rem; }
    collapsible log/history, settings dialog.
    ========================================================================== */
 
-/* Natural block flow (not flex: 1) so opening the Log & History <details>
-   simply pushes everything below it down the page rather than fighting a
-   fixed-height flex container. main.page already scrolls when content
-   exceeds the viewport. */
-/* Tight vertical rhythm — the student grid is the point of the page, so the
-   single control row above it stays as short as it can. */
-.bathroom-page { padding: var(--space-2) var(--page-pad) var(--space-3); display: flex; flex-direction: column; gap: var(--space-3); }
-.bathroom { display: flex; flex-direction: column; gap: var(--space-3); }
+/* One screen, three bands: the control island, the student grid, and the
+   two panels. The grid is the only thing that gives — it scrolls inside
+   itself so the fixed-height panels below are always visible and the page
+   itself never scrolls. Tight vertical rhythm throughout: the grid is the
+   point of the page. */
+.bathroom-page {
+  --br-panels-h: clamp(10rem, 27vh, 15rem);   /* the Out now / Log row */
+  padding: var(--space-2) var(--page-pad) var(--space-3);
+  display: flex; flex-direction: column; gap: var(--space-3);
+  overflow: hidden;
+}
+.bathroom { flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; gap: var(--space-3); }
 
 /* The one control island: period · Quick tap/Timer · search · gear.
    It shrink-wraps its contents and centres itself instead of spanning the
@@ -2679,26 +2683,54 @@ body.present .att-tile { font-size: 1.35rem; }
   box-shadow: 0 4px 12px var(--accent-glow);
 }
 
-/* Out-now strip: only visible when at least one student is out */
-.br-out-strip {
+/* ---- The two panels under the grid: Out now | Log ----
+   Fixed height, bodies scroll internally, so the row never resizes as
+   students come and go and the student grid above keeps its place. */
+.br-panels {
+  flex: 0 0 auto;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.25fr);
+  gap: var(--space-3);
+  height: var(--br-panels-h);
+}
+.br-panel {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
   background: var(--card);
   border: 1px solid var(--border);
   border-radius: var(--radius-lg);
-  padding: var(--space-3) var(--space-4);
   box-shadow: var(--shadow-card);
-  display: flex; flex-direction: column; gap: var(--space-3);
 }
-.br-out-strip-head { display: flex; align-items: baseline; gap: var(--space-3); }
-.br-out-strip-head h3 {
+.br-panel-head {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+  padding: var(--space-3) var(--space-4) var(--space-2);
+  border-bottom: 1px solid var(--border);
+}
+.br-panel-head h3 {
   margin: 0;
+  flex: none;
   font-family: var(--font-display);
   font-size: var(--fs-md);
   font-weight: var(--fw-semibold);
   letter-spacing: var(--track-display);
   text-transform: var(--label-transform);
   color: var(--text);
-  display: flex; align-items: baseline; gap: 0.6rem;
 }
+/* the head's first control group takes the slack, so trailing items sit right */
+.br-panel-head > :nth-child(2) { margin-right: auto; }
+.br-panel-body {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  padding: var(--space-3) var(--space-4);
+}
+.br-none { margin: 0; padding: var(--space-3) 0; color: var(--text-muted); font-style: italic; }
 .br-out-count {
   font-family: var(--font-mono);
   font-variant-numeric: tabular-nums;
@@ -2706,19 +2738,78 @@ body.present .att-tile { font-size: 1.35rem; }
   font-size: var(--fs-lg);
   font-weight: var(--fw-bold);
 }
-.br-out-strip-head .hud-key { color: var(--text-muted); font-size: 0.72rem; }
-.br-out-cards {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(15rem, 1fr));
-  gap: var(--space-3);
+.br-panel-head .hud-key { color: var(--text-muted); font-size: 0.72rem; }
+
+/* Day switcher: ‹ Today › + calendar */
+.br-daynav { display: flex; align-items: center; gap: 0.2rem; }
+.br-day-step {
+  width: 1.9rem; height: 1.9rem; padding: 0;
+  display: inline-flex; align-items: center; justify-content: center;
+  border: 1px solid var(--border-strong);
+  background: var(--card-2);
+  color: var(--text-2);
+  border-radius: var(--radius-sm);
+  font-size: 1rem;
+  line-height: 1;
+  cursor: pointer;
 }
+.br-day-step svg { width: 0.95rem; height: 0.95rem; }
+.br-day-step:hover:not(:disabled) { color: var(--text); border-color: var(--border-hover); }
+.br-day-step:disabled { opacity: 0.3; cursor: default; }
+.br-day-label {
+  min-width: 7.5rem;
+  padding: 0.25rem 0.5rem;
+  border: 0;
+  background: none;
+  color: var(--text);
+  font-family: var(--font-mono);
+  font-size: 0.82rem;
+  letter-spacing: 0.02em;
+  text-align: center;
+  cursor: pointer;
+  border-radius: var(--radius-sm);
+}
+.br-day-label:hover:not(:disabled) { background: var(--card-2); }
+.br-day-label:disabled { cursor: default; color: var(--text-2); }
+/* The real date input hides under the calendar button; `.bare` reveals it
+   when showPicker() isn't available. */
+.br-cal { position: relative; display: inline-flex; margin-left: 0.15rem; }
+.br-cal input[type="date"] {
+  position: absolute; inset: 0; width: 100%; height: 100%;
+  opacity: 0; pointer-events: none; border: 0; padding: 0;
+}
+.br-cal.bare { position: static; }
+.br-cal.bare > button { display: none; }
+.br-cal.bare input[type="date"] {
+  position: static; opacity: 1; pointer-events: auto;
+  width: auto; height: auto; min-height: 1.9rem;
+  border: 1px solid var(--border-strong);
+  background: var(--card-2);
+  color: var(--text);
+  border-radius: var(--radius-sm);
+  padding: 0.1rem 0.4rem;
+}
+.br-hist-btn {
+  flex: none;
+  padding: 0.25rem 0.7rem;
+  border: 1px solid var(--border-strong);
+  background: var(--card-2);
+  color: var(--text-muted);
+  border-radius: var(--radius-pill);
+  font-size: 0.8rem;
+  font-weight: var(--fw-semibold);
+  cursor: pointer;
+}
+.br-hist-btn:hover { color: var(--text); border-color: var(--border-hover); }
+
+/* Out-now cards: one compact row each, stacked down the panel */
+.br-out-cards { display: flex; flex-direction: column; gap: var(--space-2); }
 .br-out-card {
   display: grid;
-  grid-template-columns: 1fr auto;
-  grid-template-rows: auto auto;
+  grid-template-columns: minmax(0, 1fr) auto auto;
   align-items: center;
-  gap: 0.4rem 1rem;
-  padding: var(--space-3) var(--space-4);
+  gap: 0.75rem;
+  padding: 0.5rem 0.75rem;
   background: var(--card-2);
   border: 1.5px solid var(--accent);
   border-radius: var(--radius-md);
@@ -2727,26 +2818,19 @@ body.present .att-tile { font-size: 1.35rem; }
 }
 .br-out-card .br-out-name {
   font-weight: var(--fw-bold);
-  font-size: var(--fs-md);
+  font-size: var(--fs-sm);
   color: var(--text);
-  grid-column: 1;
-  grid-row: 1;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
 .br-out-card .br-out-timer {
   font-family: var(--font-mono);
   font-variant-numeric: tabular-nums;
-  font-size: var(--fs-xl);
+  font-size: var(--fs-lg);
   font-weight: var(--fw-bold);
   color: var(--accent);
-  grid-column: 1;
-  grid-row: 2;
   letter-spacing: 0.02em;
 }
-.br-out-card .br-end-btn {
-  grid-column: 2;
-  grid-row: 1 / span 2;
-  min-height: 2.6rem;
-}
+.br-out-card .br-end-btn { min-height: 2rem; padding: 0 0.7rem; font-size: 0.8rem; white-space: nowrap; }
 /* Flagged: past the limit — turn red and pulse */
 .br-out-card.flagged {
   border-color: var(--danger);
@@ -2763,7 +2847,8 @@ body.present .att-tile { font-size: 1.35rem; }
 }
 
 /* Student grid */
-.br-grid-wrap { min-height: 0; }
+/* The flexible band: scrolls internally rather than pushing the panels off */
+.br-grid-wrap { flex: 1 1 auto; min-height: 0; overflow-y: auto; padding-right: 2px; }
 .br-search {
   width: min(18rem, 100%);
   min-height: 2.4rem;
@@ -2887,76 +2972,24 @@ body.present .att-tile { font-size: 1.35rem; }
 .bathroom .chart-empty { text-align: center; padding: var(--space-6) var(--space-4); color: var(--text-muted); }
 .bathroom .chart-empty a { margin-top: var(--space-3); display: inline-block; }
 
-/* Log & history collapsible */
-.br-log-panel {
-  background: var(--card);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-card);
-  overflow: hidden;
-}
-.br-log-panel > summary {
-  list-style: none;
-  cursor: pointer;
-  padding: var(--space-3) var(--space-4);
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: var(--space-3);
-  font-family: var(--font-display);
-  font-size: var(--fs-md);
-  font-weight: var(--fw-semibold);
-  letter-spacing: var(--track-display);
-  text-transform: var(--label-transform);
-  color: var(--text);
-}
-.br-log-panel > summary::-webkit-details-marker { display: none; }
-.br-log-panel > summary::marker { content: ""; }
-.br-log-panel > summary::after {
-  content: "▸";
-  color: var(--text-muted);
-  transition: transform 160ms ease;
-}
-.br-log-panel[open] > summary::after { transform: rotate(90deg); }
-.br-log-panel #br-log-summary { font-family: var(--font-mono); font-size: 0.75rem; color: var(--text-muted); letter-spacing: 0.02em; text-transform: none; font-weight: var(--fw-regular); }
-.br-log-inner { padding: 0 var(--space-4) var(--space-4); }
-/* Tabs on the left, the date control on the right of the same line */
-.br-log-tabs-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--space-3);
-  flex-wrap: wrap;
-  margin-bottom: var(--space-3);
-}
-.br-log-date { display: inline-flex; align-items: center; gap: var(--space-2); }
-.br-log-date .dash-field { display: inline-flex; align-items: center; gap: 0.6rem; }
-.br-log-date .dash-field .hud-key { color: var(--text-muted); font-size: 0.72rem; }
-.br-log-date input { min-height: 2.2rem; }
-.br-log-tabs { display: flex; gap: 0.25rem; padding: 0.35rem; background: var(--card-2); border-radius: var(--radius-pill); width: fit-content; }
-.br-tab {
-  border: 0;
-  background: transparent;
-  padding: 0.4rem 1rem;
-  border-radius: var(--radius-pill);
-  font-family: var(--font-body);
-  font-weight: var(--fw-semibold);
-  font-size: 0.9rem;
-  color: var(--text-muted);
-  cursor: pointer;
-}
-.br-tab:hover { color: var(--text); }
-.br-tab.active { background: var(--accent-soft); color: var(--accent); }
-.br-log-body { min-height: 3rem; }
+/* Log list: name · out → back · duration · remove */
 .br-list { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 0.25rem; }
 .br-list li {
   display: grid;
-  grid-template-columns: 1fr auto auto;
+  grid-template-columns: minmax(0, 1fr) auto auto auto;
   align-items: baseline;
   gap: 0.75rem;
-  padding: 0.55rem 0.6rem;
+  padding: 0.5rem 0.6rem;
   border-radius: var(--radius-sm);
   background: var(--card-2);
+}
+.br-log-dur {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  font-size: 0.85rem;
+  color: var(--text-2);
+  min-width: 3.6rem;
+  text-align: right;
 }
 .br-list li.none { justify-content: center; text-align: center; color: var(--text-muted); font-style: italic; display: block; padding: var(--space-3); }
 .br-list li.flagged { border-left: 3px solid var(--danger); }
@@ -2975,9 +3008,10 @@ body.present .att-tile { font-size: 1.35rem; }
 
 /* Undo toast — quick-tap actions get a 6-second undo bubble at the bottom
    of the viewport. Fades in/out; timer is JS-managed. */
+/* Rides above the Out now / Log row rather than covering it */
 .br-undo-toast {
   position: fixed;
-  bottom: 1.5rem;
+  bottom: calc(var(--br-panels-h, 0px) + 1.5rem);
   left: 50%;
   transform: translateX(-50%);
   z-index: 30;
@@ -3009,6 +3043,16 @@ body.present .att-tile { font-size: 1.35rem; }
 @keyframes br-toast-out { from { opacity: 1; transform: translateX(-50%) translateY(0); } to { opacity: 0; transform: translateX(-50%) translateY(0.6rem); } }
 @media (prefers-reduced-motion: reduce) {
   .br-undo-toast, .br-undo-toast.hiding { animation: none; }
+}
+
+/* Narrow: stop pinning the panels — stack them and let the page scroll.
+   Must come after the .br-panels / .br-grid-wrap rules above to win. */
+@media (max-width: 900px) {
+  .bathroom-page { overflow: auto; }
+  .br-grid-wrap { flex: 0 0 auto; overflow: visible; }
+  .br-panels { grid-template-columns: 1fr; height: auto; }
+  .br-panel { height: 15rem; }
+  .br-undo-toast { bottom: 1.5rem; }
 }
 
 /* Confirm dialog */

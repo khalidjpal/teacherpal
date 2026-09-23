@@ -38,7 +38,7 @@ full-screen toggle. There is no sidebar; every page uses the full width.
 | Name Wheel | `wheel.html` | Cold-calling: spin a wheel of the period's present students, big name in the middle, no-repeats mode, projector pop-out |
 | Noise Meter | `noise.html` | Room volume from the laptop mic: big green/amber/red meter, three zones with activity presets, "Too loud" hold + chime, pop-out for the projector. Mic only while you hold it on |
 | Seating | `seating.html` | Room builder + seat assignment |
-| Bathroom | `bathroom.html` | Bathroom tracker: tap a card to sign out (quick tap or timer); live Out-now strip with End timer, per-student pass checkboxes, red flag past the limit; one centred control island (period · mode · search · gear) over a full-width grid, settings + date + log/history collapsed out of the main view |
+| Bathroom | `bathroom.html` | Bathroom tracker: tap a card to sign out (quick tap or timer); per-student pass checkboxes, red flag past the limit. One centred control island (period · mode · search · gear) over a scrolling student grid, with **Out now** (live timers + End timer) and **Log** (the day's trips + a day switcher) as two fixed-height panels underneath |
 | Rosters | `roster.html` | Setup: periods + students |
 | Schedule | `schedule.html` | Setup: bell-schedule overrides + reference |
 
@@ -851,12 +851,43 @@ All styling lives in `style.css`; pages carry almost no inline styling.
   with `getLessonPlansRange`; `panel.show(pid, date)` opens the editor and
   its `onChange` updates the cell live. Opens on the bell's current period,
   today.
-- **Bathroom Tracker** (`bathroom.html` + `bathroom.js`). Layout is a single
-  column: one `.br-bar` control row → `.br-out-strip` (only when someone's
-  out in timer mode) → `.br-grid` of student cards →
-  `<details class="br-log-panel">` collapsible log + history at the
-  bottom. Settings live in a `<dialog>` reached from the gear button on
-  that row — the main view stays clean.
+- **Bathroom Tracker** (`bathroom.html` + `bathroom.js`). **One screen, three
+  bands**: the `.br-bar` control island → `.br-grid-wrap` of student cards →
+  `.br-panels`, a two-up row of **Out now** and **Log**. Settings live in a
+  `<dialog>` reached from the gear button on the control row — the main
+  view stays clean.
+  **The grid is the only band that gives.** `.bathroom-page` is
+  `overflow: hidden` and `.br-grid-wrap` is `flex: 1; min-height: 0;
+  overflow-y: auto`, so a long roster scrolls *inside* the grid and the
+  panels below are always on screen; the page itself never scrolls.
+  `.br-panels` is `grid-template-columns: minmax(0,1fr) minmax(0,1.25fr)`
+  at a fixed `height: var(--br-panels-h)` (`clamp(10rem, 27vh, 15rem)`,
+  declared on `.bathroom-page` so the undo toast can sit above it). Both
+  `.br-panel`s are flex columns of a `.br-panel-head` + a scrolling
+  `.br-panel-body`, **so neither panel ever changes size** — measured 194px
+  through empty, two-out and after-return states at 1280×720. Under 900px
+  they stack and the page scrolls again (that media query must come *after*
+  the `.br-panels` rules to win the cascade).
+    - **Out now** is always rendered, never hidden: the head counts
+      `n / maxOut`, the body lists one compact `.br-out-card` per student
+      out (name · live `m:ss` · **End timer**, red + pulsing past the flag
+      limit) or the single quiet `.br-none` line **"Nobody out"**.
+    - **Log** shows the day's trips newest first as
+      `name · out → back · duration · ×` (`out now` / `quick tap` fill the
+      duration column when there's no elapsed time), each removable with
+      the `×` after a confirm. Its head carries the **day switcher**:
+      `‹` / `›` step a day (`›` disabled on today), the label between them
+      reads **"Today"** or `Mon, Sep 21` and is itself the button back to
+      today (disabled when already there), and the calendar button opens
+      the native picker. **That picker is a real `<input type="date">`
+      hidden under the button at `opacity: 0`**; the click handler tries
+      `showPicker()` and, if it's missing or refuses, adds `.bare` to
+      `.br-cal`, which swaps the button out for the visible input. All
+      four paths funnel through one `goToDate()` — the date drives the
+      student grid as well as the log.
+      A small **History** button on the right swaps the body to the
+      per-student quarter tallies (the only place manual tallies can be
+      edited) and back; `activeTab` still drives it.
   **There is exactly one control row and it is deliberately almost empty.**
   `.br-bar` is a **centred island, not a full-width bar**: `align-self:
   center` + `width: fit-content` inside the `.bathroom` flex column, with
@@ -873,22 +904,18 @@ All styling lives in `style.css`; pages carry almost no inline styling.
   there was removed on purpose, so don't put it back: **no AUTO chip**
   (the bell is followed automatically — `followBell` starts true and only
   a manual period change turns it off for the session, a reload follows
-  again), **no mode hint line**, **no quarter badge** (the quarter is in
-  the log panel's summary line), **no full-screen button** (the top bar
-  already has one), and **no date field** — the date + TODAY chip live
-  inside the Log & History panel (`.br-log-tabs-row`, tabs left, date
-  right), since another day is only something you look at there. The date
-  still drives the grid as well as the log, so changing it force-opens the
-  panel (`$('br-log-panel').open = true`) rather than leaving the only way
-  back collapsed. `.bathroom-page` pads `--space-2` at the top and
-  `.bathroom` uses `--space-3` gaps; the island's own
+  again), **no mode hint line**, **no quarter badge**, **no full-screen
+  button** (the top bar already has one), and **no date field** — the day
+  switcher lives in the Log panel's header, since another day is only
+  something you look at there. `.bathroom-page` pads `--space-2` at the top
+  and `.bathroom` uses `--space-3` gaps; the island's own
   `margin: var(--space-2) 0 var(--space-3)` gives it air above and below,
   landing the grid at y≈166 at 1280×720.
   **Two sign-out modes** (segmented pill on the main view, saved per
   period in `localStorage['teacherpal.bathroom.modes']`):
     - **Timer** (default): click a card → `bathroomSignOut` runs
-      immediately (no confirmation), the student appears in the out-now
-      strip with a live m:ss timer, and a 6-second undo bubble shows in
+      immediately (no confirmation), the student appears in the **Out now**
+      panel with a live m:ss timer, and a 6-second undo bubble shows in
       case of a mistap. Each `.br-out-card` has an **End timer** button
       that calls `bathroomSignIn` — that's when the next `.br-pass`
       checkbox on the grid card fills. Past the flag limit the out-now
@@ -896,9 +923,10 @@ All styling lives in `style.css`; pages carry almost no inline styling.
     - **Quick tap**: one tap on a card immediately calls
       `insertBathroomTrip` with `out_at = in_at = now`, which counts as a
       completed pass (fills the checkbox on the spot). No confirmation,
-      no out-now strip entry, no timer. The card flashes green for
-      ~800 ms and a floating undo toast (`.br-undo-toast`, bottom-centre)
-      offers **Undo** for 6 s — undo calls `deleteBathroomTrip`.
+      no Out-now entry, no timer. The card flashes green for
+      ~800 ms and a floating undo toast (`.br-undo-toast`, centred just
+      above the panel row) offers **Undo** for 6 s — undo calls
+      `deleteBathroomTrip`.
       The `maxOut` cap doesn't apply here (nobody is "out"); the
       per-quarter pass limit and existing-out-student blocks still do.
   Both modes write to the same `bathroom_log` rows, so log entries and
@@ -916,9 +944,8 @@ All styling lives in `style.css`; pages carry almost no inline styling.
   page's `quarterFor()` — the rest of the app still uses
   `schedule.js`'s `QUARTERS`). Other settings in
   `teacherpal.bathroom.settings` (`{ flagMinutes: 8, maxOut: 2, passLimit: 4 }`).
-  **Log & History** collapsible: two tabs. Today's log = chronological
-  trips with hover-× delete. History = quarter-scoped summary per
-  student, click a name for the detail view (per-quarter manual tally
+  **History** (the Log panel's other view): a quarter-scoped summary per
+  student; click a name for the detail view (per-quarter manual tally
   with −/+, list of timed trips across all dates). Seeding from paper:
   `seed-bathroom-q1.sql` (match rules: normalised exact → first + last
   word → first name + a shared surname, each only when unique in the

@@ -8,14 +8,16 @@
 //     passes/quarter, quarter dates) live in a dialog opened from the gear.
 //   • Date + Today live inside the Log & History panel — looking at another
 //     day is the only reason to move it.
-//   • Out-now strip appears only when at least one student is out — big
-//     cards with live timer + End timer button. Flagged (past limit) →
-//     red timer.
 //   • Student grid: name + four small pass-checkboxes that fill left-to-right
 //     as passes are used. Card visibly dims + shows OUT badge when out; card
-//     locks (dashed border, No passes badge) when 4 used.
-//   • Log & History collapsed by default in a <details> at the bottom; two
-//     tabs inside, click a name in History to see per-student breakdown.
+//     locks (dashed border, No passes badge) when 4 used. It scrolls
+//     internally so the two panels below always stay on screen.
+//   • Two fixed-height panels under the grid, side by side:
+//       – Out now: live timers + End timer per student, "Nobody out" when
+//         empty. Always rendered, so the row never changes height.
+//       – Log: the day's trips (name · out → back · duration · remove) with
+//         a ‹ day › switcher + calendar button in its header. A History
+//         button swaps the body to the per-quarter tallies.
 //
 // Click flow: click a card → confirm dialog → Start timer signs out. On the
 // Out-now card, End timer signs the student back in (that's what fills the
@@ -75,43 +77,51 @@ function initBathroom({ mount = '#bathroom' } = {}) {
       <button type="button" class="icon-btn" id="br-settings-btn" title="Bathroom settings" aria-label="Bathroom settings">${SETTINGS_ICON}</button>
     </div>
 
-    <section class="br-out-strip" id="br-out-strip" hidden aria-label="Out now">
-      <div class="br-out-strip-head">
-        <h3>Out now <span class="br-out-count" id="br-out-count">0</span> <span class="hud-key">of ${settings.maxOut}</span></h3>
-      </div>
-      <div class="br-out-cards" id="br-out-cards"></div>
-    </section>
-
     <section class="br-grid-wrap" aria-label="Students">
       <div class="br-grid" id="br-grid"></div>
       <div class="br-search-empty" id="br-search-empty" hidden></div>
       <div class="chart-empty" id="br-empty" hidden></div>
     </section>
 
-    <details class="br-log-panel" id="br-log-panel">
-      <summary>
-        <span>Log &amp; history</span>
-        <span class="hud-key" id="br-log-summary">— trips today</span>
-      </summary>
-      <div class="br-log-inner">
-        <!-- The date lives here, not on the toolbar: looking at another day is
-             a log/history job, and it drives what the grid shows too. -->
-        <div class="br-log-tabs-row">
-          <div class="br-log-tabs" role="tablist">
-            <button type="button" class="br-tab active" role="tab" data-tab="log" aria-selected="true">Today's log</button>
-            <button type="button" class="br-tab" role="tab" data-tab="history" aria-selected="false">History</button>
-          </div>
-          <div class="br-log-date">
-            <label class="dash-field"><span class="hud-key">Date</span><input type="date" id="br-date" aria-label="Date"></label>
-            <button type="button" class="hud-chip" id="br-today" hidden>Today</button>
-          </div>
+    <!-- Two fixed-height cards under the grid. Both bodies scroll internally
+         so neither one resizes as students come and go. -->
+    <div class="br-panels">
+      <section class="br-panel" aria-label="Out now">
+        <div class="br-panel-head">
+          <h3>Out now</h3>
+          <span class="br-out-count"><span id="br-out-count">0</span><span class="hud-key" id="br-out-max"> / ${settings.maxOut}</span></span>
         </div>
-        <div class="br-log-body">
+        <div class="br-panel-body">
+          <div class="br-out-cards" id="br-out-cards"></div>
+          <p class="br-none" id="br-out-none">Nobody out</p>
+        </div>
+      </section>
+
+      <section class="br-panel" aria-label="Log">
+        <div class="br-panel-head">
+          <h3>Log</h3>
+          <!-- Day switcher: ‹ day › plus a calendar button that opens the
+               native picker. The date input sits under the button (opacity 0)
+               so there is still a real control if showPicker() is missing. -->
+          <div class="br-daynav">
+            <button type="button" class="br-day-step" id="br-prev-day" title="Previous day" aria-label="Previous day">‹</button>
+            <button type="button" class="br-day-label" id="br-day-label" title="Back to today">Today</button>
+            <button type="button" class="br-day-step" id="br-next-day" title="Next day" aria-label="Next day">›</button>
+            <span class="br-cal">
+              <button type="button" class="br-day-step" id="br-cal-btn" title="Jump to a date" aria-label="Jump to a date">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M16 3v4M8 3v4M3 11h18"/></svg>
+              </button>
+              <input type="date" id="br-date" aria-label="Jump to a date">
+            </span>
+          </div>
+          <button type="button" class="br-hist-btn" id="br-hist-btn" title="Passes used this quarter">History</button>
+        </div>
+        <div class="br-panel-body">
           <ul class="br-list" id="br-log-list"></ul>
           <div id="br-history-view" hidden></div>
         </div>
-      </div>
-    </details>
+      </section>
+    </div>
 
     <div class="br-undo-toast" id="br-undo" hidden role="status" aria-live="polite">
       <span class="br-undo-msg" id="br-undo-msg"></span>
@@ -274,7 +284,7 @@ function initBathroom({ mount = '#bathroom' } = {}) {
         : (locked ? '<span class="br-badge locked-badge">No passes</span>' : '');
       const remaining = settings.passLimit - usedDone;
       const title = out
-        ? `${s.name} is out — end their timer in the Out-now strip`
+        ? `${s.name} is out — end their timer in the Out now panel`
         : (locked
             ? `${s.name} used all ${settings.passLimit} passes this ${q} — raise passes-per-quarter in settings to override`
             : (mode === 'quick'
@@ -291,12 +301,14 @@ function initBathroom({ mount = '#bathroom' } = {}) {
     if (typeof applySearchFilter === 'function') applySearchFilter();
   }
 
+  // The Out-now panel never hides — an empty one keeps the row the same
+  // height, so nothing below it jumps when a student leaves or comes back.
   function renderOutStrip() {
-    const strip = $('br-out-strip');
     const cards = $('br-out-cards');
     const out = outTrips();
-    strip.hidden = out.length === 0;
     $('br-out-count').textContent = out.length;
+    $('br-out-max').textContent = ` / ${settings.maxOut}`;
+    $('br-out-none').hidden = out.length > 0;
     cards.innerHTML = out.map((t) => {
       const s = studentById(t.student_id);
       const flag = flagged(t);
@@ -309,32 +321,47 @@ function initBathroom({ mount = '#bathroom' } = {}) {
     }).join('');
   }
 
+  // "Today" reads as Today; any other day as "Mon, Sep 21".
+  function dayLabel(ymd) {
+    if (ymd === todayKey()) return 'Today';
+    const d = new Date(`${ymd}T00:00`);
+    return Number.isNaN(d.getTime())
+      ? ymd
+      : d.toLocaleDateString([], { weekday: 'short', month: 'short', day: 'numeric' });
+  }
+  function renderDayNav() {
+    const today = isToday();
+    $('br-day-label').textContent = dayLabel(date);
+    $('br-day-label').disabled = today;
+    $('br-next-day').disabled = today;   // nothing is logged in the future
+    $('br-date').value = date;
+  }
+
   function renderLogPanel() {
-    const q = quarterFor(date);
+    renderDayNav();
     const timed = trips.filter(isTrip);
-    $('br-log-summary').textContent = `${isToday() ? 'today' : date} · ${timed.length} trip${timed.length === 1 ? '' : 's'} · ${q}`;
+    const onHistory = activeTab === 'history';
+    $('br-log-list').hidden = onHistory;
+    $('br-history-view').hidden = !onHistory;
+    $('br-hist-btn').setAttribute('aria-pressed', String(onHistory));
+    $('br-hist-btn').textContent = onHistory ? 'Log' : 'History';
 
-    // Toggle tab visibility
-    $('br-log-list').hidden = activeTab !== 'log';
-    $('br-history-view').hidden = activeTab !== 'history';
-    root.querySelectorAll('.br-tab').forEach((b) => {
-      const on = b.dataset.tab === activeTab;
-      b.classList.toggle('active', on);
-      b.setAttribute('aria-selected', String(on));
-    });
+    if (onHistory) { renderHistoryView(); return; }
 
-    if (activeTab === 'log') {
-      $('br-log-list').innerHTML = timed.slice().reverse().map((t) => {
-        const s = studentById(t.student_id);
-        return `<li>
-          <span class="br-log-name">${escapeHtml(s ? s.name : '?')}</span>
-          <span class="br-log-times">${escapeHtml(tripLabel(t))}</span>
-          <button type="button" class="link br-del" data-trip="${t.id}" title="Delete this trip">×</button>
-        </li>`;
-      }).join('') || '<li class="none">No trips yet today.</li>';
-    } else {
-      renderHistoryView();
-    }
+    // Newest first: name · out → back · duration · remove
+    $('br-log-list').innerHTML = timed.slice().reverse().map((t) => {
+      const s = studentById(t.student_id);
+      let times, dur;
+      if (!t.in_at)            { times = `${fmtClock(t.out_at)} → —`;                    dur = 'out now'; }
+      else if (isQuickTap(t))  { times = fmtClock(t.out_at);                              dur = 'quick tap'; }
+      else                     { times = `${fmtClock(t.out_at)} → ${fmtClock(t.in_at)}`;  dur = fmtDur(elapsedSec(t)); }
+      return `<li>
+        <span class="br-log-name">${escapeHtml(s ? s.name : '?')}</span>
+        <span class="br-log-times">${escapeHtml(times)}</span>
+        <span class="br-log-dur">${escapeHtml(dur)}</span>
+        <button type="button" class="link br-del" data-trip="${t.id}" title="Delete this trip">×</button>
+      </li>`;
+    }).join('') || `<li class="none">No trips ${isToday() ? 'yet today' : `on ${dayLabel(date)}`}.</li>`;
   }
 
   function renderHistoryView() {
@@ -457,7 +484,7 @@ function initBathroom({ mount = '#bathroom' } = {}) {
     const sid = btn.dataset.student;
     const student = studentById(sid);
     if (!student) return;
-    if (outOf(sid)) { setStatus(`${student.name} is already out — end their timer on the Out-now strip.`, 'info'); return; }
+    if (outOf(sid)) { setStatus(`${student.name} is already out — end their timer in the Out now panel.`, 'info'); return; }
     if (settings.passLimit > 0 && usedIn(sid, quarterFor(date)) >= settings.passLimit) {
       setStatus(`${student.name} has no passes left this ${quarterFor(date)}. Raise passes-per-quarter in settings to override.`, 'error');
       return;
@@ -585,12 +612,13 @@ function initBathroom({ mount = '#bathroom' } = {}) {
     renderGrid(); renderOutStrip(); renderLogPanel();
   });
 
-  // Tab switching
-  root.querySelectorAll('.br-tab').forEach((b) => b.addEventListener('click', () => {
-    activeTab = b.dataset.tab;
-    historyStudent = null;   // reset detail view when swapping tabs
+  // The panel is the Log; History is the one other view it can show (the
+  // per-student quarter tallies live there and nowhere else).
+  $('br-hist-btn').addEventListener('click', () => {
+    activeTab = activeTab === 'history' ? 'log' : 'history';
+    historyStudent = null;   // reset detail view when swapping
     renderLogPanel();
-  }));
+  });
 
   // ---------- settings dialog ----------
   function openSettings() {
@@ -824,23 +852,34 @@ function initBathroom({ mount = '#bathroom' } = {}) {
   document.addEventListener('teacherpal:tick', (e) => followTheBell(e.detail.now, e.detail.sched));
 
   $('br-period').addEventListener('change', (e) => selectPeriod(e.target.value, { manual: true }));
+  // ---------- day switcher (Log panel header) ----------
+  // The date drives the student grid as well as the log, so every path here
+  // goes through one function that reloads the day.
+  function goToDate(ymd) {
+    if (!ymd || ymd === date) return;
+    date = ymd;
+    historyStudent = null;
+    renderDayNav();
+    load();
+  }
+  const shiftDate = (ymd, days) => {
+    const d = new Date(`${ymd}T00:00`);
+    d.setDate(d.getDate() + days);
+    return dateKey(d);
+  };
   $('br-date').value = date;
-  $('br-date').addEventListener('change', (e) => {
-    if (!e.target.value) return;
-    date = e.target.value;
-    $('br-today').hidden = isToday();
-    // The date drives the grid too, so don't let the only way back hide
-    // behind a collapsed panel while you're looking at another day.
-    if (!isToday()) $('br-log-panel').open = true;
-    historyStudent = null;
-    load();
-  });
-  $('br-today').addEventListener('click', () => {
-    date = todayKey();
-    $('br-date').value = date;
-    $('br-today').hidden = true;
-    historyStudent = null;
-    load();
+  $('br-date').addEventListener('change', (e) => goToDate(e.target.value));
+  $('br-prev-day').addEventListener('click', () => goToDate(shiftDate(date, -1)));
+  $('br-next-day').addEventListener('click', () => goToDate(shiftDate(date, 1)));
+  $('br-day-label').addEventListener('click', () => goToDate(todayKey()));
+  $('br-cal-btn').addEventListener('click', () => {
+    const el = $('br-date');
+    if (typeof el.showPicker === 'function') {
+      try { el.showPicker(); return; } catch { /* fall through */ }
+    }
+    // No showPicker (or it refused): reveal the real input instead.
+    el.closest('.br-cal').classList.add('bare');
+    el.focus();
   });
 
   async function load() {
