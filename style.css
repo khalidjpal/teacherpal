@@ -4141,7 +4141,10 @@ body.noise-popout .noise-zone { font-size: clamp(1.2rem, 5vmin, 3rem); }
 .wheel-control-row .icon-btn { width: 2rem; height: 2rem; padding: 0; }
 .wheel-control-row .icon-btn svg { width: 1rem; height: 1rem; }
 .wheel-control-row button[aria-checked="true"] { border-color: var(--accent); color: var(--accent); background: var(--accent-soft); }
-.wheel-control-row .when-off, .wheel-control-row .when-on { display: inline; }
+/* Scoped to the switches — an aria-pressed button (the full-screen toggle)
+   keeps the app-wide .when-off/.when-on swap, or it shows both icons. */
+.wheel-control-row button[aria-checked] .when-off,
+.wheel-control-row button[aria-checked] .when-on { display: inline; }
 .wheel-control-row button[aria-checked="false"] .when-on { display: none; }
 .wheel-control-row button[aria-checked="true"] .when-off { display: none; }
 
@@ -4151,20 +4154,84 @@ body.noise-popout .noise-zone { font-size: clamp(1.2rem, 5vmin, 3rem); }
 .wheel-picked-name { font-weight: var(--fw-semibold); color: var(--text-2); }
 .wheel-picked button { min-height: 2.1rem; padding: 0.3rem 0.9rem; border-radius: var(--radius-pill); font-size: var(--fs-xs); }
 
-.wheel-called { display: flex; flex-wrap: wrap; gap: 0.4rem; align-items: center; justify-content: center; max-width: 60rem; }
-.wheel-called-label {
-  font-family: var(--font-mono); font-size: 0.64rem; letter-spacing: 0.16em;
-  text-transform: uppercase; color: var(--text-muted); margin-right: 0.2rem;
+/* ---- On the wheel / Off the wheel ----
+   Two compact chip lists under the controls. They share a fixed height and
+   scroll internally so a 35-name roster can't push the wheel off the page. */
+.wheel-roster {
+  flex: none;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-2);
+  width: 100%;
+  height: clamp(5.5rem, 16vh, 9rem);
 }
+.wheel-list {
+  display: flex; flex-direction: column; min-width: 0; min-height: 0;
+  border: 1px solid var(--hud-line);
+  border-radius: var(--radius-md);
+  background: var(--panel-bg);
+}
+.wheel-list-head {
+  flex: none;
+  display: flex; align-items: center; gap: 0.4rem;
+  margin: 0; padding: 0.35rem 0.5rem 0.25rem;
+  font-family: var(--font-mono); font-size: 0.62rem; letter-spacing: 0.14em;
+  text-transform: uppercase; font-weight: var(--fw-regular);
+  color: var(--text-muted);
+}
+.wheel-list-n {
+  font-variant-numeric: tabular-nums;
+  color: var(--accent);
+}
+.wheel-restore {
+  margin-left: auto;
+  padding: 0.1rem 0.45rem;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-pill);
+  background: var(--card-2);
+  color: var(--text-2);
+  font-family: var(--font-body);
+  font-size: 0.7rem;
+  letter-spacing: 0.02em;
+  text-transform: none;
+  cursor: pointer;
+}
+.wheel-restore:hover { color: var(--text); border-color: var(--accent); }
+.wheel-chips {
+  flex: 1 1 auto; min-height: 0; overflow-y: auto;
+  display: flex; flex-wrap: wrap; align-content: flex-start;
+  gap: 0.25rem;
+  padding: 0 0.5rem 0.5rem;
+}
+.wheel-list-none { color: var(--text-muted); font-size: var(--fs-xs); font-style: italic; padding: 0.1rem 0.15rem; }
 .wheel-chip {
-  display: inline-flex; align-items: center; gap: 0.35rem;
-  min-height: 1.8rem; padding: 0.15rem 0.6rem;
+  display: inline-flex; align-items: center; gap: 0.3rem;
+  min-height: 1.6rem; padding: 0.1rem 0.5rem;
   border: 1px solid var(--border); border-radius: var(--radius-pill);
-  background: var(--card-2); color: var(--text-muted);
-  font-size: var(--fs-xs);
+  background: var(--card-2); color: var(--text-2);
+  font-size: 0.78rem;
+  cursor: pointer;
 }
 .wheel-chip:hover { color: var(--text); border-color: var(--accent); }
-.wheel-chip span { opacity: 0.7; }
+.wheel-chip > span { opacity: 0.7; }
+.wheel-chip.back:hover .wheel-plus { color: var(--accent); opacity: 1; }
+.wheel-chip.static { cursor: default; color: var(--text-muted); }
+.wheel-chip.static:hover { border-color: var(--border); color: var(--text-muted); }
+/* why a student isn't on the wheel */
+.wheel-why {
+  font-family: var(--font-mono); font-size: 0.58rem; letter-spacing: 0.1em;
+  text-transform: uppercase; opacity: 1;
+  padding: 0.05rem 0.3rem; border-radius: var(--radius-pill);
+  background: var(--card-3); color: var(--text-muted);
+}
+.wheel-why[data-why="absent"]      { color: var(--danger); }
+.wheel-why[data-why="sitting out"] { color: var(--lavender); }
+.wheel-why[data-why="called"]      { color: var(--accent); }
+
+/* slices are clickable (take that student off); the label must not swallow it */
+.slice { cursor: pointer; }
+.slice-label { pointer-events: none; }
+body.wheel-popout .slice { cursor: default; }
 
 /* full screen: controls go, the wheel takes the room */
 body.present .wheel-wrap { width: min(80vh, 94vw); }

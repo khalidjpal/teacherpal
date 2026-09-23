@@ -112,12 +112,25 @@
               <span class="when-on">Tick muted</span>
             </button>
             <button type="button" id="wheel-firstnames" role="switch" aria-checked="true" title="Show first names only (shared with Create Groups)">First names</button>
-            <button type="button" id="wheel-reset" title="Put everyone back on the wheel">Reset</button>
             <button type="button" id="wheel-popout-btn">Pop out ↗</button>
             <button type="button" class="icon-btn" data-fullscreen aria-pressed="false" title="Full screen (F)" aria-label="Toggle full screen"><span class="when-off"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 3H5a2 2 0 0 0-2 2v3M16 3h3a2 2 0 0 1 2 2v3M8 21H5a2 2 0 0 1-2-2v-3M16 21h3a2 2 0 0 0 2-2v-3"/></svg></span><span class="when-on"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 3v3a2 2 0 0 1-2 2H3M21 8h-3a2 2 0 0 1-2-2V3M3 16h3a2 2 0 0 1 2 2v3M16 21v-3a2 2 0 0 1 2-2h3"/></svg></span></button>
           </div>
 
-          <div class="wheel-called" id="wheel-called" hidden></div>
+          <!-- Who is on the wheel and who isn't. Compact on purpose — the
+               wheel is the page. Both scroll internally. -->
+          <div class="wheel-roster">
+            <section class="wheel-list" aria-label="On the wheel">
+              <h3 class="wheel-list-head">On the wheel <span class="wheel-list-n" id="wheel-on-n">0</span></h3>
+              <div class="wheel-chips" id="wheel-on"></div>
+            </section>
+            <section class="wheel-list" aria-label="Off the wheel">
+              <h3 class="wheel-list-head">
+                Off the wheel <span class="wheel-list-n" id="wheel-off-n">0</span>
+                <button type="button" class="wheel-restore" id="wheel-restore-all" hidden title="Put everyone we took off back on the wheel">Restore all</button>
+              </h3>
+              <div class="wheel-chips" id="wheel-off"></div>
+            </section>
+          </div>
         </div>
       </section>
       </div>

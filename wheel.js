@@ -27,6 +27,7 @@
   const MUTE_KEY   = 'teacherpal.wheel.muted';
   const REPEAT_KEY = 'teacherpal.wheel.noRepeats';
   const calledKey  = (pid) => `teacherpal.wheel.called.${pid}`;
+  const removedKey = (pid) => `teacherpal.wheel.removed.${pid}`;
 
   const SPIN_MS = 4500;
   const MIN_TURNS = 5;                // whole rotations before the offset
@@ -38,7 +39,10 @@
   let currentPeriodId = null;
   let roster = [];                    // everyone in the period
   let eligible = [];                  // roster minus absent minus sitting out
-  let pool = [];                      // eligible minus called (when No repeats)
+  let absentIds = new Set();          // kept so the off-list can say *why*
+  let sitOutIds = new Set();          // (both are read-only here)
+  let removed = new Set();            // taken off by hand today - see `removed`
+  let pool = [];                      // eligible minus removed minus called
   let displayList = [];               // what is actually drawn. Lags `pool` by
                                       // one spin so the winner stays under the
                                       // pointer to be seen, and only drops off
@@ -99,22 +103,26 @@
       localStorage.setItem(REPEAT_KEY, noRepeats ? '1' : '0');
     } catch { /* ignore */ }
   }
-  // The called list is per period, per day - a fresh wheel every morning.
-  function loadCalled(pid) {
+  // Called and removed are both per period, per day - a fresh wheel every
+  // morning - and both are this browser only. Neither touches attendance:
+  // taking someone off the wheel says nothing about whether they are here.
+  function loadIdSet(key) {
     try {
-      const raw = JSON.parse(localStorage.getItem(calledKey(pid)) || 'null');
+      const raw = JSON.parse(localStorage.getItem(key) || 'null');
       if (raw && raw.date === todayKey() && Array.isArray(raw.ids)) return new Set(raw.ids);
     } catch { /* ignore */ }
     return new Set();
   }
-  function saveCalled() {
-    if (!currentPeriodId) return;
+  function saveIdSet(key, set) {
     try {
-      const ids = [...called];
-      if (!ids.length) localStorage.removeItem(calledKey(currentPeriodId));
-      else localStorage.setItem(calledKey(currentPeriodId), JSON.stringify({ date: todayKey(), ids }));
+      const ids = [...set];
+      if (!ids.length) localStorage.removeItem(key);
+      else localStorage.setItem(key, JSON.stringify({ date: todayKey(), ids }));
     } catch { /* ignore */ }
   }
+  const loadCalled = (pid) => loadIdSet(calledKey(pid));
+  function saveCalled() { if (currentPeriodId) saveIdSet(calledKey(currentPeriodId), called); }
+  function saveRemoved() { if (currentPeriodId) saveIdSet(removedKey(currentPeriodId), removed); }
 
   // ---------- wheel geometry ----------
   const pt = (a) => {
@@ -486,35 +494,71 @@
 
   // ---------- data ----------
   async function loadPeriod() {
-    roster = []; eligible = []; pool = []; called = new Set(); winnerId = null;
+    roster = []; eligible = []; pool = [];
+    called = new Set(); removed = new Set();
+    absentIds = new Set(); sitOutIds = new Set();
+    winnerId = null;
     if (currentPeriodId) {
       try { roster = await getStudents(currentPeriodId); } catch (err) { showError(err); }
       const ids = new Set(roster.map((s) => s.id));
-      let absent = new Set();
       try {
         const att = await getAttendance(currentPeriodId, todayKey());
-        absent = att ? absentIdsOf(att.marks) : readAbsentCache(currentPeriodId);
-      } catch { absent = readAbsentCache(currentPeriodId); }
-      const sitOut = readSitOutCache(currentPeriodId);
-      eligible = roster.filter((s) => !absent.has(s.id) && !sitOut.has(s.id));
-      called = new Set([...loadCalled(currentPeriodId)].filter((id) => ids.has(id)));
+        absentIds = att ? absentIdsOf(att.marks) : readAbsentCache(currentPeriodId);
+      } catch { absentIds = readAbsentCache(currentPeriodId); }
+      sitOutIds = readSitOutCache(currentPeriodId);
+      eligible = roster.filter((s) => !absentIds.has(s.id) && !sitOutIds.has(s.id));
+      called  = new Set([...loadCalled(currentPeriodId)].filter((id) => ids.has(id)));
+      removed = new Set([...loadIdSet(removedKey(currentPeriodId))].filter((id) => ids.has(id)));
     }
     rebuildPool();
     broadcast();
   }
 
-  // pool = eligible minus called (when No repeats is on); refills when empty
+  // pool = eligible, minus the ones taken off by hand, minus the ones already
+  // called (when No repeats is on). The refill compares against what is
+  // *available* — a removed student must not keep the wheel from refilling.
   function rebuildPool({ redraw = true } = {}) {
     if (spin) redraw = false;          // never redraw the wheel mid-spin
+    const available = eligible.filter((s) => !removed.has(s.id));
     if (noRepeats) {
-      if (called.size >= eligible.length && eligible.length) { called = new Set(); saveCalled(); }
-      pool = eligible.filter((s) => !called.has(s.id));
+      if (available.length && available.every((s) => called.has(s.id))) { called = new Set(); saveCalled(); }
+      pool = available.filter((s) => !called.has(s.id));
     } else {
-      pool = eligible.slice();
+      pool = available;
     }
     if (redraw) syncWheel();
-    renderCalled();
+    renderLists();
     renderControls();
+  }
+
+  // ---------- add / remove ----------
+  // All of this is display-only bookkeeping: `removed` lives in localStorage
+  // keyed by today's date, so it clears overnight, and nothing here writes
+  // attendance or the sit-out cache.
+  function removeFromWheel(id) {
+    if (!id || spin || removed.has(id)) return;
+    removed.add(id); saveRemoved();
+    rebuildPool();                     // redraws the wheel straight away
+    broadcast();
+  }
+  function restoreToWheel(id) {
+    if (!id || spin) return;
+    let changed = false;
+    if (removed.delete(id)) { saveRemoved(); changed = true; }
+    if (called.delete(id))  { saveCalled();  changed = true; }
+    if (!changed) return;
+    rebuildPool();
+    broadcast();
+  }
+  // Puts back everyone we took off — absent and sitting-out students are not
+  // ours to restore, so they stay off.
+  function restoreAll() {
+    if (spin) return;
+    removed = new Set(); saveRemoved();
+    called = new Set();  saveCalled();
+    winnerId = null;
+    rebuildPool();
+    broadcast();
   }
 
   // Draw whatever is in the pool right now. Called on load, on any explicit
@@ -575,8 +619,9 @@
       spinBtn.disabled = !!spin || pool.length === 0;
       spinBtn.dataset.spinning = spin ? '1' : '';
     }
+    const avail = eligible.filter((s) => !removed.has(s.id)).length;
     const left = $('wheel-left');
-    if (left) left.textContent = noRepeats ? `${pool.length} left of ${eligible.length}` : `${eligible.length} on the wheel`;
+    if (left) left.textContent = noRepeats ? `${pool.length} left of ${avail}` : `${avail} on the wheel`;
     const rep = $('wheel-norepeat');
     if (rep) rep.setAttribute('aria-checked', String(noRepeats));
     const fn = $('wheel-firstnames');
@@ -588,20 +633,49 @@
     const back = $('wheel-back');
     const remove = $('wheel-remove');
     const has = !!winnerId && !spin;
-    const isOut = has && called.has(winnerId);
+    const isOut = has && (called.has(winnerId) || removed.has(winnerId));
     if (back) back.hidden = !has || !isOut;
     if (remove) remove.hidden = !has || isOut;
   }
 
-  function renderCalled() {
-    const box = $('wheel-called');
-    if (!box) return;
-    const ids = [...called];
-    box.hidden = ids.length === 0;
-    box.innerHTML = ids.length
-      ? '<span class="wheel-called-label">Called</span>' + ids.map((id) =>
-          `<button type="button" class="wheel-chip" data-back="${id}" title="Put ${escapeHtml(nameOf(id))} back on the wheel">${escapeHtml(nameOf(id))}<span aria-hidden="true">&times;</span></button>`).join('')
-      : '';
+  // Two compact chip lists under the controls: who is on the wheel (× takes
+  // them off) and who is off it (with the reason, and a put-back for the two
+  // reasons this page owns). Absent / sitting out are shown but not
+  // restorable here — those belong to Attendance and Create Groups.
+  function renderLists() {
+    const on = $('wheel-on'), off = $('wheel-off');
+    if (!on || !off) return;
+
+    on.innerHTML = pool.map((s) =>
+      `<button type="button" class="wheel-chip" data-remove="${s.id}" title="Take ${escapeHtml(s.name)} off the wheel">` +
+      `${escapeHtml(labelFor(s, eligible))}<span aria-hidden="true">&times;</span></button>`
+    ).join('') || '<span class="wheel-list-none">Nobody on the wheel</span>';
+
+    // reason order: taken off by hand, already called, absent, sitting out
+    const reason = (s) => (removed.has(s.id) ? 'removed'
+      : (noRepeats && called.has(s.id)) ? 'called'
+      : absentIds.has(s.id) ? 'absent'
+      : sitOutIds.has(s.id) ? 'sitting out' : null);
+    const LABEL = { removed: 'Off', called: 'Called', absent: 'Absent', 'sitting out': 'Sitting out' };
+    const RANK  = { removed: 0, called: 1, absent: 2, 'sitting out': 3 };
+    const rows = roster
+      .map((s) => ({ s, why: reason(s) }))
+      .filter((r) => r.why)
+      .sort((a, b) => RANK[a.why] - RANK[b.why]);
+
+    off.innerHTML = rows.map(({ s, why }) => {
+      const label = escapeHtml(labelFor(s, roster));
+      const tag = `<span class="wheel-why" data-why="${why}">${LABEL[why]}</span>`;
+      return (why === 'removed' || why === 'called')
+        ? `<button type="button" class="wheel-chip back" data-back="${s.id}" title="Put ${escapeHtml(s.name)} back on the wheel">${label}${tag}<span class="wheel-plus" aria-hidden="true">+</span></button>`
+        : `<span class="wheel-chip static" title="${escapeHtml(s.name)} — ${LABEL[why].toLowerCase()} today">${label}${tag}</span>`;
+    }).join('') || '<span class="wheel-list-none">Everyone is on</span>';
+
+    const onN = $('wheel-on-n'), offN = $('wheel-off-n');
+    if (onN) onN.textContent = String(pool.length);
+    if (offN) offN.textContent = String(rows.length);
+    const restore = $('wheel-restore-all');
+    if (restore) restore.hidden = !rows.some((r) => r.why === 'removed' || r.why === 'called');
   }
 
   // ---------- broadcast ----------
@@ -681,30 +755,23 @@
       saveSettings();
       renderControls();
     });
-    $('wheel-remove').addEventListener('click', () => {
-      if (!winnerId) return;
-      called.add(winnerId); saveCalled();
-      rebuildPool();
-      broadcast();
+    $('wheel-remove').addEventListener('click', () => removeFromWheel(winnerId));
+    $('wheel-back').addEventListener('click', () => restoreToWheel(winnerId));
+    $('wheel-restore-all').addEventListener('click', restoreAll);
+    $('wheel-on').addEventListener('click', (e) => {
+      const btn = e.target.closest('[data-remove]');
+      if (btn) removeFromWheel(btn.getAttribute('data-remove'));
     });
-    $('wheel-back').addEventListener('click', () => {
-      if (!winnerId) return;
-      called.delete(winnerId); saveCalled();
-      rebuildPool();
-      broadcast();
-    });
-    $('wheel-reset').addEventListener('click', () => {
-      called = new Set(); saveCalled();
-      winnerId = null;
-      rebuildPool();
-      broadcast();
-    });
-    $('wheel-called').addEventListener('click', (e) => {
+    $('wheel-off').addEventListener('click', (e) => {
       const btn = e.target.closest('[data-back]');
-      if (!btn) return;
-      called.delete(btn.getAttribute('data-back')); saveCalled();
-      rebuildPool();
-      broadcast();
+      if (btn) restoreToWheel(btn.getAttribute('data-back'));
+    });
+    // Clicking a slice takes that student off. Guarded by `spin` so a stray
+    // click on the moving wheel (or on the landing) can't drop anyone.
+    $('wheel-rotor').addEventListener('click', (e) => {
+      if (spin) return;
+      const el = e.target.closest('[data-id]');
+      if (el) removeFromWheel(el.getAttribute('data-id'));
     });
     $('wheel-popout-btn').addEventListener('click', () => {
       const w = window.open('wheel-popout.html', 'teacherpal-wheel', 'popup=yes,width=820,height=720');

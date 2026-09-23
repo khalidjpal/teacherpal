@@ -67,7 +67,7 @@ full-screen toggle. There is no sidebar; every page uses the full width.
 | `timer.js`     | Countdown + stopwatch logic, plus `buildDial()` / `paintDial()` for the themed dial. **End-timestamp model**: state is `{ mode, running, paused, label, muted, targetMs, endsAt, remainingAtPause, startedAt, elapsedAtPause, zeroed }` in `localStorage['teacherpal.timer.state']`; every window computes the display from `Date.now()` against `endsAt`/`startedAt`, so tab-throttling doesn't drift. `BroadcastChannel('teacherpal-timer')` syncs main ↔ pop-out ↔ PiP. Web Audio API beep on zero (respects mute). `documentPictureInPicture.requestWindow()` on Chrome for an always-on-top floating display. Space toggles start/pause. |
 | `noise.html`   | Noise Meter screen: the `.noise-stage` (activity presets, big reading + bar + zone word, Start/Stop, chime mute, Pop out, full screen, the two zone sliders, privacy line) — loads `noise.js`. |
 | `noise.js`     | Mic → `AnalyserNode` → RMS → a 35–95 relative "dB" reading, 500ms rolling average, three zones, "Too loud" after 3s in the red, optional chime. Polls on `setInterval` (**not** rAF — rAF freezes in a background window and the pop-out would stall). `BroadcastChannel('teacherpal-noise')` feeds the pop-out. Opens the mic only on Start; stops every track on Stop and on `pagehide`. Nothing is recorded or sent anywhere. |
-| `wheel.html`   | Name Wheel screen: control row (period, AUTO, count, First names / No repeats / Reset / tick mute / Pop out / full screen) then the wheel, Spin, the picked-student actions and the called strip — loads `wheel.js`. |
+| `wheel.html`   | Name Wheel screen: the wheel on the left; on the right the result panel, the controls (period, AUTO, First names / No repeats / tick mute / Pop out / full screen) and the **On the wheel / Off the wheel** chip lists — loads `wheel.js`. |
 | `wheel.js`     | The wheel: draws the slices as SVG into `#wheel-rotor` (the only thing that spins), runs the spin on rAF with an ease-out, ticks as each slice passes the pointer, and syncs the pop-out over `BroadcastChannel('teacherpal-wheel')`. **Winner is drawn first** (`crypto.getRandomValues`), then the landing rotation is computed — the animation can't bias it. |
 | `wheel-popout.html` | Read-only projector wheel (`body.wheel-popout`): same dial filling the window, fed by broadcast, no controls. |
 | `noise-popout.html` | Read-only projector pop-out (`body.noise-popout`): reading + bar + zone word, fed over BroadcastChannel. Never opens a mic of its own; says so when the main window isn't answering. |
@@ -1025,7 +1025,7 @@ All styling lives in `style.css`; pages carry almost no inline styling.
   small `.wheel-result-sub`: the remaining count and the contextual
   put-back / take-off button. Controls follow below: the "press the hub or
   Space" hint, period + AUTO, then the toggles (No repeats, tick mute,
-  First names, Reset, Pop out, full screen) and the `.wheel-called` chips.
+  First names, Pop out, full screen) and the `.wheel-roster` lists.
   **The hub IS the Spin button** (`.wheel-hub-btn`, `#wheel-spin`): a small
   disc at the centre, 28% of the wrap = radius 14 in viewBox units, with
   hover (accent ring + glow + a nudge up in scale), pressed (scale down,
@@ -1093,9 +1093,31 @@ All styling lives in `style.css`; pages carry almost no inline styling.
   follows the bell via `suggestedPeriod()`, exactly like Attendance.
   **No repeats** (default on) drops each pick into `called`
   (`teacherpal.wheel.called.<periodId>`, date-keyed so it clears overnight);
-  when the pool empties it refills automatically. The count chip reads
-  "N left of M". Picked students can be removed or put back from the row
-  under the wheel, or restored by clicking their chip in the called strip.
+  when the pool empties it refills automatically.
+  **Taking students off** (`removed`, `teacherpal.wheel.removed.<periodId>`,
+  date-keyed and this-browser-only exactly like `called`): three ways in —
+  the `×` on a chip in the **On the wheel** list, a **click on the slice
+  itself** (`#wheel-rotor` click → `removeFromWheel`, guarded by `spin` so a
+  stray click on a moving wheel or on the landing can't drop anyone), or the
+  result panel's take-off button. Every path funnels through
+  `removeFromWheel` / `restoreToWheel` / `restoreAll`, each of which calls
+  `rebuildPool()` so **the wheel redraws on the spot**. None of it touches
+  attendance or the sit-out cache — being off the wheel says nothing about
+  whether a student is in the room.
+  **The two lists** (`.wheel-roster`, a fixed-height 2-up grid whose chip
+  boxes scroll internally, so a 35-name roster can't push the wheel off the
+  page): **On the wheel** is `pool`, each chip an `×`; **Off the wheel** is
+  every roster student who isn't, tagged with the reason and sorted
+  `removed → called → absent → sitting out`. Removed and called chips are
+  buttons that put the student back; **absent and sitting out are shown but
+  inert** (`.wheel-chip.static`) — those belong to Attendance and Create
+  Groups, and `restoreAll` deliberately leaves them off. `restoreAll`
+  (the **Restore all** button in the Off header, shown only when there is
+  something to restore) replaced the old Reset button and the `.wheel-called`
+  strip, which did the same job.
+  `rebuildPool`'s no-repeats refill compares against **available**
+  (`eligible` minus `removed`), not `eligible` — otherwise a removed student
+  keeps the wheel from ever refilling.
   **`displayList` lags `pool` by one spin on purpose** — the winner stays on
   the wheel under the pointer until the next spin starts, otherwise the
   landing you just watched vanishes instantly.
