@@ -25,7 +25,7 @@
         <h2 class="gp-title">Group size</h2>
         <!-- What the number means depends on the mode, so it lives in the
              input's aria-label (kept in sync by updateSummary). -->
-        <div class="gp-row">
+        <div class="gp-body">
           <div class="seg mode-seg" role="radiogroup" aria-label="Group mode">
             <label><input type="radio" name="mode" value="count"><span>Groups</span></label>
             <label><input type="radio" name="mode" value="size"><span>Per group</span></label>
@@ -36,21 +36,16 @@
 
       <section class="gp-panel" aria-label="Roster">
         <h2 class="gp-title">Roster</h2>
-        <label class="bar-field">
-          <span class="lbl">Period</span>
-          <select id="period-select"></select>
-        </label>
-        <div class="gp-row">
+        <div class="gp-body">
+          <select id="period-select" aria-label="Period"></select>
           <p class="gp-summary" id="roster-summary">—</p>
-          <span class="gp-spacer"></span>
           <button type="button" id="btn-attendance" title="Mark who is absent or sitting out today (the saved roster never changes)">Edit Roster</button>
         </div>
       </section>
 
-      <section class="gp-panel gp-create" aria-label="Create">
-        <h2 class="gp-title">Create</h2>
-        <button id="btn-shuffle" class="primary groups-primary" title="Create Groups (or Reshuffle)">Create Groups</button>
-        <div class="gp-row">
+      <section class="gp-panel" aria-label="Options">
+        <h2 class="gp-title">Options</h2>
+        <div class="gp-body">
           <button type="button" id="btn-formula" title="Grouping rules for this period">Formula</button>
           <button type="button" id="btn-use-formula" class="gp-toggle" role="switch" aria-checked="false" title="Create Groups will obey this period's grouping rules instead of random">Follow rules</button>
           <button type="button" class="icon-btn" id="btn-groups-settings" title="Group settings" aria-label="Group settings">
@@ -61,8 +56,15 @@
       </section>
     </div>
 
-    <!-- ---------- Settings dialog (first names / formula toggle; mode and
-         number live on the toolbar) ---------- -->
+    <!-- The primary action, centred directly under the panels. It is a
+         sibling of the stage (never inside it), so creating groups can't
+         move it — reshuffling is always in the same spot. -->
+    <div class="shuffle-row no-present">
+      <button id="btn-shuffle" class="primary groups-primary" title="Create Groups (or Reshuffle)">Create Groups</button>
+    </div>
+
+    <!-- ---------- Settings dialog (first names only; mode, number and the
+         Formula toggle live on the panels) ---------- -->
     <dialog id="groups-settings-dialog" class="groups-settings-dialog">
       <form method="dialog">
         <h3>Group settings</h3>

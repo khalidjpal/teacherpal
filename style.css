@@ -1584,9 +1584,11 @@ body.editing .student .name { cursor: text; }
 .groups-page { scrollbar-gutter: stable; }
 
 /* ---------- The three panels across the top ---------- */
-/* Group size · Roster · Create. Equal columns, content-height, and they all
-   hide together in full screen (.no-present on the row) so the projector
-   sees only the group cards. */
+/* Group size · Roster · Options — three identical boxes: equal columns
+   (`1fr` each), equal height (grid stretch), the same padding, titles on one
+   line and each panel's controls centred in the space underneath, so nothing
+   sits higher or lower than its neighbours. They all hide together in full
+   screen (.no-present on the row) so the projector sees only the cards. */
 .groups-panels {
   --ctl: 2.2rem;                    /* control height inside a panel */
   flex: 0 0 auto;
@@ -1596,15 +1598,24 @@ body.editing .student .name { cursor: text; }
   margin-bottom: var(--space-4);
 }
 .gp-panel {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 0.55rem;
-  padding: var(--space-3) var(--space-4) var(--space-4);
+  display: grid;
+  grid-template-rows: auto 1fr;     /* title, then the centred body */
+  justify-items: center;
+  gap: 0.6rem;
+  padding: var(--space-4);
   border: 1px solid var(--border);
   border-radius: var(--radius-lg);
   background: var(--card);
   box-shadow: var(--shadow-card);
+  min-width: 0;
+}
+.gp-body {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 0.45rem 0.6rem;
+  width: 100%;
   min-width: 0;
 }
 .gp-title {
@@ -1622,8 +1633,6 @@ body.editing .student .name { cursor: text; }
 }
 .gp-panel select { min-width: 9.5rem; max-width: 100%; padding-right: 2rem; }
 .gp-panel input[type="number"] { width: 4.5rem; text-align: center; }
-.gp-panel .bar-field { display: inline-flex; align-items: center; gap: 0.45rem; min-width: 0; max-width: 100%; }
-.gp-panel .bar-field > .lbl { white-space: nowrap; }
 .gp-panel .mode-seg { grid-template-columns: auto auto; padding: 0.15rem; gap: 0.15rem; }
 .gp-panel .mode-seg span { padding: 0.32rem 0.7rem; font-size: var(--fs-xs); white-space: nowrap; }
 .gp-panel .icon-btn { width: var(--ctl); height: var(--ctl); padding: 0; flex: none; }
@@ -1636,24 +1645,30 @@ body.editing .student .name { cursor: text; }
   color: var(--text-2);
   font-variant-numeric: tabular-nums;
 }
-/* Create panel: the big button owns the width, the extras sit under it */
-.gp-create { align-items: stretch; }
-.gp-create .groups-primary {
-  width: 100%;
-  min-height: 3.2rem;
+.gp-toggle { white-space: nowrap; }
+
+/* Create Groups / Reshuffle: a standalone primary, centred under the panels
+   and a sibling of the stage — never inside it. Keeping it out of the stage
+   is what stops it drifting when the group cards appear (that was the old
+   "button floats at the bottom" bug); its row is content-sized, so the stage
+   below still takes all the remaining height. */
+.shuffle-row {
+  flex: 0 0 auto;
+  display: flex;
+  justify-content: center;
+  margin-bottom: var(--space-4);
+}
+.shuffle-row .groups-primary {
+  min-width: 16rem;
+  min-height: 3.3rem;
+  padding: 0 2.2rem;
   font-size: var(--fs-lg);
   font-weight: var(--fw-bold);
   letter-spacing: 0.04em;
   border-radius: var(--radius-md);
   box-shadow: 0 6px 20px var(--accent-glow);
 }
-.gp-create .groups-primary:hover:not(:disabled) { transform: translateY(-1px); }
-.gp-row { display: flex; align-items: center; flex-wrap: wrap; gap: 0.4rem; width: 100%; }
-.gp-spacer { flex: 1 1 0; min-width: 0; }
-.gp-toggle { white-space: nowrap; }
-/* the three panels are the same height (grid stretch) — sit each panel's last
-   control on the bottom line so they read as one row of controls */
-.gp-panel > :last-child { margin-top: auto; }
+.shuffle-row .groups-primary:hover:not(:disabled) { transform: translateY(-1px); }
 
 @media (max-width: 900px) {
   .groups-panels { grid-template-columns: 1fr; }
@@ -1906,10 +1921,6 @@ body:not(.present) .group .name-chip:hover { background: var(--card-2); }
 .attend-sitout:disabled { opacity: 0.35; cursor: not-allowed; }
 .attendance-actions { display: flex; align-items: center; gap: var(--space-3); }
 .attendance-actions .spacer { flex: 1; }
-
-@media (max-width: 900px) {
-  .gp-panel .gp-spacer { display: none; }   /* wrap tight instead of spreading */
-}
 
 @media (prefers-reduced-motion: reduce) {
   .stage.shuffling .name-chip { animation: none; }

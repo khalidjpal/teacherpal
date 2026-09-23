@@ -81,7 +81,7 @@ full-screen toggle. There is no sidebar; every page uses the full width.
 | `formula.js`   | Shared Formula **algorithms and modal only** — never rule data: type metadata per scope (`RULE_TYPES`, `SCOPE_TYPES`, `KEY_TYPES`), priorities (`sortByPriority`, `priorityWeight`, `planRules`), feasibility (`findImpossibleHard`, `confirmImpossible`), the `annealAssign()` solver, `groupWithFormula()`, `summarizeRun()`, `absentTodayFor()`, `createFormulaModal({ scope, … })`. No Supabase calls. |
 | `style.css`    | Shared styling for every page (dark pink dashboard theme; all tokens at the top) |
 | `roster.html`  | Two-panel roster: period panel (search, sort, add, import modal, edit mode, full screen) + name-card grid with undo-toast remove |
-| `groups.html`  | **Create Groups**: three panels across the top — **Group size** (mode toggle + number), **Roster** (period, one-line summary, Edit Roster → the roster modal) and **Create** (big Create Groups / Reshuffle button, Formula, Follow-rules switch, gear, full screen) — with the group cards filling everything below. First names is the only field left in the `.groups-settings-dialog`. FLIP-animated: names fly out of the Roster panel on Create and between cards on Reshuffle |
+| `groups.html`  | **Create Groups**: three identical panels across the top — **Group size** (mode toggle + number), **Roster** (period, one-line summary, Edit Roster → the roster modal) and **Options** (Formula, Follow-rules switch, gear, full screen) — then the centred Create Groups / Reshuffle button, then the group cards filling everything below. First names is the only field left in the `.groups-settings-dialog`. FLIP-animated: names fly out of the Roster panel on Create and between cards on Reshuffle |
 | `seating.html` | Freeform room builder: palette of desk pieces on a zoomable dot-grid canvas (Arrange Room), then drag names onto seats (Assign Seats); layout shared, seats per period, autosave, full screen |
 | `migration-room-builder.sql` | One-off migration for the room builder tables (run in the Supabase SQL editor) |
 | `migration-seating-rules.sql` | One-off migration creating the formula rules table (run in the Supabase SQL editor) |
@@ -1317,14 +1317,25 @@ All styling lives in `style.css`; pages carry almost no inline styling.
        not on the page**: the full per-student panel lives in
        `<dialog id="attendance-dialog">` and closing it returns to the
        summary.
-    3. **Create** — `#btn-shuffle` full-width (3.2rem, accent glow),
-       reading **Create Groups** then **Reshuffle**; under it a `.gp-row`
-       with **Formula**, the **Follow rules** `role="switch"`
+    3. **Options** — **Formula**, the **Follow rules** `role="switch"`
        (`#btn-use-formula`, moved out of the settings dialog), the gear
        and the full-screen button.
-  `.gp-panel > :last-child { margin-top: auto }` drops each panel's last
-  control onto a common bottom line.
-  **`.stage` is just the results** and takes every pixel under the panels
+  **The three are deliberately identical boxes**: `1fr` columns (equal
+  width), grid stretch (equal height), one `padding: var(--space-4)`, and
+  `grid-template-rows: auto 1fr` + `justify-items: center` so every title
+  lands on the same line and every panel's `.gp-body` is centred in the
+  space beneath it. Measured at 1280×720: all three 388×88 with
+  `titleT: 90` and `bodyMid: 131`. Keep new controls inside a panel's
+  `.gp-body` or the symmetry breaks.
+  **The primary action sits between the panels and the stage.**
+  `#btn-shuffle` lives alone in a centred `.shuffle-row` (16rem × 3.3rem,
+  accent glow), reading **Create Groups** then **Reshuffle**. That row is
+  a **sibling of `#stage`, never inside it** — keeping it out of the stage
+  is what stops it drifting when the cards appear (the old "button floats
+  at the bottom" bug), and being content-sized (`flex: 0 0 auto`) it lets
+  the stage keep all the remaining height. Measured: the row stays at
+  `top: 177` across loaded / created / reshuffled.
+  **`.stage` is just the results** and takes every pixel under it
   (`flex: 1 1 auto`, one `1fr` row) so the group cards are the focus.
   `.results` is `repeat(auto-fit, minmax(11rem, 1fr))` — auto-fit collapses
   the tracks it doesn't need, so six groups land on **one row** and the
