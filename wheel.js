@@ -527,7 +527,7 @@
       pool = available;
     }
     if (redraw) syncWheel();
-    renderLists();
+    renderEditButton();
     renderControls();
   }
 
@@ -550,15 +550,30 @@
     rebuildPool();
     broadcast();
   }
-  // Puts back everyone we took off — absent and sitting-out students are not
-  // ours to restore, so they stay off.
-  function restoreAll() {
-    if (spin) return;
-    removed = new Set(); saveRemoved();
-    called = new Set();  saveCalled();
-    winnerId = null;
-    rebuildPool();
-    broadcast();
+  // ---- modal edits: change the sets, repaint the modal, and leave the wheel
+  // alone until it closes (the dialog covers it anyway). -------------------
+  function toggleOnWheel(id) {
+    const s = roster.find((x) => x.id === id);
+    if (!s || locked(s)) return;
+    if (onWheel(id)) {
+      removed.add(id); saveRemoved();
+    } else {
+      removed.delete(id); saveRemoved();
+      called.delete(id);  saveCalled();
+    }
+    renderRosterDialog();
+  }
+  function allOnWheel(on) {
+    if (on) {
+      removed = new Set(); saveRemoved();
+      called = new Set();  saveCalled();
+      winnerId = null;
+    } else {
+      // everyone eligible goes off; absent / sitting out are already off
+      eligible.forEach((s) => removed.add(s.id));
+      saveRemoved();
+    }
+    renderRosterDialog();
   }
 
   // Draw whatever is in the pool right now. Called on load, on any explicit
@@ -638,44 +653,45 @@
     if (remove) remove.hidden = !has || isOut;
   }
 
-  // Two compact chip lists under the controls: who is on the wheel (× takes
-  // them off) and who is off it (with the reason, and a put-back for the two
-  // reasons this page owns). Absent / sitting out are shown but not
-  // restorable here — those belong to Attendance and Create Groups.
-  function renderLists() {
-    const on = $('wheel-on'), off = $('wheel-off');
-    if (!on || !off) return;
+  // ---------- wheel roster (the Edit wheel modal) ----------
+  // Who is actually on the wheel right now. `pool` is the same set, but this
+  // works per-id while the modal is open and the pool hasn't been rebuilt.
+  const onWheel = (id) => eligible.some((s) => s.id === id)
+    && !removed.has(id) && !(noRepeats && called.has(id));
+  // Why someone isn't on it (null when they are)
+  const offReason = (s) => (absentIds.has(s.id) ? 'absent'
+    : sitOutIds.has(s.id) ? 'sitting out'
+    : removed.has(s.id) ? 'off'
+    : (noRepeats && called.has(s.id)) ? 'called' : null);
+  const REASON_LABEL = { absent: 'Absent', 'sitting out': 'Sitting out', called: 'Called', off: '' };
+  // Absent / sitting out aren't ours to undo — Attendance and Create Groups
+  // own those, so their chips are locked.
+  const locked = (s) => absentIds.has(s.id) || sitOutIds.has(s.id);
 
-    on.innerHTML = pool.map((s) =>
-      `<button type="button" class="wheel-chip" data-remove="${s.id}" title="Take ${escapeHtml(s.name)} off the wheel">` +
-      `${escapeHtml(labelFor(s, eligible))}<span aria-hidden="true">&times;</span></button>`
-    ).join('') || '<span class="wheel-list-none">Nobody on the wheel</span>';
+  function renderRosterDialog() {
+    const list = $('wheel-roster-list');
+    if (!list) return;
+    const on = roster.filter((s) => onWheel(s.id)).length;
+    const count = $('wheel-roster-count');
+    if (count) count.textContent = `${on} of ${roster.length} on the wheel`;
+    list.innerHTML = roster.map((s) => {
+      const is = onWheel(s.id);
+      const why = is ? null : offReason(s);
+      const tag = why && REASON_LABEL[why] ? `<span class="wr-why" data-why="${why}">${REASON_LABEL[why]}</span>` : '';
+      const lock = locked(s);
+      return `<button type="button" class="wr-chip" data-id="${s.id}" aria-pressed="${is}"${lock ? ' disabled' : ''}
+        title="${escapeHtml(s.name)}${lock ? ` — ${REASON_LABEL[why].toLowerCase()} today` : (is ? ' — on the wheel' : ' — off the wheel')}">
+        <span class="wr-name">${escapeHtml(s.name)}</span>${tag}</button>`;
+    }).join('') || '<p class="hint">No students in this period.</p>';
+  }
 
-    // reason order: taken off by hand, already called, absent, sitting out
-    const reason = (s) => (removed.has(s.id) ? 'removed'
-      : (noRepeats && called.has(s.id)) ? 'called'
-      : absentIds.has(s.id) ? 'absent'
-      : sitOutIds.has(s.id) ? 'sitting out' : null);
-    const LABEL = { removed: 'Off', called: 'Called', absent: 'Absent', 'sitting out': 'Sitting out' };
-    const RANK  = { removed: 0, called: 1, absent: 2, 'sitting out': 3 };
-    const rows = roster
-      .map((s) => ({ s, why: reason(s) }))
-      .filter((r) => r.why)
-      .sort((a, b) => RANK[a.why] - RANK[b.why]);
-
-    off.innerHTML = rows.map(({ s, why }) => {
-      const label = escapeHtml(labelFor(s, roster));
-      const tag = `<span class="wheel-why" data-why="${why}">${LABEL[why]}</span>`;
-      return (why === 'removed' || why === 'called')
-        ? `<button type="button" class="wheel-chip back" data-back="${s.id}" title="Put ${escapeHtml(s.name)} back on the wheel">${label}${tag}<span class="wheel-plus" aria-hidden="true">+</span></button>`
-        : `<span class="wheel-chip static" title="${escapeHtml(s.name)} — ${LABEL[why].toLowerCase()} today">${label}${tag}</span>`;
-    }).join('') || '<span class="wheel-list-none">Everyone is on</span>';
-
-    const onN = $('wheel-on-n'), offN = $('wheel-off-n');
-    if (onN) onN.textContent = String(pool.length);
-    if (offN) offN.textContent = String(rows.length);
-    const restore = $('wheel-restore-all');
-    if (restore) restore.hidden = !rows.some((r) => r.why === 'removed' || r.why === 'called');
+  // The button by the controls carries the count.
+  function renderEditButton() {
+    const n = $('wheel-edit-n');
+    if (!n) return;
+    n.textContent = `${pool.length} on`;
+    const btn = $('wheel-edit');
+    if (btn) btn.title = `${pool.length} on the wheel — click to choose who's on it`;
   }
 
   // ---------- broadcast ----------
@@ -757,15 +773,27 @@
     });
     $('wheel-remove').addEventListener('click', () => removeFromWheel(winnerId));
     $('wheel-back').addEventListener('click', () => restoreToWheel(winnerId));
-    $('wheel-restore-all').addEventListener('click', restoreAll);
-    $('wheel-on').addEventListener('click', (e) => {
-      const btn = e.target.closest('[data-remove]');
-      if (btn) removeFromWheel(btn.getAttribute('data-remove'));
+
+    // ---- Edit wheel modal ----
+    const rosterDialog = $('wheel-roster-dialog');
+    $('wheel-edit').addEventListener('click', () => {
+      if (spin) return;
+      if (!roster.length) { setStatus('Pick a period with students first.', 'info'); return; }
+      renderRosterDialog();
+      rosterDialog.showModal();
     });
-    $('wheel-off').addEventListener('click', (e) => {
-      const btn = e.target.closest('[data-back]');
-      if (btn) restoreToWheel(btn.getAttribute('data-back'));
+    $('wheel-roster-list').addEventListener('click', (e) => {
+      const btn = e.target.closest('.wr-chip');
+      if (btn && !btn.disabled) toggleOnWheel(btn.dataset.id);
     });
+    $('wheel-all-on').addEventListener('click', () => allOnWheel(true));
+    $('wheel-all-off').addEventListener('click', () => allOnWheel(false));
+    // The wheel catches up with the edits on close. Wired to both the button
+    // and the dialog's `close` (Esc) — running it twice is harmless, missing
+    // it would leave the wheel showing the old line-up.
+    const afterRosterEdit = () => { rebuildPool(); broadcast(); };
+    $('wheel-roster-done').addEventListener('click', () => { rosterDialog.close(); afterRosterEdit(); });
+    rosterDialog.addEventListener('close', afterRosterEdit);
     // Clicking a slice takes that student off. Guarded by `spin` so a stray
     // click on the moving wheel (or on the landing) can't drop anyone.
     $('wheel-rotor').addEventListener('click', (e) => {
