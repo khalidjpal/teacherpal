@@ -35,15 +35,30 @@
 --     id          uuid        primary key
 --     owner_id    uuid        -> auth.users.id (cascade delete)
 --     key         text        default 'default'; UNIQUE (key, owner_id)
---     layout      jsonb       { version, grid, front: {x,y,w,h}, pieces: [{ id, type, x, y, rotation }] }
+--     layout      jsonb       { version, grid, front: {x,y,w,h,rotation?}, pieces: [{ id, type, x, y, rotation }] }
 --     updated_at  timestamptz
 --
---   seat_assignments            (one row per period)
+--   seat_assignments            (LEGACY — one row per period. No longer written;
+--                                read only as a fallback before
+--                                seating_arrangements exists)
 --     id          uuid        primary key
 --     owner_id    uuid        -> auth.users.id (cascade delete)
 --     period_id   uuid        -> periods.id (cascade delete), UNIQUE
 --     assignments jsonb       { "<pieceId>:<seatIndex>": "<student uuid>", ... }
 --     updated_at  timestamptz
+--
+--   seating_arrangements        (named seating charts, several per period;
+--                                at most one active = what Attendance shows)
+--     id          uuid        primary key
+--     owner_id    uuid        -> auth.users.id (cascade delete)
+--     period_id   uuid        -> periods.id (cascade delete)
+--     name        text        UNIQUE (period_id, lower(name))
+--     assignments jsonb       { "<pieceId>:<seatIndex>": "<student uuid>", ... }
+--     layout      jsonb       the desk layout it was saved on (room_layouts shape); null = unknown
+--     is_active   boolean     UNIQUE (period_id) WHERE is_active
+--     created_at  timestamptz
+--     updated_at  timestamptz
+--     RPC set_active_seating_arrangement(p_id uuid) swaps the active one
 --
 --   seating_rules               (one row per period AND scope — seating rules and
 --                                grouping rules are separate data sets)
@@ -153,6 +168,44 @@ create table if not exists public.seat_assignments (
 );
 create index if not exists seat_assignments_owner_idx on public.seat_assignments(owner_id);
 
+create table if not exists public.seating_arrangements (
+  id           uuid primary key default gen_random_uuid(),
+  owner_id     uuid not null default auth.uid() references auth.users(id) on delete cascade,
+  period_id    uuid not null references public.periods(id) on delete cascade,
+  name         text not null check (length(btrim(name)) between 1 and 60),
+  assignments  jsonb not null default '{}'::jsonb,
+  layout       jsonb,
+  is_active    boolean not null default false,
+  created_at   timestamptz not null default now(),
+  updated_at   timestamptz not null default now()
+);
+create index if not exists seating_arrangements_owner_idx on public.seating_arrangements (owner_id);
+create index if not exists seating_arrangements_period_idx on public.seating_arrangements (period_id);
+create unique index if not exists seating_arrangements_period_name_uidx on public.seating_arrangements (period_id, lower(name));
+create unique index if not exists seating_arrangements_one_active_uidx on public.seating_arrangements (period_id) where is_active;
+
+-- Make one arrangement active and the rest of its period not, in one
+-- transaction. SECURITY INVOKER: RLS limits it to the caller's own rows.
+create or replace function public.set_active_seating_arrangement(p_id uuid)
+returns void
+language plpgsql
+security invoker
+set search_path = public
+as $$
+declare
+  v_period uuid;
+begin
+  select period_id into v_period from public.seating_arrangements where id = p_id;
+  if v_period is null then
+    raise exception 'arrangement not found' using errcode = 'P0002';
+  end if;
+  update public.seating_arrangements set is_active = false where period_id = v_period and is_active and id <> p_id;
+  update public.seating_arrangements set is_active = true where id = p_id;
+end;
+$$;
+revoke all on function public.set_active_seating_arrangement(uuid) from public;
+grant execute on function public.set_active_seating_arrangement(uuid) to authenticated;
+
 create table if not exists public.seating_rules (
   id           uuid primary key default gen_random_uuid(),
   owner_id     uuid not null default auth.uid() references auth.users(id) on delete cascade,
@@ -239,6 +292,7 @@ alter table public.periods            enable row level security;
 alter table public.students           enable row level security;
 alter table public.room_layouts       enable row level security;
 alter table public.seat_assignments   enable row level security;
+alter table public.seating_arrangements enable row level security;
 alter table public.seating_rules      enable row level security;
 alter table public.attendance         enable row level security;
 alter table public.lesson_plans       enable row level security;
@@ -251,7 +305,7 @@ declare
   policy_name text;
 begin
   foreach t in array array[
-    'periods','students','room_layouts','seat_assignments','seating_rules',
+    'periods','students','room_layouts','seat_assignments','seating_arrangements','seating_rules',
     'attendance','lesson_plans','bathroom_log','schedule_overrides'
   ] loop
     policy_name := format('%s owner select', t);

@@ -386,7 +386,7 @@ async function renamePeriod(id, name) {
 }
 
 async function deletePeriod(id) {
-  // students and seat_assignments cascade in the database
+  // students and seating arrangements cascade in the database
   return sb('periods', { method: 'DELETE', params: { id: `eq.${id}` } });
 }
 
@@ -461,22 +461,68 @@ async function saveRoomLayout(layout) {
   return saved[0];
 }
 
+// The period's LIVE seats (what Attendance shows) = its active arrangement.
 // assignments: { "<pieceId>:<seatIndex>": "<student id>" }
+// Falls back to the old seat_assignments table only when seating_arrangements
+// doesn't exist yet (migration-seating-arrangements.sql not run).
 async function getSeatAssignments(periodId) {
-  const rows = await sb('seat_assignments', {
-    params: { select: '*', period_id: `eq.${periodId}`, limit: 1 },
-  });
-  return rows[0] ? rows[0].assignments : {};
+  let rows;
+  try {
+    rows = await sb('seating_arrangements', {
+      params: { select: 'assignments', period_id: `eq.${periodId}`, is_active: 'is.true', limit: 1 },
+    });
+  } catch (err) {
+    if (!isMissingTableError(err)) throw err;
+    rows = await sb('seat_assignments', {
+      params: { select: 'assignments', period_id: `eq.${periodId}`, limit: 1 },
+    });
+  }
+  return rows[0] ? rows[0].assignments || {} : {};
 }
 
-async function saveSeatAssignments(periodId, assignments) {
-  const saved = await sb('seat_assignments', {
-    method: 'POST',
-    params: { on_conflict: 'period_id' },
-    prefer: 'resolution=merge-duplicates,return=representation',
-    body: { period_id: periodId, assignments, updated_at: new Date().toISOString() },
+// PostgREST's answer for a table it doesn't know about (404 / PGRST205)
+function isMissingTableError(err) {
+  return /\(404\)|PGRST20[0-9]|does not exist/.test(String(err && err.message));
+}
+
+// ---------------------------------------------------------------------------
+// Seating arrangements — several named charts per period; at most one is
+// active (is_active = what Attendance shows). Each stores its own
+// assignments plus the desk layout it was saved on, so the page can warn
+// when the shared room has changed since.
+// ---------------------------------------------------------------------------
+
+async function getSeatingArrangements(periodId) {
+  return sb('seating_arrangements', {
+    params: { select: '*', period_id: `eq.${periodId}`, order: 'created_at.asc' },
   });
-  return saved[0];
+}
+
+async function createSeatingArrangement(periodId, { name, assignments = {}, layout = null, isActive = false }) {
+  const rows = await sb('seating_arrangements', {
+    method: 'POST',
+    body: { period_id: periodId, name, assignments, layout, is_active: isActive, updated_at: new Date().toISOString() },
+  });
+  return rows[0];
+}
+
+// fields: any of { name, assignments, layout }
+async function updateSeatingArrangement(id, fields) {
+  const rows = await sb('seating_arrangements', {
+    method: 'PATCH',
+    params: { id: `eq.${id}` },
+    body: { ...fields, updated_at: new Date().toISOString() },
+  });
+  return rows[0];
+}
+
+async function deleteSeatingArrangement(id) {
+  return sb('seating_arrangements', { method: 'DELETE', params: { id: `eq.${id}` } });
+}
+
+// One transaction server-side: this one on, every other one in its period off.
+async function setActiveSeatingArrangement(id) {
+  return sb('rpc/set_active_seating_arrangement', { method: 'POST', body: { p_id: id } });
 }
 
 // ---------------------------------------------------------------------------

@@ -2034,6 +2034,91 @@ body.present .student .remove { display: none !important; }
 .save-state.ok::before { content: "● "; color: var(--ok); }
 .save-state.bad { color: var(--danger); }
 
+/* Arrangement strip: which saved arrangement is in the editor, active or draft */
+.arr-bar {
+  --ctl: 2.1rem;
+  position: relative;
+  z-index: 5;                     /* the menu drops over the canvas */
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.5rem 0.7rem;
+  padding: 0.45rem 0.9rem;
+  border-radius: var(--radius-md);
+  margin: calc(var(--space-4) * -0.5) 0 var(--space-4);
+}
+.arr-bar::before { display: none; }
+.arr-bar > .lbl { color: var(--text-muted); font-size: var(--fs-xs); font-weight: var(--fw-medium); white-space: nowrap; }
+.arr-bar button { min-height: var(--ctl); padding-top: 0.25rem; padding-bottom: 0.25rem; font-size: var(--fs-xs); }
+.arr-bar .spacer { flex: 1; }
+.arr-picker { position: relative; }
+#arr-current { gap: 0.4rem; min-width: 11rem; justify-content: space-between; font-weight: var(--fw-semibold); }
+#arr-current[aria-expanded="true"] { border-color: var(--accent); }
+#arr-current svg { width: 0.9rem; height: 0.9rem; color: var(--text-muted); }
+#arr-name { max-width: 16rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.arr-unsaved { color: var(--lavender); font-size: var(--fs-xs); white-space: nowrap; }
+.arr-unsaved::before { content: "● "; }
+.arr-summary { color: var(--text-2); font-size: var(--fs-xs); white-space: nowrap; }
+.arr-note { color: var(--text-muted); font-size: var(--fs-xs); }
+
+.arr-menu {
+  position: absolute;
+  top: calc(100% + 0.4rem);
+  left: 0;
+  width: min(30rem, 88vw);
+  max-height: min(60dvh, 32rem);
+  overflow-y: auto;
+  padding: 0.5rem;
+  background: var(--card);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-pop);
+}
+.arr-menu[hidden] { display: none; }
+.arr-menu .hint { margin: 0.5rem; }
+.arr-list { display: grid; gap: 0.35rem; }
+.arr-row { display: flex; align-items: stretch; gap: 0.25rem; border: 1px solid transparent; border-radius: var(--radius-sm); }
+.arr-row.current { border-color: var(--border-strong); background: var(--card-2); }
+.arr-row .arr-load {
+  flex: 1;
+  min-width: 0;
+  display: grid;
+  justify-content: stretch;
+  justify-items: start;
+  gap: 0.2rem;
+  padding: 0.5rem 0.7rem;
+  border: 0;
+  background: transparent;
+  text-align: left;
+  box-shadow: none;
+}
+.arr-row .arr-load:hover { background: var(--card-3); }
+.arr-row-top { display: flex; align-items: center; gap: 0.5rem; max-width: 100%; }
+.arr-row-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--text); font-size: var(--fs-sm); font-weight: var(--fw-semibold); }
+.arr-row .pct { min-width: 0; font-size: 0.62rem; }
+.arr-viewing { color: var(--text-muted); font-size: var(--fs-xs); white-space: nowrap; }
+.arr-row-meta { color: var(--text-muted); font-size: var(--fs-xs); }
+.arr-warn { color: var(--lavender); }
+.arr-row-actions { display: flex; align-items: center; gap: 0.15rem; padding-right: 0.3rem; }
+.arr-row-actions .icon-btn { width: 1.9rem; height: 1.9rem; min-height: 0; padding: 0; border-color: transparent; background: transparent; }
+.arr-row-actions .icon-btn:hover:not(:disabled) { border-color: var(--border-strong); background: var(--card-3); }
+.arr-row-actions .icon-btn svg { width: 0.95rem; height: 0.95rem; }
+.arr-menu .arr-new { width: 100%; margin-top: 0.35rem; justify-content: flex-start; }
+
+/* Arrangement dialogs (name, unsaved, different desks, make active, delete) */
+.arr-dialog { border: 0; padding: 0; background: transparent; max-width: none; }
+.arr-dialog::backdrop { background: rgba(8, 6, 14, 0.7); backdrop-filter: blur(6px); }
+.arr-dialog-inner { width: min(34rem, 92vw); padding: var(--space-5); background: var(--card); border: 1px solid var(--border-strong); border-radius: var(--radius-lg); box-shadow: var(--shadow-pop); color: var(--text); }
+.arr-dialog-inner h3 { margin: 0 0 var(--space-3); font-size: var(--fs-lg); font-weight: var(--fw-semibold); }
+.arr-dialog-body { color: var(--text-2); font-size: var(--fs-sm); }
+.arr-dialog-body p { margin: 0 0 var(--space-3); }
+.arr-dialog-body ul { margin: 0 0 var(--space-3); padding-left: 1.2rem; display: grid; gap: 0.4rem; }
+.arr-dialog-body b { color: var(--text); }
+.arr-dialog-warn { padding: 0.55rem 0.8rem; border-left: 3px solid var(--lavender); border-radius: var(--radius-sm); background: var(--card-2); color: var(--text); }
+.arr-dialog-inner input { width: 100%; margin: 0 0 var(--space-4); font-size: var(--fs-md); }
+.arr-dialog-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: var(--space-2); }
+.arr-dialog-actions button { min-height: 2.4rem; padding: 0 var(--space-4); }
+
 .seat-layout {
   flex: 1;
   min-height: 0;
@@ -2198,7 +2283,21 @@ body.present .student .remove { display: none !important; }
   background: var(--accent-soft);
 }
 .piece.front.selected { box-shadow: 0 0 0 2px var(--ring); }
-.front-text { font-size: 10px; font-weight: var(--fw-semibold); letter-spacing: 0.18em; text-transform: uppercase; color: var(--accent); }
+.front-text { font-size: 10px; font-weight: var(--fw-semibold); letter-spacing: 0.18em; text-transform: uppercase; color: var(--accent); white-space: nowrap; }
+/* Facing notch: a small triangle on the room side of the marker (its local
+   bottom edge), so it's clear which way the front faces once it's turned */
+.front-face {
+  position: absolute;
+  left: 50%;
+  top: 100%;
+  width: 0;
+  height: 0;
+  margin-left: -6px;
+  border: 6px solid transparent;
+  border-top-color: var(--accent-deep);
+  border-bottom-width: 0;
+  pointer-events: none;
+}
 
 /* Rotation gizmo: handle on the selection's local "up", ring + angle while rotating */
 .rot-line { position: absolute; width: 1px; background: var(--accent); opacity: 0.7; transform-origin: bottom center; pointer-events: none; }

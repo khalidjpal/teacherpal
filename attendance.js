@@ -283,8 +283,8 @@ function initAttendance({ mount = '#attendance', mode = 'full' } = {}) {
     front.className = 'piece front';
     front.style.width = `${FRONT.w * G}px`;
     front.style.height = `${FRONT.h * G}px`;
-    front.style.transform = pieceTransform(f.x, f.y, 0);
-    front.innerHTML = '<span class="front-text">Front of room</span>';
+    front.style.transform = pieceTransform(f.x, f.y, f.rotation || 0);
+    front.innerHTML = frontMarkerHtml(f.rotation || 0);
     room.appendChild(front);
 
     for (const p of layout.pieces) {

@@ -72,6 +72,30 @@
       <button type="button" class="icon-btn" data-fullscreen aria-pressed="false" title="Present full screen (F)" aria-label="Present full screen"><span class="when-off"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 3H5a2 2 0 0 0-2 2v3M16 3h3a2 2 0 0 1 2 2v3M8 21H5a2 2 0 0 1-2-2v-3M16 21h3a2 2 0 0 0 2-2v-3"/></svg></span><span class="when-on"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 3v3a2 2 0 0 1-2 2H3M21 8h-3a2 2 0 0 1-2-2V3M3 16h3a2 2 0 0 1 2 2v3M16 21v-3a2 2 0 0 1 2-2h3"/></svg></span></button>
     </div>
 
+    <!-- ---------- Arrangement strip: which saved chart is in the editor ---------- -->
+    <div class="arr-bar card no-present" role="toolbar" aria-label="Seating arrangements">
+      <span class="lbl">Arrangement</span>
+      <div class="arr-picker">
+        <button type="button" id="arr-current" aria-haspopup="true" aria-expanded="false" title="Saved arrangements for this period" disabled>
+          <span id="arr-name">—</span>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>
+        </button>
+        <div class="arr-menu" id="arr-menu" hidden>
+          <div class="arr-list" id="arr-list"></div>
+          <button type="button" class="ghost small arr-new" id="arr-new">+ New empty draft</button>
+        </div>
+      </div>
+      <span class="pct" id="arr-badge" hidden>Active</span>
+      <span class="arr-unsaved" id="arr-unsaved" hidden>Unsaved changes</span>
+      <span class="arr-summary" id="arr-summary"></span>
+      <span class="arr-note" id="arr-note"></span>
+      <span class="spacer"></span>
+      <button type="button" id="arr-discard" class="ghost" title="Go back to the last saved version" disabled>Discard</button>
+      <button type="button" id="arr-save-as" title="Save what's on screen as a new draft (the original stays as it was)" disabled>Save as new…</button>
+      <button type="button" id="arr-save" class="primary" title="Save over this arrangement (Ctrl+S)" disabled>Save</button>
+      <button type="button" id="arr-activate" title="Use this arrangement for Attendance and everything else" hidden>Make active</button>
+    </div>
+
     <div id="status" class="status no-present"></div>
 
     <!-- ---------- Sidebar + canvas ---------- -->
@@ -82,7 +106,7 @@
           <div class="card-head"><h2>Desks</h2></div>
           <p class="hint">Drag a piece onto the room. Pieces snap to the grid and to each other.</p>
           <div class="palette-list" id="palette-list"></div>
-          <p class="hint">Drag empty canvas to pan, wheel to scroll, Shift+wheel sideways, Ctrl+wheel or pinch to zoom · Shift+drag box-selects · click a piece: drag to move · R (or Rotate) turns on rotate mode — drag the piece or its handle to turn it, Shift = 15° steps, press R / Enter or click elsewhere to keep the angle, Esc to cancel · Ctrl+D duplicate · Del delete · Shift-click for several · Ctrl+Z / Ctrl+Shift+Z undo / redo · F full screen.</p>
+          <p class="hint">Drag empty canvas to pan, wheel to scroll, Shift+wheel sideways, Ctrl+wheel or pinch to zoom · Shift+drag box-selects · click a piece: drag to move · R (or Rotate) turns on rotate mode — drag the piece or its handle to turn it, Shift = 15° steps, press R / Enter or click elsewhere to keep the angle, Esc to cancel · the Front of room marker moves and turns the same way — its notch points into the room · Ctrl+D duplicate · Del delete · Shift-click for several · Ctrl+Z / Ctrl+Shift+Z undo / redo · F full screen.</p>
         </div>
 
         <!-- Student list (Assign Seats) -->
@@ -123,7 +147,7 @@
     // =====================================================================
     // version 2: rotation is a free angle in degrees (v1 only used 90° steps — same JSON shape)
     let layout = { version: 2, grid: G, front: { x: 20, y: 3, w: FRONT.w, h: FRONT.h }, pieces: [] };
-    let assignments = {};                      // seatId -> studentId (current period)
+    let assignments = {};                      // seatId -> studentId (the arrangement in the editor)
     let students = [];
     let currentPeriodId = null;
     let mode = 'arrange';
@@ -132,7 +156,15 @@
     let panMode = false, spaceHeld = false;
     let firstNamesOnly = false;
     let history = [], future = [];
-    let saveTimer = null, dirty = { layout: false, seats: false, rules: false };
+    let saveTimer = null, dirty = { rules: false };   // rules autosave; desks + seats save with the arrangement
+    // Saved arrangements. The editor holds a working copy of one of them
+    // (layout + assignments); nothing is written until Save / Save as new.
+    let roomLayout = null;                     // the shared room as saved (what the active arrangements sit on)
+    let arrangements = [];                     // this period's rows from seating_arrangements
+    let currentArrId = null;                   // the row in the editor (null = nothing saved yet)
+    let savedKey = '';                         // stateKey() at the last load / save → "Unsaved changes"
+    let savedSnap = null;                      // snapshot() at the same moment → Discard
+    let arrTableMissing = false;
     let rules = [];                            // this period's formula (see RULE_TYPES)
     let useFormula = false;                    // Randomize follows the formula (per period)
     let absentToday = new Set();               // from Create Groups' "Edit Roster" (today only)
@@ -158,6 +190,8 @@
     const normDeg = (d) => ((d % 360) + 360) % 360;
     const allPieces = () => [{ id: 'front', ...layout.front }, ...layout.pieces];
     const pieceById = (id) => (id === 'front' ? { id: 'front', ...layout.front } : layout.pieces.find((p) => p.id === id));
+    // pieceById('front') is a copy, so geometry writes go through here
+    function setPieceGeom(id, fields) { Object.assign(id === 'front' ? layout.front : pieceById(id), fields); }
     const seatIds = () => layout.pieces.flatMap((p) => TYPES[p.type].seats.map((_, i) => `${p.id}:${i}`));
 
     // =====================================================================
@@ -190,16 +224,13 @@
       selected = new Set([...selected].filter((id) => pieceById(id)));
     }
     let base = null;                           // state before the current change
-    function commit({ seats = false } = {}) {
+    function commit() {
       history.push(base || snapshot());
       if (history.length > 100) history.shift();
       future = [];
       base = null;
-      dirty.layout = true;
-      if (seats) dirty.seats = true;
       updateUndoButtons();
       render();
-      scheduleSave();
     }
     function undo() {
       if (!history.length) return;
@@ -214,10 +245,8 @@
       afterHistory();
     }
     function afterHistory() {
-      dirty.layout = true; dirty.seats = true;
       updateUndoButtons();
       render();
-      scheduleSave();
     }
     function updateUndoButtons() {
       $('btn-undo').disabled = history.length === 0;
@@ -229,14 +258,12 @@
       setSaveState('Saving…');
       saveTimer = setTimeout(saveNow, 600);
     }
+    // Formula rules still autosave (they belong to the period, not to an arrangement)
     async function saveNow() {
       try {
-        const jobs = [];
-        if (dirty.layout) { jobs.push(saveRoomLayout(layout)); dirty.layout = false; }
-        if (dirty.seats && currentPeriodId) { jobs.push(saveSeatAssignments(currentPeriodId, assignments)); dirty.seats = false; }
-        if (dirty.rules && currentPeriodId) { jobs.push(saveFormulaRules(currentPeriodId, RULE_SCOPE, rules, useFormula)); dirty.rules = false; }
-        await Promise.all(jobs);
-        setSaveState('Saved');
+        if (dirty.rules && currentPeriodId) { dirty.rules = false; await saveFormulaRules(currentPeriodId, RULE_SCOPE, rules, useFormula); }
+        setSaveState(isUnsaved() ? '' : 'Saved');
+        renderArrangements();                  // rules-met counts may have changed
       } catch (err) {
         setSaveState('Not saved', true);
         showError(err);
@@ -249,7 +276,7 @@
       el.classList.toggle('ok', text === 'Saved');
     }
     window.addEventListener('beforeunload', (e) => {
-      if (dirty.layout || dirty.seats || dirty.rules) { e.preventDefault(); e.returnValue = ''; }
+      if (dirty.rules || isUnsaved()) { e.preventDefault(); e.returnValue = ''; }
     });
 
     // =====================================================================
@@ -272,6 +299,7 @@
       renderSidebar();
       updateSelectionButtons();
       updateCounts();
+      updateArrBar();
     }
 
     function renderFront() {
@@ -281,8 +309,8 @@
       el.dataset.id = 'front';
       el.style.width = `${FRONT.w * G}px`;
       el.style.height = `${FRONT.h * G}px`;
-      el.style.transform = pieceTransform(f.x, f.y, 0);
-      el.innerHTML = '<span class="front-text">Front of room</span>';
+      el.style.transform = pieceTransform(f.x, f.y, f.rotation || 0);
+      el.innerHTML = frontMarkerHtml(f.rotation || 0);
       return el;
     }
 
@@ -360,7 +388,7 @@
 
     function updateSelectionButtons() {
       const pieces = [...selected].filter((id) => id !== 'front');
-      $('btn-rotate').disabled = pieces.length === 0;
+      $('btn-rotate').disabled = rotIds().length === 0;      // the Front marker turns too
       $('btn-duplicate').disabled = pieces.length === 0;
       $('btn-delete').disabled = pieces.length === 0;
     }
@@ -440,7 +468,7 @@
     // =====================================================================
     let rotSession = null;   // { ids, cx, cy, starts: Map, baseAngle, byDrag, angle }
 
-    const rotIds = () => [...selected].filter((id) => id !== 'front' && pieceById(id));
+    const rotIds = () => [...selected].filter((id) => pieceById(id));   // desks and the Front marker
 
     // Shared centre + ring radius for the selected pieces (room units)
     function selectionGeom(ids) {
@@ -524,13 +552,14 @@
 
       const rad = (delta * Math.PI) / 180, cos = Math.cos(rad), sin = Math.sin(rad);
       for (const id of rotSession.ids) {
-        const p = pieceById(id), st = rotSession.starts.get(id), t = TYPES[p.type];
-        p.rotation = Math.round(normDeg(st.rotation + delta));
+        const p = pieceById(id), st = rotSession.starts.get(id), t = pieceDims(p);
+        const next = { rotation: Math.round(normDeg(st.rotation + delta)) };
         // several pieces: orbit each centre around the shared centre
         const pcx = st.x + t.w / 2 - rotSession.cx, pcy = st.y + t.h / 2 - rotSession.cy;
         const ncx = rotSession.cx + pcx * cos - pcy * sin, ncy = rotSession.cy + pcx * sin + pcy * cos;
-        p.x = Math.round((ncx - t.w / 2) * 100) / 100;
-        p.y = Math.round((ncy - t.h / 2) * 100) / 100;
+        next.x = Math.round((ncx - t.w / 2) * 100) / 100;
+        next.y = Math.round((ncy - t.h / 2) * 100) / 100;
+        setPieceGeom(id, next);
       }
       // one batched DOM pass: piece transforms + upright labels + gizmo
       frame(() => {
@@ -541,6 +570,7 @@
           if (!el) continue;
           el.style.transform = pieceTransform(p.x, p.y, p.rotation);
           el.querySelectorAll('.seat-label').forEach((lb) => { lb.style.cssText = labelStyle(p, +lb.dataset.w, +lb.dataset.h); });
+          el.querySelectorAll('.front-text').forEach((lb) => { lb.style.cssText = frontLabelStyle(p.rotation); });
         }
         renderGizmo();
       });
@@ -552,7 +582,7 @@
       drag = null;
       viewport.classList.remove('rotating');
       $('btn-rotate').setAttribute('aria-pressed', 'false');
-      const unchanged = base && JSON.stringify(base.pieces) === JSON.stringify(layout.pieces);
+      const unchanged = base && JSON.stringify([base.front, base.pieces]) === JSON.stringify([layout.front, layout.pieces]);
       if (unchanged) { base = null; render(); }   // toggled on and off without turning anything
       else commit();                              // one undo step for the whole rotation
     }
@@ -792,7 +822,7 @@
       });
       layout.pieces.push(...copies);
       selected = new Set(copies.map((c) => c.id));
-      commit({ seats: true });
+      commit();
     }
     function deleteSelected() {
       const ids = new Set([...selected].filter((id) => id !== 'front'));
@@ -801,7 +831,7 @@
       layout.pieces = layout.pieces.filter((p) => !ids.has(p.id));
       for (const seatId of Object.keys(assignments)) if (ids.has(seatId.split(':')[0])) delete assignments[seatId];
       selected = new Set();
-      commit({ seats: true });
+      commit();
     }
     $('btn-rotate').addEventListener('click', rotateSelected);
     $('btn-duplicate').addEventListener('click', duplicateSelected);
@@ -815,10 +845,12 @@
     });
 
     document.addEventListener('keydown', (e) => {
-      const typing = !!(e.target && e.target.matches && e.target.matches('input, select, textarea'));
+      const typing = !!(e.target && e.target.matches && e.target.matches('input, select, textarea')) || !!document.querySelector('.arr-dialog[open]');
       if (e.key === ' ' && !typing) { spaceHeld = true; viewport.classList.add('pan-mode'); e.preventDefault(); }
       if (typing) return;
       const ctrl = e.ctrlKey || e.metaKey;
+      if (ctrl && e.key.toLowerCase() === 's') { e.preventDefault(); saveArrangement(); return; }
+      if (e.key === 'Escape' && !$('arr-menu').hidden) { toggleArrMenu(false); return; }
       if (rotSession) {
         if (e.key === 'Enter' || (e.key.toLowerCase() === 'r' && !ctrl)) { e.preventDefault(); confirmRotate(); }
         else if (e.key === 'Escape') { e.preventDefault(); cancelRotate(); }
@@ -899,14 +931,14 @@
       if (occupant && occupant !== studentId) {
         if (prev) assignments[prev] = occupant;          // swap
       }
-      commit({ seats: true });
+      commit();
     }
     function unseat(studentId) {
       const k = Object.keys(assignments).find((key) => assignments[key] === studentId);
       if (!k) return;
       base = snapshot();
       delete assignments[k];
-      commit({ seats: true });
+      commit();
     }
     $('btn-randomize').addEventListener('click', () => {
       if (useFormula) {
@@ -921,7 +953,7 @@
       shuffle(present).forEach((st, i) => { if (seats[i]) next[seats[i]] = st.id; });
       if (present.length > seats.length) setStatus(`${present.length - seats.length} student(s) have no seat — add more desks.`, 'info');
       applySeating(next);
-      setStatus('Seated randomly (formula off).', 'ok');
+      setStatus(`Seated randomly (formula off). ${whereTo()}`, 'ok');
     });
     $('btn-use-formula').addEventListener('click', () => {
       useFormula = !useFormula;
@@ -933,7 +965,7 @@
       if (!Object.keys(assignments).length) return;
       base = snapshot();
       assignments = {};
-      commit({ seats: true });
+      commit();
     });
     $('btn-firstnames').addEventListener('click', () => {
       firstNamesOnly = !firstNamesOnly;
@@ -953,11 +985,12 @@
     const nameOf = (id) => { const st = studentById(id); return st ? displayName(st) : '?'; };
     const ruleText = (r) => ruleSentence(r, nameOf);
 
-    // ---- seat geometry from the canvas (rotation-aware) ----
-    function seatWorld() {
+    // ---- seat geometry from the canvas, or any saved layout (rotation-aware) ----
+    function seatWorld(lay = layout) {
       const list = [];
-      for (const p of layout.pieces) {
+      for (const p of lay.pieces) {
         const t = TYPES[p.type];
+        if (!t) continue;
         const rad = ((p.rotation || 0) * Math.PI) / 180, cos = Math.cos(rad), sin = Math.sin(rad);
         const pcx = p.x + t.w / 2, pcy = p.y + t.h / 2;
         t.seats.forEach(([x, y, w, h], i) => {
@@ -965,11 +998,13 @@
           list.push({ id: `${p.id}:${i}`, piece: p.id, cx: pcx + lx * cos - ly * sin, cy: pcy + lx * sin + ly * cos });
         });
       }
-      // distance from each seat centre to the nearest point of the Front of Room bar
-      const f = layout.front, fy = f.y + FRONT.h / 2, fx0 = f.x, fx1 = f.x + FRONT.w;
+      // distance from each seat centre to the Front of Room bar where it really
+      // is (moved, turned, on a side wall); a seat behind the marker (against
+      // its facing) ranks after every seat on the room side
+      const f = lay.front || layout.front;
       for (const st of list) {
-        const nx = Math.max(fx0, Math.min(fx1, st.cx));
-        st.depth = Math.hypot(st.cx - nx, st.cy - fy);
+        const { dist: d, behind } = frontDistance(f, st.cx, st.cy);
+        st.depth = behind ? 1e4 + d : d;
       }
       // rank 0 = physically closest seat; the back half counts as "toward the back"
       const byDepth = list.slice().sort((a, b) => a.depth - b.depth);
@@ -1035,8 +1070,14 @@
       const extra = [];
       if (present.length > seats.length) extra.push(`${present.length - seats.length} student(s) have no seat`);
       const summary = summarizeRun(plan, best.unmet, nameOf, RULE_SCOPE, extra);
-      setStatus(summary.text, summary.ok ? 'ok' : 'info');
+      setStatus(`${summary.text} ${whereTo()}`, summary.ok ? 'ok' : 'info');
       formula.setSummary(summary.text);
+    }
+
+    // Randomize / Populate only ever change the arrangement in the editor
+    function whereTo() {
+      const a = currentArr();
+      return `${a ? `In ${a.is_active ? '' : 'draft '}“${a.name}”` : 'On screen'} — not saved until you Save.`;
     }
 
     // Apply a new seating with names flying from where they were to their seats
@@ -1049,7 +1090,7 @@
       }
       $('student-list').querySelectorAll('.student-chip').forEach((ch) => { if (!from.has(ch.dataset.student)) from.set(ch.dataset.student, ch.getBoundingClientRect()); });
       assignments = next;
-      commit({ seats: true });
+      commit();
       if (reduceMotion()) return;
       // fly a clone of each name from its old spot to its new seat, staggered
       const seated = Object.entries(assignments);
@@ -1093,6 +1134,406 @@
     });
 
     // =====================================================================
+    // Saved arrangements. The editor always holds a working copy of one
+    // arrangement (desks + seats). Randomize / Populate / drags only change
+    // that copy; Save writes it back, Save as new makes a draft from it.
+    // Only the ACTIVE arrangement is what Attendance shows, and only saving
+    // the active one (or making one active) writes the shared room layout —
+    // desk changes on a draft stay with the draft.
+    // =====================================================================
+    const deskLayout = (lay) => clone({ version: lay.version || 2, grid: lay.grid || G, front: lay.front, pieces: lay.pieces || [] });
+    const currentArr = () => arrangements.find((a) => a.id === currentArrId) || null;
+    const activeArr = () => arrangements.find((a) => a.is_active) || null;
+    const hasDesks = (lay) => !!(lay && Array.isArray(lay.pieces));
+    const plural = (n, one, many = `${one}s`) => `${n} ${n === 1 ? one : many}`;
+
+    // What's in the editor, as text (assignment key order doesn't matter)
+    function stateKey() {
+      const seats = Object.keys(assignments).sort().map((k) => [k, assignments[k]]);
+      return JSON.stringify([layout.front, layout.pieces, seats]);
+    }
+    const isUnsaved = () => !!currentPeriodId && !arrTableMissing && stateKey() !== savedKey;
+    function markSaved(key = stateKey(), snap = snapshot()) { savedKey = key; savedSnap = snap; }
+
+    // How an arrangement's saved desks differ from a layout (normally the room now).
+    // null = unknown (no desks were stored with it) → no warning.
+    function layoutDiff(saved, now) {
+      if (!hasDesks(saved) || !hasDesks(now)) return null;
+      const was = new Map(saved.pieces.map((p) => [p.id, p]));
+      const is = new Map(now.pieces.map((p) => [p.id, p]));
+      let added = 0, removed = 0, moved = 0;
+      const gone = new Set();                  // pieces whose seats no longer exist
+      for (const [id, p] of was) {
+        const q = is.get(id);
+        if (!q || q.type !== p.type) { removed++; gone.add(id); }
+        else if (q.x !== p.x || q.y !== p.y || (q.rotation || 0) !== (p.rotation || 0)) moved++;
+      }
+      for (const [id, q] of is) { const p = was.get(id); if (!p || p.type !== q.type) added++; }
+      const f0 = saved.front || {}, f1 = now.front || {};
+      const frontMoved = f0.x !== f1.x || f0.y !== f1.y || (f0.rotation || 0) !== (f1.rotation || 0);
+      return { added, removed, moved, frontMoved, gone, same: !added && !removed && !moved && !frontMoved };
+    }
+    function describeDiff(d) {
+      const parts = [];
+      if (d.removed) parts.push(`${plural(d.removed, 'desk')} removed`);
+      if (d.added) parts.push(`${plural(d.added, 'desk')} added`);
+      if (d.moved) parts.push(`${plural(d.moved, 'desk')} moved or turned`);
+      if (d.frontMoved) parts.push('front of room moved or turned');
+      return parts.join(', ');
+    }
+    // students of this arrangement who sat on desks that are gone
+    function lostSeats(a, diff) {
+      const ids = new Set(students.map((s) => s.id));
+      return Object.entries(a.assignments || {}).filter(([k, sid]) => ids.has(sid) && diff.gone.has(k.split(':')[0])).length;
+    }
+
+    // "24/27 seated · 5/6 rules met" — seated students + seating rules met on that layout
+    function arrStats(lay, seatMap) {
+      const world = new Map(seatWorld(lay).map((st) => [st.id, st]));
+      const ids = new Set(students.map((s) => s.id));
+      const seatOf = new Map();
+      for (const [k, sid] of Object.entries(seatMap || {})) if (world.has(k) && ids.has(sid)) seatOf.set(sid, world.get(k));
+      // "close" is a mild pull, never counted as met / missed (same as the Populate summary)
+      const plan = planRules(rules, ids, RULE_SCOPE).filter((r) => r.type !== 'close');
+      const missed = new Set(plan.length ? evaluateSeating(seatOf, [...world.values()], plan).unmet.map((u) => u.rule.id) : []);
+      return { seated: seatOf.size, total: students.length, rules: plan.length, met: plan.filter((r) => !missed.has(r.id)).length };
+    }
+    const statsText = (st) => `${st.seated}/${st.total} seated` + (st.rules ? ` · ${st.met}/${st.rules} rules met` : '');
+    const statsOf = (a) => (a.id === currentArrId ? arrStats(layout, assignments) : arrStats(hasDesks(a.layout) ? a.layout : roomLayout, a.assignments));
+
+    // ---- the strip: which arrangement is open, active or draft, unsaved ----
+    function updateArrBar() {
+      const has = !!currentPeriodId && !arrTableMissing;
+      const a = currentArr(), act = activeArr(), isActive = !!a && a.is_active;
+      const unsaved = isUnsaved();
+      $('arr-current').disabled = !has;
+      $('arr-name').textContent = !has ? '—' : a ? a.name : 'Not saved yet';
+      $('arr-badge').hidden = !has || !a;
+      $('arr-badge').textContent = isActive ? 'Active' : 'Draft';
+      $('arr-badge').classList.toggle('lavender', !isActive);
+      $('arr-unsaved').hidden = !unsaved;
+      $('arr-summary').textContent = has ? statsText(arrStats(layout, assignments)) : '';
+      $('arr-note').textContent = !has ? ''
+        : isActive ? 'Attendance uses this one'
+        : act ? `Draft only · Attendance uses “${act.name}”`
+        : 'Nothing is active yet — Save makes this the active one';
+      $('arr-save').disabled = !has || !unsaved;
+      $('arr-discard').disabled = !has || !unsaved;
+      $('arr-save-as').disabled = !has;
+      $('arr-activate').hidden = !has || !a || isActive;
+    }
+
+    const ICON_RENAME = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>';
+    const ICON_COPY = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>';
+    const ICON_TRASH = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6h18"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>';
+
+    function renderArrList() {
+      const list = $('arr-list');
+      if (!arrangements.length) {
+        list.innerHTML = '<p class="hint">Nothing saved for this period yet. Save keeps what’s on screen as the active arrangement.</p>';
+        return;
+      }
+      list.innerHTML = arrangements.map((a) => {
+        const open = a.id === currentArrId;
+        const diff = layoutDiff(open ? layout : a.layout, roomLayout);
+        const name = escapeHtml(a.name);
+        return `
+          <div class="arr-row${open ? ' current' : ''}" data-id="${a.id}">
+            <button type="button" class="arr-load" data-act="load"${open ? ' aria-current="true"' : ''}>
+              <span class="arr-row-top">
+                <span class="arr-row-name">${name}</span>
+                <span class="pct${a.is_active ? '' : ' lavender'}">${a.is_active ? 'Active' : 'Draft'}</span>
+                ${open ? `<span class="arr-viewing">${isUnsaved() ? 'Open · unsaved' : 'Open'}</span>` : ''}
+              </span>
+              <span class="arr-row-meta">${statsText(statsOf(a))}${diff && !diff.same ? ' · <span class="arr-warn">different desks</span>' : ''}</span>
+            </button>
+            <span class="arr-row-actions">
+              <button type="button" class="icon-btn" data-act="rename" title="Rename" aria-label="Rename ${name}">${ICON_RENAME}</button>
+              <button type="button" class="icon-btn" data-act="duplicate" title="${open ? 'Duplicate what’s on screen' : 'Duplicate'}" aria-label="Duplicate ${name}">${ICON_COPY}</button>
+              <button type="button" class="icon-btn" data-act="delete" title="${a.is_active ? 'The active arrangement can’t be deleted — make another one active first' : 'Delete'}" aria-label="Delete ${name}"${a.is_active ? ' disabled' : ''}>${ICON_TRASH}</button>
+            </span>
+          </div>`;
+      }).join('');
+    }
+    function renderArrangements() { updateArrBar(); if (!$('arr-menu').hidden) renderArrList(); }
+
+    function toggleArrMenu(open = $('arr-menu').hidden) {
+      $('arr-menu').hidden = !open;
+      $('arr-current').setAttribute('aria-expanded', String(open));
+      if (open) renderArrList();
+    }
+    $('arr-current').addEventListener('click', () => toggleArrMenu());
+    document.addEventListener('pointerdown', (e) => {
+      if (!$('arr-menu').hidden && !e.target.closest('.arr-picker') && !e.target.closest('dialog')) toggleArrMenu(false);
+    });
+    $('arr-list').addEventListener('click', (e) => {
+      const b = e.target.closest('[data-act]'), row = e.target.closest('.arr-row');
+      if (!b || !row || b.disabled) return;
+      const id = row.dataset.id;
+      toggleArrMenu(false);
+      ({ load: loadArrangement, rename: renameArrangement, duplicate: duplicateArrangement, delete: removeArrangement })[b.dataset.act](id);
+    });
+    $('arr-new').addEventListener('click', () => { toggleArrMenu(false); newEmptyDraft(); });
+
+    // ---- small modal: title, body html, optional name field, buttons → { act, value } | null ----
+    function askDialog({ title, body = '', input = null, buttons }) {
+      return new Promise((resolve) => {
+        const dlg = document.createElement('dialog');
+        dlg.className = 'arr-dialog';
+        dlg.innerHTML = `
+          <form method="dialog" class="arr-dialog-inner">
+            <h3>${escapeHtml(title)}</h3>
+            ${body ? `<div class="arr-dialog-body">${body}</div>` : ''}
+            ${input ? `<input type="text" name="value" maxlength="60" autocomplete="off" aria-label="${escapeHtml(input.label || 'Name')}" value="${escapeHtml(input.value || '')}">` : ''}
+            <div class="arr-dialog-actions">
+              ${buttons.map((b) => `<button type="${b.submit ? 'submit' : 'button'}" data-act="${b.act}" class="${b.kind || ''}">${escapeHtml(b.label)}</button>`).join('')}
+            </div>
+          </form>`;
+        document.body.appendChild(dlg);
+        const field = dlg.querySelector('input');
+        const value = () => (field ? field.value.trim() : '');
+        const done = (v) => { dlg.close(); dlg.remove(); resolve(v); };
+        dlg.addEventListener('click', (e) => {
+          const b = e.target.closest('button[data-act]');
+          if (b && b.type === 'button') done(b.dataset.act === 'cancel' ? null : { act: b.dataset.act, value: value() });
+          else if (e.target === dlg) done(null);
+        });
+        dlg.querySelector('form').addEventListener('submit', (e) => {
+          e.preventDefault();
+          if (field && !value()) { field.focus(); return; }
+          done({ act: dlg.querySelector('button[type="submit"]').dataset.act, value: value() });
+        });
+        dlg.addEventListener('cancel', (e) => { e.preventDefault(); done(null); });
+        dlg.showModal();
+        if (field) { field.focus(); field.select(); }
+      });
+    }
+    const CANCEL = { act: 'cancel', label: 'Cancel' };
+
+    const nameTaken = (name, exceptId = null) => arrangements.some((a) => a.id !== exceptId && a.name.toLocaleLowerCase() === name.toLocaleLowerCase());
+    function freeName(base) {
+      if (!nameTaken(base)) return base;
+      for (let i = 2; ; i++) if (!nameTaken(`${base} ${i}`)) return `${base} ${i}`;
+    }
+    async function askName(title, value, okLabel, exceptId = null) {
+      let error = '';
+      for (;;) {
+        const r = await askDialog({
+          title,
+          body: error ? `<p class="arr-dialog-warn">${escapeHtml(error)}</p>` : '',
+          input: { value, label: 'Arrangement name' },
+          buttons: [CANCEL, { act: 'ok', label: okLabel, kind: 'primary', submit: true }],
+        });
+        if (!r) return null;
+        value = r.value.slice(0, 60);
+        if (!nameTaken(value, exceptId)) return value;
+        error = `There’s already an arrangement called “${value}” in this period.`;
+      }
+    }
+
+    // Before the editor switches to something else: Save / Discard / Cancel → true to go on
+    async function confirmLeave() {
+      if (!isUnsaved()) return true;
+      const a = currentArr();
+      const r = await askDialog({
+        title: 'Save changes first?',
+        body: `<p>${a ? `“${escapeHtml(a.name)}”` : 'This arrangement'} has unsaved changes.</p>`,
+        buttons: [CANCEL, { act: 'discard', label: 'Discard changes', kind: 'danger' }, { act: 'save', label: 'Save', kind: 'primary', submit: true }],
+      });
+      if (!r) return false;
+      return r.act === 'save' ? saveArrangement() : true;
+    }
+
+    // Put a saved arrangement into the editor. ownDesks: show the desks it
+    // was saved on instead of the room as it is now.
+    function openArrangement(a, { ownDesks = false } = {}) {
+      cancelRotate();
+      const src = ownDesks && a && hasDesks(a.layout) ? a.layout : roomLayout;
+      layout.front = clone({ ...layout.front, ...(src.front || {}) });
+      layout.pieces = clone(src.pieces || []);
+      currentArrId = a ? a.id : null;
+      const ids = new Set(students.map((s) => s.id)), valid = new Set(seatIds());
+      assignments = {};
+      for (const [k, v] of Object.entries((a && a.assignments) || {})) if (ids.has(v) && valid.has(k)) assignments[k] = v;
+      selected = new Set([...selected].filter((id) => pieceById(id)));
+      history = []; future = [];
+      updateUndoButtons();
+      markSaved();
+      render();
+    }
+
+    // Load from the list — warns first when it was saved on different desks
+    async function loadArrangement(id, { skipLeave = false } = {}) {
+      const a = arrangements.find((x) => x.id === id);
+      if (!a || (a.id === currentArrId && !skipLeave)) return;
+      if (!skipLeave && !(await confirmLeave())) return;
+      let ownDesks = false;
+      const diff = layoutDiff(a.layout, roomLayout);
+      if (diff && !diff.same) {
+        const lost = lostSeats(a, diff);
+        const r = await askDialog({
+          title: 'Saved with a different desk layout',
+          body: `
+            <p>Since “${escapeHtml(a.name)}” was saved, the room has changed: ${escapeHtml(describeDiff(diff))}.</p>
+            ${lost ? `<p class="arr-dialog-warn">On the current room, ${plural(lost, 'student')} would lose ${lost === 1 ? 'their seat' : 'their seats'} (they were on desks that are gone).</p>` : ''}
+            <ul>
+              <li><b>Use its saved desks</b> — the room exactly as it was. Desk changes stay with this arrangement; the real room only changes ${a.is_active ? 'when you save it, because it’s the active one — that affects every period' : 'if you make it active'}.</li>
+              <li><b>Use current room</b> — today’s desks; seats on desks that are gone are left empty.</li>
+            </ul>`,
+          buttons: [CANCEL, { act: 'room', label: 'Use current room' }, { act: 'own', label: 'Use its saved desks', kind: 'primary', submit: true }],
+        });
+        if (!r) return;
+        ownDesks = r.act === 'own';
+      }
+      openArrangement(a, { ownDesks });
+      setStatus(`Viewing “${a.name}”${a.is_active ? ' — the active arrangement.' : ' — a draft; nothing else changes until you make it active.'}`, 'info');
+    }
+
+    // Save over the open arrangement (the first save in a period creates it)
+    let saving = false;
+    async function saveArrangement() {
+      if (!currentPeriodId || arrTableMissing || saving) return false;
+      saving = true;
+      setSaveState('Saving…');
+      const key = stateKey(), snap = snapshot(), desks = deskLayout(layout), seats = clone(assignments);
+      try {
+        let a = currentArr();
+        if (!a) {
+          a = await createSeatingArrangement(currentPeriodId, { name: freeName('Seating chart'), assignments: seats, layout: desks, isActive: !activeArr() });
+          arrangements.push(a);
+          currentArrId = a.id;
+        } else {
+          Object.assign(a, await updateSeatingArrangement(a.id, { assignments: seats, layout: desks }));
+        }
+        // the active arrangement sits on the real room: its desks ARE the room
+        if (a.is_active) { await saveRoomLayout(desks); roomLayout = desks; }
+        markSaved(key, snap);
+        setSaveState('Saved');
+        renderArrangements();
+        return true;
+      } catch (err) {
+        setSaveState('Not saved', true);
+        showError(err);
+        return false;
+      } finally {
+        saving = false;
+      }
+    }
+
+    // What's on screen → a new draft; the original stays as last saved
+    async function saveAsNew({ title = 'Save as a new arrangement', okLabel = 'Save' } = {}) {
+      if (!currentPeriodId || arrTableMissing) return;
+      const from = currentArr();
+      const name = await askName(title, freeName(from ? `${from.name} copy` : 'Draft'), okLabel);
+      if (!name) return;
+      const key = stateKey(), snap = snapshot(), desks = deskLayout(layout);
+      try {
+        const row = await createSeatingArrangement(currentPeriodId, { name, assignments: clone(assignments), layout: desks, isActive: !activeArr() });
+        arrangements.push(row);
+        currentArrId = row.id;
+        if (row.is_active) { await saveRoomLayout(desks); roomLayout = desks; }
+        markSaved(key, snap);
+        setSaveState('Saved');
+        renderArrangements();
+        setStatus(`Saved as “${name}”${row.is_active ? ' — the active arrangement' : ' (draft)'}.${from ? ` “${from.name}” is unchanged.` : ''}`, 'ok');
+      } catch (err) { showError(err); }
+    }
+
+    async function duplicateArrangement(id) {
+      const a = arrangements.find((x) => x.id === id);
+      if (!a) return;
+      // the open one: copy what's on screen (unsaved tweaks go to the copy, the original keeps its saved version)
+      if (id === currentArrId) { await saveAsNew({ title: `Duplicate “${a.name}”`, okLabel: 'Duplicate' }); return; }
+      const name = await askName(`Duplicate “${a.name}”`, freeName(`${a.name} copy`), 'Duplicate');
+      if (!name || !(await confirmLeave())) return;
+      try {
+        const row = await createSeatingArrangement(currentPeriodId, { name, assignments: clone(a.assignments || {}), layout: a.layout ? clone(a.layout) : null, isActive: false });
+        arrangements.push(row);
+        await loadArrangement(row.id, { skipLeave: true });
+      } catch (err) { showError(err); }
+    }
+
+    async function renameArrangement(id) {
+      const a = arrangements.find((x) => x.id === id);
+      if (!a) return;
+      const name = await askName(`Rename “${a.name}”`, a.name, 'Rename', a.id);
+      if (!name || name === a.name) return;
+      try {
+        const row = await updateSeatingArrangement(a.id, { name });
+        a.name = row.name;
+        renderArrangements();
+      } catch (err) { showError(err); }
+    }
+
+    async function removeArrangement(id) {
+      const a = arrangements.find((x) => x.id === id);
+      if (!a || a.is_active) return;
+      const r = await askDialog({
+        title: `Delete “${a.name}”?`,
+        body: `<p>This draft is removed for good${a.id === currentArrId && isUnsaved() ? ', along with the unsaved changes on screen' : ''}. The active arrangement and Attendance aren’t affected.</p>`,
+        buttons: [CANCEL, { act: 'delete', label: 'Delete', kind: 'danger', submit: true }],
+      });
+      if (!r) return;
+      try {
+        await deleteSeatingArrangement(a.id);
+        arrangements = arrangements.filter((x) => x.id !== a.id);
+        if (a.id === currentArrId) openArrangement(activeArr() || arrangements[0] || null);   // back to the live chart
+        renderArrangements();
+        setStatus(`Deleted “${a.name}”.`, 'ok');
+      } catch (err) { showError(err); }
+    }
+
+    async function newEmptyDraft() {
+      if (!currentPeriodId || arrTableMissing) return;
+      const name = await askName('New empty draft', freeName('Draft'), 'Create');
+      if (!name || !(await confirmLeave())) return;
+      try {
+        const row = await createSeatingArrangement(currentPeriodId, { name, assignments: {}, layout: deskLayout(roomLayout), isActive: !activeArr() });
+        arrangements.push(row);
+        openArrangement(row);
+        setStatus(`“${name}” is empty and open — Randomize or Populate to fill it.`, 'info');
+      } catch (err) { showError(err); }
+    }
+
+    // Promote the open draft. Saves first; if its desks differ from the room,
+    // the room (shared by every period) changes too — so that's spelled out.
+    async function makeActive() {
+      const a = currentArr();
+      if (!a || a.is_active) return;
+      const prev = activeArr();
+      const diff = layoutDiff(layout, roomLayout);
+      const deskChange = !!diff && !diff.same;
+      const r = await askDialog({
+        title: `Make “${a.name}” active?`,
+        body: `
+          <p>Attendance and everything else will use “${escapeHtml(a.name)}” for this period${prev ? ` instead of “${escapeHtml(prev.name)}”, which stays saved as a draft` : ''}.</p>
+          ${isUnsaved() ? '<p>Your unsaved changes are saved first.</p>' : ''}
+          ${deskChange ? `<p class="arr-dialog-warn">It uses a different desk layout (${escapeHtml(describeDiff(diff))}). The room is shared, so this changes the desks for <b>every period</b>: other periods keep students on desks that still exist, and anyone on a removed desk becomes unseated there.</p>` : ''}`,
+        buttons: [CANCEL, { act: 'go', label: 'Make active', kind: 'primary', submit: true }],
+      });
+      if (!r) return;
+      if (isUnsaved() && !(await saveArrangement())) return;
+      try {
+        await setActiveSeatingArrangement(a.id);
+        arrangements.forEach((x) => { x.is_active = x.id === a.id; });
+        if (deskChange) { const desks = deskLayout(layout); await saveRoomLayout(desks); roomLayout = desks; }
+        renderArrangements();
+        setStatus(`“${a.name}” is now the active arrangement — Attendance uses it.`, 'ok');
+      } catch (err) { showError(err); }
+    }
+
+    $('arr-save').addEventListener('click', saveArrangement);
+    $('arr-save-as').addEventListener('click', () => saveAsNew());
+    $('arr-activate').addEventListener('click', makeActive);
+    $('arr-discard').addEventListener('click', () => {
+      if (!isUnsaved() || !savedSnap) return;
+      base = snapshot();
+      restore(savedSnap);
+      commit();                                // one undo step, so Ctrl+Z brings the changes back
+      setStatus('Back to the last saved version (Ctrl+Z undoes that).', 'info');
+    });
+
+    // =====================================================================
     // Mode, period, present
     // =====================================================================
     document.querySelectorAll('input[name="mode"]').forEach((r) => {
@@ -1107,15 +1548,19 @@
 
     async function loadPeriod() {
       students = [];
-      assignments = {};
-      history = []; future = [];
-      updateUndoButtons();
-      if (!currentPeriodId) { render(); return; }
+      arrangements = [];
+      rules = []; useFormula = false;
+      if (!currentPeriodId) { openArrangement(null); return; }
       try {
         students = await getStudents(currentPeriodId);
-        let seats = {};
-        try { seats = await getSeatAssignments(currentPeriodId); } catch (err) { console.error(err); }
-        rules = []; useFormula = false;
+        try {
+          arrangements = await getSeatingArrangements(currentPeriodId);
+          arrTableMissing = false;
+        } catch (err) {
+          console.error(err);
+          arrTableMissing = true;
+          setStatus('Saved arrangements not found — run migration-seating-arrangements.sql in the Supabase SQL editor, then reload. Nothing on this page can be saved until then.', 'error');
+        }
         try {
           const r = await getFormulaRules(currentPeriodId, RULE_SCOPE);
           rules = r.rules; useFormula = r.useFormula;
@@ -1124,14 +1569,20 @@
         rules = rules.filter((r) => ids0.has(r.a) && (!ruleIsPair(r.type) || ids0.has(r.b)));
         absentToday = absentTodayFor(currentPeriodId);
         $('btn-use-formula').setAttribute('aria-checked', String(useFormula));
-        // drop assignments for students/seats that no longer exist
-        const ids = new Set(students.map((s) => s.id)), valid = new Set(seatIds());
-        for (const [k, v] of Object.entries(seats || {})) if (ids.has(v) && valid.has(k)) assignments[k] = v;
       } catch (err) { showError(err); }
-      render();
+      // the live chart opens first, on the room as it is now; say so if the
+      // room has changed under it since it was saved
+      const a = activeArr() || arrangements[0] || null;
+      openArrangement(a);
+      const diff = a && layoutDiff(a.layout, roomLayout);
+      const lost = diff && !diff.same ? lostSeats(a, diff) : 0;
+      if (lost) setStatus(`The room has changed since “${a.name}” was saved (${describeDiff(diff)}) — ${plural(lost, 'student was', 'students were')} on desks that are gone and ${lost === 1 ? 'is' : 'are'} unseated here. To see it as saved, pick it from the Arrangement list and choose “Use its saved desks”.`, 'info');
     }
     $('period-select').addEventListener('change', async () => {
-      currentPeriodId = $('period-select').value || null;
+      const sel = $('period-select');
+      if (!(await confirmLeave())) { sel.value = currentPeriodId || ''; return; }
+      if (dirty.rules) { clearTimeout(saveTimer); await saveNow(); }   // the old period's rules, before they're swapped out
+      currentPeriodId = sel.value || null;
       setLastPeriodId(currentPeriodId);
       await loadPeriod();
     });
@@ -1165,12 +1616,12 @@
         if (saved && Array.isArray(saved.pieces)) {
           layout = { ...layout, ...saved, front: { ...layout.front, ...(saved.front || {}) } };
         }
+        roomLayout = deskLayout(layout);
         periodsCache = periods;
         currentPeriodId = fillPeriodSelect($('period-select'), periods);
         await loadPeriod();
         if (isPresent()) onPresent(true);
         fitToScreen();
-        setSaveState(saved ? 'Saved' : '');
       })().catch(showError);
     } else {
       render();

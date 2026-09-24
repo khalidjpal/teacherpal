@@ -82,8 +82,9 @@ full-screen toggle. There is no sidebar; every page uses the full width.
 | `style.css`    | Shared styling for every page (dark pink dashboard theme; all tokens at the top) |
 | `roster.html`  | Two-panel roster: period panel (search, sort, add, import modal, edit mode, full screen) + name-card grid with undo-toast remove |
 | `groups.html`  | **Create Groups**: three identical panels across the top — **Group size** (mode toggle + number), **Roster** (period, one-line summary, Edit Roster → the roster modal) and **Options** (Formula, Follow-rules switch, gear, full screen) — then the centred Create Groups / Reshuffle button, then the group cards filling everything below. First names is the only field left in the `.groups-settings-dialog`. FLIP-animated: names fly out of the Roster panel on Create and between cards on Reshuffle |
-| `seating.html` | Freeform room builder: palette of desk pieces on a zoomable dot-grid canvas (Arrange Room), then drag names onto seats (Assign Seats); layout shared, seats per period, autosave, full screen |
+| `seating.html` | Freeform room builder: palette of desk pieces on a zoomable dot-grid canvas (Arrange Room), then drag names onto seats (Assign Seats); room shared, several saved arrangements per period (one active), explicit Save, full screen |
 | `migration-room-builder.sql` | One-off migration for the room builder tables (run in the Supabase SQL editor) |
+| `migration-seating-arrangements.sql` | One-off migration: `seating_arrangements` table + RLS, the `set_active_seating_arrangement` RPC, and a backfill turning each `seat_assignments` row into an active "Current seating" arrangement |
 | `migration-seating-rules.sql` | One-off migration creating the formula rules table (run in the Supabase SQL editor) |
 | `migration-rule-scopes.sql` | One-off migration splitting rules into `scope` = seating / grouping (copies existing rules into both, then `notify pgrst`) |
 | `migration-attendance.sql` | One-off migration creating the `attendance` table (run in the Supabase SQL editor) |
@@ -245,7 +246,7 @@ to `owner_id = auth.uid()`; INSERTs get the owner from the column default
 |--------------|-------------|-------|
 | `id`         | uuid        | PK |
 | `key`        | text        | default `'default'`; **UNIQUE (key, owner_id)** — the app only ever uses this one row per owner |
-| `layout`     | jsonb       | `{ version: 2, grid: 24, front: { x, y, w, h }, pieces: [{ id, type, x, y, rotation }] }` |
+| `layout`     | jsonb       | `{ version: 2, grid: 24, front: { x, y, w, h, rotation? }, pieces: [{ id, type, x, y, rotation }] }` |
 | `updated_at` | timestamptz | set by the client on save |
 
 `x`/`y` are in grid units (24px at zoom 1); `type` is one of `single`, `pair`,
@@ -257,20 +258,32 @@ Piece geometry (desk rectangles, seat offsets) is **not** stored — it comes
 from the `TYPES` table in `room.js`, so the JSON stays small and the
 shapes can be tuned without a migration.
 
-### `seat_assignments` — one row per period
+### `seating_arrangements` — named seating charts, several per period
 | column        | type        | notes |
 |---------------|-------------|-------|
 | `id`          | uuid        | PK |
-| `period_id`   | uuid        | FK → periods.id, `on delete cascade`, **UNIQUE** |
+| `period_id`   | uuid        | FK → periods.id, `on delete cascade` |
+| `name`        | text        | "Q1", "Q2 draft"; **UNIQUE (period_id, lower(name))** |
 | `assignments` | jsonb       | `{ "<pieceId>:<seatIndex>": "<student uuid>", ... }` |
-| `updated_at`  | timestamptz | set by the client on save |
+| `layout`      | jsonb       | the desk layout it was saved on (`room_layouts.layout` shape); `null` = unknown → no warning |
+| `is_active`   | boolean     | **at most one per period** (partial unique index). The active one is the period's live chart |
+| `created_at` / `updated_at` | timestamptz | |
 
+**One source of truth for a period's live seats: its active arrangement.**
+`getSeatAssignments(periodId)` reads it (Attendance uses that and nothing
+else); drafts never affect any other page. Switching the active one goes
+through the `set_active_seating_arrangement(p_id)` RPC (SECURITY INVOKER —
+unset + set in one transaction so the one-active index never trips).
 Seat ids are derived from the piece (`<piece.id>:<index into TYPES[type].seats>`),
-so switching periods keeps the desks and swaps the names. Both saves are
-upserts (`on_conflict=key,owner_id` / `on_conflict=period_id` with
-`Prefer: resolution=merge-duplicates`). The old grid table `seating_charts`
-is unused; `migration-room-builder.sql` creates the two tables above and has
-an optional, commented-out `drop table` for it.
+so switching periods keeps the desks and swaps the names. The room save is
+an upsert (`on_conflict=key,owner_id`). `migration-seating-arrangements.sql`
+created the table and turned each old `seat_assignments` row into an active
+"Current seating" arrangement.
+
+`seat_assignments` (one row per period, `period_id` UNIQUE) is **legacy**:
+nothing writes it; `getSeatAssignments()` falls back to it only when
+`seating_arrangements` doesn't exist yet. The old grid table `seating_charts`
+is unused too; both have commented-out `drop table`s in their migrations.
 
 ### `seating_rules` — Formula rules, one row per (period, scope)
 
@@ -407,7 +420,8 @@ sends it):
 - `getPeriods()`, `createPeriod(name, sortOrder)`, `renamePeriod(id, name)`, `deletePeriod(id)`
 - `getStudents(periodId)`, `addStudents(periodId, names[], startSortOrder)`, `updateStudent(id, fields)`, `deleteStudent(id)`, `countStudents()` (all periods, ids only)
 - `getRoomLayout()` → layout object or `null`; `saveRoomLayout(layout)` (upsert on `key,owner_id`)
-- `getSeatAssignments(periodId)` → `{}` when none; `saveSeatAssignments(periodId, assignments)` (upsert on `period_id`)
+- `getSeatAssignments(periodId)` → the **active arrangement's** assignments, `{}` when none (read-only; seats are saved through arrangements)
+- `getSeatingArrangements(periodId)` → rows by `created_at`; `createSeatingArrangement(periodId, { name, assignments, layout, isActive })`; `updateSeatingArrangement(id, { name?, assignments?, layout? })`; `deleteSeatingArrangement(id)`; `setActiveSeatingArrangement(id)` (RPC)
 - `getAttendance(periodId, date)` → `{ marks, updatedAt }` or `null`; `saveAttendance(periodId, date, marks)` (upsert on `period_id,date`). Plus the same-browser cache helpers `readAbsentCache(periodId)` / `writeAbsentCache(periodId, ids)` (`teacherpal.absent.<periodId>` = `{ date, ids }`, today only), `absentIdsOf(marks)` and `todayKey()`.
 - `readSitOutCache(periodId)` / `writeSitOutCache(periodId, ids)` — "sitting out" for grouping (`teacherpal.sitout.<periodId>` = `{ date, ids }`, today only, this browser only). **Not attendance**: it never writes the `attendance` table or the absent cache. Used by Create Groups only.
 - `getAttendanceForDate(date)` → `[{ period_id, marks }]` for every period; `countStudentsByPeriod()` → `Map<periodId, n>`
@@ -1513,21 +1527,48 @@ All styling lives in `style.css`; pages carry almost no inline styling.
   if nothing turned; a click on another piece then selects it as normal);
   Esc → `cancelRotate()` restores the state from when the mode began.
   Duplicate (Ctrl+D),
-  Delete (Del) act on the selection; the Front marker moves but can't rotate
-  or be deleted. Assign mode locks pieces; names drag from the `.student-chip`
+  Delete (Del) act on the selection; the Front marker can't be duplicated
+  or deleted, but it **moves and rotates exactly like a desk** (same
+  handle, R, Shift = 15°, 0/90/180/270 snap). Its geometry lives in
+  `room.js`: `layout.front.rotation` (saved with the room), `pieceDims()`,
+  `frontMarkerHtml(rot)` (label along the bar, flipped by
+  `frontLabelStyle()` so it never reads upside down, plus a `.front-face`
+  notch on the room side), and `frontDistance(front, x, y)` →
+  `{ dist, behind }`. **Facing = the marker's local +y** (down at 0°, left
+  at 90°). `pieceById('front')` returns a copy, so rotation writes go through
+  `setPieceGeom()`. `seatWorld()` ranks seats for the front/back rules by
+  `frontDistance` — the nearest point on the turned bar — and seats
+  *behind* the marker rank after every seat on the room side. Assign mode locks pieces; names drag from the `.student-chip`
   list (unseated ones have a pink border) or from a seat, drop target found
   with `elementFromPoint` → `placeStudent()` (swap when occupied) or
   `unseat()` when dropped on the sidebar; Randomize fills every seat,
   Clear seats empties, "First names" shares the `teacherpal.groups.firstNames`
   setting. **Undo/redo** is a snapshot stack of `{ front, pieces, assignments }`
   (`base` is captured before a change, `commit()` pushes it); Ctrl+Z /
-  Ctrl+Shift+Z / Ctrl+Y. **Autosave**: `commit()` marks `dirty.layout` /
-  `dirty.seats`, `scheduleSave()` debounces 600ms then upserts via
-  `saveRoomLayout` / `saveSeatAssignments` and sets the `.save-state` text
-  (Saving… / ● Saved / Not saved); `beforeunload` warns if dirty. Full
-  screen forces Assign, hides sidebar/bars and fits the room with 14px labels.
-  If the room tables are missing the page still loads periods and shows a
-  "run migration-room-builder.sql" error.
+  Ctrl+Shift+Z / Ctrl+Y. **Saved arrangements** (`.arr-bar` under the
+  toolbar): the editor always holds a **working copy** of one arrangement
+  (desks + seats) — drags, Randomize and Populate only change that copy,
+  and **nothing autosaves**. The strip shows the open arrangement's name
+  (button → `.arr-menu` list: load / rename / duplicate / delete, plus "New
+  empty draft", each row with "N/M seated · K/R rules met" from
+  `arrStats()` — `close` rules excluded, same as the Populate summary), an
+  Active / Draft `.pct`, "● Unsaved changes" (`stateKey()` ≠ `savedKey`),
+  the live summary, and Discard (one undo step) / Save as new… / Save
+  (Ctrl+S) / Make active. `roomLayout` is the shared room as saved; **only
+  saving the active arrangement, or making one active, writes it** — desk
+  changes on a draft stay in that draft's `layout`. Loading an arrangement
+  whose stored `layout` differs from the room (`layoutDiff()`) asks first:
+  "Use its saved desks" / "Use current room" (seats on desks that are gone
+  are dropped). Make active spells out that different desks change the room
+  for every period. Switching period / arrangement with unsaved changes asks
+  Save / Discard / Cancel; `beforeunload` warns too. The active one can't be
+  deleted. Names are unique per period (case-insensitive). Formula rules still
+  autosave through `scheduleSave()` (they belong to the period, not to an
+  arrangement). Full screen forces Assign, hides sidebar/bars (the strip is
+  `.no-present`) and fits the room with 14px labels. If the room tables are
+  missing the page still loads periods and shows a "run
+  migration-room-builder.sql" error; if `seating_arrangements` is missing it
+  says to run `migration-seating-arrangements.sql` and disables saving.
 - **Formula system — `formula.js`: shared code, separate data.** Each page
   owns one rule set per period in its own `scope` (see the `seating_rules`
   schema) and passes `scope` into every helper and into

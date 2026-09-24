@@ -14,14 +14,42 @@ const TYPES = {
   round:   { label: 'Round table',  w: 9, h: 6, round: true, seats: [[1.5, 0, 3, 1.5], [4.5, 0, 3, 1.5], [4.5, 4.5, 3, 1.5], [1.5, 4.5, 3, 1.5]] },
   teacher: { label: 'Teacher desk', w: 4, h: 2, seats: [], desks: [[0, 0, 4, 2]], text: 'Teacher' },
 };
+// The "Front of room" marker: a FRONT.w × FRONT.h bar, stored as
+// layout.front = { x, y, w, h, rotation? }. It turns about its centre like a
+// desk. Its FACING is its local +y (straight down at 0°): the side the room
+// is on. So a marker on the right wall faces left at 90°, on the left wall
+// faces right at 270°, on the back wall faces up at 180°.
 const FRONT = { w: 12, h: 1 };
+const pieceDims = (p) => (p.id === 'front' ? FRONT : TYPES[p.type]);
 
 // Pieces are positioned with a transform (composited, no layout), never top/left
 const pieceTransform = (x, y, rot = 0) => `translate3d(${x * G}px, ${y * G}px, 0) rotate(${rot}deg)`;
 
+// The marker's label runs along the bar (upright text can't fit across a
+// 1-unit bar once it's turned) and flips whenever it would read upside down.
+function frontLabelStyle(rot = 0) {
+  const n = ((rot % 360) + 360) % 360;
+  return n > 90 && n <= 270 ? 'transform:rotate(180deg)' : '';
+}
+// The marker's inside: a notch on the room side (its facing) + the label
+const frontMarkerHtml = (rot = 0) =>
+  `<span class="front-face" aria-hidden="true"></span><span class="front-text" style="${frontLabelStyle(rot)}">Front of room</span>`;
+
+// Distance from a point (grid units) to the marker at its real position and
+// angle: to the nearest point of the bar's centre line. behind = the point
+// is on the far side of the marker from the room (against its facing).
+function frontDistance(front, x, y) {
+  const r = ((front.rotation || 0) * Math.PI) / 180, cos = Math.cos(r), sin = Math.sin(r);
+  const dx = x - (front.x + FRONT.w / 2), dy = y - (front.y + FRONT.h / 2);
+  const along = dx * cos + dy * sin;          // along the bar (local x)
+  const across = -dx * sin + dy * cos;        // toward the room (local +y)
+  const clamped = Math.max(-FRONT.w / 2, Math.min(FRONT.w / 2, along));
+  return { dist: Math.hypot(along - clamped, across), behind: across < 0 };
+}
+
 // Axis-aligned visual bounding box of a piece rotated by any angle about its centre
 function bbox(p) {
-  const t = p.id === 'front' ? FRONT : TYPES[p.type];
+  const t = pieceDims(p);
   const r = ((p.rotation || 0) * Math.PI) / 180;
   const c = Math.abs(Math.cos(r)), sn = Math.abs(Math.sin(r));
   const w = t.w * c + t.h * sn, h = t.w * sn + t.h * c;
