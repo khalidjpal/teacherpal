@@ -412,6 +412,11 @@ async function addStudents(periodId, names, startSortOrder = 0) {
   return sb('students', { method: 'POST', body });
 }
 
+// Every student in every period (bathroom quarter review, "All periods").
+async function getAllStudents() {
+  return sb('students', { params: { select: '*', order: 'sort_order.asc,name.asc' } });
+}
+
 // Total students across all periods (ids only — cheap). Used by the hub readout.
 async function countStudents() {
   const rows = await sb('students', { params: { select: 'id' } });
@@ -684,6 +689,25 @@ async function getBathroomLog(periodId, date) {
 // every trip for a period (all dates) — per-student history / frequency
 async function getBathroomHistory(periodId) {
   return sb('bathroom_log', { params: { select: '*', period_id: `eq.${periodId}`, order: 'out_at.desc', limit: 2000 } });
+}
+
+// Every period's rows that can belong to one quarter: timed trips dated in
+// [from, to] (either end may be null = open) plus the manual tallies tagged
+// with that quarter. The caller re-checks each trip's quarter against its
+// own quarter dates, so a range a little too wide is harmless.
+async function getBathroomQuarter(quarter, from, to) {
+  const range = [from && `date.gte.${from}`, to && `date.lte.${to}`].filter(Boolean);
+  const trips = range.length ? `and(manual.eq.false,${range.join(',')})` : 'manual.eq.false';
+  // Paged: Supabase caps a response at 1000 rows, and a quarter of every
+  // period can pass that.
+  const PAGE = 1000, out = [];
+  for (let offset = 0; ; offset += PAGE) {
+    const rows = await sb('bathroom_log', {
+      params: { select: '*', or: `(${trips},and(manual.eq.true,quarter.eq.${quarter}))`, order: 'out_at.asc,id.asc', limit: PAGE, offset },
+    });
+    out.push(...rows);
+    if (rows.length < PAGE) return out;
+  }
 }
 
 async function bathroomSignOut(periodId, studentId, date) {

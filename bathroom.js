@@ -6,8 +6,8 @@
 //     settings gear. The bell is followed automatically (no AUTO button);
 //     full screen is the top bar's job. Settings (flag min, max out,
 //     passes/quarter, quarter dates) live in a dialog opened from the gear.
-//   • Date + Today live inside the Log & History panel — looking at another
-//     day is the only reason to move it.
+//   • Date + Today live inside the Log panel — looking at another day is the
+//     only reason to move it.
 //   • Student grid: name + four small pass-checkboxes that fill left-to-right
 //     as passes are used. Card visibly dims + shows OUT badge when out; card
 //     locks (dashed border, No passes badge) when 4 used. It scrolls
@@ -16,8 +16,8 @@
 //       – Out now: live timers + End timer per student, "Nobody out" when
 //         empty. Always rendered, so the row never changes height.
 //       – Log: the day's trips (name · out → back · duration · remove) with
-//         a ‹ day › switcher + calendar button in its header. A History
-//         button swaps the body to the per-quarter tallies.
+//         a ‹ day › switcher + calendar button in its header. Its History
+//         button opens the quarter review (see "quarter review" below).
 //
 // Click flow: click a card → confirm dialog → Start timer signs out. On the
 // Out-now card, End timer signs the student back in (that's what fills the
@@ -114,11 +114,10 @@ function initBathroom({ mount = '#bathroom' } = {}) {
               <input type="date" id="br-date" aria-label="Jump to a date">
             </span>
           </div>
-          <button type="button" class="br-hist-btn" id="br-hist-btn" title="Passes used this quarter">History</button>
+          <button type="button" class="br-hist-btn" id="br-hist-btn" title="Pass history by quarter">History</button>
         </div>
         <div class="br-panel-body">
           <ul class="br-list" id="br-log-list"></ul>
-          <div id="br-history-view" hidden></div>
         </div>
       </section>
     </div>
@@ -199,6 +198,25 @@ function initBathroom({ mount = '#bathroom' } = {}) {
           <button value="ok" class="primary">Save settings</button>
         </div>
       </form>
+    </dialog>
+
+    <!-- Quarter review: every student's passes for one quarter, one period or
+         all of them, with a per-student drill-down, CSV and a printable
+         paper-tracker sheet. Opened by the Log panel's History button. -->
+    <dialog id="br-review" class="br-review-dialog" aria-labelledby="rv-title">
+      <div class="rv-head">
+        <h3 id="rv-title">Pass history</h3>
+        <div class="br-mode-toggle" id="rv-quarters" role="group" aria-label="Quarter"></div>
+        <select id="rv-period" aria-label="Period"></select>
+        <span class="rv-spacer"></span>
+        <button type="button" class="small" id="rv-csv">Export CSV</button>
+        <button type="button" class="small" id="rv-print" title="Print the paper-tracker sheet">Print</button>
+        <button type="button" class="icon-btn" id="rv-close" title="Close" aria-label="Close">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>
+        </button>
+      </div>
+      <p class="rv-range" id="rv-range"></p>
+      <div class="rv-body" id="rv-body"></div>
     </dialog>`;
 
   // ---------- state ----------
@@ -208,8 +226,6 @@ function initBathroom({ mount = '#bathroom' } = {}) {
   let trips = [];         // today's rows for this period
   let history = [];       // all rows for this period, all dates
   let followBell = true, loadSeq = 0;
-  let activeTab = 'log';
-  let historyStudent = null;   // if set, showing a specific student's history detail
 
   const studentById = (id) => students.find((s) => s.id === id);
   const isToday = () => date === todayKey();
@@ -217,11 +233,15 @@ function initBathroom({ mount = '#bathroom' } = {}) {
   const tripQuarter = (t) => (t.manual ? t.quarter : quarterFor(t.date));
   // Passes "used" = completed trips + manual tallies. An in-progress trip
   // does NOT count until the student returns — that's when the next
-  // checkbox fills. Effective pass count for gating a new sign-out includes
-  // the in-progress trip if any, via `effectiveUsed` below.
+  // checkbox fills. A trip from an earlier day whose timer was never ended
+  // does count — the student went. The grid and the quarter review both
+  // count through passValue(), so they always agree.
+  const passValue = (t) => (t.manual
+    ? (Number(t.count) || 0)
+    : (t.in_at || t.date < todayKey() ? 1 : 0));
   const usedIn = (sid, q) => history
-    .filter((t) => t.student_id === sid && tripQuarter(t) === q && (t.manual || t.in_at))
-    .reduce((s, t) => s + (t.manual ? (Number(t.count) || 0) : 1), 0);
+    .filter((t) => t.student_id === sid && tripQuarter(t) === q)
+    .reduce((s, t) => s + passValue(t), 0);
   const outTrips = () => trips.filter((t) => isTrip(t) && !t.in_at);
   const effectiveUsed = (sid, q) => usedIn(sid, q) + (outOf(sid) ? 1 : 0);
   const outOf = (sid) => outTrips().find((t) => t.student_id === sid);
@@ -268,7 +288,9 @@ function initBathroom({ mount = '#bathroom' } = {}) {
 
     grid.innerHTML = students.map((s) => {
       const out = outOf(s.id);
-      const usedDone = usedIn(s.id, q);          // completed passes only
+      // completed passes only (on a past day an unended trip already counts
+      // in usedIn — take it back out so it shows once, as the pending box)
+      const usedDone = usedIn(s.id, q) - (out ? passValue(out) : 0);
       const effUsed  = usedDone + (out ? 1 : 0); // includes in-flight
       const locked = !out && settings.passLimit > 0 && usedDone >= settings.passLimit;
       const cls = ['br-card', out && 'out', locked && 'locked'].filter(Boolean).join(' ');
@@ -340,14 +362,6 @@ function initBathroom({ mount = '#bathroom' } = {}) {
   function renderLogPanel() {
     renderDayNav();
     const timed = trips.filter(isTrip);
-    const onHistory = activeTab === 'history';
-    $('br-log-list').hidden = onHistory;
-    $('br-history-view').hidden = !onHistory;
-    $('br-hist-btn').setAttribute('aria-pressed', String(onHistory));
-    $('br-hist-btn').textContent = onHistory ? 'Log' : 'History';
-
-    if (onHistory) { renderHistoryView(); return; }
-
     // Newest first: name · out → back · duration · remove
     $('br-log-list').innerHTML = timed.slice().reverse().map((t) => {
       const s = studentById(t.student_id);
@@ -362,69 +376,6 @@ function initBathroom({ mount = '#bathroom' } = {}) {
         <button type="button" class="link br-del" data-trip="${t.id}" title="Delete this trip">×</button>
       </li>`;
     }).join('') || `<li class="none">No trips ${isToday() ? 'yet today' : `on ${dayLabel(date)}`}.</li>`;
-  }
-
-  function renderHistoryView() {
-    const view = $('br-history-view');
-    const q = quarterFor(date);
-    if (historyStudent) {
-      const s = studentById(historyStudent);
-      const rows = history.filter((t) => t.student_id === historyStudent && !t.manual);
-      const manualRow = history.find((t) => t.student_id === historyStudent && t.manual && t.quarter === q);
-      const manualCount = manualRow ? Number(manualRow.count) || 0 : 0;
-      view.innerHTML = `
-        <div class="br-hist-detail-head">
-          <button type="button" class="link" id="br-hist-back">← back</button>
-          <h4>${escapeHtml(s ? s.name : '?')}</h4>
-        </div>
-        <div class="br-hist-manual">
-          <span class="hud-key">${q} manual tally</span>
-          <button type="button" class="small" data-adj="-1" aria-label="Minus one">−</button>
-          <span class="br-manual-n">${manualCount}</span>
-          <button type="button" class="small" data-adj="1" aria-label="Plus one">+</button>
-          <span class="hud-key">used ${usedIn(historyStudent, q)}/${settings.passLimit || '∞'}</span>
-        </div>
-        <ul class="br-list">${
-          rows.map((t) => `<li>
-            <span class="br-log-name">${escapeHtml(t.date)}</span>
-            <span class="br-log-times">${escapeHtml(tripLabel(t))}</span>
-          </li>`).join('') || '<li class="none">No timed trips.</li>'
-        }</ul>`;
-      view.querySelector('#br-hist-back').addEventListener('click', () => { historyStudent = null; renderLogPanel(); });
-      view.querySelectorAll('[data-adj]').forEach((b) => b.addEventListener('click', async () => {
-        const cur = usedManualIn(historyStudent, q);
-        const next = Math.max(0, cur + Number(b.dataset.adj));
-        try {
-          const row = await setManualTally(periodId, historyStudent, q, next);
-          history = history.filter((t) => !(t.student_id === historyStudent && t.manual && t.quarter === q));
-          if (row) history.unshift(row);
-        } catch (err) { showError(err); return; }
-        renderGrid(); renderLogPanel();
-      }));
-      return;
-    }
-    // Summary list per student for the current quarter
-    const by = new Map();
-    for (const t of history) {
-      if (tripQuarter(t) !== q) continue;
-      const b = by.get(t.student_id) || { used: 0, trips: 0, manual: 0, sec: 0 };
-      if (t.manual) { const n = Number(t.count) || 0; b.manual += n; b.used += n; }
-      else { b.trips++; b.used++; b.sec += elapsedSec(t); }
-      by.set(t.student_id, b);
-    }
-    const rows = [...by.entries()]
-      .map(([sid, b]) => ({ sid, ...b, name: (studentById(sid) || {}).name || '?' }))
-      .filter((r) => r.used > 0)
-      .sort((a, b) => b.used - a.used);
-    view.innerHTML = `
-      <p class="br-hist-note">Passes used this ${q} — click a name for detail.</p>
-      <ul class="br-list">${
-        rows.map((r) => `<li class="${settings.passLimit > 0 && r.used >= settings.passLimit ? 'flagged' : ''}">
-          <button type="button" class="link br-hist-who" data-student="${r.sid}">${escapeHtml(r.name)}</button>
-          <span class="br-log-times">${r.used}/${settings.passLimit || '∞'} · ${r.trips ? `${r.trips} timed · ${Math.round(r.sec / 60)} min` : 'tallies only'}${r.manual ? ` · ${r.manual} manual` : ''}</span>
-        </li>`).join('') || '<li class="none">No passes used yet this quarter.</li>'
-      }</ul>`;
-    view.querySelectorAll('.br-hist-who').forEach((b) => b.addEventListener('click', () => { historyStudent = b.dataset.student; renderLogPanel(); }));
   }
 
   const usedManualIn = (sid, q) => {
@@ -612,13 +563,8 @@ function initBathroom({ mount = '#bathroom' } = {}) {
     renderGrid(); renderOutStrip(); renderLogPanel();
   });
 
-  // The panel is the Log; History is the one other view it can show (the
-  // per-student quarter tallies live there and nowhere else).
-  $('br-hist-btn').addEventListener('click', () => {
-    activeTab = activeTab === 'history' ? 'log' : 'history';
-    historyStudent = null;   // reset detail view when swapping
-    renderLogPanel();
-  });
+  // History opens the quarter review dialog (built further down).
+  $('br-hist-btn').addEventListener('click', () => openReview());
 
   // ---------- settings dialog ----------
   function openSettings() {
@@ -832,6 +778,376 @@ function initBathroom({ mount = '#bathroom' } = {}) {
     renderBackfillList(); renderGrid(); renderOutStrip(); renderLogPanel();
   });
 
+  // ---------- quarter review ----------
+  // Its own data, separate from the grid's: one fetch per quarter across
+  // every period (getBathroomQuarter), counted with the same passValue() and
+  // the same quarter dates (activeQuarters → Settings) as the grid. A trip's
+  // quarter comes from its date, so a finished quarter never changes as new
+  // ones begin; editing a quarter's dates in Settings re-buckets old trips.
+  // Paper-tracker tallies count toward the quarter they're tagged with.
+  const rv = { q: null, periodId: null, sort: 'used', dir: 1, studentId: null, rows: [], students: [], seq: 0, loading: false, error: null, msg: '' };
+
+  // The periods the main select offers (the ones you teach), in its order.
+  const rvPeriods = () => [...$('br-period').options]
+    .filter((o) => o.value)
+    .map((o) => ({ id: o.value, name: o.textContent }));
+  const rvInScope = () => rvPeriods().filter((p) => rv.periodId === 'all' || p.id === rv.periodId);
+  const periodShort = (name) => { const p = parsePeriodName(name || ''); return p ? `P${p.n}` : (name || '?'); };
+  const fmtDay = (ymd) => new Date(`${ymd}T00:00`).toLocaleDateString([], { weekday: 'short', month: 'short', day: 'numeric' });
+  const fmtMD  = (ymd) => { const [, m, d] = ymd.split('-'); return `${Number(m)}/${Number(d)}`; };
+  const fmtRange = (a, b) => {
+    const da = new Date(`${a}T00:00`), db = new Date(`${b}T00:00`);
+    const md = { month: 'short', day: 'numeric' };
+    return `${da.toLocaleDateString([], md)} – ${db.toLocaleDateString([], { ...md, year: 'numeric' })}`;
+  };
+  const fmtMins = (sec) => `${Math.round(sec / 60)} min`;
+
+  function quarterRange(q) {
+    const qs = activeQuarters(), i = qs.findIndex((x) => x.q === q), next = qs[i + 1];
+    return {
+      start: qs[i].start, end: qs[i].end,
+      // fetch window, matching quarterFor(): days before Q1 count as Q1 and
+      // break days after a quarter count toward the quarter that just ended
+      from: i === 0 ? null : qs[i].start,
+      to: next ? shiftDate(next.start, -1) : null,
+    };
+  }
+
+  // One entry per student in scope (zeros included), roster order.
+  function rvStats() {
+    const scope = new Set(rvInScope().map((p) => p.id));
+    const by = new Map(rv.students
+      .filter((s) => scope.has(s.period_id))
+      .map((s) => [s.id, { s, used: 0, logged: 0, paper: 0, sec: 0, trips: [] }]));
+    for (const t of rv.rows) {
+      const b = by.get(t.student_id);
+      if (!b || tripQuarter(t) !== rv.q) continue;
+      b.used += passValue(t);
+      if (t.manual) { b.paper += Number(t.count) || 0; continue; }
+      b.trips.push(t);
+      if (passValue(t)) b.logged++;
+      if (t.in_at && !isQuickTap(t)) b.sec += elapsedSec(t);
+    }
+    return [...by.values()];
+  }
+
+  function rvSorted(list) {
+    const order = new Map(rvPeriods().map((p, i) => [p.id, i]));
+    const byName = (a, b) => a.s.name.localeCompare(b.s.name);
+    const cmp = {
+      used:   (a, b) => b.used - a.used || byName(a, b),
+      name:   byName,
+      period: (a, b) => order.get(a.s.period_id) - order.get(b.s.period_id) || byName(a, b),
+    }[rv.sort] || byName;
+    return list.slice().sort((a, b) => cmp(a, b) * rv.dir);
+  }
+
+  function passBoxes(n) {
+    const lim = settings.passLimit;
+    if (!lim) return `<span class="br-pass-unlimited">${n}</span>`;
+    const boxes = Array.from({ length: lim }, (_, i) => `<span class="br-pass${i < n ? ' used' : ''}"></span>`).join('');
+    return `<span class="br-passes" aria-hidden="true">${boxes}</span>${n > lim ? `<span class="rv-over">+${n - lim}</span>` : ''}`;
+  }
+
+  function renderReview() {
+    const qs = activeQuarters(), cur = quarterFor(todayKey());
+    $('rv-quarters').innerHTML = qs.map((x) => `
+      <button type="button" class="br-mode${x.q === rv.q ? ' active' : ''}" data-q="${x.q}" aria-pressed="${x.q === rv.q}"
+        title="${escapeHtml(fmtRange(x.start, x.end))}${x.q === cur ? ' · current quarter' : ''}">${x.q}${x.q === cur ? '<span class="rv-now" aria-hidden="true"></span>' : ''}</button>`).join('');
+    const r = quarterRange(rv.q);
+    $('rv-range').innerHTML = `${rv.q} · ${escapeHtml(fmtRange(r.start, r.end))} <span class="rv-src">quarter dates from Settings</span>`
+      + (rv.msg ? ` <span class="rv-msg">${escapeHtml(rv.msg)}</span>` : '');
+    const busy = rv.loading || !!rv.error;
+    $('rv-csv').disabled = busy;
+    $('rv-print').disabled = busy;
+    $('rv-csv').title = rv.studentId ? "Export this student's trips" : 'Export this summary';
+
+    const body = $('rv-body');
+    if (rv.error) { body.innerHTML = `<p class="rv-empty error">Couldn't load the log: ${escapeHtml(rv.error)}</p>`; return; }
+    if (rv.loading) { body.innerHTML = '<p class="rv-empty">Loading…</p>'; return; }
+    body.innerHTML = rv.studentId ? reviewDetailHtml() : reviewSummaryHtml();
+  }
+
+  function reviewSummaryHtml() {
+    const list = rvStats(), lim = settings.passLimit, all = rv.periodId === 'all';
+    const total = list.reduce((n, b) => n + b.used, 0);
+    const maxed = lim ? list.filter((b) => b.used >= lim).length : null;
+    const never = list.filter((b) => b.used === 0).length;
+    const avg = list.length ? total / list.length : 0;
+    const pName = new Map(rvPeriods().map((p) => [p.id, p.name]));
+    const head = (key, label) => {
+      const on = rv.sort === key;
+      const down = on && (key === 'used' ? rv.dir === 1 : rv.dir === -1);
+      return `<th${on ? ` aria-sort="${down ? 'descending' : 'ascending'}"` : ''}>
+        <button type="button" class="rv-sort${on ? ' on' : ''}" data-sort="${key}">${label}<span class="rv-arrow" aria-hidden="true">${on ? (down ? '▾' : '▴') : ''}</span></button></th>`;
+    };
+    const rows = rvSorted(list).map((b) => {
+      const cls = lim && b.used >= lim ? 'maxed' : (b.used === 0 ? 'zero' : '');
+      const parts = [b.logged && `${b.logged} logged`, b.paper && `${b.paper} paper`].filter(Boolean);
+      return `<tr class="${cls}">
+        <td><button type="button" class="rv-who" data-student="${b.s.id}">${escapeHtml(b.s.name)}</button></td>
+        ${all ? `<td class="rv-mono" title="${escapeHtml(pName.get(b.s.period_id) || '')}">${escapeHtml(periodShort(pName.get(b.s.period_id)))}</td>` : ''}
+        <td class="rv-used">${passBoxes(b.used)}<span class="rv-n">${b.used}${lim ? `/${lim}` : ''}</span></td>
+        <td class="rv-mono">${parts.join(' · ') || '—'}</td>
+        <td class="rv-mono">${b.sec ? fmtMins(b.sec) : '—'}</td>
+      </tr>`;
+    }).join('');
+    return `
+      <div class="rv-stats">
+        <div class="rv-stat"><b>${maxed ?? '—'}</b><span>${lim ? `used all ${lim}` : 'no pass limit set'}</span></div>
+        <div class="rv-stat"><b>${never}</b><span>never used one</span></div>
+        <div class="rv-stat"><b>${avg.toFixed(1)}</b><span>${all ? 'average' : 'class average'}${lim ? ` of ${lim}` : ''}</span></div>
+        <div class="rv-stat"><b>${total}</b><span>passes · ${list.length} student${list.length === 1 ? '' : 's'}</span></div>
+      </div>
+      <div class="rv-table-wrap">
+        <table class="rv-table">
+          <thead><tr>${head('name', 'Student')}${all ? head('period', 'Period') : ''}${head('used', 'Passes')}<th>Trips</th><th>Time out</th></tr></thead>
+          <tbody>${rows || `<tr><td colspan="${all ? 5 : 4}" class="rv-empty">No students${all ? '' : ' in this period'}.</td></tr>`}</tbody>
+        </table>
+      </div>
+      <p class="rv-hint">Click a name for that student's trips. "Paper" = passes from the paper tracker, which have no date or time.</p>`;
+  }
+
+  function reviewDetailHtml() {
+    const b = rvStats().find((x) => x.s.id === rv.studentId);
+    if (!b) return '<p class="rv-empty">That student isn\'t in this period.</p><button type="button" class="link" id="rv-back">← All students</button>';
+    const lim = settings.passLimit;
+    const pName = (rvPeriods().find((p) => p.id === b.s.period_id) || {}).name || '';
+    const trips = b.trips.slice().sort((x, y) => String(x.out_at).localeCompare(String(y.out_at)));
+    const timed = trips.filter((t) => t.in_at && !isQuickTap(t));
+    const rows = trips.map((t) => {
+      let back, dur;
+      if (!t.in_at)          { back = passValue(t) ? 'never ended' : 'out now'; dur = '—'; }
+      else if (isQuickTap(t)) { back = '—'; dur = 'quick tap'; }
+      else                   { back = fmtClock(t.in_at); dur = fmtDur(elapsedSec(t)); }
+      return `<tr><td>${escapeHtml(fmtDay(t.date))}</td><td class="rv-mono">${escapeHtml(fmtClock(t.out_at))}</td>
+        <td class="rv-mono">${escapeHtml(back)}</td><td class="rv-mono">${escapeHtml(dur)}</td></tr>`;
+    }).join('');
+    return `
+      <div class="rv-detail-head">
+        <button type="button" class="link" id="rv-back">← All students</button>
+        <h4>${escapeHtml(b.s.name)}</h4>
+        <span class="pct" title="${escapeHtml(pName)}">${escapeHtml(periodShort(pName))}</span>
+        <span class="rv-used">${passBoxes(b.used)}<span class="rv-n">${b.used}${lim ? `/${lim}` : ''} used in ${rv.q}</span></span>
+      </div>
+      <div class="br-hist-manual">
+        <span class="hud-key">${rv.q} paper tally</span>
+        <button type="button" class="small" data-adj="-1" aria-label="Remove one paper pass"${b.paper ? '' : ' disabled'}>−</button>
+        <span class="br-manual-n">${b.paper}</span>
+        <button type="button" class="small" data-adj="1" aria-label="Add one paper pass">+</button>
+        <span class="rv-src">passes from the paper tracker (no date or time)</span>
+      </div>
+      <div class="rv-table-wrap">
+        <table class="rv-table">
+          <thead><tr><th>Date</th><th>Out</th><th>Back</th><th>Duration</th></tr></thead>
+          <tbody>${rows || `<tr><td colspan="4" class="rv-empty">No logged trips in ${rv.q}.</td></tr>`}</tbody>
+        </table>
+      </div>
+      ${timed.length ? `<p class="rv-hint">${timed.length} timed trip${timed.length === 1 ? '' : 's'} · ${fmtMins(b.sec)} out in total · ${fmtDur(Math.round(b.sec / timed.length))} average</p>` : ''}`;
+  }
+
+  async function rvLoad() {
+    const seq = ++rv.seq;
+    rv.loading = true; rv.error = null; rv.msg = '';
+    renderReview();
+    const r = quarterRange(rv.q);
+    try {
+      const [rows, studs] = await Promise.all([
+        getBathroomQuarter(rv.q, r.from, r.to),
+        rv.students.length ? rv.students : getAllStudents(),
+      ]);
+      if (seq !== rv.seq) return;
+      rv.rows = rows; rv.students = studs;
+    } catch (err) {
+      if (seq !== rv.seq) return;
+      rv.rows = []; rv.error = err.message || String(err);
+    }
+    rv.loading = false;
+    renderReview();
+  }
+
+  function openReview() {
+    const ps = rvPeriods();
+    $('rv-period').innerHTML = '<option value="all">All periods</option>'
+      + ps.map((p) => `<option value="${p.id}">${escapeHtml(p.name)}</option>`).join('');
+    rv.periodId = ps.some((p) => p.id === periodId) ? periodId : 'all';
+    $('rv-period').value = rv.periodId;
+    rv.q = quarterFor(todayKey());
+    rv.sort = 'used'; rv.dir = 1; rv.studentId = null;
+    rv.students = [];   // re-read the rosters each time it opens
+    rvLoad();           // renders the quarter buttons synchronously, so…
+    $('br-review').showModal();
+    root.querySelector('#rv-quarters .active')?.focus();   // …focus lands on the open quarter
+  }
+
+  async function rvAdjustTally(delta) {
+    const s = rv.students.find((x) => x.id === rv.studentId);
+    if (!s) return;
+    const isTally = (t) => t.student_id === s.id && t.manual && t.quarter === rv.q;
+    const row = rv.rows.find(isTally);
+    const next = Math.max(0, (row ? Number(row.count) || 0 : 0) + delta);
+    try {
+      const saved = await setManualTally(s.period_id, s.id, rv.q, next);
+      rv.rows = rv.rows.filter((t) => !isTally(t));
+      if (saved) rv.rows.push(saved);
+      if (s.period_id === periodId) {          // keep the grid behind in step
+        history = history.filter((t) => !isTally(t));
+        if (saved) history.unshift(saved);
+        renderGrid();
+      }
+      rv.msg = '';
+    } catch (err) { rv.msg = `Couldn't save: ${err.message || err}`; }
+    renderReview();
+  }
+
+  $('rv-quarters').addEventListener('click', (e) => {
+    const b = e.target.closest('[data-q]');
+    if (!b || b.dataset.q === rv.q) return;
+    rv.q = b.dataset.q;   // an open student stays open: same student, other quarter
+    rvLoad();
+  });
+  $('rv-period').addEventListener('change', (e) => {
+    rv.periodId = e.target.value;
+    rv.studentId = null;
+    if (rv.sort === 'period' && rv.periodId !== 'all') { rv.sort = 'used'; rv.dir = 1; }
+    renderReview();
+  });
+  $('rv-body').addEventListener('click', (e) => {
+    const who = e.target.closest('.rv-who');
+    if (who) { rv.studentId = who.dataset.student; renderReview(); $('rv-back')?.focus(); return; }
+    const sort = e.target.closest('.rv-sort');
+    if (sort) {
+      if (rv.sort === sort.dataset.sort) rv.dir = -rv.dir;
+      else { rv.sort = sort.dataset.sort; rv.dir = 1; }
+      renderReview();
+      root.querySelector(`.rv-sort[data-sort="${rv.sort}"]`)?.focus();
+      return;
+    }
+    if (e.target.closest('#rv-back')) {
+      const sid = rv.studentId;
+      rv.studentId = null; renderReview();
+      root.querySelector(`.rv-who[data-student="${sid}"]`)?.focus();
+      return;
+    }
+    const adj = e.target.closest('[data-adj]');
+    if (adj) rvAdjustTally(Number(adj.dataset.adj));
+  });
+  $('rv-close').addEventListener('click', () => $('br-review').close());
+
+  // ---- CSV ----
+  // Cells starting with = + - @ are prefixed with ' so a spreadsheet never
+  // runs a student name as a formula.
+  const csvCell = (v) => {
+    let s = String(v ?? '');
+    if (/^[=+\-@]/.test(s)) s = `'${s}`;
+    return /[",\r\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+  };
+  function downloadCsv(name, rows) {
+    const text = '﻿' + rows.map((r) => r.map(csvCell).join(',')).join('\r\n') + '\r\n';
+    const url = URL.createObjectURL(new Blob([text], { type: 'text/csv;charset=utf-8' }));
+    const a = document.createElement('a');
+    a.href = url; a.download = name;
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  }
+  const fileSafe = (s) => String(s).replace(/[^a-z0-9]+/gi, '-').replace(/^-+|-+$/g, '').toLowerCase();
+
+  $('rv-csv').addEventListener('click', () => {
+    const r = quarterRange(rv.q), lim = settings.passLimit;
+    const pName = new Map(rvPeriods().map((p) => [p.id, p.name]));
+    if (rv.studentId) {
+      const b = rvStats().find((x) => x.s.id === rv.studentId);
+      if (!b) return;
+      const per = pName.get(b.s.period_id) || '';
+      const out = [['Student', 'Period', 'Quarter', 'Date', 'Out', 'Back', 'Minutes out', 'Type']];
+      if (b.paper) out.push([b.s.name, per, rv.q, '', '', '', '', `paper tally: ${b.paper} pass${b.paper === 1 ? '' : 'es'}`]);
+      b.trips.slice().sort((x, y) => String(x.out_at).localeCompare(String(y.out_at))).forEach((t) => {
+        const quick = isQuickTap(t);
+        out.push([b.s.name, per, rv.q, t.date, fmtClock(t.out_at),
+          t.in_at && !quick ? fmtClock(t.in_at) : '',
+          t.in_at && !quick ? (elapsedSec(t) / 60).toFixed(1) : '',
+          !t.in_at ? (passValue(t) ? 'timer never ended' : 'out now') : (quick ? 'quick tap' : 'timed')]);
+      });
+      out.push([], [`Passes used in ${rv.q} (${r.start} to ${r.end})`, `${b.used}${lim ? ` of ${lim}` : ''}`]);
+      downloadCsv(`bathroom-${rv.q}-${fileSafe(b.s.name)}.csv`, out);
+      return;
+    }
+    const out = [['Quarter', 'Quarter start', 'Quarter end', 'Period', 'Student', 'Passes used', 'Pass limit', 'Logged trips', 'Paper tally', 'Minutes out']];
+    rvSorted(rvStats()).forEach((b) => out.push([rv.q, r.start, r.end, pName.get(b.s.period_id) || '', b.s.name,
+      b.used, lim || '', b.logged, b.paper, Math.round(b.sec / 60)]));
+    const scope = rv.periodId === 'all' ? 'all-periods' : fileSafe(pName.get(rv.periodId) || 'period');
+    downloadCsv(`bathroom-${rv.q}-${scope}.csv`, out);
+  });
+
+  // ---- print: the paper-tracker sheet ----
+  // One page per period: # · student · one box per pass (the date it was
+  // used, ✓ for a paper-tracker pass) · total. Roster order, like the paper
+  // sheet. Printed from a hidden iframe so none of the app's dark theme or
+  // layout reaches the page.
+  $('rv-print').addEventListener('click', () => {
+    const r = quarterRange(rv.q), lim = settings.passLimit;
+    const stats = new Map(rvStats().map((b) => [b.s.id, b]));
+    const marksOf = (b) => [
+      ...Array(b.paper).fill('✓'),
+      ...b.trips.filter((t) => passValue(t))
+        .sort((x, y) => String(x.out_at).localeCompare(String(y.out_at)))
+        .map((t) => fmtMD(t.date)),
+    ];
+    const cols = lim || Math.max(4, ...[...stats.values()].map((b) => b.used));
+    const today = new Date().toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' });
+    const sections = rvInScope().map((p) => {
+      const roster = rv.students.filter((s) => s.period_id === p.id).map((s) => stats.get(s.id)).filter(Boolean);
+      const body = roster.map((b, i) => {
+        const marks = marksOf(b);
+        const cells = Array.from({ length: cols }, (_, k) => `<td class="pass">${escapeHtml(marks[k] || '')}</td>`).join('');
+        const over = b.used > cols ? ` (+${b.used - cols})` : '';
+        return `<tr${lim && b.used >= lim ? ' class="maxed"' : ''}><td class="num">${i + 1}</td><td class="name">${escapeHtml(b.s.name)}</td>${cells}<td class="total">${b.used}${over}</td></tr>`;
+      }).join('') || `<tr><td colspan="${cols + 3}">No students.</td></tr>`;
+      return `<section>
+        <header>
+          <div><h1>Bathroom Pass Tracker</h1><div class="per">${escapeHtml(p.name)}</div></div>
+          <div class="meta"><b>${rv.q}</b> · ${escapeHtml(fmtRange(r.start, r.end))}<br>${escapeHtml(displayName())}</div>
+        </header>
+        <table>
+          <thead><tr><th class="num">#</th><th class="name">Student</th>${Array.from({ length: cols }, (_, k) => `<th>Pass ${k + 1}</th>`).join('')}<th class="total">Total</th></tr></thead>
+          <tbody>${body}</tbody>
+        </table>
+        <footer><span>Each box: the date the pass was used · ✓ = from the paper tracker (no date)</span><span>Printed ${escapeHtml(today)}</span></footer>
+      </section>`;
+    }).join('');
+    const html = `<!DOCTYPE html><html><head><meta charset="utf-8"><title>Bathroom passes ${rv.q}</title><style>
+      @page { size: letter portrait; margin: 0.5in; }
+      * { box-sizing: border-box; }
+      body { margin: 0; font: 11pt Arial, Helvetica, sans-serif; color: #000; background: #fff; }
+      section { break-after: page; page-break-after: always; }
+      section:last-child { break-after: auto; page-break-after: auto; }
+      header { display: flex; justify-content: space-between; align-items: flex-end; gap: 12pt; border-bottom: 2pt solid #000; padding-bottom: 4pt; margin-bottom: 8pt; }
+      h1 { margin: 0; font-size: 16pt; }
+      .per { font-size: 12pt; margin-top: 2pt; }
+      .meta { text-align: right; font-size: 10pt; line-height: 1.4; }
+      table { width: 100%; border-collapse: collapse; table-layout: fixed; }
+      th, td { border: 1pt solid #000; padding: 2pt 5pt; height: 19pt; }
+      th { font-size: 9pt; background: #e8e8e8; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+      .num { width: 24pt; text-align: center; color: #333; }
+      th.name, td.name { width: 40%; text-align: left; }
+      td.pass { text-align: center; font-size: 10pt; }
+      .total { width: 48pt; text-align: center; font-weight: bold; }
+      tr.maxed td { background: #e8e8e8; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+      tr { break-inside: avoid; }
+      footer { display: flex; justify-content: space-between; margin-top: 6pt; font-size: 8.5pt; color: #333; }
+    </style></head><body>${sections}</body></html>`;
+    const frame = document.createElement('iframe');
+    frame.setAttribute('aria-hidden', 'true');
+    frame.style.cssText = 'position:fixed;right:0;bottom:0;width:0;height:0;border:0;';
+    document.body.appendChild(frame);
+    const doc = frame.contentDocument;
+    doc.open(); doc.write(html); doc.close();
+    const w = frame.contentWindow;
+    w.addEventListener('afterprint', () => frame.remove());
+    setTimeout(() => frame.remove(), 120000);   // in case afterprint never fires
+    w.focus(); w.print();
+  });
+
   // ---------- period / date ----------
   // The bell is followed automatically — there is no AUTO button. Picking a
   // period by hand stops it for the rest of the session, so your choice isn't
@@ -858,7 +1174,6 @@ function initBathroom({ mount = '#bathroom' } = {}) {
   function goToDate(ymd) {
     if (!ymd || ymd === date) return;
     date = ymd;
-    historyStudent = null;
     renderDayNav();
     load();
   }

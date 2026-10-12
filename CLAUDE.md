@@ -38,7 +38,7 @@ full-screen toggle. There is no sidebar; every page uses the full width.
 | Name Wheel | `wheel.html` | Cold-calling: spin a wheel of the period's present students, big name in the middle, no-repeats mode, projector pop-out |
 | Noise Meter | `noise.html` | Room volume from the laptop mic: big green/amber/red meter, three zones with activity presets, "Too loud" hold + chime, pop-out for the projector. Mic only while you hold it on |
 | Seating | `seating.html` | Room builder + seat assignment |
-| Bathroom | `bathroom.html` | Bathroom tracker: tap a card to sign out (quick tap or timer); per-student pass checkboxes, red flag past the limit. One centred control island (period · mode · search · gear) over a scrolling student grid, with **Out now** (live timers + End timer) and **Log** (the day's trips + a day switcher) as two fixed-height panels underneath |
+| Bathroom | `bathroom.html` | Bathroom tracker: tap a card to sign out (quick tap or timer); per-student pass checkboxes, red flag past the limit. One centred control island (period · mode · search · gear) over a scrolling student grid, with **Out now** (live timers + End timer) and **Log** (the day's trips + a day switcher; its History button opens the quarter review — counts, CSV, print) as two fixed-height panels underneath |
 | Rosters | `roster.html` | Setup: periods + students |
 | Schedule | `schedule.html` | Setup: bell-schedule overrides + reference |
 
@@ -418,7 +418,7 @@ Auth:
 Data helpers (owner_id is filled by the DB default, so no helper here ever
 sends it):
 - `getPeriods()`, `createPeriod(name, sortOrder)`, `renamePeriod(id, name)`, `deletePeriod(id)`
-- `getStudents(periodId)`, `addStudents(periodId, names[], startSortOrder)`, `updateStudent(id, fields)`, `deleteStudent(id)`, `countStudents()` (all periods, ids only)
+- `getStudents(periodId)`, `addStudents(periodId, names[], startSortOrder)`, `updateStudent(id, fields)`, `deleteStudent(id)`, `countStudents()` (all periods, ids only), `getAllStudents()` (every period, full rows)
 - `getRoomLayout()` → layout object or `null`; `saveRoomLayout(layout)` (upsert on `key,owner_id`)
 - `getSeatAssignments(periodId)` → the **active arrangement's** assignments, `{}` when none (read-only; seats are saved through arrangements)
 - `getSeatingArrangements(periodId)` → rows by `created_at`; `createSeatingArrangement(periodId, { name, assignments, layout, isActive })`; `updateSeatingArrangement(id, { name?, assignments?, layout? })`; `deleteSeatingArrangement(id)`; `setActiveSeatingArrangement(id)` (RPC)
@@ -426,7 +426,7 @@ sends it):
 - `readSitOutCache(periodId)` / `writeSitOutCache(periodId, ids)` — "sitting out" for grouping (`teacherpal.sitout.<periodId>` = `{ date, ids }`, today only, this browser only). **Not attendance**: it never writes the `attendance` table or the absent cache. Used by Create Groups only.
 - `getAttendanceForDate(date)` → `[{ period_id, marks }]` for every period; `countStudentsByPeriod()` → `Map<periodId, n>`
 - `getLessonPlan(periodId, date)` → row or `null`; `getLessonPlansRange(from, to)` (week view); `saveLessonPlan(periodId, date, plan)` (upsert on `period_id,date`); `deleteLessonPlan(periodId, date)`; `EMPTY_PLAN()`
-- `getBathroomLog(periodId, date)`, `getBathroomHistory(periodId)` (all dates, newest first, ≤2000), `bathroomSignOut(periodId, studentId, date)` → row, `bathroomSignIn(id)` → row, `deleteBathroomTrip(id)`, `setManualTally(periodId, studentId, quarter, count)` (read-then-write because the uniqueness is a partial index; count 0 deletes)
+- `getBathroomLog(periodId, date)`, `getBathroomHistory(periodId)` (all dates, newest first, ≤2000), `getBathroomQuarter(quarter, from, to)` (every period: trips dated in `[from, to]`, either end `null` = open, plus that quarter's manual tallies; paged), `bathroomSignOut(periodId, studentId, date)` → row, `bathroomSignIn(id)` → row, `deleteBathroomTrip(id)`, `setManualTally(periodId, studentId, quarter, count)` (read-then-write because the uniqueness is a partial index; count 0 deletes)
 - `getScheduleOverrides()` → rows ordered by date; `saveScheduleOverride({ date, schedule, finals_pair, note })` (upsert on `date,owner_id`; `finals_pair` is nulled unless `schedule === 'finals'`); `deleteScheduleOverride(id)`
 - `getFormulaRules(periodId, scope)` → `{ rules, useFormula }` for **that scope only**; `saveFormulaRules(periodId, scope, rules, useFormula)` (upsert on `period_id,scope`). `scope` must be `'seating'` or `'grouping'` (`assertScope` throws otherwise). No helper reads or writes both scopes in one operation.
 
@@ -899,9 +899,8 @@ All styling lives in `style.css`; pages carry almost no inline styling.
       `.br-cal`, which swaps the button out for the visible input. All
       four paths funnel through one `goToDate()` — the date drives the
       student grid as well as the log.
-      A small **History** button on the right swaps the body to the
-      per-student quarter tallies (the only place manual tallies can be
-      edited) and back; `activeTab` still drives it.
+      A small **History** button on the right opens the **quarter review**
+      dialog (see **History** below).
   **There is exactly one control row and it is deliberately almost empty.**
   `.br-bar` is a **centred island, not a full-width bar**: `align-self:
   center` + `width: fit-content` inside the `.bathroom` flex column, with
@@ -958,9 +957,42 @@ All styling lives in `style.css`; pages carry almost no inline styling.
   page's `quarterFor()` — the rest of the app still uses
   `schedule.js`'s `QUARTERS`). Other settings in
   `teacherpal.bathroom.settings` (`{ flagMinutes: 8, maxOut: 2, passLimit: 4 }`).
-  **History** (the Log panel's other view): a quarter-scoped summary per
-  student; click a name for the detail view (per-quarter manual tally
-  with −/+, list of timed trips across all dates). Seeding from paper:
+  **History = the quarter review** (`<dialog id="br-review">`, opened from
+  the Log panel's History button; all code under "quarter review" in
+  `bathroom.js`, state in `rv`). Header: Q1–Q4 pill (opens on the current
+  quarter, a green dot marks it; looking back is just another pill), a
+  period select with **All periods** first (the same taught periods as the
+  main select), Export CSV, Print, close. Under it the quarter's dates,
+  which are **always `activeQuarters()`** — the Settings dates. Body:
+  four stat tiles (used all N · never used one · class average of N ·
+  total passes / students), then a sticky-header table of **every
+  student in scope, zeros included** — Student · (Period, all only) ·
+  Passes (boxes + n/N, `+k` past the limit, red edge when maxed) · Trips
+  ("2 logged · 1 paper") · Time out. Sorted by most used by default;
+  click a header to sort, again to reverse. Click a name → that
+  student's trips for the quarter (date, out, back, duration; quick taps
+  and never-ended timers labelled), the paper tally with −/+ (**the only
+  place outside Settings → backfill to edit tallies**), and a total /
+  average time line. **Data**: its own fetch, `getBathroomQuarter(q,
+  from, to)` across every period (paged past Supabase's 1000-row cap)
+  plus `getAllStudents()`; the fetch window runs from the quarter's start
+  to the day before the next one (break days count to the quarter just
+  ended, like `quarterFor()`) and every row is re-bucketed with
+  `tripQuarter()`. Counting is the grid's own `passValue()`: manual rows
+  add `count`; a trip counts once it's ended, **or once its day has
+  passed even if the timer never was** (the student went) — so a
+  still-out student today doesn't count yet. Because a trip's quarter
+  comes from its date, past quarters don't drift as new ones start; only
+  changing the quarter dates in Settings re-buckets them.
+  **CSV**: summary rows in the on-screen order (quarter, dates, period,
+  student, used, limit, logged, paper, minutes), or with a student open,
+  that student's trips. UTF-8 BOM for Excel; cells starting `= + - @`
+  get a `'` so a name can't run as a formula. **Print**: the paper-tracker
+  sheet — one page per period, roster order, `# · Student · Pass 1..N ·
+  Total`, each box holding the date the pass was used (`✓` for a paper
+  tally pass, which has no date), maxed rows shaded. Written into a
+  hidden iframe as plain black-on-white HTML and printed from there, so
+  none of the app's theme reaches paper. Seeding from paper:
   `seed-bathroom-q1.sql` (match rules: normalised exact → first + last
   word → first name + a shared surname, each only when unique in the
   period).

@@ -3109,12 +3109,70 @@ body.present .att-tile { font-size: 1.35rem; }
 .br-list .link:hover { color: var(--danger); background: var(--card-3); }
 
 /* History detail view */
-.br-hist-detail-head { display: flex; align-items: center; gap: 0.75rem; margin-bottom: var(--space-3); }
-.br-hist-detail-head h4 { margin: 0; font-weight: var(--fw-bold); }
 .br-hist-manual { display: flex; align-items: center; gap: 0.6rem; flex-wrap: wrap; padding: 0.5rem 0.6rem; background: var(--card-2); border-radius: var(--radius-sm); margin-bottom: var(--space-3); }
 .br-hist-manual button.small { min-height: 1.9rem; width: 2rem; padding: 0; border-radius: var(--radius-sm); }
 .br-hist-manual .br-manual-n { font-family: var(--font-mono); font-variant-numeric: tabular-nums; font-size: 1.1rem; min-width: 1.4rem; text-align: center; }
-.br-hist-note { color: var(--text-muted); font-size: 0.9rem; margin: 0 0 var(--space-3); }
+/* ---- Quarter review (History) — a large dialog over the bathroom page ---- */
+dialog.br-review-dialog { width: min(62rem, 94vw); height: min(88dvh, 52rem); padding: var(--space-5); border: 0; border-radius: var(--radius-lg); background: var(--card); color: var(--text); box-shadow: var(--shadow-pop); flex-direction: column; gap: var(--space-3); overflow: hidden; }
+dialog.br-review-dialog[open] { display: flex; }
+dialog.br-review-dialog::backdrop { background: rgba(8, 6, 14, 0.55); backdrop-filter: blur(3px); }
+.rv-head { display: flex; align-items: center; gap: var(--space-3); flex-wrap: wrap; }
+.rv-head h3 { margin: 0; font-size: var(--fs-lg); font-weight: var(--fw-bold); font-family: var(--font-body); text-transform: none; letter-spacing: 0; }
+.rv-head .br-mode { padding: 0.35rem 0.95rem; min-height: 2rem; position: relative; }
+.rv-head .br-mode[aria-pressed="true"] { border: 0; }
+.rv-now { position: absolute; top: 0.3rem; right: 0.38rem; width: 0.32rem; height: 0.32rem; border-radius: 50%; background: var(--ok); }
+.rv-head select { min-height: 2.2rem; min-width: 12rem; }
+.rv-spacer { flex: 1 1 auto; }
+.rv-head .icon-btn { width: 2.2rem; height: 2.2rem; padding: 0; display: inline-flex; align-items: center; justify-content: center; }
+.rv-head .icon-btn svg { width: 1.1rem; height: 1.1rem; }
+.rv-range { margin: 0; font-family: var(--font-mono); font-size: 0.85rem; color: var(--text-2); font-variant-numeric: tabular-nums; }
+.rv-src { font-family: var(--font-body); color: var(--text-muted); font-size: 0.85rem; margin-left: 0.4rem; }
+.rv-msg { color: var(--danger); margin-left: 0.6rem; }
+.rv-body { flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; gap: var(--space-3); }
+.rv-empty { color: var(--text-muted); font-style: italic; text-align: center; padding: var(--space-4); margin: 0; }
+.rv-empty.error { color: var(--danger); font-style: normal; }
+.rv-stats { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: var(--space-3); }
+.rv-stat { background: var(--card-2); border: 1px solid var(--border); border-radius: var(--radius-md); padding: 0.6rem 0.9rem; display: flex; flex-direction: column; gap: 0.1rem; }
+.rv-stat b { font-family: var(--font-mono); font-weight: 400; font-size: 1.9rem; line-height: 1.1; font-variant-numeric: tabular-nums; color: var(--text); }
+.rv-stat span { color: var(--text-muted); font-size: var(--fs-sm); }
+.rv-table-wrap { flex: 1 1 auto; min-height: 0; overflow: auto; border: 1px solid var(--border); border-radius: var(--radius-md); }
+.rv-table { width: 100%; border-collapse: collapse; }
+.rv-table th { position: sticky; top: 0; z-index: 1; background: var(--card-2); text-align: left; font-family: var(--font-body); font-size: 0.8rem; font-weight: var(--fw-semibold); text-transform: uppercase; letter-spacing: 0.1em; color: var(--text-muted); padding: 0.45rem 0.8rem; border-bottom: 1px solid var(--border-strong); white-space: nowrap; }
+.rv-table td { padding: 0.4rem 0.8rem; border-bottom: 1px solid var(--border); vertical-align: middle; }
+.rv-table tbody tr:last-child td { border-bottom: 0; }
+.rv-table tbody tr:hover td { background: var(--card-3); }
+.rv-table tr.zero td { color: var(--text-muted); }
+.rv-table tr.maxed td:first-child { box-shadow: inset 3px 0 0 var(--danger); }
+.rv-table tr.maxed .br-pass.used { background: var(--danger); border-color: var(--danger); }
+.rv-sort { all: unset; cursor: pointer; display: inline-flex; align-items: center; gap: 0.25rem; }
+.rv-sort:hover, .rv-sort.on { color: var(--text); }
+.rv-sort:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 3px; }
+.rv-arrow { color: var(--accent); min-width: 0.6rem; }
+.rv-who { all: unset; cursor: pointer; font-family: var(--font-body); font-weight: var(--fw-semibold); font-size: var(--fs-md); color: var(--text); }
+.rv-table tr.zero .rv-who { color: var(--text-2); }
+.rv-who:hover { text-decoration: underline; text-decoration-color: var(--accent); text-underline-offset: 3px; }
+.rv-who:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 3px; }
+.rv-mono { font-family: var(--font-mono); font-size: 0.88rem; color: var(--text-2); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.rv-used { display: inline-flex; align-items: center; gap: 0.55rem; white-space: nowrap; }
+td.rv-used { display: table-cell; }
+td.rv-used > * { vertical-align: middle; }
+td.rv-used .br-passes { display: inline-flex; margin-right: 0.55rem; }
+.rv-n { font-family: var(--font-mono); font-size: 0.88rem; color: var(--text-2); font-variant-numeric: tabular-nums; }
+.rv-over { font-family: var(--font-mono); font-size: 0.8rem; color: var(--danger); margin: 0 0.4rem 0 -0.2rem; }
+.rv-hint { margin: 0; color: var(--text-muted); font-size: var(--fs-sm); }
+.rv-detail-head { display: flex; align-items: center; gap: var(--space-3); flex-wrap: wrap; }
+.rv-detail-head h4 { margin: 0; font-size: var(--fs-xl); font-weight: var(--fw-bold); font-family: var(--font-body); }
+.rv-detail-head .link { background: none; border: 0; color: var(--text-muted); cursor: pointer; padding: 0.2rem 0.3rem; font-size: var(--fs-sm); }
+.rv-detail-head .link:hover { color: var(--text); }
+.rv-detail-head .rv-used { margin-left: auto; }
+.rv-body .br-hist-manual { margin-bottom: 0; }
+@media (max-width: 700px) {
+  dialog.br-review-dialog { height: 92dvh; padding: var(--space-4); }
+  .rv-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .rv-spacer { display: none; }
+  .rv-head select { min-width: 0; flex: 1 1 10rem; }
+  .rv-table td, .rv-table th { padding: 0.35rem 0.5rem; }
+}
 
 /* Undo toast — quick-tap actions get a 6-second undo bubble at the bottom
    of the viewport. Fades in/out; timer is JS-managed. */
