@@ -89,6 +89,8 @@
   --accent-glow: rgba(240, 127, 174, 0.35);
   --lavender: #B79CF5;              /* secondary accent for contrast */
   --lavender-soft: rgba(183, 156, 245, 0.16);
+  --group-tint: 16%;                /* how much a group's colour washes its card */
+  --group-ink-dl: 0;                /* label / dot lightness vs the group colour */
   --danger: #FF7A8A;
   --ok: #6FD3A6;
 
@@ -202,6 +204,8 @@
   --accent-glow: rgba(232, 70, 124, 0.25);
   --lavender:      #9F7AEA;
   --lavender-soft: rgba(159, 122, 234, 0.14);
+  --group-tint: 10%;
+  --group-ink-dl: -0.12;            /* darker ink so labels hold on white cards */
   --danger:  #D63757;
   --ok:      #4EB889;
 
@@ -1762,8 +1766,10 @@ dialog.groups-settings-dialog .gs-note { margin: 0 0 var(--space-4); color: var(
   align-content: start;
   gap: var(--space-4);
 }
-/* once there are cards, let them share the height the stage was given */
-.stage.has-groups .results { align-content: stretch; }
+/* Once there are cards, groups.html sets --cols so every row holds the same
+   number of cards (10 groups = 5 + 5, never 6 + 4 or 9 + 1). Cards size to
+   their names; grid stretch keeps the cards of one row the same height. */
+.stage.has-groups .results { grid-template-columns: repeat(var(--cols, 4), minmax(0, 1fr)); }
 /* before the first Create the stage is a big empty board — say what fills it */
 .results:empty {
   display: grid;
@@ -1797,45 +1803,140 @@ body.present .results:empty { border: 0; }
   white-space: nowrap;
   user-select: none;
 }
+/* Inside a card: centred, no dividers — spacing separates them — with a small
+   dot in the group's colour leading each name */
+/* Dot + name are one flex row, so the name can never drop below its dot; the
+   name is one line, shrunk by fitNames() and ellipsised past that. */
 .group .name-chip {
-  display: block;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  z-index: 1;
+  min-width: 0;
   min-height: 0;
-  padding: 0.35rem 0;
+  padding: 0.15rem 0.4rem;
   border: 0;
-  border-bottom: 1px solid var(--border);
-  border-radius: 0;
+  border-radius: var(--radius-sm);
   background: transparent;
   font-size: var(--fs-xl);
   font-weight: var(--fw-semibold);
-  white-space: normal;
+  white-space: nowrap;
 }
-.group .name-chip:last-child { border-bottom: 0; }
+.group .chip-text {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.group .name-chip::before {
+  content: "";
+  flex: none;
+  width: 0.26em;
+  height: 0.26em;
+  margin-right: 0.35em;
+  border-radius: 50%;
+  background: var(--g-ink);
+  box-shadow: 0 0 0.4em var(--g-glow);
+}
 /* click a name in a card to sit them out — off while projecting */
 body:not(.present) .group .name-chip { cursor: pointer; }
 body:not(.present) .group .name-chip:hover { background: var(--card-2); }
 .group .name-chip:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 .name-chip.flying { position: relative; z-index: 2; will-change: transform; }
 
-/* Group cards fade + scale in just before their names arrive */
+/* Group cards fade + scale in just before their names arrive.
+   Each group has its own colour (--g): the theme accent turned round the hue
+   wheel and lightened / deepened, cycling through ten tones so groups are
+   told apart from the back of the room. It shows in the label, the top glow
+   line, the border glow, a faint background wash, the name dots and the big
+   number watermark. Never an overflow here — the chips fly through. */
 .group {
+  --g-shift: 0;      /* hue turn, degrees */
+  --g-dl: 0;         /* lightness nudge */
+  --g: var(--accent);
+  --g-ink: var(--accent);
+  --g-glow: var(--accent-glow);
+  --g-edge: var(--accent-soft);
   position: relative;
-  background: var(--card);
-  border: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  background: linear-gradient(165deg, color-mix(in srgb, var(--g) var(--group-tint), var(--card)) 0%, var(--card) 72%);
+  border: 1px solid var(--g-edge);
   border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-card);
-  padding: var(--space-4) var(--space-5) var(--space-5);
-  transition: opacity 260ms ease, transform 260ms cubic-bezier(0.34, 1.4, 0.64, 1), border-color var(--transition);
+  box-shadow: var(--shadow-card), 0 0 1.4rem -0.4rem var(--g-glow);
+  padding: var(--space-3) var(--space-4) var(--space-4);
+  transition: opacity 260ms ease, transform 260ms cubic-bezier(0.34, 1.4, 0.64, 1),
+              border-color var(--transition), box-shadow var(--transition), filter var(--transition);
+}
+@supports (color: oklch(from red l c h)) {
+  .group {
+    --g: oklch(from var(--accent) calc(l + var(--g-dl)) c calc(h + var(--g-shift)));
+    --g-ink: oklch(from var(--g) calc(l + var(--group-ink-dl)) c h);
+    --g-glow: oklch(from var(--g) l c h / 0.4);
+    --g-edge: oklch(from var(--g) l c h / 0.38);
+  }
+}
+/* Pink → violet one way, coral → amber the other; never as far as blue.
+   The second five reuse the hue band with lighter / deeper steps. */
+.group:nth-child(10n+2)  { --g-shift: -60; }                 /* violet */
+.group:nth-child(10n+3)  { --g-shift: 45; }                  /* coral */
+.group:nth-child(10n+4)  { --g-shift: -30; }                 /* orchid */
+.group:nth-child(10n+5)  { --g-shift: 85; }                  /* amber */
+.group:nth-child(10n+6)  { --g-shift: -55; --g-dl: 0.12; }   /* lavender */
+.group:nth-child(10n+7)  { --g-shift: 25;  --g-dl: 0.12; }   /* salmon */
+.group:nth-child(10n+8)  { --g-shift: -40; --g-dl: -0.12; }  /* plum */
+.group:nth-child(10n+9)  { --g-shift: 60;  --g-dl: -0.1; }   /* rust */
+.group:nth-child(10n+10) { --g-shift: 0;   --g-dl: -0.16; }  /* raspberry */
+/* top glow line in the group's colour (overrides the shared card line) */
+.group::before {
+  left: 14%;
+  right: 14%;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, var(--g), transparent);
+}
+/* the group number, huge and faint, behind the names */
+.group::after {
+  content: attr(data-n);
+  position: absolute;
+  right: 0.12em;
+  bottom: -0.06em;
+  font-family: var(--font-display);
+  font-size: 5.5rem;
+  font-weight: 700;
+  line-height: 1;
+  color: var(--g);
+  opacity: 0.09;
+  pointer-events: none;
+  z-index: 0;
 }
 .group.enter { opacity: 0; transform: scale(0.94); }
-.group:hover { border-color: var(--border-hover); }
+.group:hover {
+  border-color: var(--g);
+  box-shadow: var(--shadow-card-hover), 0 0 1.8rem -0.3rem var(--g-glow);
+  filter: brightness(1.08);
+}
+body:not(.present) .group:not(.enter):hover { transform: translateY(-3px); }
+.group-names {
+  flex: 1;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 0.2rem;
+}
 .group h3 {
+  position: relative;
+  z-index: 1;
   display: inline-flex;
   align-items: center;
-  margin: 0 0 var(--space-3);
+  margin: 0 0 var(--space-2);
   padding: 0.15rem 0.6rem;
-  border: 1px solid var(--accent);
+  border: 1px solid var(--g-ink);
   border-radius: 0.4rem;
-  color: var(--accent);
+  background: color-mix(in srgb, var(--g) 12%, transparent);
+  color: var(--g-ink);
   font-size: var(--fs-xs);
   font-weight: var(--fw-semibold);
   text-transform: uppercase;
@@ -1926,6 +2027,7 @@ body:not(.present) .group .name-chip:hover { background: var(--card-2); }
   .stage.shuffling .name-chip { animation: none; }
   .group { transition: opacity 160ms ease; }
   .group.enter { transform: none; }
+  body:not(.present) .group:not(.enter):hover { transform: none; }
 }
 
 /* ==========================================================================
@@ -1985,7 +2087,8 @@ body.present header.topbar { min-height: 2.8rem; padding: var(--space-1) var(--p
 /* one card per group on a single row wherever it fits — six groups across a
    1280px projector still beats two rows the class has to scroll past */
 body.present .results { grid-template-columns: repeat(auto-fit, minmax(11rem, 1fr)); gap: var(--space-5); }
-body.present .group .name-chip { font-size: var(--fs-2xl); padding: 0.4rem 0; }
+body.present .group .name-chip { font-size: var(--fs-2xl); padding: 0.2rem 0.5rem; }
+body.present .group::after { font-size: 7.5rem; }
 body.present .group h3 { font-size: var(--fs-sm); }
 
 /* Roster present mode */
@@ -2647,7 +2750,7 @@ button, .btn, .neu-btn { font-weight: var(--fw-semibold); }
 .page-title, .hero h1 { font-size: 1.15rem; font-weight: 600; letter-spacing: var(--track-display); line-height: 1.3; }
 .card h2, .card-head h2 { font-size: 0.78rem; font-weight: 600; letter-spacing: var(--track-label); color: var(--text-2); }
 .period-title { font-size: 1.05rem; font-weight: 700; letter-spacing: 0.1em; line-height: 1.35; }
-.group h3 { font-size: 0.62rem; font-weight: 600; letter-spacing: 0.2em; }
+.group h3 { font-size: 0.7rem; font-weight: 600; letter-spacing: 0.2em; }
 .hud-name { font-size: 0.92rem; font-weight: 600; letter-spacing: 0.16em; }
 .hud-panel.compact .hud-name { font-size: 0.7rem; letter-spacing: 0.14em; }
 .formula-header h2 { font-size: 1.2rem; font-weight: 600; letter-spacing: var(--track-display); }
@@ -2703,8 +2806,8 @@ button, .btn, .neu-btn { font-weight: var(--fw-semibold); }
 /* --- names: Rajdhani, heavier, a touch larger than before --- */
 .student .name, .inline-edit { font-size: 1.15rem; font-weight: 700; letter-spacing: 0.01em; }
 .name-chip { font-size: 1.12rem; font-weight: 600; }
-.group .name-chip { font-size: 1.7rem; font-weight: 700; line-height: 1.25; }
-body.present .group .name-chip { font-size: 2.1rem; }
+.group .name-chip { font-size: 1.85rem; font-weight: 700; line-height: 1.3; }
+body.present .group .name-chip { font-size: 2.25rem; }
 .seat-label { font-family: var(--font-body); font-weight: 700; letter-spacing: 0.01em; font-size: 11px; }
 .hub-room .seat-label { font-size: 14px; }
 body.present .hub-room .seat-label { font-size: 15px; }

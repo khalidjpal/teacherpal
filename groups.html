@@ -254,7 +254,7 @@
         el.dataset.id = student.id;
         chips.set(student.id, el);
       }
-      el.textContent = displayName(student);
+      el.innerHTML = `<span class="chip-text">${escapeHtml(displayName(student))}</span>`;
       el.title = sitOut.has(student.id)
         ? `${student.name} — sitting out. Click to put back in.`
         : `${student.name} — click to sit out of grouping`;
@@ -507,6 +507,7 @@
       groups.forEach((members, i) => {
         const card = document.createElement('div');
         card.className = 'group enter';
+        card.dataset.n = i + 1;                    // the faint number watermark
         card.innerHTML = `<h3>Group ${i + 1}</h3><div class="group-names"></div>`;
         const names = card.querySelector('.group-names');
         members.forEach((s) => {
@@ -520,6 +521,41 @@
       resultsEl.innerHTML = '';
       resultsEl.appendChild(frag);
       stage.classList.add('has-groups');
+      balanceColumns();
+    }
+
+    // Even rows: find how many rows the widest fit needs, then spread the cards
+    // evenly over them (10 groups → 5 + 5, 7 → 4 + 3, never 9 + 1). Runs before
+    // the FLIP measures Last, and again whenever the stage changes width.
+    const CARD_MIN_REM = 11;
+    function balanceColumns() {
+      const n = resultsEl.children.length;
+      if (!n) { resultsEl.style.removeProperty('--cols'); return; }
+      const rem = parseFloat(getComputedStyle(document.documentElement).fontSize) || 16;
+      const gap = parseFloat(getComputedStyle(resultsEl).columnGap) || 0;
+      const fit = Math.max(1, Math.floor((resultsEl.clientWidth + gap) / (CARD_MIN_REM * rem + gap)));
+      const rows = Math.ceil(n / fit);
+      resultsEl.style.setProperty('--cols', Math.ceil(n / rows));
+      fitNames();
+    }
+    new ResizeObserver(balanceColumns).observe(resultsEl);
+    document.fonts && document.fonts.ready.then(balanceColumns);   // re-measure once Rajdhani is in
+
+    // One line per name: a name wider than its card is scaled down (to 75% at
+    // most); anything still too wide is cut with an ellipsis by the CSS — the
+    // chip's title carries the full name. Synchronous, so the FLIP measures
+    // the final sizes.
+    const NAME_MIN_SCALE = 0.75;
+    function fitNames() {
+      const els = [...resultsEl.querySelectorAll('.group .name-chip')];
+      els.forEach((el) => { el.style.fontSize = ''; });
+      els.forEach((el) => {
+        const t = el.firstElementChild;
+        if (!t || t.scrollWidth <= t.clientWidth) return;
+        const base = parseFloat(getComputedStyle(el).fontSize);
+        const scale = Math.max(NAME_MIN_SCALE, (t.clientWidth / t.scrollWidth) * 0.98);
+        el.style.fontSize = `${base * scale}px`;
+      });
     }
 
     // FLIP: measure First, mutate, measure Last, Invert with a transform, Play.
@@ -636,8 +672,7 @@
         lastGroups = result.groups.filter((grp) => grp.length);
         const sum = summarizeRun(result.plan, result.unmet, nameOf, RULE_SCOPE, result.notes);
         summary = sum.text;
-        setStatus(summary, sum.ok ? 'ok' : 'info');
-        formula.setSummary(summary);
+        formula.setSummary(summary);          // shown in the Formula modal only — no banner over the results
       } else {
         lastGroups = makeGroups(present, g);
       }

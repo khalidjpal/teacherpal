@@ -735,8 +735,8 @@ All styling lives in `style.css`; pages carry almost no inline styling.
     priority dividers) are Rajdhani **uppercase 600 tracked 0.1em**, not
     Orbitron — Orbitron there made the one-row toolbars wrap.
   - **Student names are Rajdhani, heavier and a touch larger** so they carry
-    on a projector: roster names 1.15rem/700, group cards 1.7rem/700
-    (2.1rem in full screen), pool chips 1.12rem/600, seat labels 700
+    on a projector: roster names 1.15rem/700, group cards 1.85rem/700
+    (2.25rem in full screen), pool chips 1.12rem/600, seat labels 700
     (11px in the builder, 14px in the hub's compact room, 15px there in
     full screen, 14px on the Seating page in full screen), attendance
     tiles/lists 600.
@@ -1413,8 +1413,24 @@ All styling lives in `style.css`; pages carry almost no inline styling.
   `.results` is `repeat(auto-fit, minmax(11rem, 1fr))` — auto-fit collapses
   the tracks it doesn't need, so six groups land on **one row** and the
   page fits 1280×720 without scrolling (full screen uses the same minimum
-  for the same reason). `.stage.has-groups .results` switches to
-  `align-content: stretch` so the cards share the height. Empty, `.results`
+  for the same reason). With cards up, `.stage.has-groups .results` uses
+  `repeat(var(--cols), …)`: `balanceColumns()` in `groups.html` finds how
+  many rows the 11rem minimum needs and spreads the cards evenly over them
+  (10 → 5 + 5, 7 → 4 + 3), re-run by a `ResizeObserver`. Cards **size to
+  their names** (no stretch); grid stretch keeps one row one height, and
+  `.group-names` centres the names in the card. **Group identity**: each
+  `.group` derives `--g` from `--accent` with relative `oklch()` —
+  `--g-shift` (hue) / `--g-dl` (lightness) per `:nth-child(10n+k)`, ten
+  tones kept in the pink → violet / coral → amber band (never blue) — and
+  uses it for the label, the top glow line, a border glow, a
+  `--group-tint` background wash, the dot before each name and the faint
+  `data-n` number watermark (`::after`). `--group-tint` / `--group-ink-dl`
+  are per-theme tokens (marwa darkens the ink for white cards). Each name is
+  one line (`.chip-text` span in a flex row beside the dot): `fitNames()`
+  scales a too-wide name down to 75%, past that it ellipsises and the
+  chip `title` has the full name. The Formula run summary goes only to the
+  Formula modal, never a status banner over the results. No dividers
+  between names; hover lifts 3px and brightens. Empty, `.results`
   shows a dashed box with "PRESS CREATE GROUPS" (suppressed by
   `.stage.no-students` when the `#empty` line is already saying it).
   `.groups-page` sets `scrollbar-gutter: stable` and hides its empty
