@@ -32,6 +32,7 @@
   const SPIN_MS = 4500;
   const MIN_TURNS = 5;                // whole rotations before the offset
   const R = 46;                       // slice radius in the 100x100 viewBox
+  const RIM_PAD = 5;                  // names stop this far inside the rim, clear of the pointer
   const COLORS = 6;                   // palette slots (.c0 ... .c5)
 
   // ---------- state ----------
@@ -203,7 +204,9 @@
       // usually still loading - so this is a deterministic fit.
       // the page's hub is the small Spin button (radius 14); the pop-out
       // keeps a bigger disc for the winner's name, so it has less room
-      const gap = isPopout ? R - 24 : R - 18;
+      // names run from RIM_PAD inside the rim (clear of the pointer tip) to
+      // just outside the hub
+      const gap = isPopout ? R - 26 : R - 20;
       const wide = (document.documentElement.getAttribute('data-theme') || 'jarvis') !== 'marwa'
         ? 0.68        // jarvis: mono, uppercase - wider per character
         : 0.62;       // marwa: Comfortaa
@@ -217,11 +220,11 @@
       }
       text.setAttribute('font-size', size.toFixed(2));
       if (upright) {
-        text.setAttribute('x', String(50 + R - 3));
+        text.setAttribute('x', String(50 + R - RIM_PAD));
         text.setAttribute('text-anchor', 'end');
         text.setAttribute('transform', `rotate(${mid} 50 50)`);
       } else {
-        text.setAttribute('x', String(50 - R + 3));
+        text.setAttribute('x', String(50 - R + RIM_PAD));
         text.setAttribute('text-anchor', 'start');
         text.setAttribute('transform', `rotate(${mid + 180} 50 50)`);
       }
@@ -233,7 +236,7 @@
       // anything that doesn't fit the rim-to-hub gap instead of letting it
       // collide with the centre.
       try {
-        const maxLen = R - 24;                       // hub radius 20 + padding
+        const maxLen = gap;                          // same rim-to-hub gap as the fit
         if (text.getComputedTextLength && text.getComputedTextLength() > maxLen) {
           text.setAttribute('textLength', String(maxLen));
           text.setAttribute('lengthAdjust', 'spacingAndGlyphs');

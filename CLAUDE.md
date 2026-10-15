@@ -1083,8 +1083,11 @@ All styling lives in `style.css`; pages carry almost no inline styling.
   button is the disc) and no name — that lives in the result panel; only
   the pop-out fills `.wheel-hub-name`, since the projector has no right
   column and no button. The smaller page hub also buys label room:
-  `drawWheel` uses `R - 18` for the page and `R - 24` for the pop-out's
-  larger disc.
+  `drawWheel` uses a `R - 20` label gap for the page and `R - 26` for the pop-out's
+  larger disc. Names end `RIM_PAD` (5) inside the rim, and the pointer is
+  small and sits on the housing ring above the face (bracket y 0–3.4, tip
+  at y≈6.5, face edge at y=4), so it touches only the outer edge of the top
+  slice and never a name. Keep it there in both skins.
   **Fairness is structural**: `startSpin()` draws the winner first with
   `crypto.getRandomValues` (rejection-sampled so every index is equally
   likely), *then* solves for the rotation that parks that slice under the
