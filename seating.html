@@ -29,19 +29,33 @@
         <label><input type="radio" name="mode" value="assign"><span>Assign seats</span></label>
       </div>
 
-      <div class="bar-group" id="arrange-tools">
-        <button type="button" id="btn-change-layout" title="Swap in a ready-made desk setup">Change layout</button>
-      </div>
-
-      <div class="bar-group" id="assign-tools" hidden>
-        <button type="button" id="btn-randomize" class="primary" title="Put every student who's here in a random seat">Fill randomly</button>
-        <button type="button" id="btn-fill-rules" title="Seat everyone following this period's seating rules">Fill by rules</button>
-        <button type="button" id="btn-clear-seats" title="Take everyone out of their seats">Clear seats</button>
-        <button type="button" id="btn-formula" class="ghost" title="Who should sit together, apart, in front or at the back">Edit rules</button>
+      <!-- one primary action per mode + its menu, so the bar keeps one shape -->
+      <div class="split" id="bar-action">
+        <button type="button" id="btn-change-layout" class="primary split-main" data-for-mode="arrange" title="Swap in a ready-made desk setup">Change layout</button>
+        <button type="button" id="btn-fill" class="primary split-main" data-for-mode="assign" hidden title="Seat everyone who's here — following this period's rules when it has any">Fill seats</button>
+        <button type="button" id="btn-action-menu" class="primary split-caret" aria-haspopup="true" aria-expanded="false" title="More actions" aria-label="More actions"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></button>
+        <div class="more-menu action-menu" id="action-menu" hidden>
+          <div class="am-group" data-for-mode="arrange">
+            <div class="mm-label">Selected desk</div>
+            <div class="mm-row">
+              <button type="button" id="btn-rotate" class="mm-item" aria-pressed="false" title="Turn the selected desk (R)" disabled>Turn</button>
+              <button type="button" id="btn-duplicate" class="mm-item" title="Copy the selected desk (Ctrl+D)" disabled>Copy</button>
+              <button type="button" id="btn-delete" class="mm-item" title="Remove the selected desk (Delete)" disabled>Remove</button>
+            </div>
+          </div>
+          <div class="am-group" data-for-mode="assign" hidden>
+            <button type="button" id="btn-randomize" class="mm-item" title="Put every student who's here in a random seat, ignoring the rules">Fill randomly</button>
+            <button type="button" id="btn-fill-rules" class="mm-item" title="Seat everyone following this period's seating rules">Fill by rules</button>
+            <button type="button" id="btn-clear-seats" class="mm-item" title="Take everyone out of their seats">Clear seats</button>
+          </div>
+          <div class="mm-sep" role="separator"></div>
+          <button type="button" id="btn-formula" class="mm-item" title="Who should sit together, apart, in front or at the back">Edit rules…</button>
+        </div>
       </div>
 
       <span class="spacer"></span>
       <span class="save-state" id="save-state" aria-live="polite"></span>
+      <div class="bar-cluster">
       <button type="button" id="btn-help" class="icon-btn help-btn" title="Keyboard shortcuts and tips" aria-label="Keyboard shortcuts and tips">?</button>
       <div class="more-wrap">
         <button type="button" id="btn-more" class="icon-btn" aria-haspopup="true" aria-expanded="false" title="More" aria-label="More options"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="5" cy="12" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/></svg></button>
@@ -58,12 +72,6 @@
             <button type="button" id="btn-fit" class="mm-fit" title="Show the whole room">Fit</button>
           </div>
           <button type="button" id="btn-pan" class="mm-item" aria-pressed="false" title="While on, dragging anywhere moves the view (or hold Space)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 11V6a2 2 0 0 0-4 0v5M14 10V4a2 2 0 0 0-4 0v6M10 10.5V6a2 2 0 0 0-4 0v8"/><path d="M18 8a2 2 0 1 1 4 0v6a8 8 0 0 1-8 8h-2c-2.8 0-4.5-.9-5.8-2.4L3 15.7a2 2 0 0 1 2.9-2.7L6 14"/></svg>Hand tool — move the view</button>
-          <div class="mm-label" id="mm-desk-label">Selected desk</div>
-          <div class="mm-row">
-            <button type="button" id="btn-rotate" class="mm-item" aria-pressed="false" title="Turn the selected desk (R)" disabled>Turn</button>
-            <button type="button" id="btn-duplicate" class="mm-item" title="Copy the selected desk (Ctrl+D)" disabled>Copy</button>
-            <button type="button" id="btn-delete" class="mm-item" title="Remove the selected desk (Delete)" disabled>Remove</button>
-          </div>
           <div class="mm-label">Names</div>
           <button type="button" id="btn-firstnames" class="mm-item" role="switch" aria-checked="false" title="Show first names only on the seats">
             <span class="when-off">Show first names only</span>
@@ -72,6 +80,7 @@
         </div>
       </div>
       <button type="button" class="icon-btn" data-fullscreen aria-pressed="false" title="Full screen (F)" aria-label="Full screen"><span class="when-off"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 3H5a2 2 0 0 0-2 2v3M16 3h3a2 2 0 0 1 2 2v3M8 21H5a2 2 0 0 1-2-2v-3M16 21h3a2 2 0 0 0 2-2v-3"/></svg></span><span class="when-on"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 3v3a2 2 0 0 1-2 2H3M21 8h-3a2 2 0 0 1-2-2V3M3 16h3a2 2 0 0 1 2 2v3M16 21v-3a2 2 0 0 1 2-2h3"/></svg></span></button>
+      </div>
     </div>
 
     <!-- ---------- Arrangements: one card each, click to flip between them ---------- -->
@@ -443,8 +452,7 @@
       $('seat-layout').dataset.mode = mode;
       $('palette').hidden = !arrange;
       $('names-panel').hidden = arrange;
-      $('arrange-tools').hidden = !arrange;
-      $('assign-tools').hidden = arrange;
+      document.querySelectorAll('[data-for-mode]').forEach((el) => { el.hidden = el.dataset.forMode !== mode; });
       if (arrange) {
         if (!$('palette-list').children.length) {
           $('palette-list').innerHTML = Object.entries(TYPES).map(([type, t]) => `
@@ -1003,6 +1011,7 @@
       const ctrl = e.ctrlKey || e.metaKey;
       if (ctrl && e.key.toLowerCase() === 's') { e.preventDefault(); flushArrSave(); return; }
       if (e.key === 'Escape' && !$('more-menu').hidden) { toggleMoreMenu(false); $('btn-more').focus(); return; }
+      if (e.key === 'Escape' && !$('action-menu').hidden) { toggleActionMenu(false); $('btn-action-menu').focus(); return; }
       if (e.key === 'Escape' && picked) { picked = null; render(); return; }
       if (rotSession) {
         if (e.key === 'Enter' || (e.key.toLowerCase() === 'r' && !ctrl)) { e.preventDefault(); confirmRotate(); }
@@ -1390,7 +1399,7 @@
         return `
           <div class="arr-card${open ? ' current' : ''}${a.is_active ? ' is-active' : ''}" data-id="${a.id}" role="listitem">
             <button type="button" class="arr-card-main" data-act="load" aria-pressed="${open}" title="${escapeHtml(tip)}">
-              <span class="arr-thumb">${layoutPic(open ? layout : desksOf(a), 3.2, 2.1)}</span>
+              <span class="arr-thumb">${layoutPic(open ? layout : desksOf(a), 2.7, 1.6)}</span>
               <span class="arr-card-text">
                 <span class="arr-card-top"><span class="arr-card-name">${name}</span><span class="arr-tag${a.is_active ? ' on' : ''}">${a.is_active ? 'Active' : 'Draft'}</span></span>
                 <span class="arr-card-stats">
@@ -1794,11 +1803,23 @@
     function toggleMoreMenu(open = $('more-menu').hidden) {
       $('more-menu').hidden = !open;
       $('btn-more').setAttribute('aria-expanded', String(open));
-      $('mm-desk-label').textContent = mode === 'arrange' ? 'Selected desk' : 'Selected desk (in Arrange room)';
+      if (open) toggleActionMenu(false);
+    }
+    // the ▾ beside the mode's primary button
+    function toggleActionMenu(open = $('action-menu').hidden) {
+      $('action-menu').hidden = !open;
+      $('btn-action-menu').setAttribute('aria-expanded', String(open));
+      if (open) toggleMoreMenu(false);
     }
     $('btn-more').addEventListener('click', () => toggleMoreMenu());
+    $('btn-action-menu').addEventListener('click', () => toggleActionMenu());
+    // an action picked from the menu closes it (Turn stays open: it's a mode you leave with R / Done)
+    $('action-menu').addEventListener('click', (e) => { const b = e.target.closest('button.mm-item'); if (b && b.id !== 'btn-rotate') toggleActionMenu(false); });
+    // Fill seats: by the rules when this period has any, otherwise at random
+    $('btn-fill').addEventListener('click', () => { (rules.length ? $('btn-fill-rules') : $('btn-randomize')).click(); });
     document.addEventListener('pointerdown', (e) => {
       if (!$('more-menu').hidden && !e.target.closest('.more-wrap')) toggleMoreMenu(false);
+      if (!$('action-menu').hidden && !e.target.closest('#bar-action')) toggleActionMenu(false);
     });
     $('btn-help').addEventListener('click', () => { $('help-dialog').showModal(); $('help-dialog').querySelector('.help-body').scrollTop = 0; });
     $('help-close').addEventListener('click', () => $('help-dialog').close());
@@ -1859,7 +1880,7 @@
     // Assign mode with big names; the front marker stays at its real position.
     function onPresent(on) {
       if (on && mode !== 'assign') { document.querySelector('input[name="mode"][value="assign"]').checked = true; mode = 'assign'; selected = new Set(); viewport.classList.add('assign'); }
-      if (on) { cancelRotate(); picked = null; toggleMoreMenu(false); }
+      if (on) { cancelRotate(); picked = null; toggleMoreMenu(false); toggleActionMenu(false); }
       render();                              // the starter picker and desk tools stay off the projector
       requestAnimationFrame(fitToScreen);
       setTimeout(fitToScreen, 350);          // again once the browser has finished the fullscreen resize

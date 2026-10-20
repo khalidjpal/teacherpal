@@ -265,7 +265,7 @@ function groupWithFormula(present, groupCount, rules, nameOf, { demote = new Set
 // middle), front/back a badge on the node. Drag a node to move it, drag its
 // port (or Shift+drag the node) onto another to add a rule, drag a name from
 // the list onto the map to put them on it. Selecting a student (list, node or
-// arrow keys) opens their rules in the side panel. Node positions are a per-browser
+// arrow keys) opens their rules in a floating popover beside their node. Node positions are a per-browser
 // view setting (localStorage, per scope + period) — never rule data.
 // Priority tab = the ordered list (ordering reads better as a list).
 // ---------------------------------------------------------------------------
@@ -324,8 +324,8 @@ function createFormulaModal(opts) {
             <span class="fm-leg"><i class="fm-dot must"></i>Must <i class="fm-dot"></i>Try</span>
           </div>
           <div class="fm-pop" id="fm-pop" hidden></div>
+          <aside class="fm-panel" id="fm-panel" hidden aria-label="Selected student's rules"></aside>
         </div>
-        <aside class="fm-panel" id="fm-panel" hidden aria-label="Selected student's rules"></aside>
       </div>
       <div class="formula-priority" id="formula-body-priority" hidden>
         <p class="hint">Drag to reorder. When not everything fits, rules nearer the top win. <strong>Must meet</strong> rules are constraints and always outrank <strong>Try to meet</strong> rules.</p>
@@ -351,6 +351,7 @@ function createFormulaModal(opts) {
   let staged = new Set();  // put on the map by hand (stay there with no rules)
   let popState = null;     // { kind: 'rule', id } | { kind: 'connect', a, b, x, y }
   let hoverId = null;
+  let panelAt = null;      // { sid, x, y }: the rules popover, moved by hand for this student
 
   const byId = (id) => opts.students().find((s) => s.id === id);
   const nameOf = (id) => { const s = byId(id); return s ? opts.displayName(s) : '?'; };
@@ -558,6 +559,7 @@ function createFormulaModal(opts) {
   // Select a student: their node is outlined, their lines stay lit, their rules open in the panel
   function selectStudent(sid) {
     if (!mapIds().includes(sid)) { staged.add(sid); pos.set(sid, emptySpot()); savePos(); }
+    if (focus !== sid) panelAt = null;
     focus = sid; ruleFocus = null; popState = null;
     render();
     flash(sid);
@@ -632,10 +634,9 @@ function createFormulaModal(opts) {
 
   // The selected student's rules: change type, must/try, delete; front/back toggles
   function renderPanel() {
-    const panel = $('fm-panel'), body = $('formula-body-rules');
-    const s = focus && mapIds().includes(focus) && rulesForStudent(rules(), focus).length ? byId(focus) : null;
+    const panel = $('fm-panel');
+    const s = tab === 'rules' && focus && mapIds().includes(focus) && rulesForStudent(rules(), focus).length ? byId(focus) : null;
     panel.hidden = !s;
-    body.classList.toggle('has-panel', !!s);
     if (!s) { panel.innerHTML = ''; return; }
     const mine = sortByPriority(rulesForStudent(rules(), s.id)), out = opts.absent().has(s.id);
     const typeSelect = (r) => `<select class="fp-type" data-rule="${r.id}" aria-label="Rule type">${(ruleIsPair(r.type) ? pairTypes : soloTypes).map((t) => `<option value="${t}"${t === r.type ? ' selected' : ''}>${escapeHtml(L(t))}</option>`).join('')}</select>`;
@@ -653,6 +654,30 @@ function createFormulaModal(opts) {
           <div class="fp-row">${ruleIsPair(r.type) ? `<span class="fp-other">${escapeHtml(nameOf(r.a === s.id ? r.b : r.a))}</span>` : '<span class="fp-other"></span>'}${priorityBadge(r)}</div>
         </div>`).join('')}</div>
       <p class="fp-hint">Drag the dot on ${escapeHtml(opts.displayName(s))} onto another student to add a rule.</p>`;
+    placePanel();
+  }
+
+  // Beside the selected node: to its right, flipped to its left when there's
+  // no room, clamped inside the map. A hand-dragged spot wins while the same
+  // student stays selected. The map itself never moves or narrows.
+  function placePanel() {
+    const panel = $('fm-panel');
+    if (panel.hidden) return;
+    const { W, H } = size(), pw = panel.offsetWidth, ph = panel.offsetHeight;
+    let x, y;
+    if (panelAt && panelAt.sid === focus) { x = panelAt.x; y = panelAt.y; }
+    else {
+      const node = nodesEl.querySelector(`.fm-node[data-sid="${focus}"]`);
+      if (!node) return;
+      const tools = nodesEl.querySelector('.fm-node-tools');
+      const nx = parseFloat(node.style.left), ny = parseFloat(node.style.top);
+      const half = Math.max(node.offsetWidth, tools ? tools.offsetWidth : 0) / 2, gap = 16;
+      x = nx + half + gap;                                  // right of the node
+      if (x + pw > W - 8) x = nx - half - gap - pw;          // no room: flip to the left
+      y = ny - node.offsetHeight / 2 - 6;
+    }
+    panel.style.left = `${f1(clamp(x, 8, Math.max(8, W - pw - 8)))}px`;
+    panel.style.top = `${f1(clamp(y, 8, Math.max(8, H - ph - 8)))}px`;
   }
 
   function renderList() {
@@ -714,6 +739,7 @@ function createFormulaModal(opts) {
     }
     drawEdges();
     renderPop();
+    placePanel();
   }
 
   // One curve per rule; several rules on one pair fan out side by side.
@@ -870,13 +896,27 @@ function createFormulaModal(opts) {
 
   // ---- the side panel ----
   const panel = $('fm-panel');
+  panel.addEventListener('pointerdown', (e) => {
+    e.stopPropagation();                                   // not a canvas click, never a pan
+    const head = e.target.closest('.fp-head');
+    if (!head || e.button !== 0 || e.target.closest('button, select')) return;
+    e.preventDefault();
+    const sx = e.clientX, sy = e.clientY, ox = parseFloat(panel.style.left) || 0, oy = parseFloat(panel.style.top) || 0;
+    head.setPointerCapture(e.pointerId);
+    panel.classList.add('dragging');
+    const move = (ev) => { panelAt = { sid: focus, x: ox + ev.clientX - sx, y: oy + ev.clientY - sy }; placePanel(); };
+    const up = () => { panel.classList.remove('dragging'); head.removeEventListener('pointermove', move); head.removeEventListener('pointerup', up); head.removeEventListener('pointercancel', up); };
+    head.addEventListener('pointermove', move);
+    head.addEventListener('pointerup', up);
+    head.addEventListener('pointercancel', up);
+  });
   panel.addEventListener('click', (e) => {
     const tg = e.target.closest('.prio-toggle');
     if (tg) { ruleFocus = tg.dataset.toggle; toggleHard(tg.dataset.toggle); inner.focus({ preventScroll: true }); return; }
     const b = e.target.closest('[data-act]');
     if (b) {
       const act = b.dataset.act;
-      if (act === 'close') { focus = null; ruleFocus = null; popState = null; render(); }
+      if (act === 'close') { focus = null; ruleFocus = null; popState = null; panelAt = null; render(); }
       else if (act === 'delete') removeRule(b.dataset.rule);
       else if (act === 'solo') toggleSolo(focus, b.dataset.type);
       else if (act === 'unstage') { staged.delete(focus); focus = null; render(); }
@@ -912,7 +952,7 @@ function createFormulaModal(opts) {
     const node = e.target.closest('.fm-node');
     if (!node) {
       if (e.target.closest('.fm-tools')) return;
-      if (popState || ruleFocus) { popState = null; ruleFocus = null; render(); }
+      if (popState || ruleFocus || focus) { popState = null; ruleFocus = null; focus = null; panelAt = null; render(); }   // close everything
       inner.focus({ preventScroll: true });
       return;
     }
@@ -1087,7 +1127,7 @@ function createFormulaModal(opts) {
       const filter = $('formula-filter');
       if (tab === 'rules' && filter.value) { filter.value = ''; render(); inner.focus({ preventScroll: true }); return; }
       if (ruleFocus) { ruleFocus = null; render(); return; }
-      if (focus && tab === 'rules') { focus = null; render(); return; }
+      if (focus && tab === 'rules') { focus = null; panelAt = null; render(); return; }
       close();
       return;
     }

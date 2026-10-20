@@ -1639,29 +1639,41 @@ All styling lives in `style.css`; pages carry almost no inline styling.
   words.** Plain words in every label (no "formula", "populate", "pan",
   "marquee"), no explanatory sentences on the page — how-to lives in `?`.
   The bars are kept tight so the canvas gets the height. Top to bottom:
-    - **One `.seat-bar`**: Period · **Arrange room / Assign seats** `.seg` ·
-      the mode's few buttons (Arrange: **Change layout**; Assign: **Fill
-      randomly** · **Fill by rules** · **Clear seats** · **Edit rules**) ·
-      save state · `?` · `⋯` · full screen. The **`⋯` menu** (`#more-menu`)
-      holds undo/redo, zoom −/%/+/Fit, the hand tool, Turn/Copy/Remove for
-      the selection and "Show first names only" — the old ids (`btn-undo`,
-      `btn-zoom-in`, `btn-rotate`, …) live there. **`?`** opens
-      `#help-dialog`, the tips and shortcuts in plain words (including how
-      to seat by dragging or clicking); don't put hint text back on the page.
-      It is a header (title + `.corner-btn` close X) over one scrolling
-      column: a **Mouse** part then a **Keyboard** part, each split into
-      divided `.help-sec` sections of `.help-list` rows — a fixed 12.5rem
-      left column so every description lines up, one line each. Keys are
-      always `<kbd>` chips (same height, mono); mouse actions are plain
-      text, never chips.
-    - **`.arr-bar`**, one row: the period's arrangements as **cards**
+    - **One `.seat-bar` that keeps the same shape in both modes**:
+      - Period, then the **Arrange room / Assign seats** `.seg`. Both
+        halves are styled as options (bordered, `--text-2`); the checked
+        one gets the app-wide pressed fill.
+      - Then **one primary split button** (`#bar-action`): `.split-main`
+        is **Change layout** in Arrange or **Fill seats** in Assign (same
+        min-width), with a ▾ `#btn-action-menu` beside it.
+      - **Fill seats** fills by the rules when the period has any
+        (`rules.length`), otherwise at random.
+      - The ▾ `#action-menu` holds the rest:
+        - Arrange: Turn / Copy / Remove for the selected desk.
+        - Assign: Fill randomly · Fill by rules · Clear seats.
+        - Both: Edit rules…
+      - Mode-specific elements carry `data-for-mode`; `renderSidebar()`
+        hides the others. The old ids (`btn-randomize`,
+        `btn-fill-rules`, `btn-clear-seats`, `btn-formula`,
+        `btn-rotate`, …) live in that menu, so their handlers are
+        unchanged.
+      - Then the save state and **one `.bar-cluster`**: `?` · `⋯` ·
+        full screen in a single bordered group.
+      - The **`⋯` menu** (`#more-menu`) is now undo/redo, zoom −/%/+/Fit,
+        the hand tool and "Show first names only".
+      - Opening either menu closes the other; outside click and Esc close
+        both.
+      - **`?`** opens `#help-dialog`, the tips and shortcuts in plain
+        words (including how to seat by dragging or clicking); don't put
+        hint text back on the page.
+    - **`.arr-bar`**, one compact row (~47px): the period's arrangements as **cards**
       (`.arr-card`, active first) — a `.arr-thumb` drawing of **that
       arrangement's own room** (`layoutPic()`, each desk's footprint + the
       Front bar), the name, a small `.arr-tag` ACTIVE (accent) / DRAFT
       (lavender), and `.arr-card-stats` icon stats (person `31/34` seated,
       tick `5/6` rules kept; the full sentence is only the tooltip). The open
       card is outlined and carries rename / copy / delete, and an open draft
-      also **Make active**. Then **+ New**. **No banner** — the tag says
+      also **Make active**. Then **+ New**, right after the cards (`.arr-cards` is `flex: 0 1 auto`, not pinned to the edge). **No banner** — the tag says
       active vs draft.
     - **`.seat-layout`** (`data-mode`): the left column is the
       **`.desk-rail`** in Arrange (icon-only `.palette-item`s, name on hover
@@ -1891,15 +1903,26 @@ All styling lives in `style.css`; pages carry almost no inline styling.
       the node is dragged). A rule-less student placed by hand also gets a
       Remove chip. **There is no separate window for front/back**: the
       teacher found a panel holding only those two toggles pointless.
-    - **The side panel** (`#fm-panel`, a third column of
-      `.formula-body.has-panel`) opens **only when the student has
-      rules**. It holds one card per rule: a type `<select>`, the other
-      student, the Must/Try pill and a × delete. Clicking a card selects
-      that rule, so M and Del act on it.
+    - **The rules popover** (`#fm-panel`, absolutely positioned *inside*
+      `#fm-map` with `--shadow-pop`) opens **only when the student has
+      rules**. **The map never narrows or reflows for it.** It holds one
+      card per rule: a type `<select>`, the other student, the Must/Try
+      pill and a × delete; Clicking a card selects that rule, so M and Del
+      act on it. It also has the "drag the dot…" hint.
+      - `placePanel()` puts it to the node's right, flips it to the left
+        when there's no room, and clamps it inside the map; it never covers
+        the node or its Front/Back chips.
+      - It can be dragged by its header (`.fp-head`); `panelAt` keeps
+        the dragged spot while the same student stays selected, and
+        selecting someone else re-anchors it.
+      - It closes with its X, Esc, or a click on empty canvas (which
+        deselects).
+      - Its pointerdown stops propagation, so it never counts as a canvas
+        click.
     - A student who isn't on the map yet is placed in the clearest spot
       (`emptySpot()`) first.
-    - The map is never wider than its box, so there is no panning. Nodes
-      are clamped to stay wholly visible when the panel narrows the map.
+    - The map is never wider than its box, so there is no panning; nodes
+      are clamped to stay wholly visible.
   **Arrow keys** move the selection to the nearest node in that direction
   (`stepSelection()`: within ~65° of the arrow, scored by distance along
   plus twice the sideways offset). The first press selects the top-left
