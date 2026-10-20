@@ -68,6 +68,27 @@ function labelStyle(p, w, h) {
   return `width:${box * G - 4}px;transform:translate(-50%,-50%) rotate(${-rot}deg)`;
 }
 
+// Fits a seat's name inside its seat (Seating and Attendance both call it):
+// wrap only between words, shrink the type — down to `min` × its starting
+// size — until the longest word and all the lines fit, and as a last resort
+// one line with an ellipsis (`.clip`). The full name stays in the title.
+// `base` (px) overrides the CSS starting size. It measures layout, so call
+// it once the label is in the DOM; a hidden seat (no size yet) is skipped.
+function fitSeatLabel(lb, { base = 0, min = 0.7 } = {}) {
+  lb.classList.remove('clip');
+  lb.style.fontSize = base ? `${base}px` : '';
+  const seat = lb.parentElement;
+  if (!lb.textContent.trim() || !seat || !seat.clientWidth) return;
+  const sw = seat.clientWidth, sh = seat.clientHeight;
+  // the label box is the seat's width, or its height when the desk is sideways
+  const availH = (Math.abs(lb.offsetWidth + 4 - sw) <= 3 ? sh : sw) - 2;
+  const start = parseFloat(getComputedStyle(lb).fontSize), floor = start * min;
+  const fits = () => lb.scrollWidth <= lb.clientWidth + 0.5 && lb.offsetHeight <= availH + 0.5;
+  let size = start;
+  while (!fits() && size > floor) { size = Math.max(floor, size - 0.5); lb.style.fontSize = `${size}px`; }
+  if (!fits()) lb.classList.add('clip');
+}
+
 // Grid-unit bounds of everything in a layout (front marker + pieces); an
 // empty room frames the front marker with some air around it.
 function roomBounds(layout) {

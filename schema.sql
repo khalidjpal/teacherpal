@@ -30,7 +30,8 @@
 --     sort_order  integer     display order within the period
 --     created_at  timestamptz
 --
---   room_layouts                (one shared room per OWNER; key = 'default'
+--   room_layouts                (LEGACY — the old shared room per OWNER; key = 'default'.
+--                                No longer written; every arrangement owns its desks.
 --                                per (key, owner_id) — teachers don't share)
 --     id          uuid        primary key
 --     owner_id    uuid        -> auth.users.id (cascade delete)
@@ -54,7 +55,8 @@
 --     period_id   uuid        -> periods.id (cascade delete)
 --     name        text        UNIQUE (period_id, lower(name))
 --     assignments jsonb       { "<pieceId>:<seatIndex>": "<student uuid>", ... }
---     layout      jsonb       the desk layout it was saved on (room_layouts shape); null = unknown
+--     layout      jsonb       THIS arrangement's own desks (room_layouts shape); null only on
+--                             rows from before migration-arrangement-layouts.sql
 --     is_active   boolean     UNIQUE (period_id) WHERE is_active
 --     created_at  timestamptz
 --     updated_at  timestamptz

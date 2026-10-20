@@ -17,112 +17,185 @@
 
 
   <main class="page seating-page">
-    <!-- ---------- Top bar ---------- -->
+    <!-- ---------- The one bar: period, mode, the mode's few buttons, ? and ⋯ ---------- -->
     <div class="seat-bar card no-present" role="toolbar" aria-label="Seating chart controls">
       <label class="bar-field">
         <span class="lbl">Period</span>
         <select id="period-select"></select>
       </label>
 
-      <div class="seg mode-seg" role="radiogroup" aria-label="Mode">
-        <label><input type="radio" name="mode" value="arrange" checked><span>Arrange Room</span></label>
-        <label><input type="radio" name="mode" value="assign"><span>Assign Seats</span></label>
+      <div class="seg mode-seg" role="radiogroup" aria-label="What you're doing">
+        <label><input type="radio" name="mode" value="arrange" checked><span>Arrange room</span></label>
+        <label><input type="radio" name="mode" value="assign"><span>Assign seats</span></label>
       </div>
 
-      <span class="bar-sep" aria-hidden="true"></span>
-
-      <!-- Arrange tools -->
       <div class="bar-group" id="arrange-tools">
-        <button type="button" id="btn-rotate" title="Rotate mode (R) — drag the piece or its handle to turn it; Shift = 15° steps; R, Enter or a click elsewhere keeps the angle, Esc cancels" aria-pressed="false" disabled>Rotate</button>
-        <button type="button" id="btn-duplicate" title="Duplicate (Ctrl+D)" disabled>Duplicate</button>
-        <button type="button" id="btn-delete" title="Delete (Del)" disabled>Delete</button>
-        <button type="button" id="btn-pan" class="icon-btn" title="Pan mode (hold Space, or drag empty space in Assign mode)" aria-label="Pan mode" aria-pressed="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 11V6a2 2 0 0 0-4 0v5M14 10V4a2 2 0 0 0-4 0v6M10 10.5V6a2 2 0 0 0-4 0v8"/><path d="M18 8a2 2 0 1 1 4 0v6a8 8 0 0 1-8 8h-2c-2.8 0-4.5-.9-5.8-2.4L3 15.7a2 2 0 0 1 2.9-2.7L6 14"/></svg></button>
+        <button type="button" id="btn-change-layout" title="Swap in a ready-made desk setup">Change layout</button>
       </div>
 
-      <!-- Assign tools -->
       <div class="bar-group" id="assign-tools" hidden>
-        <button type="button" id="btn-randomize">Randomize</button>
-        <button type="button" id="btn-use-formula" class="toggle" role="switch" aria-checked="false" title="When on, Randomize follows this period's formula">
-          <span class="toggle-dot" aria-hidden="true"></span>
-          <span class="when-off">Formula off</span>
-          <span class="when-on">Formula on</span>
-        </button>
-        <button type="button" id="btn-formula" title="Seating rules for this period">Formula</button>
-        <button type="button" id="btn-clear-seats" title="Clear all seats">Clear</button>
-        <button type="button" id="btn-firstnames" role="switch" aria-checked="false" title="Show first names only">
-          <span class="when-off">First names</span>
-          <span class="when-on">✓ First names</span>
-        </button>
-        <span class="chip" id="seated-chip"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg><span id="seated-count">—</span></span>
-      </div>
-
-      <span class="bar-sep" aria-hidden="true"></span>
-
-      <div class="bar-group zoom-group">
-        <button type="button" id="btn-undo" class="icon-btn" title="Undo (Ctrl+Z)" aria-label="Undo" disabled><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 14 4 9l5-5"/><path d="M4 9h11a5 5 0 0 1 0 10h-3"/></svg></button>
-        <button type="button" id="btn-redo" class="icon-btn" title="Redo (Ctrl+Shift+Z)" aria-label="Redo" disabled><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15 14 5-5-5-5"/><path d="M20 9H9a5 5 0 0 0 0 10h3"/></svg></button>
-        <button type="button" id="btn-zoom-out" class="icon-btn" title="Zoom out" aria-label="Zoom out"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M5 12h14"/></svg></button>
-        <span class="zoom-pct" id="zoom-pct">100%</span>
-        <button type="button" id="btn-zoom-in" class="icon-btn" title="Zoom in" aria-label="Zoom in"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg></button>
-        <button type="button" id="btn-fit" title="Fit room to screen">Fit</button>
+        <button type="button" id="btn-randomize" class="primary" title="Put every student who's here in a random seat">Fill randomly</button>
+        <button type="button" id="btn-fill-rules" title="Seat everyone following this period's seating rules">Fill by rules</button>
+        <button type="button" id="btn-clear-seats" title="Take everyone out of their seats">Clear seats</button>
+        <button type="button" id="btn-formula" class="ghost" title="Who should sit together, apart, in front or at the back">Edit rules</button>
       </div>
 
       <span class="spacer"></span>
       <span class="save-state" id="save-state" aria-live="polite"></span>
-      <button type="button" class="icon-btn" data-fullscreen aria-pressed="false" title="Present full screen (F)" aria-label="Present full screen"><span class="when-off"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 3H5a2 2 0 0 0-2 2v3M16 3h3a2 2 0 0 1 2 2v3M8 21H5a2 2 0 0 1-2-2v-3M16 21h3a2 2 0 0 0 2-2v-3"/></svg></span><span class="when-on"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 3v3a2 2 0 0 1-2 2H3M21 8h-3a2 2 0 0 1-2-2V3M3 16h3a2 2 0 0 1 2 2v3M16 21v-3a2 2 0 0 1 2-2h3"/></svg></span></button>
-    </div>
-
-    <!-- ---------- Arrangement strip: which saved chart is in the editor ---------- -->
-    <div class="arr-bar card no-present" role="toolbar" aria-label="Seating arrangements">
-      <span class="lbl">Arrangement</span>
-      <div class="arr-picker">
-        <button type="button" id="arr-current" aria-haspopup="true" aria-expanded="false" title="Saved arrangements for this period" disabled>
-          <span id="arr-name">—</span>
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>
-        </button>
-        <div class="arr-menu" id="arr-menu" hidden>
-          <div class="arr-list" id="arr-list"></div>
-          <button type="button" class="ghost small arr-new" id="arr-new">+ New empty draft</button>
+      <button type="button" id="btn-help" class="icon-btn help-btn" title="Keyboard shortcuts and tips" aria-label="Keyboard shortcuts and tips">?</button>
+      <div class="more-wrap">
+        <button type="button" id="btn-more" class="icon-btn" aria-haspopup="true" aria-expanded="false" title="More" aria-label="More options"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="5" cy="12" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/></svg></button>
+        <div class="more-menu" id="more-menu" hidden>
+          <div class="mm-row">
+            <button type="button" id="btn-undo" class="mm-item" title="Undo (Ctrl+Z)" disabled><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 14 4 9l5-5"/><path d="M4 9h11a5 5 0 0 1 0 10h-3"/></svg>Undo</button>
+            <button type="button" id="btn-redo" class="mm-item" title="Redo (Ctrl+Shift+Z)" disabled><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15 14 5-5-5-5"/><path d="M20 9H9a5 5 0 0 0 0 10h3"/></svg>Redo</button>
+          </div>
+          <div class="mm-label">View</div>
+          <div class="mm-row">
+            <button type="button" id="btn-zoom-out" class="icon-btn" title="Zoom out" aria-label="Zoom out"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M5 12h14"/></svg></button>
+            <span class="zoom-pct" id="zoom-pct">100%</span>
+            <button type="button" id="btn-zoom-in" class="icon-btn" title="Zoom in" aria-label="Zoom in"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg></button>
+            <button type="button" id="btn-fit" class="mm-fit" title="Show the whole room">Fit</button>
+          </div>
+          <button type="button" id="btn-pan" class="mm-item" aria-pressed="false" title="While on, dragging anywhere moves the view (or hold Space)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 11V6a2 2 0 0 0-4 0v5M14 10V4a2 2 0 0 0-4 0v6M10 10.5V6a2 2 0 0 0-4 0v8"/><path d="M18 8a2 2 0 1 1 4 0v6a8 8 0 0 1-8 8h-2c-2.8 0-4.5-.9-5.8-2.4L3 15.7a2 2 0 0 1 2.9-2.7L6 14"/></svg>Hand tool — move the view</button>
+          <div class="mm-label" id="mm-desk-label">Selected desk</div>
+          <div class="mm-row">
+            <button type="button" id="btn-rotate" class="mm-item" aria-pressed="false" title="Turn the selected desk (R)" disabled>Turn</button>
+            <button type="button" id="btn-duplicate" class="mm-item" title="Copy the selected desk (Ctrl+D)" disabled>Copy</button>
+            <button type="button" id="btn-delete" class="mm-item" title="Remove the selected desk (Delete)" disabled>Remove</button>
+          </div>
+          <div class="mm-label">Names</div>
+          <button type="button" id="btn-firstnames" class="mm-item" role="switch" aria-checked="false" title="Show first names only on the seats">
+            <span class="when-off">Show first names only</span>
+            <span class="when-on">✓ Showing first names only</span>
+          </button>
         </div>
       </div>
-      <span class="pct" id="arr-badge" hidden>Active</span>
-      <span class="arr-unsaved" id="arr-unsaved" hidden>Unsaved changes</span>
-      <span class="arr-summary" id="arr-summary"></span>
-      <span class="arr-note" id="arr-note"></span>
-      <span class="spacer"></span>
-      <button type="button" id="arr-discard" class="ghost" title="Go back to the last saved version" disabled>Discard</button>
-      <button type="button" id="arr-save-as" title="Save what's on screen as a new draft (the original stays as it was)" disabled>Save as new…</button>
-      <button type="button" id="arr-save" class="primary" title="Save over this arrangement (Ctrl+S)" disabled>Save</button>
-      <button type="button" id="arr-activate" title="Use this arrangement for Attendance and everything else" hidden>Make active</button>
+      <button type="button" class="icon-btn" data-fullscreen aria-pressed="false" title="Full screen (F)" aria-label="Full screen"><span class="when-off"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 3H5a2 2 0 0 0-2 2v3M16 3h3a2 2 0 0 1 2 2v3M8 21H5a2 2 0 0 1-2-2v-3M16 21h3a2 2 0 0 0 2-2v-3"/></svg></span><span class="when-on"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 3v3a2 2 0 0 1-2 2H3M21 8h-3a2 2 0 0 1-2-2V3M3 16h3a2 2 0 0 1 2 2v3M16 21v-3a2 2 0 0 1 2-2h3"/></svg></span></button>
     </div>
+
+    <!-- ---------- Arrangements: one card each, click to flip between them ---------- -->
+    <section class="arr-bar card no-present" aria-label="Seating arrangements">
+      <div class="arr-cards" id="arr-cards" role="list"></div>
+      <button type="button" id="arr-new" class="arr-new-btn" disabled title="New arrangement — copy this one, or start from a blank room or a ready-made layout">+ New</button>
+    </section>
 
     <div id="status" class="status no-present"></div>
 
-    <!-- ---------- Sidebar + canvas ---------- -->
-    <div class="seat-layout">
-      <aside class="seat-side card no-present" id="sidebar">
-        <!-- Palette (Arrange Room) -->
-        <div id="palette" class="palette">
-          <div class="card-head"><h2>Desks</h2></div>
-          <p class="hint">Drag a piece onto the room. Pieces snap to the grid and to each other.</p>
-          <div class="palette-list" id="palette-list"></div>
-          <p class="hint">Drag empty canvas to pan, wheel to scroll, Shift+wheel sideways, Ctrl+wheel or pinch to zoom · Shift+drag box-selects · click a piece: drag to move · R (or Rotate) turns on rotate mode — drag the piece or its handle to turn it, Shift = 15° steps, press R / Enter or click elsewhere to keep the angle, Esc to cancel · the Front of room marker moves and turns the same way — its notch points into the room · Ctrl+D duplicate · Del delete · Shift-click for several · Ctrl+Z / Ctrl+Shift+Z undo / redo · F full screen.</p>
-        </div>
-
-        <!-- Student list (Assign Seats) -->
-        <div id="students-panel" class="students-panel" hidden>
-          <div class="card-head"><h2>Students</h2><span class="chip"><span id="side-count">—</span></span></div>
-          <p class="hint">Drag a name onto a seat. Drop on a taken seat to swap. Drag a seated name back here to unseat.</p>
-          <div class="student-list" id="student-list"></div>
-        </div>
+    <!-- ---------- Left: desk rail (Arrange) or not-seated names (Assign) · canvas ---------- -->
+    <div class="seat-layout" id="seat-layout" data-mode="arrange">
+      <aside class="desk-rail card no-present" id="palette" aria-label="Add a desk">
+        <span class="rail-title">Add</span>
+        <div class="palette-list" id="palette-list"></div>
       </aside>
 
-      <div class="viewport card" id="viewport" tabindex="0" aria-label="Room canvas">
+      <aside class="names-panel card no-present" id="names-panel" hidden aria-label="Students not seated yet">
+        <div class="names-head">
+          <span class="names-title">Not seated</span>
+          <span class="names-count" id="side-count" title="Seated / students in this period">—</span>
+        </div>
+        <div class="student-list" id="student-list"></div>
+      </aside>
+
+      <div class="viewport card" id="viewport" tabindex="0" aria-label="Room">
         <div class="room" id="room"></div>
         <div class="marquee" id="marquee" hidden></div>
-        <div class="empty-room" id="empty-room" hidden>Drag desks from the left to build your room.</div>
+        <div class="empty-room" id="empty-room" hidden>Add a period in Rosters first.</div>
+
+        <!-- floats next to the selected desk -->
+        <div class="piece-tools" id="piece-tools" hidden>
+          <button type="button" id="pt-rotate" aria-pressed="false" title="Turn it (R) — drag the desk or the round handle">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12a9 9 0 1 1-3-6.7L21 8"/><path d="M21 3v5h-5"/></svg>
+            <span class="when-off">Turn</span><span class="when-on">Done</span>
+          </button>
+          <button type="button" id="pt-duplicate" title="Copy it (Ctrl+D)">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+            Copy
+          </button>
+          <button type="button" id="pt-delete" title="Remove it (Delete)">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6h18"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+            Remove
+          </button>
+        </div>
+
+        <!-- starter layouts: an empty room, or Change layout -->
+        <div class="starter" id="starter" hidden>
+          <div class="starter-card">
+            <h3>How are your desks set up?</h3>
+            <p class="starter-sub" id="starter-sub">Pick one to start. You can move, add or remove desks afterwards.</p>
+            <div class="starter-grid" id="starter-grid"></div>
+            <p class="starter-or" id="starter-or">Or add desks one at a time from the left.</p>
+            <button type="button" class="ghost" id="starter-cancel" hidden>Keep my desks</button>
+          </div>
+        </div>
       </div>
     </div>
+
+    <!-- ---------- ? : shortcuts and tips ---------- -->
+    <dialog class="arr-dialog help-dialog" id="help-dialog" aria-labelledby="help-title">
+      <div class="arr-dialog-inner help-inner">
+        <header class="help-head">
+          <h2 id="help-title">Tips and shortcuts</h2>
+          <button type="button" class="corner-btn" id="help-close" aria-label="Close" title="Close (Esc)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+        </header>
+        <div class="help-body">
+          <p class="help-part"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="6" y="3" width="12" height="18" rx="6"/><path d="M12 7v4"/></svg>Mouse</p>
+          <section class="help-sec">
+            <h3>Desks</h3>
+            <dl class="help-list">
+              <dt>Click a desk</dt><dd>Select it — Turn, Copy, Remove appear</dd>
+              <dt>Drag a desk</dt><dd>Move it; desks snap together</dd>
+              <dt>Click a desk on the left</dt><dd>Add it to the middle of the room</dd>
+              <dt>Drag a desk from the left</dt><dd>Add it where you drop it</dd>
+              <dt><kbd>Shift</kbd> + click</dt><dd>Select several desks</dd>
+              <dt><kbd>Shift</kbd> + drag</dt><dd>Box-select several desks</dd>
+              <dt>Drag the Front bar</dt><dd>Move it; its notch faces the room</dd>
+            </dl>
+          </section>
+          <section class="help-sec">
+            <h3>Seats</h3>
+            <dl class="help-list">
+              <dt>Drag a name to a seat</dt><dd>Seat them there</dd>
+              <dt>Click a name, then a seat</dt><dd>Same thing, no dragging</dd>
+              <dt>Drop on a taken seat</dt><dd>Swap the two students</dd>
+              <dt>Drag a name to the list</dt><dd>Take them out of their seat</dd>
+            </dl>
+          </section>
+          <section class="help-sec">
+            <h3>Moving around</h3>
+            <dl class="help-list">
+              <dt>Drag an empty spot</dt><dd>Move the view</dd>
+              <dt>Scroll wheel</dt><dd>Scroll up and down</dd>
+              <dt><kbd>Shift</kbd> + wheel</dt><dd>Scroll sideways</dd>
+              <dt><kbd>Ctrl</kbd> + wheel</dt><dd>Zoom (or pinch)</dd>
+              <dt><kbd>Space</kbd> + drag</dt><dd>Move the view from anywhere</dd>
+            </dl>
+          </section>
+
+          <p class="help-part"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="6" width="20" height="12" rx="2"/><path d="M6 10h.01M10 10h.01M14 10h.01M18 10h.01M7 14h10"/></svg>Keyboard</p>
+          <section class="help-sec">
+            <h3>Selected desk</h3>
+            <dl class="help-list">
+              <dt><kbd>R</kbd></dt><dd>Turn it — drag to spin</dd>
+              <dt><kbd>Shift</kbd></dt><dd>Hold while turning for 15° steps</dd>
+              <dt><kbd>Enter</kbd></dt><dd>Finish turning</dd>
+              <dt><kbd>Ctrl</kbd><kbd>D</kbd></dt><dd>Copy it</dd>
+              <dt><kbd>Delete</kbd></dt><dd>Remove it</dd>
+              <dt><kbd>Esc</kbd></dt><dd>Cancel a turn, or let go of a name</dd>
+            </dl>
+          </section>
+          <section class="help-sec">
+            <h3>Anywhere</h3>
+            <dl class="help-list">
+              <dt><kbd>Ctrl</kbd><kbd>Z</kbd></dt><dd>Undo</dd>
+              <dt><kbd>Ctrl</kbd><kbd>Shift</kbd><kbd>Z</kbd></dt><dd>Redo</dd>
+              <dt><kbd>Ctrl</kbd><kbd>S</kbd></dt><dd>Save now (it also saves on its own)</dd>
+              <dt><kbd>F</kbd></dt><dd>Full screen</dd>
+            </dl>
+          </section>
+        </div>
+      </div>
+    </dialog>
 
     <div class="drag-ghost" id="ghost" hidden></div>
 
@@ -156,10 +229,12 @@
     let panMode = false, spaceHeld = false;
     let firstNamesOnly = false;
     let history = [], future = [];
-    let saveTimer = null, dirty = { rules: false };   // rules autosave; desks + seats save with the arrangement
+    let saveTimer = null, dirty = { rules: false };   // rules autosave on their own timer
+    let picked = null;                         // Assign: a name clicked, waiting for a seat click
+    let starterForced = false;                 // "Change layout" opened the starter picker over existing desks
     // Saved arrangements. The editor holds a working copy of one of them
-    // (layout + assignments); nothing is written until Save / Save as new.
-    let roomLayout = null;                     // the shared room as saved (what the active arrangements sit on)
+    // (its own desks + seats) and autosaves it ~800ms after each change.
+    let legacyRoom = null;                     // the old shared room — only for rows saved before each arrangement owned its desks
     let arrangements = [];                     // this period's rows from seating_arrangements
     let currentArrId = null;                   // the row in the editor (null = nothing saved yet)
     let savedKey = '';                         // stateKey() at the last load / save → "Unsaved changes"
@@ -200,7 +275,8 @@
     const studentById = (id) => students.find((s) => s.id === id);
     const firstName = (n) => n.trim().split(/\s+/)[0] || n;
     const lastName = (n) => { const p = n.trim().split(/\s+/); return p.length > 1 ? p[p.length - 1] : ''; };
-    function displayName(s) {
+    // (not "displayName": that is shared.js's account-name helper, which nav.js calls)
+    function studentLabel(s) {
       if (!firstNamesOnly) return s.name;
       const first = firstName(s.name);
       const twins = students.filter((o) => firstName(o.name).toLocaleLowerCase() === first.toLocaleLowerCase());
@@ -231,6 +307,7 @@
       base = null;
       updateUndoButtons();
       render();
+      scheduleArrSave();
     }
     function undo() {
       if (!history.length) return;
@@ -247,6 +324,7 @@
     function afterHistory() {
       updateUndoButtons();
       render();
+      scheduleArrSave();
     }
     function updateUndoButtons() {
       $('btn-undo').disabled = history.length === 0;
@@ -262,8 +340,8 @@
     async function saveNow() {
       try {
         if (dirty.rules && currentPeriodId) { dirty.rules = false; await saveFormulaRules(currentPeriodId, RULE_SCOPE, rules, useFormula); }
-        setSaveState(isUnsaved() ? '' : 'Saved');
-        renderArrangements();                  // rules-met counts may have changed
+        if (!isUnsaved()) setSaveState('Saved');
+        renderArrangements();                  // rules-kept counts may have changed
       } catch (err) {
         setSaveState('Not saved', true);
         showError(err);
@@ -276,7 +354,7 @@
       el.classList.toggle('ok', text === 'Saved');
     }
     window.addEventListener('beforeunload', (e) => {
-      if (dirty.rules || isUnsaved()) { e.preventDefault(); e.returnValue = ''; }
+      if (dirty.rules || isUnsaved()) { flushArrSave(); e.preventDefault(); e.returnValue = ''; }
     });
 
     // =====================================================================
@@ -288,19 +366,27 @@
       viewport.style.backgroundSize = `${cell}px ${cell}px`;
       viewport.style.backgroundPosition = `${pan.x}px ${pan.y}px`;
       $('zoom-pct').textContent = `${Math.round(zoom * 100)}%`;
+      placePieceTools();
     }
 
     function render() {
       room.innerHTML = '';
       room.appendChild(renderFront());
       for (const p of layout.pieces) room.appendChild(renderPiece(p));
+      fitLabels();
       renderGizmo();
-      $('empty-room').hidden = layout.pieces.length > 0 || mode !== 'arrange';
+      $('empty-room').hidden = !!currentPeriodId || !isConfigured();
+      renderStarter();
       renderSidebar();
       updateSelectionButtons();
       updateCounts();
       updateArrBar();
+      placePieceTools();
     }
+
+    // Every name fits its seat (room.js): wrapped between words, shrunk, or ellipsised
+    function fitLabels(scope = room) { scope.querySelectorAll('.seat .seat-label').forEach((lb) => fitSeatLabel(lb)); }
+    if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => fitLabels());
 
     function renderFront() {
       const f = layout.front;
@@ -339,51 +425,55 @@
         const sid = assignments[seatId];
         const s = sid ? studentById(sid) : null;
         const seat = document.createElement('div');
-        seat.className = 'seat' + (s ? ' taken' : '') + (mode === 'assign' ? ' droppable' : '');
+        seat.className = 'seat' + (s ? ' taken' : '') + (mode === 'assign' ? ' droppable' : '') + (s && s.id === picked ? ' picked' : '');
         seat.dataset.seat = seatId;
         if (s) seat.dataset.student = s.id;
         seat.style.cssText = `left:${x * G}px;top:${y * G}px;width:${w * G}px;height:${h * G}px`;
-        const label = mode === 'assign' && s ? escapeHtml(displayName(s)) : '';
+        const label = mode === 'assign' && s ? escapeHtml(studentLabel(s)) : '';
         seat.innerHTML = `<span class="seat-label" data-w="${w}" data-h="${h}" style="${labelStyle(p, w, h)}" title="${s ? escapeHtml(s.name) : ''}">${label}</span>`;
         el.appendChild(seat);
       });
       return el;
     }
 
+    // Left column — Arrange: the slim desk rail. Assign: the Not seated list
+    // (only students without a seat, absent ones dimmed at the end).
     function renderSidebar() {
       const arrange = mode === 'arrange';
+      $('seat-layout').dataset.mode = mode;
       $('palette').hidden = !arrange;
-      $('students-panel').hidden = arrange;
+      $('names-panel').hidden = arrange;
       $('arrange-tools').hidden = !arrange;
       $('assign-tools').hidden = arrange;
       if (arrange) {
         if (!$('palette-list').children.length) {
           $('palette-list').innerHTML = Object.entries(TYPES).map(([type, t]) => `
-            <div class="palette-item" data-type="${type}" role="button" tabindex="0" aria-label="Add ${t.label}">
+            <div class="palette-item" data-type="${type}" data-name="${t.label}" role="button" tabindex="0" title="${t.label} — click to add, or drag it into place" aria-label="Add ${t.label}">
               <div class="mini ${t.round ? 'is-round' : ''}" style="--w:${t.w};--h:${t.h}">
                 ${t.round ? '<div class="mini-round"></div>' : ''}
                 ${[...t.seats, ...(t.desks || [])].map(([x, y, w, h]) => `<span style="left:${(x / t.w) * 100}%;top:${(y / t.h) * 100}%;width:${(w / t.w) * 100}%;height:${(h / t.h) * 100}%"></span>`).join('')}
               </div>
-              <span class="palette-name">${t.label}</span>
             </div>`).join('');
         }
         return;
       }
       const seatedIds = new Set(Object.values(assignments));
-      const list = $('student-list');
-      list.innerHTML = students
-        .slice()
-        .sort((a, b) => a.name.localeCompare(b.name))
-        .map((s) => `<div class="student-chip${seatedIds.has(s.id) ? ' seated' : ' unseated'}${absentToday.has(s.id) ? ' absent' : ''}" data-student="${s.id}" title="${escapeHtml(s.name)}${absentToday.has(s.id) ? ' (absent today)' : ''}">${escapeHtml(displayName(s))}</div>`)
-        .join('') || '<p class="hint">No students in this period.</p>';
+      const waiting = students
+        .filter((s) => !seatedIds.has(s.id))
+        .sort((a, b) => (absentToday.has(a.id) - absentToday.has(b.id)) || a.name.localeCompare(b.name));
+      // a seated name is picked: the list becomes the place to drop them out
+      $('names-panel').classList.toggle('drop-out', !!picked && seatedIds.has(picked));
+      $('student-list').innerHTML = waiting
+        .map((s) => `<div class="student-chip unseated${absentToday.has(s.id) ? ' absent' : ''}${s.id === picked ? ' picked' : ''}" data-student="${s.id}" role="button" tabindex="0" title="${escapeHtml(s.name)}${absentToday.has(s.id) ? ' (absent today)' : ''}">${escapeHtml(studentLabel(s))}</div>`)
+        .join('') || `<p class="names-empty">${students.length ? 'Everyone has a seat.' : 'No students yet — add them in Rosters.'}</p>`;
     }
 
     function updateCounts() {
       const total = seatIds().length;
       const seatedIds = new Set(Object.values(assignments).filter((id) => studentById(id)));
       const seated = students.filter((s) => seatedIds.has(s.id)).length;
-      $('seated-count').textContent = currentPeriodId ? `${seated} of ${students.length} seated` : '—';
-      $('side-count').textContent = `${students.length - seated} unseated · ${total} seats`;
+      $('side-count').textContent = currentPeriodId ? `${seated}/${students.length} seated` : '—';
+      $('side-count').title = `${seated} of ${students.length} students seated · ${total} seats in the room`;
     }
 
     function updateSelectionButtons() {
@@ -392,6 +482,42 @@
       $('btn-duplicate').disabled = pieces.length === 0;
       $('btn-delete').disabled = pieces.length === 0;
     }
+
+    // The little Turn / Copy / Remove bar that floats beside the selection
+    // (Arrange only). It lives in the viewport, not the scaled room, so it
+    // stays the same size at every zoom; above the selection unless that is
+    // off the top, then below. While turning it sits under the turn ring.
+    function placePieceTools() {
+      const el = $('piece-tools');
+      const ids = rotIds();
+      const busy = drag && (drag.kind === 'move' || drag.kind === 'marquee');
+      if (mode !== 'arrange' || !ids.length || busy || isPresent()) { el.hidden = true; return; }
+      const onlyFront = ids.every((id) => id === 'front');
+      $('pt-duplicate').hidden = onlyFront;
+      $('pt-delete').hidden = onlyFront;
+      $('pt-rotate').setAttribute('aria-pressed', String(!!rotSession));
+      let minX, minY, maxX, maxY;
+      if (rotSession) {
+        const { cx, cy, radius } = rotSession;
+        minX = cx - radius; maxX = cx + radius; minY = cy - radius - 1.6; maxY = cy + radius;
+      } else {
+        const boxes = ids.map((id) => bbox(pieceById(id)));
+        minX = Math.min(...boxes.map((b) => b.x)); minY = Math.min(...boxes.map((b) => b.y));
+        maxX = Math.max(...boxes.map((b) => b.x + b.w)); maxY = Math.max(...boxes.map((b) => b.y + b.h));
+      }
+      el.hidden = false;
+      const cx = ((minX + maxX) / 2) * G * zoom + pan.x;
+      const top = minY * G * zoom + pan.y, bottom = maxY * G * zoom + pan.y;
+      const h = el.offsetHeight, w = el.offsetWidth, vw = viewport.clientWidth;
+      let y = rotSession ? bottom + 10 : top - h - 10;
+      if (y < 8) y = bottom + 10;
+      const x = clamp(cx - w / 2, 8, Math.max(8, vw - w - 8));
+      el.style.transform = `translate(${x}px, ${y}px)`;
+    }
+    $('piece-tools').addEventListener('pointerdown', (e) => e.stopPropagation());   // not a canvas click
+    $('pt-rotate').addEventListener('click', () => toggleRotate());
+    $('pt-duplicate').addEventListener('click', () => duplicateSelected());
+    $('pt-delete').addEventListener('click', () => deleteSelected());
 
     // =====================================================================
     // View: zoom / pan / fit
@@ -570,6 +696,7 @@
           if (!el) continue;
           el.style.transform = pieceTransform(p.x, p.y, p.rotation);
           el.querySelectorAll('.seat-label').forEach((lb) => { lb.style.cssText = labelStyle(p, +lb.dataset.w, +lb.dataset.h); });
+          fitLabels(el);
           el.querySelectorAll('.front-text').forEach((lb) => { lb.style.cssText = frontLabelStyle(p.rotation); });
         }
         renderGizmo();
@@ -610,6 +737,14 @@
       }
       const pieceEl = e.target.closest('.piece');
       const seatEl = e.target.closest('.seat.taken');
+      // a name was clicked first: this click on any seat puts them there
+      const anySeat = e.target.closest('.seat');
+      if (mode === 'assign' && picked && anySeat && e.button === 0 && !panMode && !spaceHeld) {
+        const from = seatOfStudent(picked);
+        if (from === anySeat.dataset.seat) { picked = null; render(); }
+        else placeStudent(picked, anySeat.dataset.seat, from);
+        return;
+      }
       const wantPan = e.button === 1 || panMode || spaceHeld || (mode === 'assign' && !seatEl);
 
       if (mode === 'assign' && seatEl && !wantPan) {
@@ -676,6 +811,7 @@
         if (!drag.moved && Math.hypot(e.clientX - drag.sx, e.clientY - drag.sy) < 3) return;   // 3px activation
         if (!drag.moved) {
           drag.moved = true;
+          $('piece-tools').hidden = true;
           drag.els.forEach((el) => el.classList.add('lifting'));
           room.querySelectorAll('.rot-line, .rot-handle').forEach((el) => (el.style.visibility = 'hidden'));
         }
@@ -698,6 +834,7 @@
         drag.ids = new Set(allPieces().filter((p) => { const b = bbox(p); return b.x < x2 && b.x + b.w > x1 && b.y < y2 && b.y + b.h > y1; }).map((p) => p.id));
         frame(() => {
           if (!drag || drag.kind !== 'marquee') return;
+          $('piece-tools').hidden = true;
           marquee.hidden = false;
           marquee.style.transform = `translate3d(${x1 * G * zoom + pan.x}px, ${y1 * G * zoom + pan.y}px, 0)`;
           marquee.style.width = `${(x2 - x1) * G * zoom}px`;
@@ -747,8 +884,9 @@
       if (!item || e.button !== 0) return;
       const type = item.dataset.type, t = TYPES[type];
       item.setPointerCapture(e.pointerId);
-      ghost.hidden = false;
       ghost.textContent = t.label;
+      const sx = e.clientX, sy = e.clientY;
+      let moved = false;
       // snap preview on the canvas while the pointer is over it
       const preview = document.createElement('div');
       preview.className = 'snap-ghost';
@@ -759,6 +897,11 @@
       let last = e, pos = null;
       const move = (ev) => {
         last = ev;
+        if (!moved) {
+          if (Math.hypot(ev.clientX - sx, ev.clientY - sy) < 4) return;   // still a click
+          moved = true;
+          ghost.hidden = false;
+        }
         if (overCanvas(ev)) {
           const at = clientToRoom(ev.clientX, ev.clientY);
           pos = snapBox({ x: at.x - t.w / 2, y: at.y - t.h / 2, w: t.w, h: t.h }, new Set());
@@ -777,6 +920,7 @@
         flushFrame();
         ghost.hidden = true;
         preview.remove();
+        if (!moved) { if (ev.type === 'pointerup') addPieceAtCentre(type); return; }   // a click: drop it mid-view
         if (!overCanvas(ev)) return;
         const at = clientToRoom(ev.clientX, ev.clientY);
         const drop = snapBox({ x: at.x - t.w / 2, y: at.y - t.h / 2, w: t.w, h: t.h }, new Set());
@@ -784,26 +928,34 @@
         const piece = { id: uid(), type, x: drop.x, y: drop.y, rotation: 0 };
         layout.pieces.push(piece);
         selected = new Set([piece.id]);
+        starterForced = false;
         commit();
       };
       item.addEventListener('pointermove', move);
       item.addEventListener('pointerup', up);
       item.addEventListener('pointercancel', up);
     });
-    // Keyboard: Enter/Space on a palette item drops it in the middle of the view
+    // A click (or Enter / Space) on a rail item drops that desk in the middle
+    // of the view, nudged clear of whatever is already there
+    function addPieceAtCentre(type) {
+      const t = TYPES[type];
+      const r = viewport.getBoundingClientRect();
+      const at = clientToRoom(r.left + r.width / 2, r.top + r.height / 2);
+      let pos = snapBox({ x: at.x - t.w / 2, y: at.y - t.h / 2, w: t.w, h: t.h }, new Set());
+      const hits = (p) => allPieces().some((q) => { const b = bbox(q); return p.x < b.x + b.w && p.x + t.w > b.x && p.y < b.y + b.h && p.y + t.h > b.y; });
+      for (let i = 0; i < 40 && hits(pos); i++) pos = { x: pos.x, y: pos.y + t.h + 1 };
+      base = snapshot();
+      const piece = { id: uid(), type, x: pos.x, y: pos.y, rotation: 0 };
+      layout.pieces.push(piece);
+      selected = new Set([piece.id]);
+      starterForced = false;
+      commit();
+    }
     $('palette-list').addEventListener('keydown', (e) => {
       const item = e.target.closest('.palette-item');
       if (!item || (e.key !== 'Enter' && e.key !== ' ')) return;
       e.preventDefault();
-      const t = TYPES[item.dataset.type];
-      const r = viewport.getBoundingClientRect();
-      const at = clientToRoom(r.left + r.width / 2, r.top + r.height / 2);
-      const pos = snapBox({ x: at.x - t.w / 2, y: at.y - t.h / 2, w: t.w, h: t.h }, new Set());
-      base = snapshot();
-      const piece = { id: uid(), type: item.dataset.type, x: pos.x, y: pos.y, rotation: 0 };
-      layout.pieces.push(piece);
-      selected = new Set([piece.id]);
-      commit();
+      addPieceAtCentre(item.dataset.type);
     });
 
     // =====================================================================
@@ -849,8 +1001,9 @@
       if (e.key === ' ' && !typing) { spaceHeld = true; viewport.classList.add('pan-mode'); e.preventDefault(); }
       if (typing) return;
       const ctrl = e.ctrlKey || e.metaKey;
-      if (ctrl && e.key.toLowerCase() === 's') { e.preventDefault(); saveArrangement(); return; }
-      if (e.key === 'Escape' && !$('arr-menu').hidden) { toggleArrMenu(false); return; }
+      if (ctrl && e.key.toLowerCase() === 's') { e.preventDefault(); flushArrSave(); return; }
+      if (e.key === 'Escape' && !$('more-menu').hidden) { toggleMoreMenu(false); $('btn-more').focus(); return; }
+      if (e.key === 'Escape' && picked) { picked = null; render(); return; }
       if (rotSession) {
         if (e.key === 'Enter' || (e.key.toLowerCase() === 'r' && !ctrl)) { e.preventDefault(); confirmRotate(); }
         else if (e.key === 'Escape') { e.preventDefault(); cancelRotate(); }
@@ -878,12 +1031,17 @@
       if (!s) return;
       const source = e.target.closest('.seat, .student-chip') || e.target;
       source.setPointerCapture(e.pointerId);
-      ghost.hidden = false;
-      ghost.textContent = displayName(s);
-      ghost.classList.add('name');
-      let over = null, last = e;
+      ghost.textContent = studentLabel(s);
+      let over = null, last = e, moved = false;
+      const sx = e.clientX, sy = e.clientY;
       const move = (ev) => {
         last = ev;
+        if (!moved) {                                   // under 4px it's a click: pick the name
+          if (Math.hypot(ev.clientX - sx, ev.clientY - sy) < 4) return;
+          moved = true;
+          ghost.hidden = false;
+          ghost.classList.add('name');
+        }
         frame(() => {
           ghost.style.transform = `translate3d(${last.clientX + 12}px, ${last.clientY + 12}px, 0)`;
           const el = document.elementFromPoint(last.clientX, last.clientY);
@@ -893,7 +1051,6 @@
           if (seat) seat.classList.add('drop-target');
         });
       };
-      move(e);
       const up = (ev) => {
         source.removeEventListener('pointermove', move);
         source.removeEventListener('pointerup', up);
@@ -902,9 +1059,13 @@
         ghost.hidden = true;
         ghost.classList.remove('name');
         if (over) over.classList.remove('drop-target');
+        if (!moved) {                                   // click: pick / drop the pick
+          if (ev.type === 'pointerup') { picked = picked === studentId ? null : studentId; render(); }
+          return;
+        }
         const el = document.elementFromPoint(ev.clientX, ev.clientY);
         const seat = el && el.closest('.seat');
-        const list = el && el.closest('#sidebar');
+        const list = el && el.closest('#names-panel');
         if (seat) placeStudent(studentId, seat.dataset.seat, fromSeat);
         else if (list && fromSeat) unseat(studentId);
       };
@@ -917,12 +1078,26 @@
       const chip = e.target.closest('.student-chip');
       if (!chip || e.button !== 0) return;
       e.preventDefault();
-      const seatOf = Object.keys(assignments).find((k) => assignments[k] === chip.dataset.student) || null;
-      startNameDrag(e, chip.dataset.student, seatOf);
+      startNameDrag(e, chip.dataset.student, seatOfStudent(chip.dataset.student));
+    });
+    $('student-list').addEventListener('keydown', (e) => {
+      const chip = e.target.closest('.student-chip');
+      if (!chip || (e.key !== 'Enter' && e.key !== ' ')) return;
+      e.preventDefault();
+      picked = picked === chip.dataset.student ? null : chip.dataset.student;
+      render();
+    });
+    // a seated name is picked: clicking the strip takes them out of their seat
+    $('names-panel').addEventListener('click', (e) => {
+      if (!picked || e.target.closest('.student-chip') || !seatOfStudent(picked)) return;
+      unseat(picked);
     });
 
+    const seatOfStudent = (id) => Object.keys(assignments).find((k) => assignments[k] === id) || null;
+
     function placeStudent(studentId, seatId, fromSeat) {
-      if (fromSeat === seatId) return;
+      picked = null;
+      if (fromSeat === seatId) { render(); return; }
       base = snapshot();
       const occupant = assignments[seatId];
       const prev = fromSeat || Object.keys(assignments).find((k) => assignments[k] === studentId);
@@ -934,38 +1109,43 @@
       commit();
     }
     function unseat(studentId) {
+      picked = null;
       const k = Object.keys(assignments).find((key) => assignments[key] === studentId);
-      if (!k) return;
+      if (!k) { render(); return; }
       base = snapshot();
       delete assignments[k];
       commit();
     }
+    // Fill randomly: everyone who isn't absent today, in random seats
     $('btn-randomize').addEventListener('click', () => {
-      if (useFormula) {
-        if (!rules.length) { setStatus('Formula is on, but this period has no rules yet — open Formula to add some, or turn the toggle off for a random seating.', 'info'); return; }
-        populateWithFormula();
-        return;
-      }
       const seats = shuffle(seatIds());
-      if (!seats.length) { setStatus('Add some desks in Arrange Room first.', 'error'); return; }
+      if (!seats.length) { setStatus('There are no desks yet — set them up in Arrange room first.', 'error'); return; }
       const present = students.filter((st) => !absentToday.has(st.id));
       const next = {};
       shuffle(present).forEach((st, i) => { if (seats[i]) next[seats[i]] = st.id; });
-      if (present.length > seats.length) setStatus(`${present.length - seats.length} student(s) have no seat — add more desks.`, 'info');
+      picked = null;
       applySeating(next);
-      setStatus(`Seated randomly (formula off). ${whereTo()}`, 'ok');
+      const short = present.length - seats.length;
+      setStatus(short > 0 ? `Seated randomly — ${plural(short, 'student')} didn't get a seat. Add more desks in Arrange room.` : 'Seated randomly. Press it again for a different mix.', short > 0 ? 'info' : 'ok');
     });
-    $('btn-use-formula').addEventListener('click', () => {
-      useFormula = !useFormula;
-      $('btn-use-formula').setAttribute('aria-checked', String(useFormula));
-      dirty.rules = true;
-      scheduleSave();
+    // Fill by rules: the seating rules for this period (with none yet, open them)
+    $('btn-fill-rules').addEventListener('click', () => {
+      if (!currentPeriodId) { setStatus('Add a period in Rosters first.', 'error'); return; }
+      if (!rules.length) {
+        setStatus('This period has no seating rules yet — add who should sit together, apart, in front or at the back, then press Fill seats.', 'info');
+        formula.open();
+        return;
+      }
+      picked = null;
+      populateWithFormula();
     });
     $('btn-clear-seats').addEventListener('click', () => {
       if (!Object.keys(assignments).length) return;
+      picked = null;
       base = snapshot();
       assignments = {};
       commit();
+      setStatus('Everyone is out of their seat. Undo (Ctrl+Z or the ⋯ menu) puts them back.', 'info');
     });
     $('btn-firstnames').addEventListener('click', () => {
       firstNamesOnly = !firstNamesOnly;
@@ -982,7 +1162,7 @@
     // Rule weights come from the priority list (formula.js planRules): must = 1000, try = 30 → 3 by rank.
     const NEAR = 5, ADJ = 3.3;                 // grid units: "about one desk" / directly adjacent
     const RULE_SCOPE = 'seating';              // this page only ever reads/writes seating-scope rules
-    const nameOf = (id) => { const st = studentById(id); return st ? displayName(st) : '?'; };
+    const nameOf = (id) => { const st = studentById(id); return st ? studentLabel(st) : '?'; };
     const ruleText = (r) => ruleSentence(r, nameOf);
 
     // ---- seat geometry from the canvas, or any saved layout (rotation-aware) ----
@@ -1049,7 +1229,7 @@
 
     async function populateWithFormula() {
       const seats = seatWorld();
-      if (!seats.length) { setStatus('Add some desks in Arrange Room first.', 'error'); return; }
+      if (!seats.length) { setStatus('There are no desks yet — set them up in Arrange room first.', 'error'); return; }
       const present = students.filter((st) => !absentToday.has(st.id));
       const presentIds = new Set(present.map((st) => st.id));
       // early check: can every "must" hold at all? (front = K closest seats, back = farther half)
@@ -1059,7 +1239,7 @@
       let demote = new Set();
       if (problems.length) {
         const chosen = await confirmImpossible(problems, nameOf, RULE_SCOPE);
-        if (!chosen) { setStatus('Cancelled — edit the rules in Formula and try again.', 'info'); return; }
+        if (!chosen) { setStatus('Cancelled — change the rules in Edit rules and try again.', 'info'); return; }
         demote = chosen;
       }
       const plan = planRules(rules, presentIds, RULE_SCOPE, demote);
@@ -1070,15 +1250,10 @@
       const extra = [];
       if (present.length > seats.length) extra.push(`${present.length - seats.length} student(s) have no seat`);
       const summary = summarizeRun(plan, best.unmet, nameOf, RULE_SCOPE, extra);
-      setStatus(`${summary.text} ${whereTo()}`, summary.ok ? 'ok' : 'info');
+      setStatus(summary.text, summary.ok ? 'ok' : 'info');
       formula.setSummary(summary.text);
     }
 
-    // Randomize / Populate only ever change the arrangement in the editor
-    function whereTo() {
-      const a = currentArr();
-      return `${a ? `In ${a.is_active ? '' : 'draft '}“${a.name}”` : 'On screen'} — not saved until you Save.`;
-    }
 
     // Apply a new seating with names flying from where they were to their seats
     function applySeating(next) {
@@ -1119,33 +1294,38 @@
     // ---- the shared Formula modal, wired to this page ----
     const formula = createFormulaModal({
       scope: RULE_SCOPE,
+      periodId: () => currentPeriodId,
       periodName: () => { const p = periodsCache.find((x) => x.id === currentPeriodId); return p ? p.name : ''; },
       students: () => students,
       absent: () => absentToday,
-      displayName,
+      displayName: studentLabel,
       getRules: () => rules,
       setRules: (r) => { rules = r; dirty.rules = true; scheduleSave(); },
-      populateLabel: 'Populate',
+      populateLabel: 'Fill seats',
       onPopulate: populateWithFormula,
     });
     $('btn-formula').addEventListener('click', () => {
-      if (!currentPeriodId) { setStatus('Create a period first.', 'error'); return; }
+      if (!currentPeriodId) { setStatus('Add a period in Rosters first.', 'error'); return; }
       formula.open();
     });
 
     // =====================================================================
-    // Saved arrangements. The editor always holds a working copy of one
-    // arrangement (desks + seats). Randomize / Populate / drags only change
-    // that copy; Save writes it back, Save as new makes a draft from it.
-    // Only the ACTIVE arrangement is what Attendance shows, and only saving
-    // the active one (or making one active) writes the shared room layout —
-    // desk changes on a draft stay with the draft.
+    // Arrangements. Each one owns its desks AND its seats, per period. The
+    // editor holds a working copy of one and autosaves it. Only the ACTIVE
+    // arrangement is what Attendance shows for the period; drafts affect
+    // nothing, so a draft can be a completely different room.
     // =====================================================================
+    const BLANK_FRONT = { x: 20, y: 3, w: FRONT.w, h: FRONT.h, rotation: 0 };
+    const blankRoom = () => ({ version: 2, grid: G, front: { ...BLANK_FRONT }, pieces: [] });
     const deskLayout = (lay) => clone({ version: lay.version || 2, grid: lay.grid || G, front: lay.front, pieces: lay.pieces || [] });
     const currentArr = () => arrangements.find((a) => a.id === currentArrId) || null;
     const activeArr = () => arrangements.find((a) => a.is_active) || null;
     const hasDesks = (lay) => !!(lay && Array.isArray(lay.pieces));
     const plural = (n, one, many = `${one}s`) => `${n} ${n === 1 ? one : many}`;
+    // An arrangement's desks. A row saved before each arrangement had its own
+    // (migration-arrangement-layouts.sql not run yet) falls back to the old
+    // shared room; no arrangement at all = a blank room.
+    const desksOf = (a) => (!a ? blankRoom() : hasDesks(a.layout) ? a.layout : legacyRoom || blankRoom());
 
     // What's in the editor, as text (assignment key order doesn't matter)
     function stateKey() {
@@ -1155,125 +1335,92 @@
     const isUnsaved = () => !!currentPeriodId && !arrTableMissing && stateKey() !== savedKey;
     function markSaved(key = stateKey(), snap = snapshot()) { savedKey = key; savedSnap = snap; }
 
-    // How an arrangement's saved desks differ from a layout (normally the room now).
-    // null = unknown (no desks were stored with it) → no warning.
-    function layoutDiff(saved, now) {
-      if (!hasDesks(saved) || !hasDesks(now)) return null;
-      const was = new Map(saved.pieces.map((p) => [p.id, p]));
-      const is = new Map(now.pieces.map((p) => [p.id, p]));
-      let added = 0, removed = 0, moved = 0;
-      const gone = new Set();                  // pieces whose seats no longer exist
-      for (const [id, p] of was) {
-        const q = is.get(id);
-        if (!q || q.type !== p.type) { removed++; gone.add(id); }
-        else if (q.x !== p.x || q.y !== p.y || (q.rotation || 0) !== (p.rotation || 0)) moved++;
-      }
-      for (const [id, q] of is) { const p = was.get(id); if (!p || p.type !== q.type) added++; }
-      const f0 = saved.front || {}, f1 = now.front || {};
-      const frontMoved = f0.x !== f1.x || f0.y !== f1.y || (f0.rotation || 0) !== (f1.rotation || 0);
-      return { added, removed, moved, frontMoved, gone, same: !added && !removed && !moved && !frontMoved };
-    }
-    function describeDiff(d) {
-      const parts = [];
-      if (d.removed) parts.push(`${plural(d.removed, 'desk')} removed`);
-      if (d.added) parts.push(`${plural(d.added, 'desk')} added`);
-      if (d.moved) parts.push(`${plural(d.moved, 'desk')} moved or turned`);
-      if (d.frontMoved) parts.push('front of room moved or turned');
-      return parts.join(', ');
-    }
-    // students of this arrangement who sat on desks that are gone
-    function lostSeats(a, diff) {
-      const ids = new Set(students.map((s) => s.id));
-      return Object.entries(a.assignments || {}).filter(([k, sid]) => ids.has(sid) && diff.gone.has(k.split(':')[0])).length;
-    }
-
-    // "24/27 seated · 5/6 rules met" — seated students + seating rules met on that layout
+    // seated students + seating rules kept, on that arrangement's own desks
     function arrStats(lay, seatMap) {
       const world = new Map(seatWorld(lay).map((st) => [st.id, st]));
       const ids = new Set(students.map((s) => s.id));
       const seatOf = new Map();
       for (const [k, sid] of Object.entries(seatMap || {})) if (world.has(k) && ids.has(sid)) seatOf.set(sid, world.get(k));
-      // "close" is a mild pull, never counted as met / missed (same as the Populate summary)
+      // "close" is a mild pull, never counted as kept / missed (same as the fill summary)
       const plan = planRules(rules, ids, RULE_SCOPE).filter((r) => r.type !== 'close');
       const missed = new Set(plan.length ? evaluateSeating(seatOf, [...world.values()], plan).unmet.map((u) => u.rule.id) : []);
       return { seated: seatOf.size, total: students.length, rules: plan.length, met: plan.filter((r) => !missed.has(r.id)).length };
     }
-    const statsText = (st) => `${st.seated}/${st.total} seated` + (st.rules ? ` · ${st.met}/${st.rules} rules met` : '');
-    const statsOf = (a) => (a.id === currentArrId ? arrStats(layout, assignments) : arrStats(hasDesks(a.layout) ? a.layout : roomLayout, a.assignments));
+    const statsOf = (a) => (a.id === currentArrId ? arrStats(layout, assignments) : arrStats(desksOf(a), a.assignments));
 
-    // ---- the strip: which arrangement is open, active or draft, unsaved ----
+    // A small drawing of a room: each desk's footprint (and the Front bar),
+    // scaled to fit maxW × maxH rem keeping its shape. Arrangement cards and
+    // the starter layouts both use it.
+    function layoutPic(lay, maxW, maxH, cls = '') {
+      const pieces = (lay.pieces || []).filter((p) => TYPES[p.type]);
+      const boxes = [{ ...bbox({ id: 'front', ...(lay.front || BLANK_FRONT) }), front: true }, ...pieces.map((p) => ({ ...bbox(p), teacher: p.type === 'teacher' }))];
+      const minX = Math.min(...boxes.map((b) => b.x)), minY = Math.min(...boxes.map((b) => b.y));
+      const w = Math.max(1, Math.max(...boxes.map((b) => b.x + b.w)) - minX);
+      const h = Math.max(1, Math.max(...boxes.map((b) => b.y + b.h)) - minY, pieces.length ? 0 : w * 0.6);   // an empty room still looks like a room
+      const sc = Math.min(maxW / w, maxH / h);
+      return `<span class="room-pic ${cls}" style="width:${(w * sc).toFixed(2)}rem;height:${(h * sc).toFixed(2)}rem">${boxes.map((b) =>
+        `<i class="${b.front ? 'f' : b.teacher ? 't' : ''}" style="left:${((b.x - minX) / w) * 100}%;top:${((b.y - minY) / h) * 100}%;width:${(b.w / w) * 100}%;height:${(b.h / h) * 100}%"></i>`).join('')}</span>`;
+    }
+
+    // ---- the arrangement cards ----
     function updateArrBar() {
       const has = !!currentPeriodId && !arrTableMissing;
-      const a = currentArr(), act = activeArr(), isActive = !!a && a.is_active;
-      const unsaved = isUnsaved();
-      $('arr-current').disabled = !has;
-      $('arr-name').textContent = !has ? '—' : a ? a.name : 'Not saved yet';
-      $('arr-badge').hidden = !has || !a;
-      $('arr-badge').textContent = isActive ? 'Active' : 'Draft';
-      $('arr-badge').classList.toggle('lavender', !isActive);
-      $('arr-unsaved').hidden = !unsaved;
-      $('arr-summary').textContent = has ? statsText(arrStats(layout, assignments)) : '';
-      $('arr-note').textContent = !has ? ''
-        : isActive ? 'Attendance uses this one'
-        : act ? `Draft only · Attendance uses “${act.name}”`
-        : 'Nothing is active yet — Save makes this the active one';
-      $('arr-save').disabled = !has || !unsaved;
-      $('arr-discard').disabled = !has || !unsaved;
-      $('arr-save-as').disabled = !has;
-      $('arr-activate').hidden = !has || !a || isActive;
+      $('arr-new').disabled = !has;
+      renderArrCards(has);
     }
 
     const ICON_RENAME = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>';
     const ICON_COPY = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>';
     const ICON_TRASH = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6h18"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>';
+    const ICON_PERSON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21v-1a6 6 0 0 1 6-6h4a6 6 0 0 1 6 6v1"/></svg>';
+    const ICON_RULE = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>';
 
-    function renderArrList() {
-      const list = $('arr-list');
-      if (!arrangements.length) {
-        list.innerHTML = '<p class="hint">Nothing saved for this period yet. Save keeps what’s on screen as the active arrangement.</p>';
-        return;
-      }
-      list.innerHTML = arrangements.map((a) => {
-        const open = a.id === currentArrId;
-        const diff = layoutDiff(open ? layout : a.layout, roomLayout);
-        const name = escapeHtml(a.name);
+    // One card per arrangement, active first: a thumbnail of its room, the
+    // name, an ACTIVE / DRAFT tag and two icon stats (seated, rules kept).
+    // The open card is outlined and carries its own actions; an open draft
+    // also gets Make active.
+    function renderArrCards(has) {
+      const box = $('arr-cards');
+      if (!has) { box.innerHTML = ''; return; }
+      if (!arrangements.length) { box.innerHTML = '<p class="arr-none">Nothing saved yet</p>'; return; }
+      const order = arrangements.slice().sort((x, y) => Number(y.is_active) - Number(x.is_active));
+      box.innerHTML = order.map((a) => {
+        const open = a.id === currentArrId, st = statsOf(a), name = escapeHtml(a.name);
+        const tip = `${st.seated} of ${st.total} seated${st.rules ? ` · ${st.met} of ${st.rules} rules kept` : ''}${a.is_active ? ' · Attendance uses this one' : ' · draft — affects nothing until it’s made active'}`;
         return `
-          <div class="arr-row${open ? ' current' : ''}" data-id="${a.id}">
-            <button type="button" class="arr-load" data-act="load"${open ? ' aria-current="true"' : ''}>
-              <span class="arr-row-top">
-                <span class="arr-row-name">${name}</span>
-                <span class="pct${a.is_active ? '' : ' lavender'}">${a.is_active ? 'Active' : 'Draft'}</span>
-                ${open ? `<span class="arr-viewing">${isUnsaved() ? 'Open · unsaved' : 'Open'}</span>` : ''}
+          <div class="arr-card${open ? ' current' : ''}${a.is_active ? ' is-active' : ''}" data-id="${a.id}" role="listitem">
+            <button type="button" class="arr-card-main" data-act="load" aria-pressed="${open}" title="${escapeHtml(tip)}">
+              <span class="arr-thumb">${layoutPic(open ? layout : desksOf(a), 3.2, 2.1)}</span>
+              <span class="arr-card-text">
+                <span class="arr-card-top"><span class="arr-card-name">${name}</span><span class="arr-tag${a.is_active ? ' on' : ''}">${a.is_active ? 'Active' : 'Draft'}</span></span>
+                <span class="arr-card-stats">
+                  <span class="${st.seated < st.total ? 'short' : ''}">${ICON_PERSON}${st.seated}/${st.total}</span>
+                  ${st.rules ? `<span class="${st.met < st.rules ? 'short' : ''}">${ICON_RULE}${st.met}/${st.rules}</span>` : ''}
+                </span>
               </span>
-              <span class="arr-row-meta">${statsText(statsOf(a))}${diff && !diff.same ? ' · <span class="arr-warn">different desks</span>' : ''}</span>
             </button>
-            <span class="arr-row-actions">
+            ${open ? `<span class="arr-card-tools">
+              ${a.is_active ? '' : '<button type="button" class="arr-make-active" data-act="activate" title="Use this one for Attendance">Make active</button>'}
               <button type="button" class="icon-btn" data-act="rename" title="Rename" aria-label="Rename ${name}">${ICON_RENAME}</button>
-              <button type="button" class="icon-btn" data-act="duplicate" title="${open ? 'Duplicate what’s on screen' : 'Duplicate'}" aria-label="Duplicate ${name}">${ICON_COPY}</button>
-              <button type="button" class="icon-btn" data-act="delete" title="${a.is_active ? 'The active arrangement can’t be deleted — make another one active first' : 'Delete'}" aria-label="Delete ${name}"${a.is_active ? ' disabled' : ''}>${ICON_TRASH}</button>
-            </span>
+              <button type="button" class="icon-btn" data-act="duplicate" title="Save a copy" aria-label="Copy ${name}">${ICON_COPY}</button>
+              <button type="button" class="icon-btn" data-act="delete" title="${a.is_active ? 'The active one can’t be deleted — make another one active first' : 'Delete'}" aria-label="Delete ${name}"${a.is_active ? ' disabled' : ''}>${ICON_TRASH}</button>
+            </span>` : ''}
           </div>`;
       }).join('');
+      // keep the open card in view when the row scrolls
+      const cur = box.querySelector('.arr-card.current');
+      if (cur && (cur.offsetLeft < box.scrollLeft || cur.offsetLeft + cur.offsetWidth > box.scrollLeft + box.clientWidth)) {
+        box.scrollLeft = cur.offsetLeft - 8;
+      }
     }
-    function renderArrangements() { updateArrBar(); if (!$('arr-menu').hidden) renderArrList(); }
+    function renderArrangements() { updateArrBar(); }
 
-    function toggleArrMenu(open = $('arr-menu').hidden) {
-      $('arr-menu').hidden = !open;
-      $('arr-current').setAttribute('aria-expanded', String(open));
-      if (open) renderArrList();
-    }
-    $('arr-current').addEventListener('click', () => toggleArrMenu());
-    document.addEventListener('pointerdown', (e) => {
-      if (!$('arr-menu').hidden && !e.target.closest('.arr-picker') && !e.target.closest('dialog')) toggleArrMenu(false);
+    $('arr-cards').addEventListener('click', (e) => {
+      const b = e.target.closest('[data-act]'), card = e.target.closest('.arr-card');
+      if (!b || !card || b.disabled) return;
+      ({ load: loadArrangement, activate: makeActive, rename: renameArrangement, duplicate: duplicateArrangement, delete: removeArrangement })[b.dataset.act](card.dataset.id);
     });
-    $('arr-list').addEventListener('click', (e) => {
-      const b = e.target.closest('[data-act]'), row = e.target.closest('.arr-row');
-      if (!b || !row || b.disabled) return;
-      const id = row.dataset.id;
-      toggleArrMenu(false);
-      ({ load: loadArrangement, rename: renameArrangement, duplicate: duplicateArrangement, delete: removeArrangement })[b.dataset.act](id);
-    });
-    $('arr-new').addEventListener('click', () => { toggleArrMenu(false); newEmptyDraft(); });
+    $('arr-new').addEventListener('click', () => newArrangement());
 
     // ---- small modal: title, body html, optional name field, buttons → { act, value } | null ----
     function askDialog({ title, body = '', input = null, buttons }) {
@@ -1331,71 +1478,71 @@
       }
     }
 
-    // Before the editor switches to something else: Save / Discard / Cancel → true to go on
-    async function confirmLeave() {
-      if (!isUnsaved()) return true;
-      const a = currentArr();
-      const r = await askDialog({
-        title: 'Save changes first?',
-        body: `<p>${a ? `“${escapeHtml(a.name)}”` : 'This arrangement'} has unsaved changes.</p>`,
-        buttons: [CANCEL, { act: 'discard', label: 'Discard changes', kind: 'danger' }, { act: 'save', label: 'Save', kind: 'primary', submit: true }],
-      });
-      if (!r) return false;
-      return r.act === 'save' ? saveArrangement() : true;
+    // ---- autosave: a change saves the open arrangement ~800ms later ----
+    let arrTimer = null;
+    function scheduleArrSave() {
+      if (!currentPeriodId || arrTableMissing || !isUnsaved()) return;
+      clearTimeout(arrTimer);
+      setSaveState('Saving…');
+      arrTimer = setTimeout(() => { arrTimer = null; saveArrangement(); }, 800);
+    }
+    // Save now if anything is waiting (before switching, Ctrl+S, leaving).
+    // false only when a save failed — callers then stay put.
+    async function flushArrSave() {
+      clearTimeout(arrTimer);
+      arrTimer = null;
+      while (saving) await new Promise((r) => setTimeout(r, 40));
+      return isUnsaved() ? saveArrangement() : true;
     }
 
-    // Put a saved arrangement into the editor. ownDesks: show the desks it
-    // was saved on instead of the room as it is now.
-    function openArrangement(a, { ownDesks = false } = {}) {
+    // Put an arrangement — its desks and its seats — into the editor
+    function openArrangement(a) {
       cancelRotate();
-      const src = ownDesks && a && hasDesks(a.layout) ? a.layout : roomLayout;
-      layout.front = clone({ ...layout.front, ...(src.front || {}) });
+      const src = desksOf(a);
+      layout.front = clone({ ...BLANK_FRONT, ...(src.front || {}) });
       layout.pieces = clone(src.pieces || []);
       currentArrId = a ? a.id : null;
       const ids = new Set(students.map((s) => s.id)), valid = new Set(seatIds());
       assignments = {};
       for (const [k, v] of Object.entries((a && a.assignments) || {})) if (ids.has(v) && valid.has(k)) assignments[k] = v;
       selected = new Set([...selected].filter((id) => pieceById(id)));
+      picked = null;
+      starterForced = false;
       history = []; future = [];
       updateUndoButtons();
       markSaved();
       render();
     }
+    const openBest = () => openArrangement(activeArr() || arrangements[0] || null);
 
-    // Load from the list — warns first when it was saved on different desks
-    async function loadArrangement(id, { skipLeave = false } = {}) {
+    // Flip to another arrangement: save what's open, then swap in its desks
+    // and seats — no questions, so flipping back and forth is instant.
+    async function loadArrangement(id) {
       const a = arrangements.find((x) => x.id === id);
-      if (!a || (a.id === currentArrId && !skipLeave)) return;
-      if (!skipLeave && !(await confirmLeave())) return;
-      let ownDesks = false;
-      const diff = layoutDiff(a.layout, roomLayout);
-      if (diff && !diff.same) {
-        const lost = lostSeats(a, diff);
-        const r = await askDialog({
-          title: 'Saved with a different desk layout',
-          body: `
-            <p>Since “${escapeHtml(a.name)}” was saved, the room has changed: ${escapeHtml(describeDiff(diff))}.</p>
-            ${lost ? `<p class="arr-dialog-warn">On the current room, ${plural(lost, 'student')} would lose ${lost === 1 ? 'their seat' : 'their seats'} (they were on desks that are gone).</p>` : ''}
-            <ul>
-              <li><b>Use its saved desks</b> — the room exactly as it was. Desk changes stay with this arrangement; the real room only changes ${a.is_active ? 'when you save it, because it’s the active one — that affects every period' : 'if you make it active'}.</li>
-              <li><b>Use current room</b> — today’s desks; seats on desks that are gone are left empty.</li>
-            </ul>`,
-          buttons: [CANCEL, { act: 'room', label: 'Use current room' }, { act: 'own', label: 'Use its saved desks', kind: 'primary', submit: true }],
-        });
-        if (!r) return;
-        ownDesks = r.act === 'own';
-      }
-      openArrangement(a, { ownDesks });
-      setStatus(`Viewing “${a.name}”${a.is_active ? ' — the active arrangement.' : ' — a draft; nothing else changes until you make it active.'}`, 'info');
+      if (!a || a.id === currentArrId) return;
+      if (!(await flushArrSave())) return;
+      openArrangement(a);
+      fitIfHidden();
+      setStatus('');
+    }
+    // Keep the view while flipping between arrangements on the same desks (so
+    // they can be compared in place); re-frame only when desks would be cut off.
+    function fitIfHidden() {
+      const r = viewport.getBoundingClientRect(), b = roomBounds(layout);
+      const x0 = b.minX * G * zoom + pan.x, y0 = b.minY * G * zoom + pan.y;
+      const x1 = b.maxX * G * zoom + pan.x, y1 = b.maxY * G * zoom + pan.y;
+      if (x0 < 0 || y0 < 0 || x1 > r.width || y1 > r.height) fitToScreen();
     }
 
-    // Save over the open arrangement (the first save in a period creates it)
+    // Write the open arrangement — desks and seats (the first save in a
+    // period creates it, active when the period has none yet)
     let saving = false;
     async function saveArrangement() {
       if (!currentPeriodId || arrTableMissing || saving) return false;
       saving = true;
       setSaveState('Saving…');
       const key = stateKey(), snap = snapshot(), desks = deskLayout(layout), seats = clone(assignments);
+      let ok = false;
       try {
         let a = currentArr();
         if (!a) {
@@ -1405,11 +1552,10 @@
         } else {
           Object.assign(a, await updateSeatingArrangement(a.id, { assignments: seats, layout: desks }));
         }
-        // the active arrangement sits on the real room: its desks ARE the room
-        if (a.is_active) { await saveRoomLayout(desks); roomLayout = desks; }
         markSaved(key, snap);
-        setSaveState('Saved');
+        setSaveState(isUnsaved() ? 'Saving…' : 'Saved');
         renderArrangements();
+        ok = true;
         return true;
       } catch (err) {
         setSaveState('Not saved', true);
@@ -1417,40 +1563,66 @@
         return false;
       } finally {
         saving = false;
+        if (ok && isUnsaved()) scheduleArrSave();   // changes made while that save was in flight
       }
     }
 
-    // What's on screen → a new draft; the original stays as last saved
-    async function saveAsNew({ title = 'Save as a new arrangement', okLabel = 'Save' } = {}) {
+    // Create an arrangement and open it (the first one in a period becomes
+    // active, like the first save). desks default to what's on screen.
+    async function createAndOpen(name, { seats, desks = deskLayout(layout) }) {
+      if (!(await flushArrSave())) return null;
+      try {
+        const row = await createSeatingArrangement(currentPeriodId, { name, assignments: seats, layout: desks, isActive: !activeArr() });
+        arrangements.push(row);
+        openArrangement(row);
+        fitIfHidden();
+        return row;
+      } catch (err) { showError(err); return null; }
+    }
+
+    // What's on screen → a new arrangement (copy), and open it
+    async function saveAsNew({ title = 'Save a copy', okLabel = 'Save copy' } = {}) {
       if (!currentPeriodId || arrTableMissing) return;
       const from = currentArr();
       const name = await askName(title, freeName(from ? `${from.name} copy` : 'Draft'), okLabel);
       if (!name) return;
-      const key = stateKey(), snap = snapshot(), desks = deskLayout(layout);
-      try {
-        const row = await createSeatingArrangement(currentPeriodId, { name, assignments: clone(assignments), layout: desks, isActive: !activeArr() });
-        arrangements.push(row);
-        currentArrId = row.id;
-        if (row.is_active) { await saveRoomLayout(desks); roomLayout = desks; }
-        markSaved(key, snap);
-        setSaveState('Saved');
-        renderArrangements();
-        setStatus(`Saved as “${name}”${row.is_active ? ' — the active arrangement' : ' (draft)'}.${from ? ` “${from.name}” is unchanged.` : ''}`, 'ok');
-      } catch (err) { showError(err); }
+      if (await createAndOpen(name, { seats: clone(assignments) })) setStatus(`Working in “${name}” now.`, 'ok');
+    }
+
+    // + New: name it, then copy the open one (desks + seats) or start from a
+    // blank room, where the ready-made layouts are waiting
+    async function newArrangement() {
+      if (!currentPeriodId || arrTableMissing) return;
+      const from = currentArr();
+      let name = freeName('Draft'), error = '';
+      for (;;) {
+        const r = await askDialog({
+          title: 'New arrangement',
+          body: `${error ? `<p class="arr-dialog-warn">${escapeHtml(error)}</p>` : ''}
+            <ul>
+              <li><b>${from ? `Copy “${escapeHtml(from.name)}”` : 'Copy what’s on screen'}</b> — the same desks and seats, to change from there.</li>
+              <li><b>Blank room</b> — then pick a ready-made layout or add desks yourself.</li>
+            </ul>
+            <p>It starts as a draft, so nothing else changes until you make it active.</p>`,
+          input: { value: name, label: 'Name for the new arrangement' },
+          buttons: [CANCEL, { act: 'blank', label: 'Blank room' }, { act: 'copy', label: from ? `Copy “${from.name}”` : 'Copy what’s on screen', kind: 'primary', submit: true }],
+        });
+        if (!r) return;
+        name = (r.value || freeName('Draft')).slice(0, 60);
+        if (nameTaken(name)) { error = `There’s already an arrangement called “${name}” in this period.`; continue; }
+        if (r.act === 'blank') await createAndOpen(name, { seats: {}, desks: blankRoom() });
+        else if (await createAndOpen(name, { seats: clone(assignments) })) setStatus(`Working in “${name}” — a copy you can change freely.`, 'ok');
+        return;
+      }
     }
 
     async function duplicateArrangement(id) {
       const a = arrangements.find((x) => x.id === id);
       if (!a) return;
-      // the open one: copy what's on screen (unsaved tweaks go to the copy, the original keeps its saved version)
-      if (id === currentArrId) { await saveAsNew({ title: `Duplicate “${a.name}”`, okLabel: 'Duplicate' }); return; }
-      const name = await askName(`Duplicate “${a.name}”`, freeName(`${a.name} copy`), 'Duplicate');
-      if (!name || !(await confirmLeave())) return;
-      try {
-        const row = await createSeatingArrangement(currentPeriodId, { name, assignments: clone(a.assignments || {}), layout: a.layout ? clone(a.layout) : null, isActive: false });
-        arrangements.push(row);
-        await loadArrangement(row.id, { skipLeave: true });
-      } catch (err) { showError(err); }
+      if (id === currentArrId) { await saveAsNew({ title: `Copy “${a.name}”`, okLabel: 'Make copy' }); return; }
+      const name = await askName(`Copy “${a.name}”`, freeName(`${a.name} copy`), 'Make copy');
+      if (!name) return;
+      await createAndOpen(name, { seats: clone(a.assignments || {}), desks: deskLayout(desksOf(a)) });
     }
 
     async function renameArrangement(id) {
@@ -1470,68 +1642,167 @@
       if (!a || a.is_active) return;
       const r = await askDialog({
         title: `Delete “${a.name}”?`,
-        body: `<p>This draft is removed for good${a.id === currentArrId && isUnsaved() ? ', along with the unsaved changes on screen' : ''}. The active arrangement and Attendance aren’t affected.</p>`,
+        body: '<p>It’s gone for good. The active one and Attendance aren’t affected.</p>',
         buttons: [CANCEL, { act: 'delete', label: 'Delete', kind: 'danger', submit: true }],
       });
       if (!r) return;
+      clearTimeout(arrTimer); arrTimer = null;      // nothing more to save into it
       try {
         await deleteSeatingArrangement(a.id);
         arrangements = arrangements.filter((x) => x.id !== a.id);
-        if (a.id === currentArrId) openArrangement(activeArr() || arrangements[0] || null);   // back to the live chart
+        if (a.id === currentArrId) { openBest(); fitIfHidden(); }   // back to the live chart
         renderArrangements();
         setStatus(`Deleted “${a.name}”.`, 'ok');
       } catch (err) { showError(err); }
     }
 
-    async function newEmptyDraft() {
-      if (!currentPeriodId || arrTableMissing) return;
-      const name = await askName('New empty draft', freeName('Draft'), 'Create');
-      if (!name || !(await confirmLeave())) return;
-      try {
-        const row = await createSeatingArrangement(currentPeriodId, { name, assignments: {}, layout: deskLayout(roomLayout), isActive: !activeArr() });
-        arrangements.push(row);
-        openArrangement(row);
-        setStatus(`“${name}” is empty and open — Randomize or Populate to fill it.`, 'info');
-      } catch (err) { showError(err); }
-    }
-
-    // Promote the open draft. Saves first; if its desks differ from the room,
-    // the room (shared by every period) changes too — so that's spelled out.
+    // The open draft becomes what Attendance shows for this period — desks
+    // and seats together. Other periods are untouched, so it's one click.
     async function makeActive() {
       const a = currentArr();
       if (!a || a.is_active) return;
+      if (!(await flushArrSave())) return;
       const prev = activeArr();
-      const diff = layoutDiff(layout, roomLayout);
-      const deskChange = !!diff && !diff.same;
-      const r = await askDialog({
-        title: `Make “${a.name}” active?`,
-        body: `
-          <p>Attendance and everything else will use “${escapeHtml(a.name)}” for this period${prev ? ` instead of “${escapeHtml(prev.name)}”, which stays saved as a draft` : ''}.</p>
-          ${isUnsaved() ? '<p>Your unsaved changes are saved first.</p>' : ''}
-          ${deskChange ? `<p class="arr-dialog-warn">It uses a different desk layout (${escapeHtml(describeDiff(diff))}). The room is shared, so this changes the desks for <b>every period</b>: other periods keep students on desks that still exist, and anyone on a removed desk becomes unseated there.</p>` : ''}`,
-        buttons: [CANCEL, { act: 'go', label: 'Make active', kind: 'primary', submit: true }],
-      });
-      if (!r) return;
-      if (isUnsaved() && !(await saveArrangement())) return;
       try {
         await setActiveSeatingArrangement(a.id);
         arrangements.forEach((x) => { x.is_active = x.id === a.id; });
-        if (deskChange) { const desks = deskLayout(layout); await saveRoomLayout(desks); roomLayout = desks; }
         renderArrangements();
-        setStatus(`“${a.name}” is now the active arrangement — Attendance uses it.`, 'ok');
+        setStatus(`“${a.name}” is active — Attendance uses it now.${prev ? ` “${prev.name}” is kept as a draft.` : ''}`, 'ok');
       } catch (err) { showError(err); }
     }
 
-    $('arr-save').addEventListener('click', saveArrangement);
-    $('arr-save-as').addEventListener('click', () => saveAsNew());
-    $('arr-activate').addEventListener('click', makeActive);
-    $('arr-discard').addEventListener('click', () => {
-      if (!isUnsaved() || !savedSnap) return;
+    // =====================================================================
+    // Starter layouts: one click builds a whole room. Shown when the room
+    // has no desks, and by "Change layout" (which clears the seats).
+    // Positions are whole grid units; every layout sits under a centred
+    // Front of room bar with the teacher's desk to its right.
+    // =====================================================================
+    const STARTERS = [
+      { id: 'rows',     label: 'Rows',        note: 'Single desks in rows' },
+      { id: 'pairs',    label: 'Pairs',       note: 'Desks side by side in twos' },
+      { id: 'groups',   label: 'Groups of 4', note: 'Four desks pushed together' },
+      { id: 'ushape',   label: 'U-shape',     note: 'Desks around three sides' },
+      { id: 'stations', label: 'Stations',    note: 'Big tables of six' },
+    ];
+    const seatTarget = () => Math.max(students.length, 12);   // each period has its own room now
+
+    function buildStarter(id, n) {
+      const pieces = [];
+      // place by the desk's footprint on screen (rot 90 = standing on its side)
+      const add = (type, vx, vy, rot = 0) => {
+        const t = TYPES[type], side = rot % 180 !== 0;
+        const vw = side ? t.h : t.w, vh = side ? t.w : t.h;
+        pieces.push({ id: uid(), type, x: vx + vw / 2 - t.w / 2, y: vy + vh / 2 - t.h / 2, rotation: rot });
+      };
+      const top = 4;                                   // clear of the front bar and teacher's desk
+      let width;
+      if (id === 'rows') {
+        const cols = 6, rows = Math.ceil(n / cols);
+        for (let r = 0; r < rows; r++) for (let c = 0; c < cols; c++) add('single', c * 4, top + r * 4);
+        width = cols * 4 - 1;
+      } else if (id === 'pairs') {
+        const cols = 3, rows = Math.ceil(n / (cols * 2));
+        for (let r = 0; r < rows; r++) for (let c = 0; c < cols; c++) add('pair', c * 8, top + r * 4);
+        width = cols * 8 - 2;
+      } else if (id === 'groups') {
+        const count = Math.ceil(n / 4), cols = Math.min(3, count);
+        for (let i = 0; i < count; i++) add('group4', (i % cols) * 9, top + Math.floor(i / cols) * 7);
+        width = cols * 9 - 3;
+      } else if (id === 'stations') {
+        const count = Math.ceil(n / 6), cols = Math.min(3, count);
+        for (let i = 0; i < count; i++) add('group6', (i % cols) * 12, top + Math.floor(i / cols) * 8);
+        width = cols * 12 - 3;
+      } else {                                         // U-shape: back row + two sides, facing in
+        const back = Math.min(10, Math.max(4, Math.ceil(n / 3)));
+        const side = Math.max(2, Math.ceil((n - back) / 2));
+        width = back * 3 + 6;
+        for (let i = 0; i < side; i++) { add('single', 0, top + i * 3, 90); add('single', width - 2, top + i * 3, 270); }
+        for (let i = 0; i < back; i++) add('single', 3 + i * 3, top + side * 3 + 1, 180);
+      }
+      const fx = Math.round(width / 2 - FRONT.w / 2);
+      pieces.push({ id: uid(), type: 'teacher', x: Math.max(fx + FRONT.w + 1, width - 4), y: 0, rotation: 0 });
+      return { front: { x: fx, y: 0, w: FRONT.w, h: FRONT.h, rotation: 0 }, pieces };
+    }
+
+    function renderStarter() {
+      const show = !!currentPeriodId && !isPresent() && (starterForced || layout.pieces.length === 0);
+      $('starter').hidden = !show;
+      if (!show) return;
+      const n = seatTarget();
+      $('starter-grid').innerHTML = STARTERS.map((s) => {
+        const spec = buildStarter(s.id, n);
+        const seats = spec.pieces.reduce((k, p) => k + TYPES[p.type].seats.length, 0);
+        return `<button type="button" class="starter-opt" data-starter="${s.id}" title="${s.note}">
+          ${layoutPic(spec, 7, 4.6, 'starter-pic')}
+          <span class="starter-name">${s.label}</span>
+          <span class="starter-note">${seats} seats</span>
+        </button>`;
+      }).join('');
+      const hasDesks = layout.pieces.length > 0;
+      $('starter-cancel').hidden = !hasDesks;
+      $('starter-or').hidden = hasDesks || mode !== 'arrange';
+      $('starter-sub').textContent = hasDesks
+        ? 'Pick a new setup. The desks are replaced and everyone’s seat is cleared — Undo brings them back.'
+        : 'Pick one to start. You can move, add or remove desks afterwards.';
+    }
+
+    function applyStarter(id) {
+      const s = STARTERS.find((x) => x.id === id);
+      if (!s) return;
+      cancelRotate();
       base = snapshot();
-      restore(savedSnap);
-      commit();                                // one undo step, so Ctrl+Z brings the changes back
-      setStatus('Back to the last saved version (Ctrl+Z undoes that).', 'info');
+      const spec = buildStarter(id, seatTarget());
+      layout.front = { ...layout.front, ...spec.front };
+      layout.pieces = spec.pieces;
+      assignments = {};
+      selected = new Set();
+      picked = null;
+      starterForced = false;
+      commit();
+      const seats = seatIds().length;
+      setStatus(`${s.label}: ${seats} seats. Drag desks to move them, or click one to turn, copy or remove it.`, 'ok');
+      requestAnimationFrame(fitToScreen);              // after the status line has taken its height
+    }
+    $('starter').addEventListener('pointerdown', (e) => e.stopPropagation());   // not a canvas drag
+    $('starter').addEventListener('wheel', (e) => e.stopPropagation());
+    $('starter-grid').addEventListener('click', (e) => {
+      const b = e.target.closest('[data-starter]');
+      if (b) applyStarter(b.dataset.starter);
     });
+    $('starter-cancel').addEventListener('click', () => { starterForced = false; render(); });
+
+    // Change layout: warn that seats go, then open the picker over the room
+    $('btn-change-layout').addEventListener('click', async () => {
+      if (!currentPeriodId) return;
+      if (layout.pieces.length) {
+        const seated = Object.keys(assignments).length, a = currentArr();
+        const r = await askDialog({
+          title: 'Change the desk layout?',
+          body: `<p>You’ll pick a ready-made setup. It replaces the desks in ${a ? `“${escapeHtml(a.name)}”` : 'this arrangement'}${seated ? `, and the ${plural(seated, 'student')} seated now will need seating again` : ''}. Undo (Ctrl+Z) puts everything back.</p>
+            ${a && a.is_active ? '<p class="arr-dialog-warn">This is the active one, so Attendance shows the new desks. To try a layout without changing that, make a New arrangement first.</p>' : ''}`,
+          buttons: [CANCEL, { act: 'go', label: 'Pick a layout', kind: 'primary', submit: true }],
+        });
+        if (!r) return;
+      }
+      starterForced = true;
+      render();
+    });
+
+    // =====================================================================
+    // The ⋯ menu and the ? dialog
+    // =====================================================================
+    function toggleMoreMenu(open = $('more-menu').hidden) {
+      $('more-menu').hidden = !open;
+      $('btn-more').setAttribute('aria-expanded', String(open));
+      $('mm-desk-label').textContent = mode === 'arrange' ? 'Selected desk' : 'Selected desk (in Arrange room)';
+    }
+    $('btn-more').addEventListener('click', () => toggleMoreMenu());
+    document.addEventListener('pointerdown', (e) => {
+      if (!$('more-menu').hidden && !e.target.closest('.more-wrap')) toggleMoreMenu(false);
+    });
+    $('btn-help').addEventListener('click', () => { $('help-dialog').showModal(); $('help-dialog').querySelector('.help-body').scrollTop = 0; });
+    $('help-close').addEventListener('click', () => $('help-dialog').close());
+    $('help-dialog').addEventListener('click', (e) => { if (e.target === $('help-dialog')) $('help-dialog').close(); });
 
     // =====================================================================
     // Mode, period, present
@@ -1541,8 +1812,11 @@
         cancelRotate();
         mode = r.value;
         selected = new Set();
+        picked = null;
         viewport.classList.toggle('assign', mode === 'assign');
+        setStatus('');
         render();
+        requestAnimationFrame(fitToScreen);          // the rail / strip changed the canvas size
       });
     });
 
@@ -1568,33 +1842,38 @@
         const ids0 = new Set(students.map((s) => s.id));
         rules = rules.filter((r) => ids0.has(r.a) && (!ruleIsPair(r.type) || ids0.has(r.b)));
         absentToday = absentTodayFor(currentPeriodId);
-        $('btn-use-formula').setAttribute('aria-checked', String(useFormula));
       } catch (err) { showError(err); }
-      // the live chart opens first, on the room as it is now; say so if the
-      // room has changed under it since it was saved
-      const a = activeArr() || arrangements[0] || null;
-      openArrangement(a);
-      const diff = a && layoutDiff(a.layout, roomLayout);
-      const lost = diff && !diff.same ? lostSeats(a, diff) : 0;
-      if (lost) setStatus(`The room has changed since “${a.name}” was saved (${describeDiff(diff)}) — ${plural(lost, 'student was', 'students were')} on desks that are gone and ${lost === 1 ? 'is' : 'are'} unseated here. To see it as saved, pick it from the Arrangement list and choose “Use its saved desks”.`, 'info');
+      openBest();                                  // the live chart opens first
     }
     $('period-select').addEventListener('change', async () => {
       const sel = $('period-select');
-      if (!(await confirmLeave())) { sel.value = currentPeriodId || ''; return; }
+      if (!(await flushArrSave())) { sel.value = currentPeriodId || ''; return; }
       if (dirty.rules) { clearTimeout(saveTimer); await saveNow(); }   // the old period's rules, before they're swapped out
       currentPeriodId = sel.value || null;
       setLastPeriodId(currentPeriodId);
       await loadPeriod();
+      fitIfHidden();
     });
 
     // Full screen (shared system in shared.js): the room fills the screen in
     // Assign mode with big names; the front marker stays at its real position.
     function onPresent(on) {
-      if (on && mode !== 'assign') { document.querySelector('input[name="mode"][value="assign"]').checked = true; mode = 'assign'; selected = new Set(); viewport.classList.add('assign'); render(); }
+      if (on && mode !== 'assign') { document.querySelector('input[name="mode"][value="assign"]').checked = true; mode = 'assign'; selected = new Set(); viewport.classList.add('assign'); }
+      if (on) { cancelRotate(); picked = null; toggleMoreMenu(false); }
+      render();                              // the starter picker and desk tools stay off the projector
       requestAnimationFrame(fitToScreen);
       setTimeout(fitToScreen, 350);          // again once the browser has finished the fullscreen resize
     }
     document.addEventListener('teacherpal:present', (e) => onPresent(e.detail.on));
+
+    // Status lines here are short-lived (errors stay): the canvas gets its
+    // height back a few seconds after a message.
+    let statusTimer = 0;
+    new MutationObserver(() => {
+      clearTimeout(statusTimer);
+      const el = $('status');
+      if (el.textContent && !el.classList.contains('status-error')) statusTimer = setTimeout(() => setStatus(''), 6000);
+    }).observe($('status'), { childList: true, characterData: true, subtree: true });
 
     // =====================================================================
     // Boot
@@ -1605,18 +1884,12 @@
     if (isConfigured()) {
       (async () => {
         const periods = await getPeriods();
-        let saved = null;
+        // the old shared room, only for arrangements saved before each one
+        // owned its desks (see migration-arrangement-layouts.sql)
         try {
-          saved = await getRoomLayout();
-        } catch (err) {
-          // Most likely the new tables don't exist yet.
-          setStatus('Room tables not found — run migration-room-builder.sql in the Supabase SQL editor, then reload.', 'error');
-          console.error(err);
-        }
-        if (saved && Array.isArray(saved.pieces)) {
-          layout = { ...layout, ...saved, front: { ...layout.front, ...(saved.front || {}) } };
-        }
-        roomLayout = deskLayout(layout);
+          const saved = await getRoomLayout();
+          if (saved && Array.isArray(saved.pieces)) legacyRoom = deskLayout({ ...saved, front: { ...BLANK_FRONT, ...(saved.front || {}) } });
+        } catch (err) { console.error(err); }   // no room table is fine — every arrangement carries its own desks
         periodsCache = periods;
         currentPeriodId = fillPeriodSelect($('period-select'), periods);
         await loadPeriod();

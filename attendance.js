@@ -80,7 +80,7 @@ function initAttendance({ mount = '#attendance', mode = 'full' } = {}) {
   let periods = [];
   let byNumber = new Map();        // bell period number → period row
   let students = [];
-  let layout = null;               // shared room layout (or null if none)
+  let layout = null;               // the period's active arrangement's desks (or null if none)
   let assignments = {};            // seatId → studentId for the current period
   let marks = {};                  // studentId → { status: 'absent'|'tardy', at }
   let currentPeriodId = null;
@@ -120,7 +120,7 @@ function initAttendance({ mount = '#attendance', mode = 'full' } = {}) {
   });
 
   // full screen: the chart box changes size — re-fit (twice: once after the class change, once after the browser resize)
-  document.addEventListener('teacherpal:present', () => { renderSummary(); requestAnimationFrame(fitRoom); setTimeout(fitRoom, 350); });
+  document.addEventListener('teacherpal:present', () => { renderSummary(); fitLabels(); requestAnimationFrame(fitRoom); setTimeout(fitRoom, 350); });
 
   // ---------- period selection ----------
   function selectPeriod(id, { manual = false } = {}) {
@@ -166,15 +166,15 @@ function initAttendance({ mount = '#attendance', mode = 'full' } = {}) {
   // ---------- load one period + day ----------
   async function loadPeriod() {
     const seq = ++loadSeq;
-    students = []; assignments = {}; marks = {};
+    students = []; layout = null; assignments = {}; marks = {};
     setSaveState('');
     // the hub's period strip and lesson panel follow the attendance view
     document.dispatchEvent(new CustomEvent('teacherpal:period', { detail: { periodId: currentPeriodId, date: viewDate } }));
     if (!currentPeriodId) { renderAll(); return; }
     try {
-      const [st, seats, att] = await Promise.all([
+      const [st, live, att] = await Promise.all([
         getStudents(currentPeriodId),
-        getSeatAssignments(currentPeriodId).catch(() => ({})),
+        getActiveSeating(currentPeriodId).catch(() => ({ layout: null, assignments: {} })),
         getAttendance(currentPeriodId, viewDate).catch((err) => {
           setStatus(`Attendance table unavailable — run migration-attendance.sql in the Supabase SQL editor. (${err.message})`, 'error');
           return null;
@@ -182,7 +182,9 @@ function initAttendance({ mount = '#attendance', mode = 'full' } = {}) {
       ]);
       if (seq !== loadSeq) return;                 // a newer load won
       students = st;
-      assignments = seats || {};
+      // each period's active arrangement brings its own desks
+      layout = live.layout && Array.isArray(live.layout.pieces) ? { ...live.layout, front: { x: 20, y: 3, w: FRONT.w, h: FRONT.h, ...(live.layout.front || {}) } } : null;
+      assignments = live.assignments || {};
       const ids = new Set(students.map((s) => s.id));
       marks = {};
       for (const [id, m] of Object.entries((att && att.marks) || {})) if (ids.has(id) && m && m.status) marks[id] = m;
@@ -243,24 +245,15 @@ function initAttendance({ mount = '#attendance', mode = 'full' } = {}) {
     return `<button type="button" class="att-tile" data-student="${s.id}" data-status="${m ? m.status : ''}" title="${escapeHtml(s.name)}">${escapeHtml(shortName(s))}</button>`;
   }
 
-  // Compact chart labels: one line, sized to fill the seat — LABEL_PX in room
-  // units (so it scales with the zoom), shrunk only for names that don't fit,
-  // never below LABEL_MIN. The full-size screen keeps the CSS sizes.
+  // Every name fits its seat (fitSeatLabel in room.js): wrapped between
+  // words, shrunk if needed, ellipsis as a last resort, full name in the
+  // title. The full screen starts from the CSS size; the compact chart from
+  // LABEL_PX in room units (it scales with the zoom), never below LABEL_MIN.
   const LABEL_PX = 18, LABEL_MIN = 13;
-  const measureCtx = document.createElement('canvas').getContext('2d');
   function fitLabels() {
-    if (full) return;
-    const face = getComputedStyle(document.body).fontFamily || 'sans-serif';
-    measureCtx.font = `700 ${LABEL_PX}px ${face}`;
-    room.querySelectorAll('.seat .seat-label').forEach((lb) => {
-      const text = lb.textContent.trim();
-      if (!text) return;
-      const avail = parseFloat(lb.style.width) - 2;
-      const w = measureCtx.measureText(text).width;
-      lb.style.fontSize = `${w > avail ? Math.max(LABEL_MIN, Math.floor(LABEL_PX * avail / w)) : LABEL_PX}px`;
-    });
+    room.querySelectorAll('.seat .seat-label').forEach((lb) => fitSeatLabel(lb, full ? {} : { base: LABEL_PX, min: LABEL_MIN / LABEL_PX }));
   }
-  if (!full && document.fonts && document.fonts.ready) document.fonts.ready.then(fitLabels);
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(fitLabels);
 
   // Compact chart crop: only pieces with an occupied seat count (no teacher
   // desk, no empty desks off in a corner, no front marker), so the seats get
@@ -425,15 +418,14 @@ function initAttendance({ mount = '#attendance', mode = 'full' } = {}) {
   });
 
   // =====================================================================
-  // Boot — periods / overrides come from nav.js (navReady), the room from shared.js
+  // Boot — periods / overrides come from nav.js (navReady); each period brings its own room (loadPeriod)
   // =====================================================================
   (async () => {
     if (!isConfigured()) { renderAll(); return; }
     try {
-      const [nav, savedRoom] = await Promise.all([navReady, getRoomLayout().catch(() => null)]);
+      const nav = await navReady;
       periods = nav.periods;
       byNumber = nav.byNumber;
-      layout = savedRoom && Array.isArray(savedRoom.pieces) ? { front: { x: 20, y: 3, w: FRONT.w, h: FRONT.h }, ...savedRoom } : null;
       const d = new Date();
       const sched = resolveSchedule(d, nav.overrides);
       // open on the bell's period if there is one, else the last-used period

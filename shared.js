@@ -441,7 +441,9 @@ async function deleteStudent(id) {
 }
 
 // ---------------------------------------------------------------------------
-// Room layout (one shared room) + seat assignments (one row per period)
+// LEGACY: the old shared room + per-period seats. Nothing writes these any
+// more (every arrangement owns its desks); they're read only as a fallback
+// for rows from before migration-arrangement-layouts.sql.
 // ---------------------------------------------------------------------------
 
 const ROOM_KEY = 'default';
@@ -485,6 +487,26 @@ async function getSeatAssignments(periodId) {
   return rows[0] ? rows[0].assignments || {} : {};
 }
 
+// The period's LIVE chart: its active arrangement's own desks + seats →
+// { layout, assignments } (layout null = no desks). Each arrangement owns its
+// layout (migration-arrangement-layouts.sql); a row that predates that, or a
+// project without seating_arrangements yet, falls back to the old shared room.
+async function getActiveSeating(periodId) {
+  let row = null;
+  try {
+    const rows = await sb('seating_arrangements', {
+      params: { select: 'layout,assignments', period_id: `eq.${periodId}`, is_active: 'is.true', limit: 1 },
+    });
+    row = rows[0] || null;
+    if (!row) return { layout: null, assignments: {} };
+  } catch (err) {
+    if (!isMissingTableError(err)) throw err;
+  }
+  const assignments = row ? row.assignments || {} : await getSeatAssignments(periodId);
+  const layout = row && row.layout && Array.isArray(row.layout.pieces) ? row.layout : await getRoomLayout().catch(() => null);
+  return { layout, assignments };
+}
+
 // PostgREST's answer for a table it doesn't know about (404 / PGRST205)
 function isMissingTableError(err) {
   return /\(404\)|PGRST20[0-9]|does not exist/.test(String(err && err.message));
@@ -492,9 +514,8 @@ function isMissingTableError(err) {
 
 // ---------------------------------------------------------------------------
 // Seating arrangements — several named charts per period; at most one is
-// active (is_active = what Attendance shows). Each stores its own
-// assignments plus the desk layout it was saved on, so the page can warn
-// when the shared room has changed since.
+// active (is_active = what Attendance shows). Each owns BOTH its desk
+// layout and its seats, so a draft can be a completely different room.
 // ---------------------------------------------------------------------------
 
 async function getSeatingArrangements(periodId) {
@@ -988,6 +1009,7 @@ const DEFAULT_THEME = 'jarvis';
 const THEMES = [
   { id: 'jarvis', label: 'Jarvis' },
   { id: 'marwa',  label: 'Marwa'  },
+  { id: 'earthy', label: 'Earthy' },
 ];
 
 function validTheme(id) { return !!(id && THEMES.some((t) => t.id === id)); }

@@ -332,6 +332,7 @@
     const ruleText = (r) => ruleSentence(r, nameOf, RULE_SCOPE);
     const formula = createFormulaModal({
       scope: RULE_SCOPE,
+      periodId: () => currentPeriodId,
       periodName: () => periodSelect.selectedOptions[0] ? periodSelect.selectedOptions[0].textContent : '',
       students: () => students,
       // the modal marks "out today · rules ignored" — true for both states,

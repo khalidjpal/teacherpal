@@ -75,16 +75,17 @@ full-screen toggle. There is no sidebar; every page uses the full width.
 | `migration-lessons-bathroom.sql` | One-off migration creating `lesson_plans` + `bathroom_log` (incl. the manual-tally columns; run in the Supabase SQL editor) |
 | `seed-bathroom-q1.sql` | Seed: Q1 used-pass tallies from the paper tracker — name-matches students per period, creates three missing students, upserts manual tallies, reports unmatched names in its last result set |
 | `attendance.js` | `initAttendance({ mode: 'full' \| 'compact' })` builds and runs the attendance view (chart or tiles, click-to-cycle, AUTO period, date, counts, lists, Copy, Reset, autosave). Data only via `shared.js`; bell data via `navReady`. |
-| `room.js`      | Seating-room geometry shared by the builder and the hub chart: `G`, `TYPES`, `FRONT`, `pieceTransform`, `bbox`, `labelStyle`, `roomBounds`. No DOM state, no Supabase. |
+| `room.js`      | Seating-room geometry shared by the builder and the hub chart: `G`, `TYPES`, `FRONT`, `pieceTransform`, `bbox`, `labelStyle`, `roomBounds`, plus `fitSeatLabel(label, { base, min })` — the one seat-name fitter every page that draws seats calls. No DOM state, no Supabase. |
 | `shared.js`    | Supabase config + REST client + data helpers + small UI helpers. **The only file that talks to Supabase.** |
 | `schedule.js`  | West High bell schedules as data (`SCHEDULES`, `FINALS_PAIRS`, `SCHEDULE_OPTIONS`) + pure helpers: `resolveSchedule(date, overrides)`, `scheduleStatus(now, sched, teaches)`, `teachingMap(periods, teachesPeriods?)`, `parsePeriodName`, `dateKey`, `formatCountdown`, `fmt12`, `fmtWallClock(date, {hour12, seconds})`. No DOM, no Supabase. |
-| `formula.js`   | Shared Formula **algorithms and modal only** — never rule data: type metadata per scope (`RULE_TYPES`, `SCOPE_TYPES`, `KEY_TYPES`), priorities (`sortByPriority`, `priorityWeight`, `planRules`), feasibility (`findImpossibleHard`, `confirmImpossible`), the `annealAssign()` solver, `groupWithFormula()`, `summarizeRun()`, `absentTodayFor()`, `createFormulaModal({ scope, … })`. No Supabase calls. |
+| `formula.js`   | Shared Formula **algorithms and modal only** — never rule data (the modal's Rules tab is an SVG relationship map): type metadata per scope (`RULE_TYPES`, `SCOPE_TYPES`, `KEY_TYPES`), priorities (`sortByPriority`, `priorityWeight`, `planRules`), feasibility (`findImpossibleHard`, `confirmImpossible`), the `annealAssign()` solver, `groupWithFormula()`, `summarizeRun()`, `absentTodayFor()`, `createFormulaModal({ scope, … })`. No Supabase calls. |
 | `style.css`    | Shared styling for every page (dark pink dashboard theme; all tokens at the top) |
 | `roster.html`  | Two-panel roster: period panel (search, sort, add, import modal, edit mode, full screen) + name-card grid with undo-toast remove |
 | `groups.html`  | **Create Groups**: three identical panels across the top — **Group size** (mode toggle + number), **Roster** (period, one-line summary, Edit Roster → the roster modal) and **Options** (Formula, Follow-rules switch, gear, full screen) — then the centred Create Groups / Reshuffle button, then the group cards filling everything below. First names is the only field left in the `.groups-settings-dialog`. FLIP-animated: names fly out of the Roster panel on Create and between cards on Reshuffle |
-| `seating.html` | Freeform room builder: palette of desk pieces on a zoomable dot-grid canvas (Arrange Room), then drag names onto seats (Assign Seats); room shared, several saved arrangements per period (one active), explicit Save, full screen |
+| `seating.html` | Freeform room builder: starter layouts or a desk rail on a zoomable dot-grid canvas (Arrange room), then drag or click names onto seats (Assign seats); several arrangements per period as thumbnail cards, each with its own desks + seats (one active), autosaved, full screen |
 | `migration-room-builder.sql` | One-off migration for the room builder tables (run in the Supabase SQL editor) |
 | `migration-seating-arrangements.sql` | One-off migration: `seating_arrangements` table + RLS, the `set_active_seating_arrangement` RPC, and a backfill turning each `seat_assignments` row into an active "Current seating" arrangement |
+| `migration-arrangement-layouts.sql` | One-off migration: every arrangement owns its desk layout — active ones take the shared room they were shown on, layout-less rows the room, periods with none get an active "Seating chart"; safe to re-run (never overwrites a layout edited since); ends with a check query |
 | `migration-seating-rules.sql` | One-off migration creating the formula rules table (run in the Supabase SQL editor) |
 | `migration-rule-scopes.sql` | One-off migration splitting rules into `scope` = seating / grouping (copies existing rules into both, then `notify pgrst`) |
 | `migration-attendance.sql` | One-off migration creating the `attendance` table (run in the Supabase SQL editor) |
@@ -241,49 +242,47 @@ to `owner_id = auth.uid()`; INSERTs get the owner from the column default
 | `sort_order` | integer     | display order within period, default 0 |
 | `created_at` | timestamptz | default now() |
 
-### `room_layouts` — one shared room **per owner** (the same physical classroom for every period, but each teacher has their own row)
-| column       | type        | notes |
-|--------------|-------------|-------|
-| `id`         | uuid        | PK |
-| `key`        | text        | default `'default'`; **UNIQUE (key, owner_id)** — the app only ever uses this one row per owner |
-| `layout`     | jsonb       | `{ version: 2, grid: 24, front: { x, y, w, h, rotation? }, pieces: [{ id, type, x, y, rotation }] }` |
-| `updated_at` | timestamptz | set by the client on save |
-
-`x`/`y` are in grid units (24px at zoom 1); `type` is one of `single`, `pair`,
-`row3`, `group4`, `group6`, `round`, `teacher`; `rotation` is any angle in
-degrees (integer, 0–359) about the piece centre. `version: 2` marks free
-angles — v1 layouts only ever held 0/90/180/270 and load unchanged, so no
-migration was needed for the change.
-Piece geometry (desk rectangles, seat offsets) is **not** stored — it comes
-from the `TYPES` table in `room.js`, so the JSON stays small and the
-shapes can be tuned without a migration.
-
-### `seating_arrangements` — named seating charts, several per period
+### `seating_arrangements` — named seating charts, several per period, each with its own room
 | column        | type        | notes |
 |---------------|-------------|-------|
 | `id`          | uuid        | PK |
 | `period_id`   | uuid        | FK → periods.id, `on delete cascade` |
 | `name`        | text        | "Q1", "Q2 draft"; **UNIQUE (period_id, lower(name))** |
 | `assignments` | jsonb       | `{ "<pieceId>:<seatIndex>": "<student uuid>", ... }` |
-| `layout`      | jsonb       | the desk layout it was saved on (`room_layouts.layout` shape); `null` = unknown → no warning |
+| `layout`      | jsonb       | **this arrangement's own desks**: `{ version: 2, grid: 24, front: { x, y, w, h, rotation? }, pieces: [{ id, type, x, y, rotation }] }`; `null` only on rows from before `migration-arrangement-layouts.sql` (read as the old shared room) |
 | `is_active`   | boolean     | **at most one per period** (partial unique index). The active one is the period's live chart |
 | `created_at` / `updated_at` | timestamptz | |
 
-**One source of truth for a period's live seats: its active arrangement.**
-`getSeatAssignments(periodId)` reads it (Attendance uses that and nothing
-else); drafts never affect any other page. Switching the active one goes
-through the `set_active_seating_arrangement(p_id)` RPC (SECURITY INVOKER —
-unset + set in one transaction so the one-active index never trips).
-Seat ids are derived from the piece (`<piece.id>:<index into TYPES[type].seats>`),
-so switching periods keeps the desks and swaps the names. The room save is
-an upsert (`on_conflict=key,owner_id`). `migration-seating-arrangements.sql`
-created the table and turned each old `seat_assignments` row into an active
-"Current seating" arrangement.
+`x`/`y` are in grid units (24px at zoom 1); `type` is one of `single`, `pair`,
+`row3`, `group4`, `group6`, `round`, `teacher`; `rotation` is any angle in
+degrees (integer, 0–359) about the piece centre. `version: 2` marks free
+angles — v1 layouts only ever held 0/90/180/270 and load unchanged.
+Piece geometry (desk rectangles, seat offsets) is **not** stored — it comes
+from the `TYPES` table in `room.js`, so the JSON stays small and the
+shapes can be tuned without a migration.
 
-`seat_assignments` (one row per period, `period_id` UNIQUE) is **legacy**:
-nothing writes it; `getSeatAssignments()` falls back to it only when
-`seating_arrangements` doesn't exist yet. The old grid table `seating_charts`
-is unused too; both have commented-out `drop table`s in their migrations.
+**Every arrangement owns BOTH its desks and its seats**, per period, so a
+draft can be a completely different room. **One source of truth for a
+period's live chart: its active arrangement** — `getActiveSeating(periodId)`
+→ `{ layout, assignments }` reads it (Attendance uses that and nothing
+else); drafts never affect any other page or period. Switching the active
+one goes through the `set_active_seating_arrangement(p_id)` RPC (SECURITY
+INVOKER — unset + set in one transaction so the one-active index never
+trips). Seat ids are derived from the piece (`<piece.id>:<index into
+TYPES[type].seats>`). History: `migration-seating-arrangements.sql` created
+the table from the old `seat_assignments` rows;
+`migration-arrangement-layouts.sql` gave every arrangement its own desks
+(active ones took the shared room they were shown on, layout-less rows the
+room, and every period without an arrangement got an active "Seating
+chart" on the room).
+
+**Legacy, read-only:** `room_layouts` (one shared room per owner, `key`
+`'default'`, UNIQUE (key, owner_id)) and `seat_assignments` (one row per
+period). Nothing writes either any more; `getRoomLayout()` is read only as
+the fallback for a layout-less arrangement row, `getSeatAssignments()` only
+when `seating_arrangements` doesn't exist. The old grid table
+`seating_charts` is unused too; all three have commented-out `drop table`s
+in their migrations.
 
 ### `seating_rules` — Formula rules, one row per (period, scope)
 
@@ -419,8 +418,8 @@ Data helpers (owner_id is filled by the DB default, so no helper here ever
 sends it):
 - `getPeriods()`, `createPeriod(name, sortOrder)`, `renamePeriod(id, name)`, `deletePeriod(id)`
 - `getStudents(periodId)`, `addStudents(periodId, names[], startSortOrder)`, `updateStudent(id, fields)`, `deleteStudent(id)`, `countStudents()` (all periods, ids only), `getAllStudents()` (every period, full rows)
-- `getRoomLayout()` → layout object or `null`; `saveRoomLayout(layout)` (upsert on `key,owner_id`)
-- `getSeatAssignments(periodId)` → the **active arrangement's** assignments, `{}` when none (read-only; seats are saved through arrangements)
+- `getActiveSeating(periodId)` → `{ layout, assignments }` of the period's **active arrangement** (layout `null` = no desks) — what Attendance draws
+- Legacy, read-only fallbacks: `getRoomLayout()` (the old shared room), `getSeatAssignments(periodId)`; `saveRoomLayout()` still exists but nothing calls it
 - `getSeatingArrangements(periodId)` → rows by `created_at`; `createSeatingArrangement(periodId, { name, assignments, layout, isActive })`; `updateSeatingArrangement(id, { name?, assignments?, layout? })`; `deleteSeatingArrangement(id)`; `setActiveSeatingArrangement(id)` (RPC)
 - `getAttendance(periodId, date)` → `{ marks, updatedAt }` or `null`; `saveAttendance(periodId, date, marks)` (upsert on `period_id,date`). Plus the same-browser cache helpers `readAbsentCache(periodId)` / `writeAbsentCache(periodId, ids)` (`teacherpal.absent.<periodId>` = `{ date, ids }`, today only), `absentIdsOf(marks)` and `todayKey()`.
 - `readSitOutCache(periodId)` / `writeSitOutCache(periodId, ids)` — "sitting out" for grouping (`teacherpal.sitout.<periodId>` = `{ date, ids }`, today only, this browser only). **Not attendance**: it never writes the `attendance` table or the absent cache. Used by Create Groups only.
@@ -512,16 +511,119 @@ last-used period in `localStorage`), `getLastPeriodId()` / `setLastPeriodId()`,
     `teacherpal:tick { now, sched, status }` every second (use it instead of
     your own `setInterval` for clock-driven UI).
 14. **Seating geometry lives in `room.js`** (`TYPES`, `G`, `FRONT`, `bbox`,
-    `labelStyle`, `roomBounds`). Any page that draws the room loads it;
-    don't copy the table.
+    `labelStyle`, `roomBounds`, `fitSeatLabel`). Any page that draws the room
+    loads it; don't copy the table. **No name may render outside its seat**:
+    every page that draws seats runs `fitSeatLabel()` on each label after
+    rendering (and after a rotation, a full-screen toggle and
+    `document.fonts.ready`). It wraps only between words (`.seat-label` is
+    `overflow-wrap: normal` — never split a name mid-word) and shrinks the
+    type, by default down to 70% of its CSS size, until the longest word and
+    all lines fit. As a last resort it sets `.clip`: one line with an
+    ellipsis. The full name is always in the seat's `title`.
 
 ## Themes — per-user visual styles
 
-TeacherPal ships two themes, one per teacher's taste:
+TeacherPal ships three themes. **All three share one layout**: jarvis is
+the structure, and every other theme is a colour swap of it. A theme is
+(almost) nothing but a block of colour tokens.
+
+**How a theme is built:**
+
+- **Structure is shared, never per theme.** Spacing, font sizes,
+  transition and touch tokens sit in the shared `:root { … }` block. Fonts,
+  radii, tracks and weights sit in the jarvis block and are *inherited*.
+  No other theme redefines them, so a layout change to jarvis lands
+  everywhere.
+- **Colour tokens are per theme, and complete.** jarvis defines its
+  colours in two places: the `:root, :root[data-theme="jarvis"]` block at
+  the top of `style.css`, plus the HUD / attendance / wheel / noise tokens
+  in the plain `:root { --hud: … }` block in the Hub section. **Every other
+  theme's `:root[data-theme="<id>"]` block redefines every colour variable
+  from both**, so nothing falls back to a jarvis value. That means `--bg-*`,
+  `--card*`, `--border*`, `--text*`, `--accent*`, `--lavender*`,
+  `--group-*`, `--danger`/`--ok`, gradients, shadows, `--panel-bg`/
+  `--field-bg`/`--topbar-bg`/`--on-accent`, the `--surface-tint-*`,
+  `--canvas-dot`, `--hud-*`, `--att-*`, `--wheel-*` and `--noise-*`.
+  The **room and accent tokens** default to the surfaces above (set once in
+  the jarvis block, which marwa inherits through `:root`), so a theme sets
+  them only to break away:
+    - `--seat-bg` / `--seat-line` (a taken seat; = `--card-3` /
+      `--surface-tint-strong`) and `--seat-empty-bg` / `--seat-empty-line`
+      (= `--card-2` / `--border-strong`).
+    - `--chart-floor` (Attendance canvas, `transparent`) and `--room-floor`
+      (Seating canvas, `--card`).
+    - `--label-ink` (`.hud-key`, `.gp-title`, `.hub-section-title`,
+      `.att-list h3`; = `--text-muted`) and `--figure-ink` (`.hud-val`
+      readouts; = `--text`).
+    - `--chip-line` / `--chip-ink` (`.hud-chip` at rest; = `--hud-line` /
+      `--text-muted`).
+  `--body-pattern` is `none` unless the theme has a texture. Optional:
+  `--group-c1…c5`, five named group-card colours (earthy uses them). When you add a
+  colour token to jarvis, add it to **every** theme block in the same change.
+- **WCAG AA for every text/background pair.** `--text`, `--text-2`,
+  `--text-muted`, `--accent`, `--lavender`, `--danger`, `--ok` and
+  `--att-tardy` are all used as text. Each must reach ≥ 4.5:1 on `--bg-0`,
+  `--card`, `--card-2` and `--card-3`. `--on-accent` must reach it on
+  `--accent`, and `--wheel-ink` on every `--wheel-r*` and `--wheel-won`.
+  Student names (seats, group cards, wheel, attendance, full screen) are
+  `--text` / `--wheel-ink`, so they stay high contrast automatically.
+- **Extras are opt-in by name.** Only marwa has any: selectors written
+  `:root[data-theme="marwa"] …` (mascots, the Timer/Wheel skins, the
+  12-hour clock in `nav.js`). A theme without extras behaves exactly like
+  jarvis: a 24-hour clock, no mascots (the `--marwa-mascot-*` vars are
+  undefined, so `.marwa-mascot` stays hidden), and the jarvis Timer dial
+  and wheel. The one spot that names jarvis is the Timer rule hiding
+  `.dial-arc` (`:root[data-theme="jarvis"], :root[data-theme="earthy"],
+  :root:not([data-theme])`). Any new jarvis-like theme must join that
+  selector, or its dial shows both rings. `wheel.js`'s `wide` label gap
+  is "not marwa", so it needs nothing.
+
+**The three themes:**
 
 - **`jarvis`** — the original dark HUD (deep plum-navy, near-black cards,
   subtle pink accent, Orbitron uppercase labels, corner ticks). Default for
   every account and every logged-out page. See the Design rules below.
+- **`earthy`** — a **pure colour swap of jarvis, with no extras at all**.
+  Bark, clay and sage, with **browns for the ground so green reads as an
+  accent**.
+  - Palette: `#2B2118` deep bark (page), `#3A2D21` warm dark brown
+    (cards), `#6B4E35` clay (borders), `#B5734A` terracotta, `#4E7730`
+    moss, `#91AD5B` sage, `#E8F0A3` pale citron (text), `#C4B8A0` warm
+    stone (muted).
+  - Inset wells (`--card-2`) sit a shade below the card and hover rows
+    (`--card-3`) a shade above.
+  - **Sage** is the primary accent (pressed states, primary buttons, icons,
+    HUD lines), with moss as its deep tone.
+  - **Terracotta** is the stand-apart colour: `--lavender` (DRAFT tags,
+    duplicates, sitting out), `--danger` (destructive, absent) and hover
+    borders. Text uses lighter tints (`#DDA175`, `#EE9277`) because
+    `#B5734A` is only ~3:1 on the brown cards.
+  - Hover warms borders toward terracotta and brightens HUD lines and glows
+    toward citron.
+  - **Group cards cycle sage → moss → terracotta → clay → stone** through
+    the optional `--group-c1…c5` tokens. `.group:nth-child(5n+k)` sets
+    `--g-pick: var(--group-ck)`, and `--g` uses it when defined.
+    jarvis/marwa leave them undefined, so `--g-pick` is invalid and they
+    keep the hue-shifted accent. Light tints are used so the GROUP N
+    labels pass AA on the tinted card.
+  - **Wheel slices** walk moss, terracotta, clay, sage and stone in deep
+    tones; `wheel.js` visits r0 r4 r1 r5 r2 r6 r3 r7, so the tokens are
+    assigned in that order.
+  - Measured (bg / card / well / hover): text 9.6–13.1:1, muted 5.9–8.0:1,
+    accent 4.6–6.3:1, lavender ≥ 5.2:1, danger ≥ 5.0:1, on-accent 6.3:1,
+    group labels ≥ 4.67:1, names ≥ 7.85:1 on group cards, wheel names
+    ≥ 4.9:1.
+  - **Three layers on the seat canvases**: a floor (`#1E1610`) darker than
+    the page, the panel, then lit-wood seats (`#5C4834`) with light-clay
+    edges (`#B08A63`, 5.7:1 on the floor). Names on seats are 7.2:1. Empty
+    seats are dark with clay edges.
+  - **Sage and terracotta around the page**, so the green front marker
+    isn't a lone outlier: sage section labels (`--label-ink`, ≥ 5.3:1),
+    terracotta readouts such as the clock and the seated count
+    (`--figure-ink` `#DDA175`, ≥ 6.3:1), terracotta HUD chips at rest
+    (sage when pressed), and warmer clay-terracotta button and input edges
+    (`--border-strong` `#8A6143`).
+  - 24-hour clock, no mascots, no pattern.
 - **`marwa`** — a **pure colour swap of jarvis** with four tiny extras. Same
   layout, spacing, radii, borders, fonts, weights, tracks, shadows,
   animations and components: only palette tokens differ (light cream-pink
@@ -573,11 +675,17 @@ Storage & flow:
 To add a new theme:
 
 1. Add `{ id: 'my-theme', label: 'My Theme' }` to `THEMES` in `shared.js`.
-2. Copy the `:root[data-theme="marwa"] { … }` colour block in `style.css`
-   and rename the selector to `:root[data-theme="my-theme"]`. Swap the
-   colour values only — leave structural tokens (fonts, radii, tracks,
-   spacing, font-weights) alone so the layout stays identical.
-3. Test at 1366×768, 1080p, 4K and 375px, and on the projector.
+2. Copy the closest colour block in `style.css` — `:root[data-theme="earthy"]`
+   for a dark theme (no extras), `:root[data-theme="marwa"]` for a light one
+   (its extras live in separate `:root[data-theme="marwa"] …` rules and do
+   not come along) — and rename the selector. Swap colour values only:
+   every colour variable listed above, none of the structural ones.
+3. Check every text/background pair for WCAG AA (see above). For a dark
+   theme, add it to the Timer `.dial-arc` selector.
+4. Nothing else: the gear menu lists `THEMES`, `set_my_theme` accepts any
+   id, and every account can pick it. The clock is 24-hour unless
+   `nav.js` is changed.
+5. Test at 1366×768, 1080p, 4K and 375px, and on the projector.
 
 The `set_my_theme(text)` RPC validates `^[a-z0-9_-]+$` and length ≤ 40 so
 any junk name is rejected at the server. Unknown ids on the client just
@@ -610,7 +718,7 @@ cards with 24px corners, faint 1px borders with a pink glow line along the top
 edge, white medium-weight card titles with a square outlined ↗ button at the
 top-right, bordered pill chips, outlined percentage badges, slim progress
 bars, muted gray secondary text. This is the **jarvis theme**, the default.
-See the Themes section below for the per-user switcher and the `marwa` theme.
+See the Themes section below for the per-user switcher and the `earthy` and `marwa` themes.
 All styling lives in `style.css`; pages carry almost no inline styling.
 
 - **Tokens first, per theme.** Every color, gradient, shadow, font, radius and
@@ -1274,7 +1382,7 @@ All styling lives in `style.css`; pages carry almost no inline styling.
     it back on and jumps immediately. `#att-date` (defaults to today) views
     or fixes any past day; a TODAY chip appears when it isn't today, and AUTO
     never moves a past date.
-  - **Chart** (`.hub-chart` > `.hub-room`): the shared room drawn with the
+  - **Chart** (`.hub-chart` > `.hub-room`): the period's active arrangement's own desks (`getActiveSeating()`, loaded per period) drawn with the
     same `.piece / .seat / .seat-label / .desk-block / .table-top /
     .piece.front` markup as the builder (geometry from `room.js`), scaled by
     `fitRoom()` (centred, dot grid scaled to match, re-fit by a
@@ -1283,9 +1391,10 @@ All styling lives in `style.css`; pages carry almost no inline styling.
     `fitBounds()` takes only pieces with an occupied seat — no teacher desk,
     empty desks or front marker — with a 4px margin and zoom up to 4, so the
     seats get the whole panel (~0.75 zoom at 1366px). Compact seat labels
-    are sized by `fitLabels()`: one line at `LABEL_PX` 18px in room units,
-    shrunk with a canvas `measureText` only for names wider than the seat,
-    never below `LABEL_MIN` 13px — so names land at 11–14 screen px on a
+    are sized by `fitLabels()` → `fitSeatLabel()` (room.js): starting at
+    `LABEL_PX` 18px in room units, wrapped between words and shrunk to fit
+    the seat, never below `LABEL_MIN` 13px (then an ellipsis); the full mode
+    starts from the CSS size and fits the same way — so names land at 11–14 screen px on a
     laptop; if that ever gets too small, widen the column, don't shrink
     the text. The state ring is 2px / the A·T badge 12px so both survive
     the scale-down. Read-only: no drag, no rotate, no palette. Occupied seats
@@ -1332,7 +1441,7 @@ All styling lives in `style.css`; pages carry almost no inline styling.
     then `saveAttendance(periodId, date, marks)` and, when the date is
     today, `writeAbsentCache(periodId, absentIdsOf(marks))` so Create Groups
     and Seating see the same absentees. `loadPeriod()` fetches students,
-    seat assignments and the day's attendance in parallel, drops marks for
+    the active arrangement (desks + seats) and the day's attendance in parallel, drops marks for
     students no longer on the roster, and guards against stale responses
     with a load sequence number. If the table is missing the page says
     "run migration-attendance.sql" and still shows the chart.
@@ -1525,10 +1634,58 @@ All styling lives in `style.css`; pages carry almost no inline styling.
   note the animation clock is frozen under `--virtual-time-budget`, so
   screenshots show start/end states only — check
   `document.getAnimations()` instead of trying to catch a frame.
-- **Seating Chart = freeform room builder** (`seating.html`). Compact
-  `.seat-bar` (period, **Arrange Room / Assign Seats** `.seg` toggle,
-  mode-specific tools, undo/redo, zoom −/%/+/Fit, Saved indicator, full screen)
-  over a `.seat-side` sidebar + `.viewport` canvas. **The room is infinite**:
+- **Seating Chart = freeform room builder** (`seating.html`), built for a
+  teacher who isn't tech savvy: **surface little, keep everything, few
+  words.** Plain words in every label (no "formula", "populate", "pan",
+  "marquee"), no explanatory sentences on the page — how-to lives in `?`.
+  The bars are kept tight so the canvas gets the height. Top to bottom:
+    - **One `.seat-bar`**: Period · **Arrange room / Assign seats** `.seg` ·
+      the mode's few buttons (Arrange: **Change layout**; Assign: **Fill
+      randomly** · **Fill by rules** · **Clear seats** · **Edit rules**) ·
+      save state · `?` · `⋯` · full screen. The **`⋯` menu** (`#more-menu`)
+      holds undo/redo, zoom −/%/+/Fit, the hand tool, Turn/Copy/Remove for
+      the selection and "Show first names only" — the old ids (`btn-undo`,
+      `btn-zoom-in`, `btn-rotate`, …) live there. **`?`** opens
+      `#help-dialog`, the tips and shortcuts in plain words (including how
+      to seat by dragging or clicking); don't put hint text back on the page.
+      It is a header (title + `.corner-btn` close X) over one scrolling
+      column: a **Mouse** part then a **Keyboard** part, each split into
+      divided `.help-sec` sections of `.help-list` rows — a fixed 12.5rem
+      left column so every description lines up, one line each. Keys are
+      always `<kbd>` chips (same height, mono); mouse actions are plain
+      text, never chips.
+    - **`.arr-bar`**, one row: the period's arrangements as **cards**
+      (`.arr-card`, active first) — a `.arr-thumb` drawing of **that
+      arrangement's own room** (`layoutPic()`, each desk's footprint + the
+      Front bar), the name, a small `.arr-tag` ACTIVE (accent) / DRAFT
+      (lavender), and `.arr-card-stats` icon stats (person `31/34` seated,
+      tick `5/6` rules kept; the full sentence is only the tooltip). The open
+      card is outlined and carries rename / copy / delete, and an open draft
+      also **Make active**. Then **+ New**. **No banner** — the tag says
+      active vs draft.
+    - **`.seat-layout`** (`data-mode`): the left column is the
+      **`.desk-rail`** in Arrange (icon-only `.palette-item`s, name on hover
+      via `data-name`; click drops the desk mid-view through
+      `addPieceAtCentre()`, nudged clear of other desks; drag places it) or
+      the **`.names-panel`** in Assign (Not seated, `31/34 seated` at the
+      top, names listed vertically, absent ones dimmed last); the
+      `.viewport` fills the rest.
+  The **`.piece-tools`** bar (Turn / Copy / Remove; Turn only for the Front
+  marker) floats beside the selection — placed in viewport pixels by
+  `placePieceTools()` from `render()`/`applyView()`, under the turn ring
+  while turning, hidden mid-drag, in Assign and in full screen; its
+  pointerdown stops propagation so it never counts as a canvas click.
+  **Starter layouts** (`STARTERS` + `buildStarter(id, n)`): Rows, Pairs,
+  Groups of 4, U-shape, Stations, built for `seatTarget()` = this period's
+  roster (min 12), in whole grid units under a centred Front bar with the
+  teacher's desk to its right; their pictures use the same `layoutPic()`.
+  `.starter` covers the canvas when the arrangement has no desks (a new
+  period, or **+ New → Blank room**), or after **Change layout** (which
+  first warns that seats are cleared, and — on the active one — that
+  Attendance shows the new desks); `applyStarter()` is one `commit()`, so
+  Undo restores the old room. Non-error status lines clear themselves after
+  6s (a `MutationObserver` on `#status`) so the canvas gets its height back.
+  The canvas mechanics: **The room is infinite**:
   the `.viewport` paints the dot grid (`background-size = G*zoom`,
   `background-position = pan`) so it fills the panel at every zoom, and
   `.room` is a zero-size origin transformed with `translate(pan) scale(zoom)`
@@ -1589,34 +1746,58 @@ All styling lives in `style.css`; pages carry almost no inline styling.
   at 90°). `pieceById('front')` returns a copy, so rotation writes go through
   `setPieceGeom()`. `seatWorld()` ranks seats for the front/back rules by
   `frontDistance` — the nearest point on the turned bar — and seats
-  *behind* the marker rank after every seat on the room side. Assign mode locks pieces; names drag from the `.student-chip`
-  list (unseated ones have a pink border) or from a seat, drop target found
-  with `elementFromPoint` → `placeStudent()` (swap when occupied) or
-  `unseat()` when dropped on the sidebar; Randomize fills every seat,
-  Clear seats empties, "First names" shares the `teacherpal.groups.firstNames`
-  setting. **Undo/redo** is a snapshot stack of `{ front, pieces, assignments }`
-  (`base` is captured before a change, `commit()` pushes it); Ctrl+Z /
-  Ctrl+Shift+Z / Ctrl+Y. **Saved arrangements** (`.arr-bar` under the
-  toolbar): the editor always holds a **working copy** of one arrangement
-  (desks + seats) — drags, Randomize and Populate only change that copy,
-  and **nothing autosaves**. The strip shows the open arrangement's name
-  (button → `.arr-menu` list: load / rename / duplicate / delete, plus "New
-  empty draft", each row with "N/M seated · K/R rules met" from
-  `arrStats()` — `close` rules excluded, same as the Populate summary), an
-  Active / Draft `.pct`, "● Unsaved changes" (`stateKey()` ≠ `savedKey`),
-  the live summary, and Discard (one undo step) / Save as new… / Save
-  (Ctrl+S) / Make active. `roomLayout` is the shared room as saved; **only
-  saving the active arrangement, or making one active, writes it** — desk
-  changes on a draft stay in that draft's `layout`. Loading an arrangement
-  whose stored `layout` differs from the room (`layoutDiff()`) asks first:
-  "Use its saved desks" / "Use current room" (seats on desks that are gone
-  are dropped). Make active spells out that different desks change the room
-  for every period. Switching period / arrangement with unsaved changes asks
-  Save / Discard / Cancel; `beforeunload` warns too. The active one can't be
-  deleted. Names are unique per period (case-insensitive). Formula rules still
-  autosave through `scheduleSave()` (they belong to the period, not to an
-  arrangement). Full screen forces Assign, hides sidebar/bars (the strip is
-  `.no-present`) and fits the room with 14px labels. If the room tables are
+  *behind* the marker rank after every seat on the room side. Assign mode
+  locks pieces. **Two ways to seat someone, both always on**: drag a name
+  (from the Not seated list or a seat) onto a seat — `elementFromPoint` →
+  `placeStudent()` (swap when occupied), or `unseat()` when dropped on
+  `#names-panel` — or **click a name, then a seat**: under 4px of
+  movement `startNameDrag()` treats it as a click and sets `picked`
+  (`.picked` ring on the chip / seat; the list turns dashed when a picked
+  seated student can be dropped out); the viewport's pointerdown then
+  places `picked` on whatever seat is clicked, a click on the list unseats
+  a picked seated student, Esc lets go.
+  **Fill randomly** seats everyone not absent today; **Fill by rules** runs
+  `populateWithFormula()` (no rules yet → opens the rules modal, whose
+  footer button reads "Fill seats"); `use_formula` is still loaded and
+  saved untouched but no longer has a switch here. "Show first names only"
+  shares the `teacherpal.groups.firstNames` setting. The page's student-name
+  helper is **`studentLabel()` — never call it `displayName`**: that would
+  shadow shared.js's account-name `displayName()` and break nav.js's USER
+  chip when the profile refreshes. **Undo/redo** is a snapshot stack of
+  `{ front, pieces, assignments }` (`base` is captured before a change,
+  `commit()` pushes it); Ctrl+Z / Ctrl+Shift+Z / Ctrl+Y.
+  **Saved arrangements autosave.** `commit()` and undo/redo call
+  `scheduleArrSave()` → `saveArrangement()` 800ms later (the first save in
+  a period creates "Seating chart", active when nothing is); a change made
+  during a save re-schedules itself. `flushArrSave()` saves anything
+  pending and is awaited before every switch (card, period, New, Make
+  active) and on Ctrl+S; it returns false only when the save failed, and
+  the caller then stays put. **Switching is instant and asks nothing**:
+  `loadArrangement()` flushes, then swaps in that arrangement's **own desks
+  and seats** (`desksOf()`: its `layout`; a pre-migration null falls back
+  to `legacyRoom`, no arrangement = `blankRoom()`), keeping zoom/pan so two
+  arrangements on the same desks compare in place (`fitIfHidden()`
+  re-frames only when desks would be cut off). **+ New** asks for a name and
+  **Copy “<open one>”** (desks + seats) or **Blank room** (no desks — the
+  starter layouts appear); new ones are drafts unless the period has no
+  active one. The open card's copy icon is the old "Save as new". Statuses
+  come from `arrStats()` (`close` rules excluded, same as the fill
+  summary). **Nothing writes `room_layouts` any more** — each save writes
+  only the open arrangement's `layout` + `assignments`, so a draft never
+  touches the active one, another period, or Attendance. **Make active** is
+  always one click (it only changes what this period shows). The active one
+  can't be deleted.
+  Names are unique per period (case-insensitive). Formula rules autosave
+  separately through `scheduleSave()` (they belong to the period, not to an
+  arrangement). Full screen forces Assign, hides the bars, rail, names list,
+  starter and desk tools (`.no-present` / `isPresent()`) and fits the room
+  with 14px labels. **Testing it** without a login: a throwaway copy of the
+  page with a `<script>` before `shared.js` that writes a fake
+  `teacherpal.session` and stubs `window.fetch`, and one after it that
+  reassigns the data helpers (`getStudents`, `createSeatingArrangement`, …)
+  to an in-memory store; drive it through Edge's DevTools protocol
+  (`--remote-debugging-port`, Node 24's built-in `WebSocket`,
+  `Input.dispatchMouseEvent`) so pointer events and rAF are real. If the room tables are
   missing the page still loads periods and shows a "run
   migration-room-builder.sql" error; if `seating_arrangements` is missing it
   says to run `migration-seating-arrangements.sql` and disables saving.
@@ -1654,7 +1835,7 @@ All styling lives in `style.css`; pages carry almost no inline styling.
   swaps, 4000 steps, T 20→0.5, 6 random restarts, keep the best; every run
   starts from a fresh shuffle so reshuffles differ. `evaluate` returns
   `{ score, unmet: [{ rule, why }] }`; `summarizeRun()` turns that into
-  "Grouped/Seated using formula · all N rules met." or "… · 2 rules missed:
+  "Grouped/Seated by your rules · all N rules kept." or "… · 2 rules missed:
   A ↔ B: … (must — ended up in the same group); …".
   **Groups** (`groupWithFormula`): balanced group-size slots; apart in the
   same group / together split cost the rule's weight, close split costs
@@ -1665,21 +1846,101 @@ All styling lives in `style.css`; pages carry almost no inline styling.
   pull, close a 0.02× pull per unit; front/back capacity for the check is
   K (tagged count) and the farther half.
   **Modal** (`createFormulaModal(opts)`, one per page from callbacks:
-  `context`, `students`, `absent`, `displayName`, `getRules`/`setRules`,
-  `populateLabel`, `onPopulate`): 75vw × 75vh, header with Rules / Priority
-  tabs. **Rules tab**: roster with search + rule-count pills; the student's
-  rules as colour-coded cards (type label, names, a "Must meet / Try to meet"
-  pill that toggles, ×), and an Add-rule area (type chips with 1–5 shortcuts,
-  other-student select, a "Must meet" checkbox defaulting from
-  `defaultHard`); new hard rules join at the bottom of the hard band, soft at
-  the end. **Priority tab**: every rule in one draggable list (HTML5 DnD,
-  band-locked — a rule can't be dragged across the divider; toggle Must/Try
-  to change band) with "Must meet — constraints" / "Try to meet — highest
-  first" dividers. Keyboard (one document listener while open, skipped while
-  typing): ↑/↓ walk students (Rules) or rules (Priority), letters search,
-  1–5 pick a type, Enter adds, click a rule to highlight then **M** toggles
-  must/try, **Ctrl+↑/↓** moves it within its band, Del removes, Esc clears
-  search → leaves the add row → closes, Ctrl+Enter runs `onPopulate`.
+  `scope`, `periodId`, `periodName`, `students`, `absent`, `displayName`,
+  `getRules`/`setRules`, `populateLabel`, `onPopulate`). It is 90vw × 90vh,
+  with no max-width cap, and a header with Rules / Priority tabs.
+  **Rules tab = a relationship map** (plain JS + inline SVG, no
+  libraries), with two parts:
+    - **The left list** (`clamp(17rem, 22vw, 25rem)`) is the full roster in
+      **two compact columns**, so a class of ~30 fits without scrolling.
+      Each row has search, a rule count, an accent left edge when the
+      student is on the map, and absent students struck through. Click a
+      row to pick the student, or drag it onto the map (a `.fm-ghost`
+      follows the pointer).
+    - **The map** (`#fm-map`) shows every student with a rule, plus anyone
+      put there by hand (`staged`, this session only), as an HTML
+      `.fm-node` over an SVG layer of `.fm-edge`s.
+  **Lines and badges:** one line per pair rule, styled by type:
+    - `apart` is a jagged zigzag in a warm red-orange (`.type-apart` =
+      `color-mix(--danger 55%, --att-tardy)`, so it stays clear of the pink
+      accent).
+    - `together` is a thick solid line in the accent colour.
+    - `close` is a thin muted line.
+    - A ● at the line's midpoint means Must meet; a hollow ○ means Try.
+    - Several rules on one pair fan out side by side, and an
+      apart + together clash gets a red midpoint ring.
+    - **Front/back are `.fm-badge`s on the node**, not lines: solid =
+      must, dashed = try.
+  **Layout:** `autoLayout()` is force-directed (repulsion measured in node
+  half-widths, spring on links, gravity to the centre). It runs 10 starts
+  (4 when some nodes are pinned), resolves overlaps, keeps linked pairs
+  ≥ 80px apart so their line shows, and picks the start with the fewest
+  crossings. **Tidy up** reruns it from scratch. Nodes drag to rearrange.
+  Positions are a **view setting only**: `localStorage`
+  `teacherpal.formula.map.<scope>.<periodId>` as fractions of the map,
+  never rule data.
+  **Selecting a student** (click their name in the list, click their
+  node, or move with the arrow keys) is the main way to work:
+    - `selectStudent()` outlines the node (`.focused`: outline ring,
+      `.flash` on arrival).
+    - Their lines and neighbours stay lit while the rest dims, the same as
+      a hover.
+    - **Front / Back are two small `.fm-chip` toggles in
+      `.fm-node-tools`, right under the selected node on the map**
+      (seating only; flipped above the node near the bottom; hidden while
+      the node is dragged). A rule-less student placed by hand also gets a
+      Remove chip. **There is no separate window for front/back**: the
+      teacher found a panel holding only those two toggles pointless.
+    - **The side panel** (`#fm-panel`, a third column of
+      `.formula-body.has-panel`) opens **only when the student has
+      rules**. It holds one card per rule: a type `<select>`, the other
+      student, the Must/Try pill and a × delete. Clicking a card selects
+      that rule, so M and Del act on it.
+    - A student who isn't on the map yet is placed in the clearest spot
+      (`emptySpot()`) first.
+    - The map is never wider than its box, so there is no panning. Nodes
+      are clamped to stay wholly visible when the panel narrows the map.
+  **Arrow keys** move the selection to the nearest node in that direction
+  (`stepSelection()`: within ~65° of the arrow, scored by distance along
+  plus twice the sideways offset). The first press selects the top-left
+  node.
+  **Other interaction:**
+    - **Hover** a node: its lines and neighbours stay lit and the rest dims.
+    - **Click a line or badge:** opens a `.fm-pop` popover to change the
+      type, toggle Must/Try, or **Delete rule** (a red button with a trash
+      icon, so deleting never needs the Del key).
+    - **Draw a rule:** drag the node's port (◇ in jarvis/earthy, ○ in
+      marwa), or Shift+drag the node, onto another student. A popover at
+      the drop point asks which pair rule. It is created with
+      `defaultHard` and selected so Must/Try is one click away.
+    - **Drop a list name** on empty map to place the student there, or on
+      a node to connect the two.
+  **Skins:** jarvis/earthy are a technical node graph (straight lines,
+  square nodes, diamond ports on a dot grid). marwa is paper-and-string:
+  tilted paper notes with a pin, round ports, and lines that **sag like
+  string**. The sag is `softSkin()` in `formula.js` (`currentTheme() ===
+  'marwa'`), and the rest is `:root[data-theme="marwa"] .fm-*` rules.
+  Every colour is a token.
+  New hard rules join at the bottom of the hard band, soft ones at the end.
+  **Priority tab** is unchanged: every rule in one draggable list (HTML5
+  DnD, band-locked — a rule can't be dragged across the divider; toggle
+  Must/Try to change band) with "Must meet — constraints" / "Try to meet —
+  highest first" dividers.
+  **Keyboard** (one document listener while open; ignored while typing in
+  the search box or a select):
+    - ←↑↓→ move between nodes (Rules) or walk the list (Priority, ↑↓
+      only); letters type into the search; Enter in the search selects the
+      first match.
+    - **M** toggles must/try on the selected rule; **Ctrl+↑/↓** moves it
+      within its band; Del removes it.
+    - Esc closes the popover → clears the search → deselects the rule →
+      closes the panel → closes the modal.
+    - Ctrl+Enter runs `onPopulate`.
+    - **There are no number keys and no Enter-to-add**: rule types are
+      picked in the popovers and the panel.
+  The footer shows only that: "Drag a student's dot onto another to add a
+  rule · ←↑↓→ move · M must/try · Del delete · Esc back · Ctrl Enter
+  <populate>".
 - **Layout is unchanged by theme work**: app shell grid (top bar / main,
   no sidebar) locked to `100dvh`, fluid root font, rem everywhere, each tool
   scrolls internally, roster is a sticky panel + numbered `columns: 18rem`
