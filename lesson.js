@@ -263,7 +263,7 @@ function initLessonPanel({ mount = '#lesson', rows: allRows = () => [], onChange
     const left = limit - planned;
     el.hidden = false;
     el.dataset.state = left < 0 ? 'over' : 'ok';
-    el.textContent = planned ? `${planned} of ${limit} min · ${left < 0 ? `${-left} over` : `${left} left`}` : `${limit} min period`;
+    el.textContent = left < 0 ? `${-left} min over` : `${left} min left`;
     const differ = new Set(lens.map((x) => x.min)).size > 1;
     el.title = `${resolveSchedule(parse(date), overridesList).name}: ${lens.map((x) => `${x.label} ${x.min} min`).join(' · ')}${differ ? ' — counted against the shortest' : ''}`;
   }

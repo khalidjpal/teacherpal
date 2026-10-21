@@ -107,6 +107,10 @@
   --shadow-pop: 0 18px 50px rgba(0, 0, 0, 0.6);
   --shadow-pressed: inset 0 0 0 1px var(--accent), inset 0 0 18px rgba(240, 127, 174, 0.25);
   --shadow-text: rgba(0, 0, 0, 0.35);
+  /* depth extras — off here; a theme turns them on (earthy does) */
+  --panel-shadow: none;             /* under every .hud-box panel */
+  --hover-lift: 0px;                /* clickable things rise this much on hover */
+  --hover-glow: none;               /* shadow added under a hovered control */
 
   /* semantic surfaces (HUD panels/boxes, top bar, form fields) */
   --panel-bg: rgba(13, 11, 20, 0.6);
@@ -342,36 +346,36 @@
   color-scheme: dark;
 
   /* ground — browns */
-  --bg-0: #2B2118;                  /* deep bark */
-  --bg-1: #352819;                  /* radial glow centre, barely warmer */
+  --bg-0:#211911;   /* deep bark, a step below the panels */
+  --bg-1:#2B2118;   /* radial glow centre */
   --bg: var(--bg-0);
   --bg-glow: rgba(181, 115, 74, 0.10);    /* faint terracotta wash at the top */
   --body-pattern: none;
 
   /* surfaces — warm browns, lifted off the bark */
-  --card:   #3A2D21;                /* warm dark brown */
-  --card-2: #32271D;                /* inputs, chips, inset wells (a shade below the card) */
-  --card-3: #45362A;                /* hover / raised rows */
-  --border:        #6B4E35;         /* clay */
-  --border-strong: #8A6143;         /* buttons, chips, inputs: a warmer clay-terracotta edge */
-  --border-hover:  #B5734A;         /* hover warms to terracotta */
+  --card:#3A2D21;   /* warm dark brown — panels and cards */
+  --card-2:#2A2017;   /* inputs, chips, wells, empty cells: sunk below the card */
+  --card-3:#47372A;   /* hover / raised rows, a clear step up */
+  --border:#86643F;   /* clay, 2.5:1 on the card — a real outline */
+  --border-strong:#A9794F;   /* buttons, inputs, chips: 3.5:1 on the card, 4.2:1 on a well */
+  --border-hover:#E3A578;   /* hover goes bright terracotta (6.3:1) */
 
   /* text */
-  --text:       #E8F0A3;            /* pale citron */
-  --text-2:     #E0D6BE;            /* warm cream */
-  --text-muted: #C4B8A0;            /* warm stone */
+  --text:#F0F5BC;   /* citron headings and names (11.7:1 on the card) */
+  --text-2:#D3C7AB;   /* cream body (7.9:1) */
+  --text-muted:#B5A688;   /* stone, quieter (5.6:1, 4.75:1 on hover rows) */
 
   /* accents — sage primary, moss deep, terracotta secondary */
-  --accent:      #91AD5B;           /* sage */
-  --accent-deep: #4E7730;           /* moss */
-  --accent-soft: rgba(145, 173, 91, 0.16);
-  --accent-glow: rgba(145, 173, 91, 0.35);
-  --lavender:      #DDA175;         /* terracotta, light enough for text */
-  --lavender-soft: rgba(181, 115, 74, 0.22);
+  --accent:#A6C45E;   /* sage, saturated (6.8:1 on the card) */
+  --accent-deep:#6F9B3F;   /* moss, bright enough to edge a primary button */
+  --accent-soft:rgba(166, 196, 94, 0.20);
+  --accent-glow:rgba(166, 196, 94, 0.45);
+  --lavender:#E3A578;   /* terracotta (6.3:1) */
+  --lavender-soft:rgba(198, 120, 72, 0.28);
   --group-tint: 16%;
   --group-ink-dl: 0;
-  --danger: #EE9277;                /* warm terracotta-red */
-  --ok:     #A9CF86;
+  --danger:#F09A80;   /* warm terracotta-red (6.1:1) */
+  --ok:#AFD58C;
 
   /* the room: a floor darker than the page, lit wood seats with light clay
      edges (5.7:1 on the floor), so desks read as objects */
@@ -382,10 +386,10 @@
   --chart-floor: #1E1610;
   --room-floor: #1E1610;
   /* sage and terracotta around the page, so green isn't a lone outlier */
-  --label-ink: #91AD5B;              /* sage section labels (≥ 5.3:1) */
-  --figure-ink: #DDA175;             /* terracotta readouts (≥ 6.3:1) */
-  --chip-line: rgba(181, 115, 74, 0.70);
-  --chip-ink: #DDA175;
+  --label-ink:#AAAE84;   /* labels step DOWN from body text: dusty sage (5.8:1) */
+  --figure-ink:#E3A578;   /* terracotta readouts */
+  --chip-line:rgba(227, 165, 120, 0.85);
+  --chip-ink:#E3A578;
 
   /* group cards cycle the palette (formula: .group → --g-pick) */
   --group-c1: #B2C28E;              /* sage */
@@ -395,49 +399,54 @@
   --group-c5: #C4B8A0;              /* stone */
 
   /* gradients */
-  --gradient-accent: linear-gradient(180deg, rgba(145, 173, 91, 0.32), rgba(145, 173, 91, 0.06));
+  --gradient-accent:linear-gradient(180deg, rgba(166, 196, 94, 0.55), rgba(166, 196, 94, 0.16));
   --gradient-bar: linear-gradient(90deg, var(--accent-deep), var(--accent));
-  --gradient-glow-top: linear-gradient(90deg, transparent, rgba(181, 115, 74, 0.45), var(--accent-glow), transparent);
+  --gradient-glow-top:linear-gradient(90deg, transparent, rgba(227, 165, 120, 0.7), var(--accent-glow), transparent);
 
   /* rings & shadows */
-  --ring: rgba(145, 173, 91, 0.40);
-  --shadow-card: 0 1px 0 rgba(232, 240, 163, 0.04) inset, 0 10px 30px rgba(18, 12, 7, 0.45);
-  --shadow-card-hover: 0 1px 0 rgba(232, 240, 163, 0.06) inset, 0 14px 36px rgba(18, 12, 7, 0.55), 0 0 24px rgba(181, 115, 74, 0.14);
-  --shadow-pop: 0 18px 50px rgba(18, 12, 7, 0.7);
-  --shadow-pressed: inset 0 0 0 1px var(--accent), inset 0 0 18px rgba(145, 173, 91, 0.26);
+  --ring:rgba(166, 196, 94, 0.55);
+  --shadow-card:0 1px 0 rgba(240, 245, 188, 0.07) inset, 0 2px 4px rgba(12, 8, 4, 0.55), 0 10px 26px rgba(12, 8, 4, 0.5);
+  --shadow-card-hover:0 1px 0 rgba(240, 245, 188, 0.09) inset, 0 4px 8px rgba(12, 8, 4, 0.55), 0 16px 34px rgba(12, 8, 4, 0.55), 0 0 0 1px rgba(227, 165, 120, 0.35);
+  --shadow-pop:0 20px 54px rgba(10, 6, 3, 0.8);
+  --shadow-pressed:inset 0 0 0 1px var(--accent), inset 0 0 18px rgba(166, 196, 94, 0.35), 0 0 14px rgba(166, 196, 94, 0.30);
   --shadow-text: rgba(18, 12, 7, 0.45);
 
+  /* depth: panels cast a shadow, and clickable things lift a pixel on hover */
+  --panel-shadow: 0 1px 0 rgba(240, 245, 188, 0.06) inset, 0 3px 6px rgba(12, 8, 4, 0.45), 0 14px 32px rgba(12, 8, 4, 0.45);
+  --hover-lift: -1px;
+  --hover-glow: 0 3px 10px rgba(12, 8, 4, 0.5);
+
   /* semantic surfaces */
-  --panel-bg: rgba(58, 45, 33, 0.72);
-  --panel-bg-hover: rgba(58, 45, 33, 0.94);
-  --field-bg: rgba(50, 39, 29, 0.92);
-  --topbar-bg: rgba(43, 33, 24, 0.82);
-  --on-accent: #2B2118;                   /* bark on sage */
+  --panel-bg:rgba(58, 45, 33, 0.97);   /* panels are solid, so they read as objects over the page */
+  --panel-bg-hover:rgba(71, 55, 42, 0.98);
+  --field-bg:#2A2017;
+  --topbar-bg:rgba(33, 25, 17, 0.92);
+  --on-accent:#241A10;   /* bark on sage (8.7:1) */
 
   /* semantic tints — warm stone alpha over brown */
   --surface-tint: rgba(196, 184, 160, 0.07);
-  --surface-tint-strong: rgba(196, 184, 160, 0.30);
+  --surface-tint-strong:rgba(211, 199, 171, 0.38);
   --surface-tint-present: rgba(232, 240, 163, 0.40);
   --surface-tint-formula: rgba(196, 184, 160, 0.20);
   --surface-tint-progress: rgba(196, 184, 160, 0.12);
   --canvas-dot: rgba(196, 184, 160, 0.16);
 
   /* accent overlays */
-  --accent-fill-soft: rgba(145, 173, 91, 0.10);
-  --accent-line: rgba(145, 173, 91, 0.50);
-  --accent-line-strong: rgba(145, 173, 91, 0.62);
-  --accent-ring-soft: rgba(145, 173, 91, 0.16);
-  --accent-ring-strong: rgba(232, 240, 163, 0.24);   /* primary hover brightens toward citron */
+  --accent-fill-soft:rgba(166, 196, 94, 0.14);
+  --accent-line:rgba(166, 196, 94, 0.60);
+  --accent-line-strong:rgba(166, 196, 94, 0.75);
+  --accent-ring-soft:rgba(166, 196, 94, 0.30);
+  --accent-ring-strong:rgba(166, 196, 94, 0.50);
   --accent-inset-soft: rgba(181, 115, 74, 0.10);
-  --accent-inset-chip: rgba(145, 173, 91, 0.28);
-  --accent-icon-glow: rgba(232, 240, 163, 0.55);     /* icon hover glow — citron */
+  --accent-inset-chip:rgba(166, 196, 94, 0.32);
+  --accent-icon-glow:rgba(166, 196, 94, 0.75);
 
   /* HUD tokens — sage lines; hover lines and glows brighten to citron */
   --hud:              var(--accent);
-  --hud-dim:          rgba(145, 173, 91, 0.35);
-  --hud-line:         rgba(145, 173, 91, 0.30);
-  --hud-line-strong:  rgba(232, 240, 163, 0.70);
-  --hud-glow:         0 0 18px rgba(232, 240, 163, 0.18), 0 0 2px rgba(232, 240, 163, 0.50);
+  --hud-dim:rgba(166, 196, 94, 0.45);
+  --hud-line:rgba(166, 196, 94, 0.55);   /* sage panel edges — what defines shapes, as pink does in jarvis */
+  --hud-line-strong:rgba(240, 245, 188, 0.85);
+  --hud-glow:0 0 18px rgba(166, 196, 94, 0.30), 0 0 2px rgba(240, 245, 188, 0.60);
   --hud-glow-soft:    0 0 24px rgba(181, 115, 74, 0.16);
   --hud-grid:         rgba(196, 184, 160, 0.035);
   --hud-scan:         rgba(196, 184, 160, 0.025);
@@ -773,9 +782,16 @@ button, .btn, .neu-btn {
   justify-content: center;
   gap: var(--space-2);
   line-height: 1.2;
-  transition: background var(--transition), border-color var(--transition), color var(--transition), transform var(--transition), box-shadow var(--transition);
+  transition: background var(--transition), border-color var(--transition), color var(--transition), transform var(--transition), box-shadow var(--transition), translate var(--transition);
 }
 button:hover, .btn:hover, .neu-btn:hover { border-color: var(--border-hover); background: var(--card-3); color: var(--text); }
+/* depth (theme tokens; 0 / none in jarvis and marwa). `translate` is its own
+   property, so it never fights a component's `transform`, and :where() keeps
+   this at zero specificity so any component's own hover / pressed shadow wins. */
+:where(button:not(:disabled), .btn, .wk-cell:not(.off), .lp-att, .mo-day:not(.off)):hover {
+  translate: 0 var(--hover-lift);
+  box-shadow: var(--hover-glow);
+}
 button:disabled { opacity: 0.45; cursor: not-allowed; }
 button svg, .btn svg, .neu-btn svg { width: 1.05em; height: 1.05em; flex: none; }
 
@@ -1292,6 +1308,7 @@ a.hud-link:hover, a.hud-link:focus-visible { border-bottom-color: var(--hud); ou
   min-height: 0;
   background: var(--panel-bg);
   border: 1px solid var(--hud-line);
+  box-shadow: var(--panel-shadow);
   animation: hud-sweep var(--hud-in) cubic-bezier(0.2, 0.8, 0.2, 1) both;
   animation-delay: calc(120ms + var(--i, 0) * var(--hud-stagger));
 }

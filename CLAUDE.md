@@ -610,6 +610,14 @@ the structure, and every other theme is a colour swap of it. A theme is
       readouts; = `--text`).
     - `--chip-line` / `--chip-ink` (`.hud-chip` at rest; = `--hud-line` /
       `--text-muted`).
+  **Depth tokens** (set once in jarvis, off there and in marwa, which
+  inherits them): `--panel-shadow` (under every `.hud-box`; `none`),
+  `--hover-lift` (`0px`) and `--hover-glow` (`none`) — on hover, buttons,
+  `.wk-cell`, `.lp-att` and `.mo-day` take `translate: 0 var(--hover-lift)`
+  and `box-shadow: var(--hover-glow)` from one `:where(…):hover` rule.
+  `translate` is its own property, so it never fights a component's
+  `transform`; `:where()` keeps the rule at zero specificity so any
+  component's own hover / pressed shadow still wins. earthy turns all three on.
   `--body-pattern` is `none` unless the theme has a texture. Optional:
   `--group-c1…c5`, five named group-card colours (earthy uses them). When you add a
   colour token to jarvis, add it to **every** theme block in the same change.
@@ -636,23 +644,37 @@ the structure, and every other theme is a colour swap of it. A theme is
 - **`jarvis`** — the original dark HUD (deep plum-navy, near-black cards,
   subtle pink accent, Orbitron uppercase labels, corner ticks). Default for
   every account and every logged-out page. See the Design rules below.
-- **`earthy`** — a **pure colour swap of jarvis, with no extras at all**.
-  Bark, clay and sage, with **browns for the ground so green reads as an
-  accent**.
-  - Palette: `#2B2118` deep bark (page), `#3A2D21` warm dark brown
-    (cards), `#6B4E35` clay (borders), `#B5734A` terracotta, `#4E7730`
-    moss, `#91AD5B` sage, `#E8F0A3` pale citron (text), `#C4B8A0` warm
-    stone (muted).
-  - Inset wells (`--card-2`) sit a shade below the card and hover rows
-    (`--card-3`) a shade above.
-  - **Sage** is the primary accent (pressed states, primary buttons, icons,
-    HUD lines), with moss as its deep tone.
-  - **Terracotta** is the stand-apart colour: `--lavender` (DRAFT tags,
-    duplicates, sitting out), `--danger` (destructive, absent) and hover
-    borders. Text uses lighter tints (`#DDA175`, `#EE9277`) because
-    `#B5734A` is only ~3:1 on the brown cards.
-  - Hover warms borders toward terracotta and brightens HUD lines and glows
-    toward citron.
+- **`earthy`** — a **colour swap of jarvis** (tokens only, no
+  `:root[data-theme="earthy"] …` selectors) that also switches on the three
+  depth tokens. Bark, clay and sage, with **browns for the ground so green
+  reads as an accent**. **Value steps alone left it reading as one plane**,
+  so it separates elements the way jarvis's pink edges do — keep all five
+  cues when tuning it:
+  - **Layers**: page `#211911` (a step below everything) → panels and cards
+    `#3A2D21` (`--panel-bg` nearly solid, so panels sit over the page) →
+    wells `#2A2017` (`--card-2`: inputs, chips, empty week cells — sunk
+    below the card) and raised rows `#47372A` (`--card-3`: hover, planned
+    cells).
+  - **Borders that outline**: `--border` clay `#86643F` (2.5:1 on the card),
+    `--border-strong` `#A9794F` on every button / input / chip (3.5:1 on the
+    card, 4.2:1 on a well), `--border-hover` bright terracotta `#E3A578`.
+    Panel edges are sage `--hud-line` at 0.55 (it was 0.30 and vanished).
+  - **Shadows**: `--shadow-card` / `--panel-shadow` are a tight dark
+    contact shadow plus a soft 26–32px one, with a faint citron inset top
+    highlight.
+  - **Interaction you can see**: hover = terracotta border + `--card-3` +
+    1px lift + a shadow (`--hover-lift` / `--hover-glow`); focus ring sage
+    at 0.55; pressed / selected = `--gradient-accent` at 0.55 → 0.16 with
+    an outer sage glow.
+  - **Hierarchy**: headings and names `--text` citron `#F0F5BC` (11.7:1 on
+    the card) → body `--text-2` cream `#D3C7AB` (7.9:1) → labels
+    `--label-ink` dusty sage `#AAAE84` (5.8:1) and muted stone `#B5A688`
+    (5.6:1). Labels step *down* from the body, not up.
+  - **Accents with saturation**: sage `#A6C45E` (6.8:1) on primary buttons,
+    active tabs, selected items and icons, moss `#6F9B3F` edging primaries;
+    terracotta `#E3A578` is the stand-apart colour (`--lavender`: DRAFT
+    tags, duplicates, sitting out; `--figure-ink` readouts; HUD chips at
+    rest), `--danger` `#F09A80`.
   - **Group cards cycle sage → moss → terracotta → clay → stone** through
     the optional `--group-c1…c5` tokens. `.group:nth-child(5n+k)` sets
     `--g-pick: var(--group-ck)`, and `--g` uses it when defined.
@@ -662,22 +684,17 @@ the structure, and every other theme is a colour swap of it. A theme is
   - **Wheel slices** walk moss, terracotta, clay, sage and stone in deep
     tones; `wheel.js` visits r0 r4 r1 r5 r2 r6 r3 r7, so the tokens are
     assigned in that order.
-  - Measured (bg / card / well / hover): text 9.6–13.1:1, muted 5.9–8.0:1,
-    accent 4.6–6.3:1, lavender ≥ 5.2:1, danger ≥ 5.0:1, on-accent 6.3:1,
+  - Measured (bg / card / well / hover): text 10.0–15.3:1, text-2
+    6.8–10.3:1, muted 4.75–7.2:1, label 4.9–7.5:1, accent 5.8–8.8:1,
+    lavender ≥ 5.4:1, danger ≥ 5.2:1, on-accent 8.7:1,
     group labels ≥ 4.67:1, names ≥ 7.85:1 on group cards, wheel names
     ≥ 4.9:1.
   - **Three layers on the seat canvases**: a floor (`#1E1610`) darker than
     the page, the panel, then lit-wood seats (`#5C4834`) with light-clay
     edges (`#B08A63`, 5.7:1 on the floor). Names on seats are 7.2:1. Empty
     seats are dark with clay edges.
-  - **Sage and terracotta around the page**, so the green front marker
-    isn't a lone outlier: sage section labels (`--label-ink`, ≥ 5.3:1),
-    terracotta readouts such as the clock and the seated count
-    (`--figure-ink` `#DDA175`, ≥ 6.3:1), terracotta HUD chips at rest
-    (sage when pressed), and warmer clay-terracotta button and input edges
-    (`--border-strong` `#8A6143`).
   - 24-hour clock, no mascots, no pattern.
-- **`marwa`** — a **pure colour swap of jarvis** with four tiny extras. Same
+- **`marwa`** — a **pure colour swap of jarvis** (depth tokens off) with four tiny extras. Same
   layout, spacing, radii, borders, fonts, weights, tracks, shadows,
   animations and components: only palette tokens differ (light cream-pink
   ground, white cards, deep-plum text, bubblegum-pink accent) with
@@ -1019,9 +1036,7 @@ All styling lives in `style.css`; pages carry almost no inline styling.
     agenda's minutes against the period's real length that day —
     `resolveSchedule(date, navReady overrides)` from `schedule.js`, so Early
     Release Monday, Tues–Fri, minimum days, finals pairs and any override
-    all count; double 2nd uses the longer of its two blocks. "32 of 59 min ·
-    27 left", "59 min period" with nothing timed, and amber
-    (`--att-tardy`, `data-state="over"`) "60 of 59 min · 1 over". A course
+    all count; double 2nd uses the longer of its two blocks. It shows only what's left: "27 min left" (the whole period with nothing timed), and amber (`--att-tardy`, `data-state="over"`) "1 min over". A course
     is held to its **shortest** period (P3's lunch-side 65 vs P1/P2's 59 →
     59); the title lists each period's length and the schedule. A split
     uses its one period. Rows carry each period's bell number (`n` in
