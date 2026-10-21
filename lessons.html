@@ -18,22 +18,34 @@
     <main class="page hud-page lessons-page">
       <div id="status" class="status"></div>
       <div class="lessons-layout">
-        <!-- LEFT: week grid (built by the inline script) -->
-        <section class="hud-box week-box" aria-label="Week" style="--i:0">
+        <!-- LEFT: the calendar (day / week / month) -->
+        <section class="hud-box cal-box" aria-label="Lesson calendar" style="--i:0">
           <span class="tick tl" aria-hidden="true"></span><span class="tick tr" aria-hidden="true"></span><span class="tick bl" aria-hidden="true"></span><span class="tick br" aria-hidden="true"></span>
-          <div class="dash-head">
-            <button type="button" class="hud-chip" id="wk-prev" title="Previous week">← WEEK</button>
-            <span class="hud-stat"><span class="hud-key">WEEK OF</span><span class="hud-val" id="wk-label">—</span></span>
-            <button type="button" class="hud-chip" id="wk-next" title="Next week">WEEK →</button>
-            <button type="button" class="hud-chip" id="wk-today">TODAY</button>
-            <label class="dash-field"><span class="hud-key">JUMP TO</span><input type="date" id="wk-date" aria-label="Jump to date"></label>
-            <span class="spacer"></span>
-            <span class="hud-val hud-quiet wk-hint">← → day · ↑ ↓ period</span>
-            <button type="button" class="hud-chip" data-fullscreen aria-pressed="false" title="Full screen (F)"><span class="when-off">EXPAND</span><span class="when-on">EXIT</span></button>
+          <div class="cal-bar">
+            <div class="cal-nav">
+              <button type="button" class="icon-btn" id="cal-prev" aria-label="Previous"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15 6-6 6 6 6"/></svg></button>
+              <button type="button" class="hud-chip" id="cal-today">TODAY</button>
+              <button type="button" class="icon-btn" id="cal-next" aria-label="Next"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg></button>
+            </div>
+            <h2 class="cal-label" id="cal-label">—</h2>
+            <label class="cal-jump" title="Jump to a date">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3.5" y="5" width="17" height="15" rx="2"/><path d="M3.5 10h17M8 3v4M16 3v4"/></svg>
+              <input type="date" id="cal-date" aria-label="Jump to a date">
+            </label>
+            <div class="cal-search" id="cal-search">
+              <svg class="cal-search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="6.5"/><path d="m20 20-4.2-4.2"/></svg>
+              <input type="search" id="cal-q" placeholder="Search plans and files" aria-label="Search all lesson plans and attachments" autocomplete="off" aria-controls="cal-results" aria-expanded="false">
+              <div class="cal-results" id="cal-results" role="listbox" hidden></div>
+            </div>
+            <div class="seg cal-views" role="radiogroup" aria-label="View">
+              <label><input type="radio" name="cal-view" value="day"><span>Day</span></label>
+              <label><input type="radio" name="cal-view" value="week" checked><span>Week</span></label>
+              <label><input type="radio" name="cal-view" value="month"><span>Month</span></label>
+            </div>
           </div>
-          <div class="week-grid" id="week-grid"></div>
+          <div class="cal-view" id="cal-view"></div>
         </section>
-        <!-- RIGHT: the editor for the selected cell (lesson.js) -->
+        <!-- RIGHT: the editor for the selected period + day (lesson.js) -->
         <div id="lesson" class="lesson"></div>
       </div>
     </main>
@@ -44,93 +56,458 @@
   <script src="nav.js"></script>
   <script src="lesson.js"></script>
   <script>
-    // ---------- week view ----------
+    // ---------- Lesson Plans: day / week / month calendar + search ----------
+    // Rows are COURSES (one plan per course per day, shared by its periods);
+    // a period with no course is a row of its own. A period that split off for
+    // a day has its own plan, keyed by the period.
     const $ = (id) => document.getElementById(id);
-    const panel = initLessonPanel({ mount: '#lesson', follow: false, onChange: ({ periodId, date, plan }) => updateCell(periodId, date, plan) });
-    let periods = [];
-    let weekStart = mondayOf(todayKey());   // 'YYYY-MM-DD' of the Monday
-    let selected = { periodId: null, date: todayKey() };
-    let plans = new Map();                   // 'periodId|date' → plan row
+    let rows = [];                                   // [{ key, target, name, periods: [{ id, label, name }], isCourse, order }]
+    let courses = [], allPeriods = [], overrides = [];
+    let coursesReady = true;                         // false until migration-courses.sql has run
+    let view = (() => { try { return localStorage.getItem('teacherpal.lessons.view') || 'week'; } catch { return 'week'; } })();
+    let cursor = todayKey();                         // the date the view is showing
+    let selected = { key: null, date: todayKey(), split: null };
+    let plans = new Map();                           // '<rowKey or p:periodId>|date' → plan row
+    let atts = new Map();                            // same key → [attachment rows]
+    let loadSeq = 0;
 
-    function parse(ymd) { const [y, m, d] = ymd.split('-').map(Number); return new Date(y, m - 1, d); }
-    function shift(ymd, days) { const d = parse(ymd); d.setDate(d.getDate() + days); return dateKey(d); }
-    function mondayOf(ymd) { const d = parse(ymd); const wd = (d.getDay() + 6) % 7; return shift(ymd, -wd); }
-    const days = () => [0, 1, 2, 3, 4].map((i) => shift(weekStart, i));
-    const key = (pid, d) => `${pid}|${d}`;
-    const summary = (p) => {
-      if (!p) return '';
-      const items = (p.agenda || []).filter((a) => a.text && a.text.trim());
-      return (p.objective || '').trim() || items.map((a) => a.text).join(' · ') || (p.materials || p.homework || p.notes || '').trim();
-    };
-    const agendaMeta = (p) => { const items = ((p && p.agenda) || []).filter((a) => a.text && a.text.trim()); return items.length ? `${items.filter((a) => a.done).length}/${items.length}` : ''; };
+    const keyOf = (r) => (r.course_id ? `c:${r.course_id}` : `p:${r.period_id}`);   // a plan / attachment row's owner
+    const tkey = (t) => (t.courseId ? `c:${t.courseId}` : `p:${t.periodId}`);
+    const k = (ownerKey, d) => `${ownerKey}|${d}`;
+    const rowByKey = (key) => rows.find((r) => r.key === key) || null;
 
-    function renderGrid() {
-      const ds = days();
-      const today = todayKey();
-      $('wk-label').textContent = `${parse(weekStart).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })} – ${parse(ds[4]).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}`.toUpperCase();
-      $('wk-date').value = selected.date;
-      let html = '<div class="wk-corner"></div>' + ds.map((d) => `<div class="wk-day${d === today ? ' today' : ''}"><span class="wk-dow">${parse(d).toLocaleDateString(undefined, { weekday: 'short' }).toUpperCase()}</span><span class="wk-dnum">${parse(d).getDate()}</span></div>`).join('');
-      for (const p of periods) {
-        const { n, course } = parsePeriodName(p.name);
-        html += `<div class="wk-period"><span class="wk-pnum">${n !== null ? `P${n}` : ''}</span><span class="wk-pname">${escapeHtml(course || p.name)}</span></div>`;
-        for (const d of ds) {
-          const plan = plans.get(key(p.id, d));
-          const sel = selected.periodId === p.id && selected.date === d;
-          const text = summary(plan);
-          html += `<button type="button" class="wk-cell${text ? ' has-plan' : ''}${sel ? ' selected' : ''}${d === today ? ' today' : ''}" data-period="${p.id}" data-date="${d}" id="cell-${p.id}-${d}">
-            <span class="wk-text">${text ? escapeHtml(text) : '<span class="wk-add">+ plan</span>'}</span>
-            <span class="wk-meta">${agendaMeta(plan)}</span>
-          </button>`;
-        }
-      }
-      $('week-grid').innerHTML = html;
-    }
-    function updateCell(pid, d, plan) {
-      plans.set(key(pid, d), plan);
-      const cell = document.getElementById(`cell-${pid}-${d}`);
-      if (!cell) return;
-      const text = summary(plan);
-      cell.classList.toggle('has-plan', !!text);
-      cell.querySelector('.wk-text').innerHTML = text ? escapeHtml(text) : '<span class="wk-add">+ plan</span>';
-      cell.querySelector('.wk-meta').textContent = agendaMeta(plan);
-    }
-    async function loadWeek() {
-      const ds = days();
-      plans = new Map();
-      try {
-        const rows = await getLessonPlansRange(ds[0], ds[4]);
-        for (const r of rows) plans.set(key(r.period_id, r.date), r);
-      } catch (err) { setStatus(`Lesson plans unavailable — run migration-lessons-bathroom.sql in the Supabase SQL editor. (${err.message})`, 'error'); }
-      renderGrid();
-    }
-    function select(pid, d) {
-      selected = { periodId: pid, date: d };
-      if (mondayOf(d) !== weekStart) { weekStart = mondayOf(d); loadWeek(); } else renderGrid();
-      panel.show(pid, d);
-    }
-    $('week-grid').addEventListener('click', (e) => { const c = e.target.closest('.wk-cell'); if (c) select(c.dataset.period, c.dataset.date); });
-    $('wk-prev').addEventListener('click', () => { weekStart = shift(weekStart, -7); loadWeek(); });
-    $('wk-next').addEventListener('click', () => { weekStart = shift(weekStart, 7); loadWeek(); });
-    $('wk-today').addEventListener('click', () => select(selected.periodId || (periods[0] || {}).id, todayKey()));
-    $('wk-date').addEventListener('change', (e) => { if (e.target.value) select(selected.periodId || (periods[0] || {}).id, e.target.value); });
-    // keyboard: ← → move a school day, ↑ ↓ move a period (not while typing)
-    document.addEventListener('keydown', (e) => {
-      if (isTyping(e.target) || !selected.periodId || document.querySelector('dialog[open]')) return;
-      const i = periods.findIndex((p) => p.id === selected.periodId);
-      const dow = parse(selected.date).getDay();
-      if (e.key === 'ArrowLeft') { e.preventDefault(); select(selected.periodId, shift(selected.date, dow === 1 ? -3 : -1)); }
-      else if (e.key === 'ArrowRight') { e.preventDefault(); select(selected.periodId, shift(selected.date, dow === 5 ? 3 : 1)); }
-      else if (e.key === 'ArrowUp' && i > 0) { e.preventDefault(); select(periods[i - 1].id, selected.date); }
-      else if (e.key === 'ArrowDown' && i < periods.length - 1) { e.preventDefault(); select(periods[i + 1].id, selected.date); }
+    const panel = initLessonPanel({
+      mount: '#lesson',
+      rows: () => rows,
+      onChange: ({ target, date, plan }) => {
+        const key = k(tkey(target), date);
+        if (plan) plans.set(key, { ...(target.courseId ? { course_id: target.courseId } : { period_id: target.periodId }), date, ...plan }); else plans.delete(key);
+        paintDay(date);
+        indexPlan(target, date, plan);
+      },
+      onAttachments: ({ type, row }) => {
+        const key = k(keyOf(row), row.date), list = atts.get(key) || [];
+        atts.set(key, type === 'add' ? [...list, row] : list.filter((a) => a.id !== row.id));
+        paintDay(row.date);
+        if (index) index.atts = type === 'add' ? [row, ...index.atts] : index.atts.filter((a) => a.id !== row.id);
+      },
+      onScope: (split) => { selected.split = split; },
     });
 
+    // ---------- rows: courses (with their taught periods) + periods without a course ----------
+    function taughtPeriods(all) {
+      const teaches = currentTeachesPeriods();
+      return teaches ? all.filter((p) => { const { n } = parsePeriodName(p.name); return n === null || teaches.includes(n); }) : all;
+    }
+    const bell = (p) => { const { n } = parsePeriodName(p.name); return n === null ? 99 : n; };
+    const periodInfo = (p) => { const { n } = parsePeriodName(p.name); return { id: p.id, n, label: n !== null ? `P${n}` : p.name, name: p.name }; };
+    function buildRows() {
+      const taught = taughtPeriods(allPeriods).slice().sort((a, b) => bell(a) - bell(b) || a.sort_order - b.sort_order);
+      const out = [];
+      for (const c of courses) {
+        const ps = taught.filter((p) => p.course_id === c.id);
+        if (ps.length) out.push({ key: `c:${c.id}`, target: { courseId: c.id }, name: c.name, periods: ps.map(periodInfo), isCourse: true, order: bell(ps[0]) });
+      }
+      for (const p of taught.filter((x) => !x.course_id || !courses.some((c) => c.id === x.course_id))) {
+        const { course } = parsePeriodName(p.name);
+        out.push({ key: `p:${p.id}`, target: { periodId: p.id }, name: course || p.name, periods: [periodInfo(p)], isCourse: false, order: bell(p) });
+      }
+      rows = out.sort((a, b) => a.order - b.order || a.name.localeCompare(b.name));
+    }
+    async function loadRows() {
+      try { courses = await getCourses(); coursesReady = true; }
+      catch (err) { courses = []; coursesReady = false; }
+      allPeriods = await getPeriods().catch(() => allPeriods);
+      buildRows();
+      if (!coursesReady) setStatus('Lesson plans are per period until you run migration-courses.sql in the Supabase SQL editor.', 'info');
+    }
+
+    // ---------- dates ----------
+    const parse = (ymd) => { const [y, m, d] = ymd.split('-').map(Number); return new Date(y, m - 1, d); };
+    const shift = (ymd, days) => { const d = parse(ymd); d.setDate(d.getDate() + days); return dateKey(d); };
+    const mondayOf = (ymd) => shift(ymd, -((parse(ymd).getDay() + 6) % 7));
+    const isWeekend = (ymd) => [0, 6].includes(parse(ymd).getDay());
+    const fmt = (ymd, o) => parse(ymd).toLocaleDateString(undefined, o);
+    // a no-school override blocks the whole day out
+    const offDay = (ymd) => overrides.find((o) => o.date === ymd && o.schedule === 'no_school') || null;
+    const schoolDay = (ymd) => !isWeekend(ymd) && !offDay(ymd);
+    // step to the next school day in a direction (skips weekends and no-school days)
+    function stepDay(ymd, dir) { let d = ymd; for (let i = 0; i < 30; i++) { d = shift(d, dir); if (schoolDay(d)) return d; } return shift(ymd, dir); }
+    const nearestSchoolDay = (ymd) => (schoolDay(ymd) ? ymd : stepDay(ymd, 1));
+    const weekDays = (ymd) => [0, 1, 2, 3, 4].map((i) => shift(mondayOf(ymd), i));
+    function monthDays(ymd) {
+      const d = parse(ymd), first = dateKey(new Date(d.getFullYear(), d.getMonth(), 1)), last = dateKey(new Date(d.getFullYear(), d.getMonth() + 1, 0));
+      const out = [];
+      for (let w = mondayOf(first); w <= last; w = shift(w, 7)) out.push(...weekDays(w));
+      return out;
+    }
+    const range = () => (view === 'day' ? [cursor] : view === 'week' ? weekDays(cursor) : monthDays(cursor));
+
+    // ---------- plan helpers ----------
+    const agendaItems = (p) => ((p && p.agenda) || []).filter((a) => a.text && a.text.trim());
+    const preview = (p) => (p ? (p.objective || '').trim() || (p.notes || '').trim() || (agendaItems(p)[0] || {}).text || (p.materials || p.homework || '').trim() : '');
+    const hasHomework = (p) => !!(p && (p.homework || '').trim());
+    const planOf = (row, d) => plans.get(k(row.key, d));
+    const attsOf = (row, d) => atts.get(k(row.key, d)) || [];
+    const own = (row, d) => hasHomework(planOf(row, d)) || !!preview(planOf(row, d)) || attsOf(row, d).length > 0;
+    // the course's periods that have their own plan that day
+    const splitsOf = (row, d) => (row.isCourse ? row.periods.filter((p) => plans.has(k(`p:${p.id}`, d)) || atts.has(k(`p:${p.id}`, d)) && atts.get(k(`p:${p.id}`, d)).length) : []);
+    const hasContent = (row, d) => own(row, d) || splitsOf(row, d).length > 0;
+    const icon = (name) => lpIcon(name);
+
+    function cellMeta(row, d) {
+      const p = planOf(row, d), a = attsOf(row, d), items = agendaItems(p), sp = splitsOf(row, d);
+      let html = '';
+      if (a.length) html += `<span class="cm" title="${a.length} attachment${a.length === 1 ? '' : 's'}">${icon('clip')}${a.length}</span>`;
+      if (hasHomework(p)) html += `<span class="cm" title="Homework set">${icon('home')}</span>`;
+      if (sp.length) html += `<span class="cm cm-split" title="${escapeHtml(sp.map((x) => x.label).join(', '))} ha${sp.length === 1 ? 's its' : 've their'} own plan today">${icon('split')}${escapeHtml(sp.map((x) => x.label).join(' '))}</span>`;
+      return html;
+    }
+    const CELL_MAX = 8;   // agenda lines a week cell shows before "+N more"
+    function cellInner(row, d) {
+      if (!hasContent(row, d)) return '<span class="wk-plus" aria-hidden="true">+</span>';
+      const p = planOf(row, d), a = attsOf(row, d), items = agendaItems(p);
+      // the whole agenda, one entry per activity, so the week reads at a glance;
+      // the row grows to fit, and only a really long day ends in "+N more"
+      if (items.length) {
+        const obj = (p.objective || '').trim();
+        const shown = items.length > CELL_MAX ? items.slice(0, CELL_MAX - 1) : items;
+        const more = items.length - shown.length;
+        return `${obj ? `<span class="wk-obj">${escapeHtml(obj)}</span>` : ''}<ol class="wk-agenda">${shown.map((x) => `<li title="${escapeHtml(x.text)}">${escapeHtml(x.text)}</li>`).join('')}${more ? `<li class="more">+${more} more</li>` : ''}</ol><span class="wk-meta">${cellMeta(row, d)}</span>`;
+      }
+      const text = preview(p);
+      const quiet = hasHomework(p) ? `Homework: ${p.homework.trim()}` : a.length ? a[0].name : '';
+      return `<span class="wk-text${text ? '' : ' quiet'}">${escapeHtml(text || quiet)}</span><span class="wk-meta">${cellMeta(row, d)}</span>`;
+    }
+    const cellTitle = (row, d) => `${row.name} · ${fmt(d, { weekday: 'long', month: 'short', day: 'numeric' })}`;
+    const cellId = (row, d) => `cell-${row.key.replace(':', '-')}-${d}`;
+    const periodLine = (row) => (row.isCourse ? row.periods.map((p) => p.label).join(' · ') : row.periods[0].label);
+
+    // ---------- render ----------
+    function renderLabel() {
+      const ds = range();
+      $('cal-label').textContent = view === 'day' ? fmt(cursor, { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })
+        : view === 'week' ? `${fmt(ds[0], { month: 'short', day: 'numeric' })} – ${parse(ds[0]).getMonth() === parse(ds[4]).getMonth() ? parse(ds[4]).getDate() : fmt(ds[4], { month: 'short', day: 'numeric' })}, ${parse(ds[4]).getFullYear()}`
+        : fmt(cursor, { month: 'long', year: 'numeric' });
+      $('cal-date').value = cursor;
+      document.querySelectorAll('input[name="cal-view"]').forEach((r) => { r.checked = r.value === view; });
+      $('cal-view').dataset.view = view;
+    }
+    function dayHead(d, today) {
+      const off = offDay(d);
+      return `<button type="button" class="wk-day${d === today ? ' today' : ''}${off ? ' off' : ''}" data-zoom="${d}" title="Open ${fmt(d, { weekday: 'long', month: 'short', day: 'numeric' })}">
+        <span class="wk-dow">${fmt(d, { weekday: 'short' }).toUpperCase()}</span><span class="wk-dnum">${parse(d).getDate()}</span>
+        ${off ? `<span class="wk-off-note">${escapeHtml(off.note || 'No school')}</span>` : ''}
+      </button>`;
+    }
+    const coursesBtn = `<button type="button" class="wk-courses" data-courses title="Courses and the periods in each">${icon('split')}<span>Courses</span></button>`;
+    function renderWeek() {
+      const ds = weekDays(cursor), today = todayKey();
+      let html = `<div class="wk-grid" style="--rows:${Math.max(1, rows.length)}"><div class="wk-corner">${coursesReady ? coursesBtn : ''}</div>${ds.map((d) => dayHead(d, today)).join('')}`;
+      for (const row of rows) {
+        html += `<div class="wk-period${row.isCourse ? ' course' : ''}"><span class="wk-pname">${escapeHtml(row.name)}</span><span class="wk-pnum">${escapeHtml(periodLine(row))}</span></div>`;
+        for (const d of ds) {
+          if (offDay(d)) { html += '<div class="wk-cell off" aria-hidden="true"></div>'; continue; }
+          const sel = selected.key === row.key && selected.date === d;
+          html += `<button type="button" class="wk-cell${hasContent(row, d) ? ' has-plan' : ''}${sel ? ' selected' : ''}${d === today ? ' today' : ''}" data-row="${row.key}" data-date="${d}" id="${cellId(row, d)}" title="${escapeHtml(cellTitle(row, d))}">${cellInner(row, d)}</button>`;
+        }
+      }
+      $('cal-view').innerHTML = html + '</div>';
+    }
+    function renderDay() {
+      const d = cursor, off = offDay(d), today = todayKey();
+      if (off || isWeekend(d)) {
+        $('cal-view').innerHTML = `<div class="day-off"><b>${off ? 'No school' : 'Weekend'}</b>${off && off.note ? `<span>${escapeHtml(off.note)}</span>` : ''}</div>`;
+        return;
+      }
+      $('cal-view').innerHTML = `<div class="day-list${d === today ? ' today' : ''}">${rows.map((row) => {
+        const pl = planOf(row, d), a = attsOf(row, d), items = agendaItems(pl), sp = splitsOf(row, d);
+        const sel = selected.key === row.key && selected.date === d;
+        const body = hasContent(row, d) ? `
+          ${(pl && pl.objective || '').trim() ? `<p class="dc-obj">${escapeHtml(pl.objective.trim())}</p>` : ''}
+          ${(pl && pl.notes || '').trim() ? `<p class="dc-notes">${escapeHtml(pl.notes.trim())}</p>` : ''}
+          ${items.length ? `<ol class="dc-agenda">${items.slice(0, 6).map((x) => `<li>${escapeHtml(x.text)}${x.minutes ? `<span>${x.minutes} min</span>` : ''}</li>`).join('')}${items.length > 6 ? `<li class="more">+${items.length - 6} more</li>` : ''}</ol>` : ''}
+          ${hasHomework(pl) ? `<p class="dc-hw">${icon('home')}<span>${escapeHtml(pl.homework.trim())}</span></p>` : ''}
+          ${a.length ? `<div class="dc-atts">${a.map((x) => `<span class="dc-att k-${attachmentKind(x)}">${icon(attachmentKind(x))}<span>${escapeHtml(x.name)}</span></span>`).join('')}</div>` : ''}
+          ${sp.map((p) => `<p class="dc-split">${icon('split')}<span><b>${escapeHtml(p.label)} only:</b> ${escapeHtml(preview(plans.get(k(`p:${p.id}`, d))) || 'its own plan')}</span></p>`).join('')}`
+          : '<span class="dc-empty"><span class="wk-plus">+</span>Add a plan</span>';
+        return `<button type="button" class="day-card wk-cell${hasContent(row, d) ? ' has-plan' : ''}${sel ? ' selected' : ''}" data-row="${row.key}" data-date="${d}" id="${cellId(row, d)}">
+          <span class="dc-head"><span class="dc-name">${escapeHtml(row.name)}</span><span class="wk-pnum">${escapeHtml(periodLine(row))}</span><span class="wk-meta">${cellMeta(row, d)}</span></span>
+          ${body}
+        </button>`;
+      }).join('')}</div>`;
+    }
+    function renderMonth() {
+      const ds = monthDays(cursor), month = parse(cursor).getMonth(), today = todayKey();
+      let html = `<div class="mo-grid" style="--weeks:${ds.length / 5}">${['MON', 'TUE', 'WED', 'THU', 'FRI'].map((w) => `<div class="mo-dow">${w}</div>`).join('')}`;
+      for (const d of ds) {
+        const off = offDay(d), out = parse(d).getMonth() !== month;
+        const planned = rows.filter((r) => hasContent(r, d));
+        const files = rows.reduce((n, r) => n + attsOf(r, d).length, 0);
+        html += `<button type="button" class="mo-day${out ? ' out' : ''}${off ? ' off' : ''}${d === today ? ' today' : ''}${d === selected.date ? ' selected' : ''}${planned.length ? ' has-plan' : ''}" data-zoom="${d}"
+            title="${escapeHtml(off ? `No school${off.note ? ` — ${off.note}` : ''}` : `${fmt(d, { weekday: 'long', month: 'short', day: 'numeric' })} · ${planned.length} of ${rows.length} planned`)}">
+          <span class="mo-num">${parse(d).getDate()}</span>
+          ${off ? `<span class="mo-off">${escapeHtml(off.note || 'No school')}</span>`
+            : `<span class="mo-dots">${rows.map((r) => `<i class="${hasContent(r, d) ? 'on' : ''}">${escapeHtml(r.name)}</i>`).join('')}</span>
+               ${files ? `<span class="mo-clip">${icon('clip')}${files}</span>` : ''}`}
+        </button>`;
+      }
+      $('cal-view').innerHTML = html + '</div>';
+    }
+    function render() {
+      renderLabel();
+      if (!rows.length) { $('cal-view').innerHTML = `<div class="day-off"><b>No courses or periods yet</b><span><a href="roster.html">Add your periods on Rosters</a>${coursesReady ? ', then group them into <a href="#" data-courses>courses</a>' : ''}</span></div>`; return; }
+      (view === 'week' ? renderWeek : view === 'day' ? renderDay : renderMonth)();
+    }
+    // repaint one day's cells in place when the editor changes them (no full re-render while typing)
+    function paintDay(d) {
+      if (view !== 'week') { if (range().includes(d)) render(); return; }
+      for (const row of rows) {
+        const cell = document.getElementById(cellId(row, d));
+        if (!cell) continue;
+        cell.classList.toggle('has-plan', hasContent(row, d));
+        cell.innerHTML = cellInner(row, d);
+      }
+    }
+
+    // ---------- data ----------
+    async function load() {
+      const ds = range(), seq = ++loadSeq;
+      render();                                       // dates first, contents when they land
+      const [found, files] = await Promise.all([
+        getLessonPlansRange(ds[0], ds[ds.length - 1]).catch((err) => { setStatus(`Lesson plans unavailable — run migration-lessons-bathroom.sql in the Supabase SQL editor. (${err.message})`, 'error'); return []; }),
+        getLessonAttachmentsRange(ds[0], ds[ds.length - 1]).catch(() => []),
+      ]);
+      if (seq !== loadSeq) return;
+      plans = new Map(found.map((r) => [k(keyOf(r), r.date), r]));
+      atts = new Map();
+      for (const a of files) { const key = k(keyOf(a), a.date); atts.set(key, [...(atts.get(key) || []), a]); }
+      render();
+    }
+    function setView(v) {
+      view = v;
+      try { localStorage.setItem('teacherpal.lessons.view', v); } catch {}
+      if (v !== 'month') cursor = schoolDay(selected.date) ? selected.date : nearestSchoolDay(cursor);
+      load();
+    }
+    function select(key, d, split = null) {
+      const row = rowByKey(key);
+      if (!row || !schoolDay(d)) return;
+      selected = { key, date: d, split };
+      const before = range();
+      cursor = d;
+      if (view === 'month' || !range().every((x, i) => x === before[i])) load(); else render();
+      panel.show(row, d, split);
+    }
+    // a day header / month day → that day, zoomed in
+    function zoomTo(d) {
+      cursor = d;
+      if (schoolDay(d)) { selected = { key: selected.key || (rows[0] || {}).key, date: d, split: null }; panel.show(rowByKey(selected.key), d); }
+      setView('day');
+    }
+
+    // ---------- wiring ----------
+    $('cal-view').addEventListener('click', (e) => {
+      if (e.target.closest('[data-courses]')) { e.preventDefault(); openCoursesDialog(); return; }
+      const z = e.target.closest('[data-zoom]');
+      if (z) { zoomTo(z.dataset.zoom); return; }
+      const c = e.target.closest('.wk-cell[data-row]');
+      if (c) select(c.dataset.row, c.dataset.date);
+    });
+    $('cal-prev').addEventListener('click', () => go(-1));
+    $('cal-next').addEventListener('click', () => go(1));
+    function go(dir) {
+      if (view === 'day') { const d = stepDay(cursor, dir); if (selected.key) select(selected.key, d); else { cursor = d; load(); } return; }
+      if (view === 'week') { cursor = shift(mondayOf(cursor), 7 * dir); load(); return; }
+      const c = parse(cursor); cursor = dateKey(new Date(c.getFullYear(), c.getMonth() + dir, 1)); load();
+    }
+    $('cal-today').addEventListener('click', () => {
+      const d = nearestSchoolDay(todayKey());
+      if (view === 'month') { cursor = todayKey(); load(); } else select(selected.key || (rows[0] || {}).key, d);
+    });
+    $('cal-date').addEventListener('change', (e) => {
+      const d = e.target.value; if (!d) return;
+      if (view === 'month') { cursor = d; load(); } else select(selected.key || (rows[0] || {}).key, nearestSchoolDay(d));
+    });
+    document.querySelectorAll('input[name="cal-view"]').forEach((r) => r.addEventListener('change', () => { if (r.checked) setView(r.value); }));
+
+    // drop files on a cell → that course's day, uploaded through the editor
+    const dropCell = (e) => e.target.closest('.wk-cell[data-row]');
+    const hasFiles = (e) => [...(e.dataTransfer?.types || [])].includes('Files');
+    $('cal-view').addEventListener('dragover', (e) => {
+      if (!hasFiles(e)) return;
+      const c = dropCell(e);
+      document.querySelectorAll('.wk-cell.drop-target').forEach((x) => { if (x !== c) x.classList.remove('drop-target'); });
+      if (!c) return;
+      e.preventDefault(); e.dataTransfer.dropEffect = 'copy';
+      c.classList.add('drop-target');
+    });
+    $('cal-view').addEventListener('dragleave', (e) => { const c = dropCell(e); if (c && !c.contains(e.relatedTarget)) c.classList.remove('drop-target'); });
+    $('cal-view').addEventListener('drop', (e) => {
+      const c = dropCell(e);
+      if (!c || !hasFiles(e)) return;
+      e.preventDefault();
+      c.classList.remove('drop-target');
+      select(c.dataset.row, c.dataset.date);
+      panel.upload(e.dataTransfer.files);
+    });
+    // a file dropped beside a target must not navigate the browser away
+    window.addEventListener('dragover', (e) => { if (hasFiles(e)) e.preventDefault(); });
+    window.addEventListener('drop', (e) => { if (hasFiles(e)) e.preventDefault(); });
+
+    // keyboard: ← → a school day, ↑ ↓ a course (week / day); / searches
+    document.addEventListener('keydown', (e) => {
+      if (document.querySelector('dialog[open]')) return;
+      if (e.key === '/' && !isTyping(e.target)) { e.preventDefault(); $('cal-q').focus(); return; }
+      if (isTyping(e.target) || e.ctrlKey || e.metaKey || e.altKey || view === 'month' || !selected.key) return;
+      const i = rows.findIndex((r) => r.key === selected.key);
+      if (e.key === 'ArrowLeft') { e.preventDefault(); select(selected.key, stepDay(selected.date, -1)); }
+      else if (e.key === 'ArrowRight') { e.preventDefault(); select(selected.key, stepDay(selected.date, 1)); }
+      else if (e.key === 'ArrowUp' && i > 0) { e.preventDefault(); select(rows[i - 1].key, selected.date); }
+      else if (e.key === 'ArrowDown' && i < rows.length - 1) { e.preventDefault(); select(rows[i + 1].key, selected.date); }
+      else return;
+      const cell = document.getElementById(cellId(rowByKey(selected.key), selected.date));
+      if (cell) cell.scrollIntoView({ block: 'nearest' });
+    });
+
+    // ---------- search: every plan and every attachment name ----------
+    // Loaded once on first use (a teacher's whole year is a few hundred rows),
+    // then kept current from the editor's callbacks.
+    let index = null, indexing = null, results = [], active = -1;
+    function ensureIndex() {
+      if (index) return Promise.resolve(index);
+      if (!indexing) indexing = Promise.all([getAllLessonPlans(), getAllLessonAttachments().catch(() => [])])
+        .then(([p, a]) => (index = { plans: p, atts: a }))
+        .catch((err) => { indexing = null; throw err; });
+      return indexing;
+    }
+    function indexPlan(target, d, plan) {
+      if (!index) return;
+      const key = tkey(target);
+      const i = index.plans.findIndex((r) => keyOf(r) === key && r.date === d);
+      if (!plan) { if (i >= 0) index.plans.splice(i, 1); return; }
+      const row = { ...(target.courseId ? { course_id: target.courseId } : { period_id: target.periodId }), date: d, ...plan };
+      if (i >= 0) index.plans[i] = row; else index.plans.unshift(row);
+    }
+    // Where a plan / attachment lives: its calendar row (or an old course with
+    // no periods this year), and the split period if it is one.
+    function placeOf(r) {
+      if (r.course_id) {
+        const c = courses.find((x) => x.id === r.course_id);
+        return { key: `c:${r.course_id}`, split: null, label: c ? c.name : 'Course' };
+      }
+      const p = allPeriods.find((x) => x.id === r.period_id) || { id: r.period_id, name: '' };
+      const c = p.course_id && courses.find((x) => x.id === p.course_id);
+      if (c) return { key: `c:${c.id}`, split: p.id, label: `${c.name} · ${periodInfo(p).label} only` };
+      return { key: `p:${p.id}`, split: null, label: parsePeriodName(p.name).course || p.name };
+    }
+    const monthWords = (d) => `${fmt(d, { month: 'long' })} ${fmt(d, { month: 'short' })} ${fmt(d, { weekday: 'long' })} ${parse(d).getFullYear()}`;
+    const planText = (r) => [r.objective, ...(r.agenda || []).map((a) => a.text), r.materials, r.homework, r.notes].filter(Boolean).join(' · ');
+    function highlight(text, tokens) {
+      if (!tokens.length) return escapeHtml(text);
+      const re = new RegExp(`(${tokens.map((t) => t.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|')})`, 'ig');
+      return text.split(re).map((part, i) => (i % 2 ? `<mark>${escapeHtml(part)}</mark>` : escapeHtml(part))).join('');
+    }
+    function snippet(text, tokens) {
+      const low = text.toLowerCase(), at = Math.min(...tokens.map((t) => { const i = low.indexOf(t); return i < 0 ? Infinity : i; }).concat(Infinity));
+      const start = at === Infinity ? 0 : Math.max(0, at - 40);
+      return (start ? '…' : '') + text.slice(start, start + 140) + (start + 140 < text.length ? '…' : '');
+    }
+    function runSearch(q) {
+      const tokens = q.toLowerCase().split(/\s+/).filter(Boolean);
+      if (!tokens.length || !index) { results = []; return; }
+      const allIn = (hay) => { const h = hay.toLowerCase(); return tokens.every((t) => h.includes(t)); };
+      const files = index.atts.filter((a) => allIn(`${a.name} ${KIND_LABEL[attachmentKind(a)]} ${a.kind === 'link' ? a.url : ''} ${placeOf(a).label} ${monthWords(a.date)}`))
+        .map((a) => ({ type: 'att', row: a, date: a.date }));
+      const plansHit = index.plans.filter((r) => { const t = planText(r); return t && allIn(`${t} ${placeOf(r).label} ${monthWords(r.date)}`); })
+        .map((r) => ({ type: 'plan', row: r, date: r.date }));
+      results = [...files.slice(0, 30), ...plansHit.slice(0, 30)];
+      results.sort((a, b) => (a.type === b.type ? b.date.localeCompare(a.date) : a.type === 'att' ? -1 : 1));
+    }
+    function renderResults() {
+      const box = $('cal-results'), q = $('cal-q').value.trim(), tokens = q.toLowerCase().split(/\s+/).filter(Boolean);
+      if (!q) { box.hidden = true; $('cal-q').setAttribute('aria-expanded', 'false'); return; }
+      box.hidden = false; $('cal-q').setAttribute('aria-expanded', 'true');
+      if (!index) { box.innerHTML = '<p class="cr-empty">Searching…</p>'; return; }
+      if (!results.length) { box.innerHTML = `<p class="cr-empty">Nothing matches “${escapeHtml(q)}”.</p>`; return; }
+      const where = (r) => `${placeOf(r).label} · ${fmt(r.date, { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' })}`;
+      let html = '', last = '';
+      results.forEach((res, i) => {
+        if (res.type !== last) { html += `<div class="cr-group">${res.type === 'att' ? 'Files and links' : 'Plans'}</div>`; last = res.type; }
+        const r = res.row;
+        if (res.type === 'att') {
+          const kd = attachmentKind(r);
+          html += `<button type="button" class="cr-row${i === active ? ' active' : ''}" role="option" data-i="${i}"><span class="cr-icon lp-att-icon k-${kd}">${icon(kd)}</span><span class="cr-main"><b>${highlight(r.name, tokens)}</b><span>${escapeHtml(where(r))}</span></span></button>`;
+        } else {
+          html += `<button type="button" class="cr-row${i === active ? ' active' : ''}" role="option" data-i="${i}"><span class="cr-icon">${icon('doc')}</span><span class="cr-main"><b>${highlight(snippet(planText(r), tokens), tokens)}</b><span>${escapeHtml(where(r))}</span></span></button>`;
+        }
+      });
+      box.innerHTML = html;
+      const act = box.querySelector('.cr-row.active'); if (act) act.scrollIntoView({ block: 'nearest' });
+    }
+    let searchTimer = null;
+    $('cal-q').addEventListener('focus', () => { ensureIndex().then(() => { runSearch($('cal-q').value); renderResults(); }).catch(showError); renderResults(); });
+    $('cal-q').addEventListener('input', () => {
+      clearTimeout(searchTimer);
+      searchTimer = setTimeout(async () => {
+        active = -1;
+        renderResults();
+        try { await ensureIndex(); } catch (err) { showError(err); return; }
+        runSearch($('cal-q').value); renderResults();
+      }, 150);
+    });
+    $('cal-q').addEventListener('keydown', (e) => {
+      if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+        e.preventDefault();
+        if (!results.length) return;
+        active = (active + (e.key === 'ArrowDown' ? 1 : -1) + results.length) % results.length;
+        renderResults();
+      } else if (e.key === 'Enter') { e.preventDefault(); openResult(active >= 0 ? active : 0); }
+      else if (e.key === 'Escape') { e.preventDefault(); if ($('cal-q').value) { $('cal-q').value = ''; results = []; renderResults(); } else $('cal-q').blur(); }
+    });
+    $('cal-results').addEventListener('pointerdown', (e) => e.preventDefault());   // keep focus in the box
+    $('cal-results').addEventListener('click', (e) => { const b = e.target.closest('[data-i]'); if (b) openResult(Number(b.dataset.i)); });
+    document.addEventListener('pointerdown', (e) => { if (!e.target.closest('#cal-search')) $('cal-results').hidden = true; });
+    function openResult(i) {
+      const res = results[i]; if (!res) return;
+      const r = res.row, place = placeOf(r);
+      $('cal-results').hidden = true; $('cal-q').blur();
+      if (view === 'month') { view = 'week'; try { localStorage.setItem('teacherpal.lessons.view', view); } catch {} }
+      const row = rowByKey(place.key);
+      if (row && schoolDay(r.date)) select(row.key, r.date, place.split);
+      else {
+        // an old course with no periods this year, or a day that's since become no-school: still open it
+        cursor = r.date; selected = { key: null, date: r.date, split: null }; load();
+        const c = courses.find((x) => `c:${x.id}` === place.key);
+        panel.show(row || { key: place.key, target: c ? { courseId: c.id } : { periodId: r.period_id }, name: c ? c.name : place.label, periods: [], isCourse: false }, r.date, row ? place.split : null);
+        if (!row) setStatus(`${place.label} has no periods this year — showing its plan anyway.`, 'info');
+      }
+      if (res.type === 'att') panel.focusAttachment(r.id);
+    }
+
+    // ---------- start ----------
+    // course setup changed (Settings → Courses): rebuild the rows and reload
+    document.addEventListener('teacherpal:courses', async () => {
+      await loadRows();
+      if (!rowByKey(selected.key)) selected = { key: (rows[0] || {}).key || null, date: selected.date, split: null };
+      index = null; indexing = null;
+      await load();
+      if (selected.key) panel.show(rowByKey(selected.key), selected.date);
+    });
+    document.addEventListener('teacherpal:teachesPeriods', () => { buildRows(); render(); });
     navReady.then(async (nav) => {
-      periods = nav.periods;
-      const d = new Date();
-      const n = suggestedPeriod(d, resolveSchedule(d, nav.overrides), (k) => nav.byNumber.has(k));
-      const pid = n !== null ? nav.byNumber.get(n).id : ((periods.find((p) => p.id === getLastPeriodId()) || periods[0] || {}).id || null);
-      await loadWeek();
-      if (pid) select(pid, todayKey());
+      allPeriods = nav.periods;
+      overrides = nav.overrides || [];
+      await loadRows();
+      const now = new Date();
+      const n = suggestedPeriod(now, resolveSchedule(now, overrides), (x) => nav.byNumber.has(x));
+      const p = n !== null ? nav.byNumber.get(n) : null;
+      const row = (p && rows.find((r) => r.periods.some((x) => x.id === p.id))) || rows.find((r) => r.periods.some((x) => x.id === getLastPeriodId())) || rows[0];
+      const d = nearestSchoolDay(todayKey());
+      selected = { key: row ? row.key : null, date: d, split: null };
+      cursor = d;
+      await load();
+      if (row) panel.show(row, d);
     });
   </script>
 </body>

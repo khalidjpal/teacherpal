@@ -211,7 +211,8 @@ function renderSettingsMenu() {
       </label>`).join('');
     periodsBlock = `
       <div class="hud-menu-title">Periods I teach</div>
-      <div class="hud-periods">${cells}</div>`;
+      <div class="hud-periods">${cells}</div>
+      <button type="button" class="hud-menu-item hud-menu-btn" id="hud-courses">Courses…<span>which periods share a lesson plan</span></button>`;
   }
 
   return `
@@ -247,6 +248,8 @@ function wireSettingsMenu(header) {
       input.checked = input.value === t;
     });
   });
+  const coursesBtn = details.querySelector('#hud-courses');
+  if (coursesBtn) coursesBtn.addEventListener('click', () => { details.open = false; openCoursesDialog(); });
   // Teach-periods checkboxes: save on every toggle. Menu stays open so the
   // user can toggle several without losing their place.
   details.querySelectorAll('input[name="teach"]').forEach((input) => {
@@ -349,3 +352,116 @@ document.addEventListener('teacherpal:teachesPeriods', (e) => {
 
 navTick();
 setInterval(navTick, 1000);
+
+// ---------------------------------------------------------------------------
+// Settings → Courses: define courses and put periods in them. Several periods
+// can share a course; Lesson Plans then keeps one plan per course per day.
+// Attendance, seating, groups and bathroom stay per period. Changes save as
+// they're made; 'teacherpal:courses' fires when the dialog closes after any
+// change, so an open Lesson Plans page rebuilds its rows.
+// ---------------------------------------------------------------------------
+function openCoursesDialog() {
+  let dlg = document.getElementById('courses-dialog');
+  if (!dlg) {
+    dlg = document.createElement('dialog');
+    dlg.id = 'courses-dialog';
+    dlg.className = 'courses-dialog';
+    dlg.innerHTML = `
+      <div class="cd-inner">
+        <div class="cd-head">
+          <h2>Courses</h2>
+          <button type="button" class="corner-btn" data-cd="close" aria-label="Close"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg></button>
+        </div>
+        <p class="cd-note">Periods in the same course share one lesson plan each day. Attendance, seating, groups and the bathroom log stay per period.</p>
+        <div class="cd-body" id="cd-body"><p class="hint">Loading…</p></div>
+      </div>`;
+    document.body.appendChild(dlg);
+    dlg.addEventListener('click', (e) => { if (e.target === dlg || e.target.closest('[data-cd="close"]')) dlg.close(); });
+    dlg.addEventListener('close', () => {
+      if (dlg.dataset.changed) { delete dlg.dataset.changed; document.dispatchEvent(new CustomEvent('teacherpal:courses')); }
+    });
+  }
+  const body = dlg.querySelector('#cd-body');
+  let courses = [], periods = [];
+  const changed = () => { dlg.dataset.changed = '1'; };
+  const bellOf = (p) => { const { n } = parsePeriodName(p.name); return n; };
+  const teaches = typeof currentTeachesPeriods === 'function' ? currentTeachesPeriods() : null;
+  const taught = (p) => { const n = bellOf(p); return !teaches || n === null || teaches.includes(n); };
+
+  function render() {
+    const inCourse = (c) => periods.filter((p) => p.course_id === c.id).map((p) => (bellOf(p) !== null ? `P${bellOf(p)}` : p.name));
+    body.innerHTML = `
+      <section class="cd-sec">
+        <h3>Your courses</h3>
+        <ul class="cd-courses">${courses.map((c) => `
+          <li data-course="${c.id}">
+            <input type="text" value="${escapeHtml(c.name)}" aria-label="Course name" maxlength="80">
+            <span class="cd-in${inCourse(c).length ? '' : ' none'}">${inCourse(c).length ? escapeHtml(inCourse(c).join(' · ')) : 'no periods'}</span>
+            <button type="button" class="icon-btn" data-cd="delete" title="Delete course" aria-label="Delete ${escapeHtml(c.name)}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13"/></svg></button>
+          </li>`).join('') || '<li class="cd-none">No courses yet — add the first one below.</li>'}
+        </ul>
+        <form class="cd-add" data-cd="add">
+          <input type="text" placeholder="New course, e.g. English 9" aria-label="New course name" maxlength="80">
+          <button type="submit">Add course</button>
+        </form>
+      </section>
+      <section class="cd-sec">
+        <h3>Periods</h3>
+        <ul class="cd-periods">${periods.map((p) => `
+          <li class="${taught(p) ? '' : 'not-taught'}">
+            <span class="cd-pnum">${bellOf(p) !== null ? `P${bellOf(p)}` : ''}</span>
+            <span class="cd-pname">${escapeHtml(p.name)}${taught(p) ? '' : ' <em>not taught</em>'}</span>
+            <select data-period="${p.id}" aria-label="Course for ${escapeHtml(p.name)}">
+              <option value="">No course</option>
+              ${courses.map((c) => `<option value="${c.id}"${p.course_id === c.id ? ' selected' : ''}>${escapeHtml(c.name)}</option>`).join('')}
+            </select>
+          </li>`).join('') || '<li class="cd-none">No periods yet — add them on Rosters.</li>'}
+        </ul>
+      </section>`;
+  }
+  async function refresh() {
+    try {
+      [courses, periods] = await Promise.all([getCourses(), getPeriods()]);
+      periods.sort((a, b) => (bellOf(a) ?? 99) - (bellOf(b) ?? 99) || a.sort_order - b.sort_order);
+      render();
+    } catch (err) {
+      body.innerHTML = `<p class="cd-error">Courses aren't set up yet — run <b>migration-courses.sql</b> in the Supabase SQL editor. <span>(${escapeHtml(err.message)})</span></p>`;
+    }
+  }
+  const fail = (err) => setStatus(/duplicate|23505|409/.test(String(err.message)) ? 'You already have a course with that name.' : String(err.message), 'error');
+
+  body.onsubmit = async (e) => {
+    e.preventDefault();
+    const input = e.target.querySelector('input');
+    const name = input.value.trim();
+    if (!name) return;
+    try { await createCourse(name, courses.length); changed(); input.value = ''; await refresh(); body.querySelector('.cd-add input').focus(); }
+    catch (err) { fail(err); }
+  };
+  body.onchange = async (e) => {
+    const sel = e.target.closest('select[data-period]');
+    const li = e.target.closest('li[data-course]');
+    try {
+      if (sel) { await setPeriodCourse(sel.dataset.period, sel.value || null); changed(); await refresh(); }
+      else if (li && e.target.matches('input')) {
+        const c = courses.find((x) => x.id === li.dataset.course), name = e.target.value.trim();
+        if (!name) { e.target.value = c.name; return; }
+        if (name !== c.name) { await renameCourse(c.id, name); changed(); await refresh(); }
+      }
+    } catch (err) { fail(err); await refresh(); }
+  };
+  body.onkeydown = (e) => { if (e.key === 'Enter' && e.target.closest('li[data-course]') && e.target.matches('input')) { e.preventDefault(); e.target.blur(); } };
+  body.onclick = async (e) => {
+    const del = e.target.closest('[data-cd="delete"]'); if (!del) return;
+    const c = courses.find((x) => x.id === del.closest('li').dataset.course);
+    const n = await countCoursePlans(c.id).catch(() => 0);
+    const msg = n
+      ? `Delete ${c.name}?\n\nIts ${n} lesson plan${n === 1 ? '' : 's'} and their attachments are deleted too. Its periods keep their students, seating and attendance and go back to plans of their own.`
+      : `Delete ${c.name}? Its periods go back to plans of their own.`;
+    if (!confirm(msg)) return;
+    try { await deleteCourse(c.id); changed(); await refresh(); } catch (err) { fail(err); }
+  };
+  body.innerHTML = '<p class="hint">Loading…</p>';
+  if (!dlg.open) dlg.showModal();
+  refresh();
+}

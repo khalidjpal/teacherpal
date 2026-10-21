@@ -32,7 +32,7 @@ full-screen toggle. There is no sidebar; every page uses the full width.
 |--------|------|----------------|
 | Hub | `index.html` | **Launcher only**: the tools as a balanced grid of HUD panels (icon · name · a few words). No live data, no Supabase calls of its own |
 | Attendance | `attendance.html` | Taking roll: the seating chart large and central with click-to-cycle, counts, absent/tardy lists, Copy list, Reset, date control; the screen to project |
-| Lesson Plans | `lessons.html` | Writing plans: a Mon–Fri week grid across all periods (jump to any date, ← → ↑ ↓ to move) with the full editor for the selected cell beside it |
+| Lesson Plans | `lessons.html` | Writing plans **by course**: a Day / Week / Month calendar (courses × Mon–Fri, no-school days blocked out; one plan per course per day, shared by its periods, with an out-of-the-way per-period split) with the full editor for the selected period's day beside it; files and links attached per plan (Supabase Storage), and one search over every plan and attachment |
 | Create Groups | `groups.html` | Random / formula groups, projector view in full screen |
 | Timer | `timer.html` | Classroom countdown / stopwatch: big digits, presets, ±1 min, mute, pop-out + Picture-in-Picture for the projector while another tab is active |
 | Name Wheel | `wheel.html` | Cold-calling: spin a wheel of the period's present students, big name in the middle, no-repeats mode, projector pop-out |
@@ -58,10 +58,10 @@ full-screen toggle. There is no sidebar; every page uses the full width.
 | `migration-display-name.sql` | One-off migration that adds `profiles.display_name text` (how the teacher is addressed — the top-bar USER chip) and seeds `khalid` → "Mr. Pal", `marwa` → "Ms. Mohammadi" |
 | `index.html`   | Hub launcher (`body.hub.launcher`): `.hub-sections` — four labelled sections (Daily, Teacher tools, Planning, System) each with its own `.hub-panels` row of `.hud-panel` links; loads only `shared.js`, `schedule.js`, `nav.js` (top bar **without** nav links — the panels are the nav) |
 | `attendance.html` | Attendance screen: `#attendance` in **full** mode — big chart + side column with counts, lists, Copy, Reset, date |
-| `nav.js`       | Shared top bar: renders brand + nav links + readouts + full-screen button into `<header class="topbar">`, marks the active page, runs the clock / bell status (`teacherpal:tick`), exposes `navReady` (periods, overrides, teaches, byNumber). Loaded on every page after `shared.js` + `schedule.js`. |
-| `lessons.html` | Lesson Plans screen: week grid (inline script) + `#lesson` editor from `lesson.js` |
+| `nav.js`       | Shared top bar: renders brand + nav links + readouts + full-screen button into `<header class="topbar">`, marks the active page, runs the clock / bell status (`teacherpal:tick`), exposes `navReady` (periods, overrides, teaches, byNumber). Also the gear menu's **Courses…** dialog, `openCoursesDialog()`. Loaded on every page after `shared.js` + `schedule.js`. |
+| `lessons.html` | Lesson Plans screen: the calendar (Day / Week / Month), search and cell drops (inline script) + `#lesson` editor from `lesson.js` |
 | `bathroom.html` | Bathroom Tracker screen: `#bathroom` built by `bathroom.js` |
-| `lesson.js`    | `initLessonPanel({ mount, follow, onChange })` — the lesson-plan editor (objective, checkable agenda with minutes, materials, homework, notes; inline editing, 800ms autosave, empty state, Copy from period / Copy yesterday). `follow: true` tracks `teacherpal:period` (hub); otherwise `panel.show(periodId, date)`. |
+| `lesson.js`    | `initLessonPanel({ mount, rows, onChange, onAttachments, onScope })` — the lesson-plan editor for one calendar row (a course, or a period with none) on one day (numbered agenda with minutes, materials, attachments, then notes last; objective / homework only via + Add field; inline editing, 800ms autosave, a ⋯ menu with Copy from course / Copy from day / Split a period, Merge back). `panel.show(row, date, split?)`, `panel.upload(files)`, `panel.focusAttachment(id)`. Also the attachment helpers the page shares: `attachmentKind()`, `KIND_LABEL`, `lpIcon()`. |
 | `bathroom.js`  | `initBathroom()` — the bathroom tracker (tiles, sign out/in, live elapsed, flag + cap settings in localStorage, log, history). |
 | `timer.html`   | Timer screen: the `.timer-stage` (mode toggle, label, big display + ring, presets, custom min/sec, start/reset/±1, mute, Pop out, PiP, full screen) — loads `timer.js`. |
 | `timer.js`     | Countdown + stopwatch logic, plus `buildDial()` / `paintDial()` for the themed dial. **End-timestamp model**: state is `{ mode, running, paused, label, muted, targetMs, endsAt, remainingAtPause, startedAt, elapsedAtPause, zeroed }` in `localStorage['teacherpal.timer.state']`; every window computes the display from `Date.now()` against `endsAt`/`startedAt`, so tab-throttling doesn't drift. `BroadcastChannel('teacherpal-timer')` syncs main ↔ pop-out ↔ PiP. Web Audio API beep on zero (respects mute). `documentPictureInPicture.requestWindow()` on Chrome for an always-on-top floating display. Space toggles start/pause. |
@@ -73,6 +73,8 @@ full-screen toggle. There is no sidebar; every page uses the full width.
 | `noise-popout.html` | Read-only projector pop-out (`body.noise-popout`): reading + bar + zone word, fed over BroadcastChannel. Never opens a mic of its own; says so when the main window isn't answering. |
 | `timer-popout.html` | Minimal read-only pop-out window (`body.timer-popout`): label + display + the same themed dial filling the window, no controls; listens for state via BroadcastChannel. |
 | `migration-lessons-bathroom.sql` | One-off migration creating `lesson_plans` + `bathroom_log` (incl. the manual-tally columns; run in the Supabase SQL editor) |
+| `migration-courses.sql` | One-off migration (run **after** `migration-lesson-attachments.sql`): `courses` + its owner policies, `periods.course_id`, `course_id` on `lesson_plans` / `lesson_attachments` (exactly one of course/period), seeds khalid (English 9 = P1–3, ERWC 11 = P5–6) and marwa (English 12 = P2, English 9 = P3–4, ELD 12 = P5–6) by bell number, folds existing per-period plans into their course; safe to re-run, ends with a check query |
+| `migration-lesson-attachments.sql` | One-off migration: the `lesson_attachments` table + its four owner policies, the private Storage bucket `lesson-files` (50 MB/file) and its four `storage.objects` policies (own uid folder only); safe to re-run, ends with a check query |
 | `seed-bathroom-q1.sql` | Seed: Q1 used-pass tallies from the paper tracker — name-matches students per period, creates three missing students, upserts manual tallies, reports unmatched names in its last result set |
 | `attendance.js` | `initAttendance({ mode: 'full' \| 'compact' })` builds and runs the attendance view (chart or tiles, click-to-cycle, AUTO period, date, counts, lists, Copy, Reset, autosave). Data only via `shared.js`; bell data via `navReady`. |
 | `room.js`      | Seating-room geometry shared by the builder and the hub chart: `G`, `TYPES`, `FRONT`, `pieceTransform`, `bbox`, `labelStyle`, `roomBounds`, plus `fitSeatLabel(label, { base, min })` — the one seat-name fitter every page that draws seats calls. No DOM state, no Supabase. |
@@ -211,7 +213,13 @@ shared across accounts.
       contains every period — real school timetable. Only display
       of "mine vs prep" is filtered.
   Change it in the top-bar gear menu → **Periods I teach** (0-7
-  checkboxes). Toggling any checkbox calls `setMyTeachesPeriods(arr)`,
+  checkboxes). Under it, **Courses…** opens `openCoursesDialog()`
+  (nav.js): add / rename / delete courses on the left, a course `<select>`
+  per period on the right ("No course" = its own plans; untaught periods
+  dimmed). Every change saves at once; deleting a course with plans says how
+  many are deleted first; a duplicate name says so. `teacherpal:courses`
+  fires when the dialog closes after a change, and Lesson Plans rebuilds its
+  rows. Without `migration-courses.sql` the dialog says to run it. Toggling any checkbox calls `setMyTeachesPeriods(arr)`,
   which broadcasts `teacherpal:teachesPeriods`; `nav.js` listens and
   rebuilds `navState.teaches` so the NOW readout updates without a
   page reload.
@@ -232,6 +240,20 @@ to `owner_id = auth.uid()`; INSERTs get the owner from the column default
 | `name`       | text        | e.g. "Period 3" |
 | `sort_order` | integer     | display order, default 0 |
 | `created_at` | timestamptz | default now() |
+
+### `courses` — what a teacher teaches; several periods share one
+| column       | type        | notes |
+|--------------|-------------|-------|
+| `id`         | uuid        | PK |
+| `name`       | text        | "English 9"; **UNIQUE (owner_id, lower(name))** |
+| `sort_order` | integer     | |
+| `created_at` | timestamptz | |
+
+`periods.course_id` (uuid → courses.id, **on delete set null**) puts a period
+in a course; null = a period on its own. **Only lesson plans use courses.**
+Attendance, seating, groups, rules and the bathroom log stay per period.
+Courses change year to year: set them in the gear menu → **Courses…**. An
+old course with no periods keeps its plans (search still finds them).
 
 ### `students`
 | column       | type        | notes |
@@ -317,22 +339,51 @@ Upsert is `POST /attendance?on_conflict=period_id,date`. Written by the hub
 (click-to-cycle) and by Create Groups' Edit Roster (absent only — it keeps
 existing tardies). Looking back at a past day is just a different `date`.
 
-### `lesson_plans` — one row per (period, date)
+### `lesson_plans` — one row per (course, date)
 | column       | type        | notes |
 |--------------|-------------|-------|
 | `id`         | uuid        | PK |
-| `period_id`  | uuid        | FK → periods.id, `on delete cascade` |
-| `date`       | date        | **UNIQUE (period_id, date)** |
+| `course_id`  | uuid        | FK → courses.id, `on delete cascade`; **UNIQUE (course_id, date)** — the plan every period of the course follows |
+| `period_id`  | uuid        | FK → periods.id, `on delete cascade`; **UNIQUE (period_id, date)** — a period's **own** plan: a one-day *split* when the period has a course, its only plan when it has none |
+| `date`       | date        | **exactly one** of course_id / period_id is set (check `lesson_plans_one_owner`) |
 | `objective`  | text        | learning target |
-| `agenda`     | jsonb       | `[{ id, text, minutes|null, done }]` in order — `done` is the live class checklist |
+| `agenda`     | jsonb       | `[{ id, text, minutes|null, done }]` in order — `done` is legacy (the editor no longer shows checkboxes; kept, never read) |
 | `materials`  | text        | materials / links |
 | `homework`   | text        | |
 | `notes`      | text        | |
 | `updated_at` | timestamptz | set by the client on save |
 
-Upsert is `POST /lesson_plans?on_conflict=period_id,date`. A plan is "empty"
+Upsert is `POST /lesson_plans?on_conflict=course_id,date` for a course plan and `?on_conflict=period_id,date` for a period's own — the two unique constraints never collide because the other column is NULL. A plan is "empty"
 when every text field is blank and no agenda item has text; the editor shows
-the "Add a lesson plan" prompt until then.
+the "Add a lesson plan" prompt until then (or until the day has an attachment).
+
+### `lesson_attachments` — files and links on a plan's day
+| column         | type        | notes |
+|----------------|-------------|-------|
+| `id`           | uuid        | PK |
+| `course_id` / `period_id` | uuid | exactly one, keyed like `lesson_plans` (course plan vs a period's own); both `on delete cascade` |
+| `date`         | date        | the plan's day. **No FK to `lesson_plans`**: a file can be dropped on a day before anything is typed |
+| `kind`         | text        | `'file'` \| `'link'` |
+| `name`         | text        | the original file name / the link's title (1–300 chars) |
+| `storage_path` | text        | files only: the object key in bucket `lesson-files`, `<owner uid>/<course or period id>/<date>/<random>.<ext>` (a check constraint makes the first folder the row's `owner_id`) |
+| `url`          | text        | links only: `http(s)://…` (check constraint) |
+| `mime`, `size` | text, bigint | files only: Content-Type and bytes |
+| `sort_order`   | integer     | order inside the plan |
+| `created_at`   | timestamptz | |
+
+**Storage**: the private bucket `lesson-files` (`public = false`,
+`file_size_limit` 50 MB). Four policies on `storage.objects` —
+`lesson-files owner select/insert/update/delete`, all `to authenticated` and
+all `bucket_id = 'lesson-files' and (storage.foldername(name))[1] =
+auth.uid()::text` — so a teacher can only touch keys under their own uid,
+and anon nothing. Files are never public: the app reads them through signed
+URLs (10 minutes). The storage key is a random id; the real name lives in
+`name`, so names with spaces or accents never become keys. **Copies share
+objects**: Copy from course/day and a split insert new rows pointing at the same
+`storage_path`, and `deleteLessonAttachment` only removes the object when
+no row uses it any more. Deleting a period cascades the rows but leaves its
+objects in the bucket (invisible, harmless; clear them from the dashboard
+if space matters).
 
 ### `bathroom_log` — one row per trip
 | column       | type        | notes |
@@ -424,7 +475,9 @@ sends it):
 - `getAttendance(periodId, date)` → `{ marks, updatedAt }` or `null`; `saveAttendance(periodId, date, marks)` (upsert on `period_id,date`). Plus the same-browser cache helpers `readAbsentCache(periodId)` / `writeAbsentCache(periodId, ids)` (`teacherpal.absent.<periodId>` = `{ date, ids }`, today only), `absentIdsOf(marks)` and `todayKey()`.
 - `readSitOutCache(periodId)` / `writeSitOutCache(periodId, ids)` — "sitting out" for grouping (`teacherpal.sitout.<periodId>` = `{ date, ids }`, today only, this browser only). **Not attendance**: it never writes the `attendance` table or the absent cache. Used by Create Groups only.
 - `getAttendanceForDate(date)` → `[{ period_id, marks }]` for every period; `countStudentsByPeriod()` → `Map<periodId, n>`
-- `getLessonPlan(periodId, date)` → row or `null`; `getLessonPlansRange(from, to)` (week view); `saveLessonPlan(periodId, date, plan)` (upsert on `period_id,date`); `deleteLessonPlan(periodId, date)`; `EMPTY_PLAN()`
+- Courses: `getCourses()`, `createCourse(name, sortOrder)`, `renameCourse(id, name)`, `deleteCourse(id)` (periods unassigned, its plans cascade), `setPeriodCourse(periodId, courseId|null)`, `countCoursePlans(courseId)`.
+- Lesson plans take a **target** — `{ courseId }` (the course's plan) or `{ periodId }` (a period's own) — through `planWhere()` / `planOwner()`: `getLessonPlan(target, date)` → row or `null`; `getLessonPlansRange(from, to)` (every row, both kinds); `getRecentLessonPlans(target, limit)` (Copy from day); `getAllLessonPlans()` (search; paged by `sbAll()` past the 1000-row cap); `saveLessonPlan(target, date, plan)` (upsert on `course_id,date` or `period_id,date`); `deleteLessonPlan(target, date)`; `EMPTY_PLAN()`. Everything selects `*`, so the page still works per period before `migration-courses.sql`.
+- Lesson attachments (bucket `LESSON_BUCKET` = `'lesson-files'`, `LESSON_FILE_MAX` 50 MB): `getLessonAttachments(target, date)`, `getLessonAttachmentsRange(from, to)` (calendar counts), `getAllLessonAttachments()` (search); `uploadLessonFile(target, date, file, { onProgress, sortOrder })` (XHR so it can report progress; uploads the object, then the row, and removes the object again if the row fails); `addLessonLink(target, date, { url, name, sortOrder })`; `copyLessonAttachments(rows, target, date)` (new rows, same objects); `deleteLessonAttachment(row)`; `lessonFileUrl(row, { download })` → a signed URL (`download: true` saves it under its original name). Every Storage call goes through `storageCall()`, which refreshes the token once on a 401 / "jwt" error exactly like `sb()`.
 - `getBathroomLog(periodId, date)`, `getBathroomHistory(periodId)` (all dates, newest first, ≤2000), `getBathroomQuarter(quarter, from, to)` (every period: trips dated in `[from, to]`, either end `null` = open, plus that quarter's manual tallies; paged), `bathroomSignOut(periodId, studentId, date)` → row, `bathroomSignIn(id)` → row, `deleteBathroomTrip(id)`, `setManualTally(periodId, studentId, quarter, count)` (read-then-write because the uniqueness is a partial index; count 0 deletes)
 - `getScheduleOverrides()` → rows ordered by date; `saveScheduleOverride({ date, schedule, finals_pair, note })` (upsert on `date,owner_id`; `finals_pair` is nulled unless `schedule === 'finals'`); `deleteScheduleOverride(id)`
 - `getFormulaRules(periodId, scope)` → `{ rules, useFormula }` for **that scope only**; `saveFormulaRules(periodId, scope, rules, useFormula)` (upsert on `period_id,scope`). `scope` must be `'seating'` or `'grouping'` (`assertScope` throws otherwise). No helper reads or writes both scopes in one operation.
@@ -925,23 +978,91 @@ All styling lives in `style.css`; pages carry almost no inline styling.
     = pink outline + glow) and `.dash-field` (mono `.hud-key` label +
     select / date input on the dark HUD fill).
   - **Lesson plan panel** (`lesson.js`, `.lesson-panel` hud-box, used on the
-    Lesson Plans screen): header = "LESSON PLAN <period> · <date>", agenda
-    progress (`done/total · N MIN`), save state, COPY FROM PERIOD / COPY
-    YESTERDAY chips. Body = sections with small display-face labels; every
+    Lesson Plans screen): header = just "<course> · <date>" (no "LESSON PLAN" key, no periods
+    line, no agenda counter), a quiet SAVED (0.6rem, muted at 60%; only NOT
+    SAVED is loud), then a small **⋯** button
+    (`#lp-more-btn`) — the occasional actions live in its menu, not on the
+    panel: Copy from course…, Copy from day…, and Split a period… (course
+    rows only, while at least two periods still follow the course).
+    **Splitting is kept out of the way**: it swaps the menu for the periods
+    with one line of explanation; picking one (`splitOff()`) saves that period's own plan
+    for the day as a copy of the course plan (attachments copied as rows
+    sharing the same files) and opens it. Only when a period has split off
+    does the `.lp-scope` bar appear: "<course> plan  P1 · P3" and "P2 only"
+    chips to switch between them, plus **Merge back into <course>** while on
+    the split (`mergeBack()`: confirm, delete its attachment rows and its
+    plan; it follows the course again). The title then reads "English 9 · P2
+    only · <date>". A split edits only
+    its own row; the course plan is untouched. **The panel is a note, not a form.**
+    **It reads as one note**: sections sit 0.55rem apart, and only fields
+    that would otherwise be anonymous carry a label (Objective, Materials,
+    Homework, Notes, tiny); the numbered list is obviously the agenda and
+    the file list obviously the attachments, so neither has one.
+    Body = Agenda, Materials, **Attachments**, then **Notes** last (the
+    one boxed field, "What happened today?" — what happened goes after the
+    plan), then a quiet **+ Add field** whose menu offers Objective (shown
+    above the Agenda) and Homework (after Materials). Those two (`OPTIONAL`, `.lp-opt`) show only once
+    added or while they have text; left empty on blur they fold away again
+    (`opened` is per open plan). No placeholder text except Notes and the
+    agenda's "min"; the other empty fields are a faint underline (a blank
+    `placeholder=" "` so `:placeholder-shown` can draw it). Every
     field is a borderless `textarea.lp-text` (auto-grows, border appears on
     hover/focus) so it reads as text but edits inline; the agenda is an
-    `ol.lp-agenda` of `.lp-item` rows (checkbox → `done` + strike-through,
-    number, text input, minutes input, × on hover; Enter adds the next item,
-    Backspace on an empty item removes it). Autosave 800ms after the last
-    edit via `saveLessonPlan`; `beforeunload` warns while dirty. **Empty
-    state** (`.lesson-empty`): no row and nothing typed → "No lesson plan
-    yet · <period> · <date>" with **Add a lesson plan** (opens the editor
-    with one blank agenda line), Copy from another period, Copy yesterday's
-    plan. Copy-from-period opens a `<dialog>` listing the other periods'
-    plans for that date (disabled when none); Copy yesterday uses the
-    previous weekday; both confirm before replacing a non-empty plan.
-    `onChange` lets the week view mirror edits. `follow: true` (track
-    `teacherpal:period`) exists but is unused now.
+    `ol.lp-agenda` of `.lp-item` rows (no checkboxes — number, text input, minutes input, × on hover; Enter adds the next item,
+    Backspace on an empty item removes it). An empty agenda is just "+ Add activity".
+    **The panel fills its height**: the agenda grows with its items, the
+    attachments sit under it with no drop box, and **Notes** (`.lp-notes-field`,
+    `flex: 1 0 auto`, ≥ 9rem) takes every spare pixel below — `autoGrow()`
+    gives Notes only a `min-height` as tall as its text (measured with flex
+    off), so it fills the panel when short and grows (the body scrolls) when long.
+    **Time budget** (`#lp-budget`, right of + Add activity, mono): the
+    agenda's minutes against the period's real length that day —
+    `resolveSchedule(date, navReady overrides)` from `schedule.js`, so Early
+    Release Monday, Tues–Fri, minimum days, finals pairs and any override
+    all count; double 2nd uses the longer of its two blocks. "32 of 59 min ·
+    27 left", "59 min period" with nothing timed, and amber
+    (`--att-tardy`, `data-state="over"`) "60 of 59 min · 1 over". A course
+    is held to its **shortest** period (P3's lunch-side 65 vs P1/P2's 59 →
+    59); the title lists each period's length and the schedule. A split
+    uses its one period. Rows carry each period's bell number (`n` in
+    `periodInfo`); a period that doesn't meet that day (finals) is left out,
+    and with none the budget hides. Items without minutes don't count; it
+    updates on every keystroke (`renderBudget()` from `markDirty` and
+    `renderAgenda`). Autosave 800ms after the last
+    edit via `saveLessonPlan`; `beforeunload` warns while dirty. **No
+    empty-state screen**: an empty day opens straight into the editor, and
+    typing anywhere creates the plan (`.lesson-empty` only says "Pick a
+    course and a day" when nothing is selected). A week cell with an agenda
+    shows the whole agenda (see the Lesson Plans screen); without one its
+    preview is objective → notes → materials; the Day view shows
+    notes under the objective (`.dc-notes`, 4 lines). **Copy from course** lists the other
+    rows' (courses' and lone periods') plans for that date; **Copy from day** has a date picker plus
+    the 15 most recent plans of what's open (the course, or the split). Both show a paperclip count, carry an
+    "Also copy attachments" box (on by default; skips files/links already
+    there), reset agenda ticks, and confirm before replacing a non-empty
+    plan. A pending edit is saved at once (`flush()`) when the day changes.
+    **Attachments** (`.lp-att-field`): the list, then one quiet **+ Attach**
+    (`#lp-attach-btn`, styled like + Add activity) whose menu offers Upload
+    files… (`#lp-pick`), Add a link… (`#lp-link-btn`) and "or drop files
+    anywhere on the plan";
+    each `.lp-att` row is a kind icon (`attachmentKind()`: pdf · slides ·
+    doc · sheet · image · video · audio · link · file, from mime / extension
+    / URL — Google Slides/Docs/Sheets and YouTube are recognised — each
+    coloured from a token), the name, "PDF · 471 KB" or "Slides ·
+    docs.google.com", and Preview / Download (or Open) / Remove. Clicking the
+    name previews PDFs, images and YouTube links in `#lp-preview` (a 90vw ×
+    90vh `<dialog>`: PDF in an iframe and images from a signed URL, YouTube as
+    a youtube-nocookie embed, plus Download / Open in new tab), opens other
+    links in a new tab and downloads other files. Uploads show as dashed rows
+    with a percentage and a progress line; a failure stays as a red row with
+    the reason until dismissed. **Drop files anywhere on the editor** (a
+    dashed "Drop to attach to <period> · <date>" overlay) — there is no drop box any more. The link form takes a
+    URL (adds `https://` if missing) and an optional name; without one,
+    `guessLinkName()` says "Google Slides", "YouTube video", or host · last
+    path part. Without the migration the section says to run
+    `migration-lesson-attachments.sql` and the rest of the editor still
+    works. `onChange` / `onAttachments` keep the calendar and the search
+    index current.
   - **The nav is four grouped dropdowns**, defined by `NAV_SECTIONS` in
     `nav.js` (Daily · Teacher Tools · Planning · System — the hub's own
     sections). Add a screen to the right section there and every page's nav
@@ -963,16 +1084,77 @@ All styling lives in `style.css`; pages carry almost no inline styling.
     mark below 1400px and the tabs tighten; if it ever overflows, the
     nav-links wrap to their own row below the readouts (see the 1500px
     breakpoint in `style.css`).
-- **Lesson Plans screen** (`lessons.html`): `.lessons-layout` = `.week-box`
-  (58%) + `#lesson` editor (42%). The week grid (`.week-grid`, sticky day
-  headers, `9rem` period column + 5 day columns, rows `minmax(5.2rem,1fr)`)
-  shows one `.wk-cell` per period × day with the plan summary (objective,
-  else the agenda joined by ·, 3-line clamp) and `done/total`; `.has-plan`
-  fills, `.today` outlines, `.selected` glows. ← WEEK / WEEK → / TODAY /
-  JUMP TO date; ← → move a school day, ↑ ↓ a period. Plans load per week
-  with `getLessonPlansRange`; `panel.show(pid, date)` opens the editor and
-  its `onChange` updates the cell live. Opens on the bell's current period,
-  today.
+- **Lesson Plans screen** (`lessons.html`) — **organised by course**.
+  **Rows** (`buildRows()`): one per course that has a taught period
+  (`key 'c:<id>'`, target `{ courseId }`, its taught periods), plus one per
+  taught period with no course (`'p:<id>'`, named by its course part,
+  `parsePeriodName`); sorted by their first bell number. Plans and
+  attachments are mapped by owner key (`c:` / `p:`) + date, so a split
+  (`p:<period of a course>`) never shows as its own row — the course cell
+  shows a lavender split mark ("⑂ P2") instead, and the Day view adds "P2
+  only: …" lines. The week's corner cell holds a dashed **Courses** button
+  (`openCoursesDialog()`). Before `migration-courses.sql`, `getCourses()`
+  fails, every period is its own row and a status line says to run it.
+  `.lessons-layout` = the
+  `.cal-box` calendar (1.45fr) + the `#lesson` editor (1fr, ≥ 23rem);
+  stacked under 1150px. **The page's CSS was once missing from the repo**
+  (the grid fell apart into a vertical stack); it now lives in the "Lesson
+  Plans" block at the end of `style.css` — keep it there.
+  **One bar** (`.cal-bar`, one row at 1366px): ‹ TODAY › · the range label
+  · a calendar button over a hidden `<input type="date">` (jump) · the
+  search box · the **Day / Week / Month** `.seg` (remembered in
+  `teacherpal.lessons.view`). No EXPAND chip — the top bar has full screen.
+  **Week** (default, `.wk-grid`) is a real grid:
+  `grid-template-columns: <period col> repeat(5, minmax(7rem, 1fr))`, one
+  `min-content` header row (sticky `.wk-day` buttons, **one compact line**
+  "MON 19" — 0.66rem day, 0.9rem date, 0.2rem padding; a no-school note
+  wraps under it; `min-content` so the row stretch below never pads it) and one
+  `minmax(6rem, auto)` row per course (with `align-content: stretch`: rows
+  share spare height when everything fits, and grow to their content when
+  it doesn't — **the calendar scrolls vertically** (`.cal-view`) rather than
+  squeezing an agenda; readability beats fitting one screen) (`.wk-period`: the course name,
+  then its periods small — "P1 · P2 · P3"). Each `.wk-cell` is that
+  course's plan for that day: empty = a quiet `+`
+  (45% until hover); with an agenda = **the whole agenda**: the objective
+  (bold, ≤ 2 lines) if set, then `ol.wk-agenda` — every activity at
+  `--fs-sm` / 1.4 line height, 0.3rem apart, wrapping to at most two lines
+  under a hanging number (a CSS counter; the full text in each `title`).
+  Nothing is clipped vertically: past `CELL_MAX` (8) items the cell shows
+  the first 7 and a "+N more" line. Without an agenda, a 3-line
+  preview (objective, else notes, else materials; a day with only
+  attachments shows the file name in italics). `.wk-meta` at the bottom:
+  paperclip + count, a house when homework is set, the split mark. `.today` = an accent inset on the left (and
+  the header outlined); `.selected` = accent ring + glow.
+  **No-school days** (a `schedule_overrides` row with `schedule =
+  'no_school'`) are hatched `.off` cells with the override's note in the
+  header and can't be clicked; arrow keys, ‹ › and TODAY skip them and
+  weekends (`stepDay()` / `nearestSchoolDay()`). **Drop files on a cell**
+  and it is selected and the files upload through the editor
+  (`panel.upload`); a window-level dragover/drop guard keeps a missed drop
+  from navigating the browser away.
+  **Month** (`.mo-grid`, Mon–Fri × 4–6 weeks): each `.mo-day` shows the
+  date, one small mark per course row (accent = has a plan) and a
+  paperclip total, or the no-school note; days outside the month are dimmed.
+  **Clicking a month day or a week's day header zooms into that day** —
+  the **Day** view: one `.day-card` per course with the objective, up to six
+  agenda lines (with minutes), homework and
+  attachment chips; click a card to edit it. ‹ › step months / weeks /
+  school days.
+  **Search** (`#cal-q`; `/` focuses it): on first focus it loads every plan
+  and every attachment (`getAllLessonPlans` + `getAllLessonAttachments`)
+  and searches in the browser. Every word must appear in the plan text (or
+  the attachment's name / kind / URL) **plus the course name (or "<course> ·
+  P2 only") and the date's
+  month and weekday names**, so "worksheet september" finds a September
+  worksheet. Results (`.cal-results`) are grouped Files and links, then
+  Plans, newest first, with matches `<mark>`ed; ↑ ↓ Enter or a click opens
+  that week and cell (a split opens on its "P2 only" plan; an old course
+  with no periods this year still opens in the editor, with a note), and
+  an attachment hit also flashes its row in the editor
+  (`panel.focusAttachment`). Edits update the loaded index in place.
+  Keyboard: ← → a school day, ↑ ↓ a course (week / day). Periods are the
+  ones in `teaches_periods`. Opens on the course of the bell's current period,
+  today (or the next school day).
 - **Bathroom Tracker** (`bathroom.html` + `bathroom.js`). **One screen, three
   bands**: the `.br-bar` control island → `.br-grid-wrap` of student cards →
   `.br-panels`, a two-up row of **Out now** and **Log**. Settings live in a

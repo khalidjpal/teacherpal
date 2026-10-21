@@ -658,33 +658,71 @@ async function getAttendanceForDate(date) {
 }
 
 // ---------------------------------------------------------------------------
-// Lesson plans — one row per (period, date).
+// Courses — what a teacher teaches. Several periods share one through
+// periods.course_id; lesson plans belong to the course, not the period.
+// Attendance, seating, groups and bathroom stay per period.
+// ---------------------------------------------------------------------------
+
+async function getCourses() {
+  return sb('courses', { params: { select: '*', order: 'sort_order.asc,name.asc' } });
+}
+async function createCourse(name, sortOrder = 0) {
+  const rows = await sb('courses', { method: 'POST', body: { name: name.trim(), sort_order: sortOrder } });
+  return rows[0];
+}
+async function renameCourse(id, name) {
+  const rows = await sb('courses', { method: 'PATCH', params: { id: `eq.${id}` }, body: { name: name.trim() } });
+  return rows[0];
+}
+// its periods become unassigned; its lesson plans and attachments are deleted (cascade)
+async function deleteCourse(id) {
+  return sb('courses', { method: 'DELETE', params: { id: `eq.${id}` } });
+}
+// courseId null = the period stands on its own
+async function setPeriodCourse(periodId, courseId) {
+  const rows = await sb('periods', { method: 'PATCH', params: { id: `eq.${periodId}` }, body: { course_id: courseId || null } });
+  return rows[0];
+}
+// how many plans a course holds (the delete warning)
+async function countCoursePlans(courseId) {
+  const rows = await sb('lesson_plans', { params: { select: 'id', course_id: `eq.${courseId}` } });
+  return rows.length;
+}
+
+// ---------------------------------------------------------------------------
+// Lesson plans — one row per (course, date): the plan every period of the
+// course follows. A row keyed by a period instead is that period's own plan:
+// a "split" for one day when the period belongs to a course, or the only plan
+// of a period that has no course.
+//   target = { courseId } | { periodId }      (exactly one)
 // plan: { objective, agenda: [{ id, text, minutes|null, done }], materials, homework, notes }
 // ---------------------------------------------------------------------------
 
 const EMPTY_PLAN = () => ({ objective: '', agenda: [], materials: '', homework: '', notes: '' });
+// PostgREST filter / insert columns for a target
+const planWhere = (t) => (t.courseId ? { course_id: `eq.${t.courseId}` } : { period_id: `eq.${t.periodId}` });
+const planOwner = (t) => (t.courseId ? { course_id: t.courseId } : { period_id: t.periodId });
 
-async function getLessonPlan(periodId, date) {
-  const rows = await sb('lesson_plans', {
-    params: { select: '*', period_id: `eq.${periodId}`, date: `eq.${date}`, limit: 1 },
-  });
+async function getLessonPlan(target, date) {
+  const rows = await sb('lesson_plans', { params: { select: '*', ...planWhere(target), date: `eq.${date}`, limit: 1 } });
   return rows[0] || null;
 }
 
-// every plan between two dates (inclusive), for the week view
+// every plan (course and period rows alike) between two dates, inclusive
 async function getLessonPlansRange(dateFrom, dateTo) {
   return sb('lesson_plans', {
     params: { select: '*', and: `(date.gte.${dateFrom},date.lte.${dateTo})`, order: 'date.asc' },
   });
 }
 
-async function saveLessonPlan(periodId, date, plan) {
+// upsert on (course_id, date) or (period_id, date)
+async function saveLessonPlan(target, date, plan) {
   const saved = await sb('lesson_plans', {
     method: 'POST',
-    params: { on_conflict: 'period_id,date' },
+    params: { on_conflict: target.courseId ? 'course_id,date' : 'period_id,date' },
     prefer: 'resolution=merge-duplicates,return=representation',
     body: {
-      period_id: periodId, date,
+      ...planOwner(target), date,
       objective: plan.objective || '', agenda: plan.agenda || [],
       materials: plan.materials || '', homework: plan.homework || '', notes: plan.notes || '',
       updated_at: new Date().toISOString(),
@@ -693,8 +731,149 @@ async function saveLessonPlan(periodId, date, plan) {
   return saved[0];
 }
 
-async function deleteLessonPlan(periodId, date) {
-  return sb('lesson_plans', { method: 'DELETE', params: { period_id: `eq.${periodId}`, date: `eq.${date}` } });
+async function deleteLessonPlan(target, date) {
+  return sb('lesson_plans', { method: 'DELETE', params: { ...planWhere(target), date: `eq.${date}` } });
+}
+
+// this target's plans, newest first (Copy from another day)
+async function getRecentLessonPlans(target, limit = 30) {
+  return sb('lesson_plans', { params: { select: '*', ...planWhere(target), order: 'date.desc', limit } });
+}
+
+// Every row of a table, paged past PostgREST's 1000-row cap (search index).
+async function sbAll(table, params) {
+  const out = [];
+  for (let offset = 0; ; offset += 1000) {
+    const rows = await sb(table, { params: { ...params, limit: 1000, offset } });
+    out.push(...rows);
+    if (rows.length < 1000) return out;
+  }
+}
+
+// every plan ever written (Lesson Plans search)
+async function getAllLessonPlans() {
+  return sbAll('lesson_plans', { select: '*', order: 'date.desc' });
+}
+
+// ---------------------------------------------------------------------------
+// Lesson attachments — files and links on a plan's day, keyed exactly like
+// the plans (target = { courseId } | { periodId }). Rows live in
+// lesson_attachments; files in the private Storage bucket 'lesson-files' at
+// <owner uid>/<course or period id>/<date>/<random id>.<ext> (the original name is the
+// row's `name`). Storage policies only let a teacher touch their own uid
+// folder; files are read through short-lived signed URLs, never public ones.
+// row: { id, course_id, period_id, date, kind: 'file'|'link', name, storage_path, url, mime, size, sort_order }
+// ---------------------------------------------------------------------------
+
+const LESSON_BUCKET = 'lesson-files';
+const LESSON_FILE_MAX = 50 * 1024 * 1024;    // matches the bucket's file_size_limit
+
+const storageKeyUrl = (key) => `${SUPABASE_URL}/storage/v1/object/${LESSON_BUCKET}/${key.split('/').map(encodeURIComponent).join('/')}`;
+
+async function freshToken() {
+  if (_session && _session.expires_at && Date.now() > _session.expires_at - 60_000) await refreshSession().catch(() => null);
+}
+
+// One Storage API call with the same refresh-once-on-401 rule as sb().
+// send(headers) performs the request and resolves { ok, status, raw }.
+async function storageCall(send) {
+  if (!isConfigured()) throw new Error('Supabase is not configured.');
+  await freshToken();
+  let res = await send(authHeaders());
+  // (Storage reports an expired token as 400/403 "jwt expired", not always 401)
+  if ((res.status === 401 || (res.status >= 400 && /jwt/i.test(res.raw))) && _session) {
+    if (!(await refreshSession().catch(() => null))) { saveSession(null); redirectToLogin(); throw new Error('Your session expired. Please sign in again.'); }
+    res = await send(authHeaders());
+  }
+  if (!res.ok) {
+    let msg = res.raw;
+    try { const j = JSON.parse(res.raw); msg = j.message || j.error || msg; } catch {}
+    if (/bucket not found/i.test(msg)) msg = 'the lesson-files bucket is missing — run migration-lesson-attachments.sql';
+    throw new Error(`Storage ${res.status}: ${msg}`);
+  }
+  return res.raw ? (() => { try { return JSON.parse(res.raw); } catch { return res.raw; } })() : null;
+}
+const fetchRes = async (url, init) => { const r = await fetch(url, init); return { ok: r.ok, status: r.status, raw: await r.text() }; };
+
+async function getLessonAttachments(target, date) {
+  return sb('lesson_attachments', { params: { select: '*', ...planWhere(target), date: `eq.${date}`, order: 'sort_order.asc,created_at.asc' } });
+}
+// every attachment between two dates (inclusive) — cell and month counts
+async function getLessonAttachmentsRange(dateFrom, dateTo) {
+  return sb('lesson_attachments', { params: { select: '*', and: `(date.gte.${dateFrom},date.lte.${dateTo})`, order: 'date.asc' } });
+}
+// every attachment (Lesson Plans search)
+async function getAllLessonAttachments() {
+  return sbAll('lesson_attachments', { select: '*', order: 'date.desc' });
+}
+
+// Upload one File to Storage, then record it. onProgress(0..1) follows the
+// upload (XHR — fetch can't report it). If the row can't be written the
+// object is removed again, so nothing is left orphaned.
+async function uploadLessonFile(target, date, file, { onProgress, sortOrder = 0 } = {}) {
+  if (file.size > LESSON_FILE_MAX) throw new Error(`${file.name} is over the 50 MB limit.`);
+  const user = currentUser();
+  if (!user) throw new Error('Not signed in.');
+  const ext = (file.name.match(/\.([A-Za-z0-9]{1,10})$/) || [])[1];
+  const rand = (crypto.randomUUID && crypto.randomUUID()) || `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+  const key = `${user.id}/${target.courseId || target.periodId}/${date}/${rand}${ext ? `.${ext.toLowerCase()}` : ''}`;
+  const mime = file.type || 'application/octet-stream';
+  await storageCall((headers) => new Promise((resolve, reject) => {
+    const xhr = new XMLHttpRequest();
+    xhr.open('POST', storageKeyUrl(key));
+    for (const [k, v] of Object.entries({ ...headers, 'Content-Type': mime, 'x-upsert': 'false', 'cache-control': '3600' })) xhr.setRequestHeader(k, v);
+    if (onProgress) xhr.upload.onprogress = (e) => { if (e.lengthComputable) onProgress(e.loaded / e.total); };
+    xhr.onload = () => resolve({ ok: xhr.status >= 200 && xhr.status < 300, status: xhr.status, raw: xhr.responseText });
+    xhr.onerror = () => reject(new Error(`Upload of ${file.name} failed — check the connection.`));
+    xhr.send(file);
+  }));
+  try {
+    const rows = await sb('lesson_attachments', { method: 'POST', body: { ...planOwner(target), date, kind: 'file', name: file.name.slice(0, 300), storage_path: key, mime, size: file.size, sort_order: sortOrder } });
+    return rows[0];
+  } catch (err) {
+    await storageCall((h) => fetchRes(storageKeyUrl(key), { method: 'DELETE', headers: h })).catch(() => {});
+    throw err;
+  }
+}
+
+async function addLessonLink(target, date, { url, name, sortOrder = 0 }) {
+  const rows = await sb('lesson_attachments', { method: 'POST', body: { ...planOwner(target), date, kind: 'link', url, name: (name || url).slice(0, 300), sort_order: sortOrder } });
+  return rows[0];
+}
+
+// Copy attachments onto another target's day. Files are not duplicated in
+// Storage: the new rows point at the same object, which is only removed when
+// the last row using it is deleted.
+async function copyLessonAttachments(rows, target, date, startOrder = 0) {
+  if (!rows.length) return [];
+  return sb('lesson_attachments', { method: 'POST', body: rows.map((a, i) => ({
+    ...planOwner(target), date, kind: a.kind, name: a.name, storage_path: a.storage_path || null,
+    url: a.url || null, mime: a.mime || null, size: a.size ?? null, sort_order: startOrder + i,
+  })) });
+}
+
+// Removes the row, then the file once no other row uses it (copies share
+// one object). A stray object is invisible; a row without its file would be
+// a broken download — hence this order.
+async function deleteLessonAttachment(att) {
+  await sb('lesson_attachments', { method: 'DELETE', params: { id: `eq.${att.id}` } });
+  const shared = att.kind === 'file' && att.storage_path
+    ? await sb('lesson_attachments', { params: { select: 'id', storage_path: `eq.${att.storage_path}`, limit: 1 } }).catch(() => [{}])
+    : [{}];
+  if (!shared.length) {
+    await storageCall((h) => fetchRes(storageKeyUrl(att.storage_path), { method: 'DELETE', headers: h })).catch((err) => console.warn('storage delete', err));
+  }
+}
+
+// A short-lived URL for a private file. download: true makes the browser save
+// it under its original name instead of showing it.
+async function lessonFileUrl(att, { download = false, expiresIn = 600 } = {}) {
+  const key = att.storage_path.split('/').map(encodeURIComponent).join('/');
+  const data = await storageCall((h) => fetchRes(`${SUPABASE_URL}/storage/v1/object/sign/${LESSON_BUCKET}/${key}`, {
+    method: 'POST', headers: { ...h, 'Content-Type': 'application/json' }, body: JSON.stringify({ expiresIn }),
+  }));
+  const signed = data.signedURL || data.signedUrl;
+  return `${SUPABASE_URL}/storage/v1${signed}${download ? `&download=${encodeURIComponent(att.name)}` : ''}`;
 }
 
 // ---------------------------------------------------------------------------

@@ -20,6 +20,14 @@
 --     owner_id    uuid        -> auth.users.id (cascade delete)
 --     name        text        e.g. "Period 3", "Block B"
 --     sort_order  integer     display order on selectors
+--     course_id   uuid        -> courses.id (set null on delete); the course this period teaches
+--     created_at  timestamptz
+--
+--   courses                     (what a teacher teaches; several periods can share one)
+--     id          uuid        primary key
+--     owner_id    uuid        -> auth.users.id (cascade delete)
+--     name        text        "English 9"; UNIQUE (owner_id, lower(name))
+--     sort_order  integer
 --     created_at  timestamptz
 --
 --   students
@@ -83,17 +91,36 @@
 --     marks       jsonb       { "<student uuid>": { status: 'absent'|'tardy', at: ISO } }
 --     updated_at  timestamptz
 --
---   lesson_plans                (one row per period AND date)
+--   lesson_plans                (one row per COURSE and date; a period row = that period's own plan)
 --     id          uuid        primary key
 --     owner_id    uuid        -> auth.users.id (cascade delete)
---     period_id   uuid        -> periods.id (cascade delete)
---     date        date        UNIQUE (period_id, date)
+--     course_id   uuid        -> courses.id (cascade delete); UNIQUE (course_id, date)
+--     period_id   uuid        -> periods.id (cascade delete); UNIQUE (period_id, date)
+--                             exactly one of course_id / period_id is set
+--     date        date
 --     objective   text
 --     agenda      jsonb       [{ id, text, minutes|null, done }] in order
 --     materials   text
 --     homework    text
 --     notes       text
 --     updated_at  timestamptz
+--
+--   lesson_attachments          (files + links on a period's day; see migration-lesson-attachments.sql)
+--     id           uuid       primary key
+--     owner_id     uuid       -> auth.users.id (cascade delete)
+--     course_id    uuid       -> courses.id (cascade delete)   } exactly one is set,
+--     period_id    uuid       -> periods.id (cascade delete)   } like lesson_plans
+--     date         date       the plan's day (no FK to lesson_plans — a file can come first)
+--     kind         text       'file' | 'link'
+--     name         text       original file name / link title
+--     storage_path text       files: <owner uid>/<period id>/<date>/<id>.<ext> in bucket lesson-files
+--     url          text       links: http(s) URL
+--     mime         text       files: Content-Type
+--     size         bigint     files: bytes
+--     sort_order   integer
+--     created_at   timestamptz
+--
+--   storage bucket lesson-files (private, 50 MB/file; policies: own uid folder only)
 --
 --   bathroom_log                (one row per trip; in_at null while out)
 --     id          uuid        primary key
@@ -139,6 +166,19 @@ create table if not exists public.periods (
   created_at  timestamptz not null default now()
 );
 create index if not exists periods_owner_idx on public.periods(owner_id);
+
+create table if not exists public.courses (
+  id          uuid primary key default gen_random_uuid(),
+  owner_id    uuid not null default auth.uid() references auth.users(id) on delete cascade,
+  name        text not null check (length(btrim(name)) between 1 and 80),
+  sort_order  integer not null default 0,
+  created_at  timestamptz not null default now()
+);
+create unique index if not exists courses_owner_name_uidx on public.courses (owner_id, lower(name));
+create index if not exists courses_owner_idx on public.courses (owner_id);
+
+alter table public.periods add column if not exists course_id uuid references public.courses(id) on delete set null;
+create index if not exists periods_course_idx on public.periods (course_id);
 
 create table if not exists public.students (
   id          uuid primary key default gen_random_uuid(),
@@ -247,6 +287,52 @@ create table if not exists public.lesson_plans (
 );
 create index if not exists lesson_plans_date_idx  on public.lesson_plans (date);
 create index if not exists lesson_plans_owner_idx on public.lesson_plans (owner_id);
+-- course plans (course_id) vs a period's own plan (period_id): exactly one
+alter table public.lesson_plans add column if not exists course_id uuid references public.courses(id) on delete cascade;
+alter table public.lesson_plans alter column period_id drop not null;
+create index if not exists lesson_plans_course_idx on public.lesson_plans (course_id);
+do $
+begin
+  if not exists (select 1 from pg_constraint where conname = 'lesson_plans_course_date_key') then
+    alter table public.lesson_plans add constraint lesson_plans_course_date_key unique (course_id, date);
+  end if;
+  if not exists (select 1 from pg_constraint where conname = 'lesson_plans_one_owner') then
+    alter table public.lesson_plans add constraint lesson_plans_one_owner check (num_nonnulls(course_id, period_id) = 1);
+  end if;
+end $;
+
+create table if not exists public.lesson_attachments (
+  id            uuid primary key default gen_random_uuid(),
+  owner_id      uuid not null default auth.uid() references auth.users(id) on delete cascade,
+  period_id     uuid not null references public.periods(id) on delete cascade,
+  date          date not null,
+  kind          text not null check (kind in ('file', 'link')),
+  name          text not null check (length(name) between 1 and 300),
+  storage_path  text,
+  url           text,
+  mime          text,
+  size          bigint check (size is null or size >= 0),
+  sort_order    integer not null default 0,
+  created_at    timestamptz not null default now(),
+  constraint lesson_attachments_shape check (
+    (kind = 'file' and storage_path is not null and url is null
+       and split_part(storage_path, '/', 1) = owner_id::text)
+    or
+    (kind = 'link' and url ~* '^https?://' and storage_path is null)
+  )
+);
+create index if not exists lesson_attachments_period_date_idx on public.lesson_attachments (period_id, date);
+create index if not exists lesson_attachments_owner_idx       on public.lesson_attachments (owner_id);
+create index if not exists lesson_attachments_date_idx        on public.lesson_attachments (date);
+alter table public.lesson_attachments add column if not exists course_id uuid references public.courses(id) on delete cascade;
+alter table public.lesson_attachments alter column period_id drop not null;
+create index if not exists lesson_attachments_course_date_idx on public.lesson_attachments (course_id, date);
+do $
+begin
+  if not exists (select 1 from pg_constraint where conname = 'lesson_attachments_one_owner') then
+    alter table public.lesson_attachments add constraint lesson_attachments_one_owner check (num_nonnulls(course_id, period_id) = 1);
+  end if;
+end $;
 
 create table if not exists public.bathroom_log (
   id          uuid primary key default gen_random_uuid(),
@@ -291,6 +377,7 @@ create index if not exists schedule_overrides_owner_idx on public.schedule_overr
 -- ---------------------------------------------------------------------------
 
 alter table public.periods            enable row level security;
+alter table public.courses            enable row level security;
 alter table public.students           enable row level security;
 alter table public.room_layouts       enable row level security;
 alter table public.seat_assignments   enable row level security;
@@ -298,6 +385,7 @@ alter table public.seating_arrangements enable row level security;
 alter table public.seating_rules      enable row level security;
 alter table public.attendance         enable row level security;
 alter table public.lesson_plans       enable row level security;
+alter table public.lesson_attachments enable row level security;
 alter table public.bathroom_log       enable row level security;
 alter table public.schedule_overrides enable row level security;
 
@@ -307,8 +395,8 @@ declare
   policy_name text;
 begin
   foreach t in array array[
-    'periods','students','room_layouts','seat_assignments','seating_arrangements','seating_rules',
-    'attendance','lesson_plans','bathroom_log','schedule_overrides'
+    'periods','courses','students','room_layouts','seat_assignments','seating_arrangements','seating_rules',
+    'attendance','lesson_plans','lesson_attachments','bathroom_log','schedule_overrides'
   ] loop
     policy_name := format('%s owner select', t);
     if not exists (select 1 from pg_policies where schemaname='public' and tablename=t and policyname=policy_name) then
@@ -337,6 +425,34 @@ begin
         'create policy %I on public.%I for delete to authenticated using (owner_id = auth.uid())',
         policy_name, t
       );
+    end if;
+  end loop;
+end $$;
+
+-- ---------------------------------------------------------------------------
+-- Storage: the private lesson-files bucket. Keys start with the owner's uid,
+-- and these policies let a signed-in teacher touch only their own folder.
+-- ---------------------------------------------------------------------------
+insert into storage.buckets (id, name, public, file_size_limit)
+values ('lesson-files', 'lesson-files', false, 52428800)
+on conflict (id) do update set public = false, file_size_limit = excluded.file_size_limit;
+
+do $$
+declare
+  op text;
+  policy_name text;
+  own text := $own$bucket_id = 'lesson-files' and (storage.foldername(name))[1] = (select auth.uid())::text$own$;
+begin
+  foreach op in array array['select', 'insert', 'update', 'delete'] loop
+    policy_name := format('lesson-files owner %s', op);
+    if not exists (select 1 from pg_policies where schemaname='storage' and tablename='objects' and policyname=policy_name) then
+      if op = 'insert' then
+        execute format('create policy %I on storage.objects for insert to authenticated with check (%s)', policy_name, own);
+      elsif op = 'update' then
+        execute format('create policy %I on storage.objects for update to authenticated using (%s) with check (%s)', policy_name, own, own);
+      else
+        execute format('create policy %I on storage.objects for %s to authenticated using (%s)', policy_name, op, own);
+      end if;
     end if;
   end loop;
 end $$;
