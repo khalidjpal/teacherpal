@@ -88,6 +88,7 @@
   --accent-deep: #D9578F;
   --accent-soft: rgba(240, 127, 174, 0.14);
   --accent-glow: rgba(240, 127, 174, 0.35);
+  --accent-ink: var(--accent);     /* accent as text / icon colour; a theme with a dark accent points it at a lighter tint */
   --lavender: #B79CF5;              /* secondary accent for contrast */
   --lavender-soft: rgba(183, 156, 245, 0.16);
   --group-tint: 16%;                /* how much a group's colour washes its card */
@@ -310,182 +311,198 @@
   --noise-loud-soft:  rgba(214, 55, 87, 0.12);
 }
 
-/* ---------- Tokens: earthy (bark, clay and sage) ----------
-   A pure colour swap of jarvis, like marwa: same layout, fonts, radii,
-   tracks and components — only these values differ. 24-hour clock, no
-   mascots, no page pattern (exactly like jarvis).
+/* ---------- Tokens: earthy (forest, sage, terracotta, wheat) ----------
+   A colour swap of jarvis: same layout, fonts, radii, tracks and
+   components — only these values differ (plus the three depth tokens,
+   switched on). 24-hour clock, no mascots, no page pattern.
 
    Every colour token jarvis defines (this block AND the HUD / attendance /
    wheel / noise tokens in the later plain `:root` block) is redefined here,
    so nothing falls back to a jarvis value.
 
-   Palette:
-     #2B2118 deep bark · #3A2D21 warm dark brown · #6B4E35 clay ·
-     #B5734A terracotta · #4E7730 moss · #91AD5B sage · #E8F0A3 pale citron ·
-     #C4B8A0 warm stone
-   • Ground and surfaces are the BROWNS, so green reads as an accent, not
-     the whole screen: page #2B2118, cards #3A2D21, inset wells a shade
-     darker, hover rows a shade lighter; borders clay #6B4E35
-   • Text pale citron; secondary text a warm cream; muted text warm stone
-   • Sage = primary accent (pressed states, primary buttons, icons, HUD
-     lines); moss = its deep tone (gradient bars)
-   • Terracotta = the secondary / stand-apart colour: --lavender (DRAFT
-     tags, duplicate + sitting-out notes), --danger (destructive, absent),
-     hover borders. Text uses lighter terracotta tints (#DDA175 / #EE9277):
-     #B5734A itself is only ~3:1 on the brown cards
-   • Hover warms borders toward terracotta and brightens HUD lines / glows
-     toward citron
-   • Group cards (--group-c1…c5) and wheel slices cycle sage → moss →
-     terracotta → clay → stone, so neighbours always differ
-   Measured (WCAG, on bg / card / well / hover): text 9.6–13.1:1, text-2
-   8.0–10.9:1, muted 5.9–8.0:1, accent 4.6–6.3:1, lavender ≥ 5.2:1, danger
-   ≥ 5.0:1, ok/tardy ≥ 6.2:1, on-accent 6.3:1; group labels ≥ 4.67:1 and
-   names ≥ 7.85:1 on their tinted cards; wheel names ≥ 4.9:1 on every
-   slice. */
+   Ground is DARK FOREST GREEN (the old brown base read as a muddy film).
+   Each surface is a clear step lighter than the one under it:
+     page #0D1A10 → canvas #122418 → cards / panels #1A3322 →
+     raised #24452E (inputs, chips, wells) → hover #284B32
+   Borders #3D6B48 outline everything; buttons / inputs / chips get the
+   brighter #5E9A6C (4.1:1 on the card).
+   Accents are MUTED and SPARING — the separation comes from the surfaces
+   and borders, not from colour:
+     • sage #7A9E48 (--accent) — primary buttons, active tabs, selected
+       items, focus rings, hover borders. Too dark for text (4.4:1), so
+       accent-coloured text and icons use --accent-ink #A6BD8C, a soft
+       low-saturation sage
+     • terracotta #C05F35 — only the card glow line; as text #E0A582
+       (--lavender: DRAFT tags, duplicates, sitting out)
+     • wheat #C9A43C — tardy only (#D6B456 as text); readouts are plain text
+   Panel lines and chip outlines are the neutral green #5E9A6C, not accent.
+   Measured (WCAG, on bg / card / raised / hover): text 7.4–13.6:1, text-2
+   5.8–10.7:1, labels 4.6–8.4:1, accent-ink 4.8–8.8:1, lavender ≥ 4.61:1,
+   danger ≥ 4.5:1, ok ≥ 5.2:1, tardy ≥ 4.9:1, on-accent 5.8:1; muted
+   #8BA68D is 6.8:1 on the page and 5.2:1 on the card but only 4.0 / 3.7:1
+   on raised / hover. Group labels ≥ 4.76:1 and names ≥ 7.0:1 on their
+   tinted cards; wheel names ≥ 4.9:1; seat names 6.0:1. */
 :root[data-theme="earthy"] {
   color-scheme: dark;
 
-  /* ground — browns */
-  --bg-0:#211911;   /* deep bark, a step below the panels */
-  --bg-1:#2B2118;   /* radial glow centre */
+  /* ground — deep forest */
+  --bg-0:#0D1A10;   /* page: deep forest, nearly black */
+  --bg-1:#122418;   /* canvas / radial glow centre */
   --bg: var(--bg-0);
-  --bg-glow: rgba(181, 115, 74, 0.10);    /* faint terracotta wash at the top */
+  --bg-glow: rgba(122, 158, 72, 0.08);    /* faint sage wash at the top */
   --body-pattern: none;
 
-  /* surfaces — warm browns, lifted off the bark */
-  --card:#3A2D21;   /* warm dark brown — panels and cards */
-  --card-2:#2A2017;   /* inputs, chips, wells, empty cells: sunk below the card */
-  --card-3:#47372A;   /* hover / raised rows, a clear step up */
-  --border:#86643F;   /* clay, 2.5:1 on the card — a real outline */
-  --border-strong:#A9794F;   /* buttons, inputs, chips: 3.5:1 on the card, 4.2:1 on a well */
-  --border-hover:#E3A578;   /* hover goes bright terracotta (6.3:1) */
+  /* surfaces — each a clear step lighter than the last */
+  --card:#1A3322;   /* cards and panels */
+  --card-2:#24452E;   /* raised: inputs, chips, wells, empty cells */
+  --card-3:#284B32;   /* hover / raised rows */
+  --border:#3D6B48;   /* outlines every element */
+  --border-strong:#5E9A6C;   /* buttons, inputs, chips: 4.1:1 on the card */
+  --border-hover:#7A9E48;   /* hover brightens to the sage accent */
 
   /* text */
-  --text:#F0F5BC;   /* citron headings and names (11.7:1 on the card) */
-  --text-2:#D3C7AB;   /* cream body (7.9:1) */
-  --text-muted:#B5A688;   /* stone, quieter (5.6:1, 4.75:1 on hover rows) */
+  --text:#D8E4CC;   /* soft near-white, green cast (10.3:1 on the card) */
+  --text-2:#BCCDB2;   /* body (8.1:1) */
+  --text-muted:#8BA68D;   /* 5.2:1 on the card; below AA on raised / hover (4.0 / 3.7:1) */
 
-  /* accents — sage primary, moss deep, terracotta secondary */
-  --accent:#A6C45E;   /* sage, saturated (6.8:1 on the card) */
-  --accent-deep:#6F9B3F;   /* moss, bright enough to edge a primary button */
-  --accent-soft:rgba(166, 196, 94, 0.20);
-  --accent-glow:rgba(166, 196, 94, 0.45);
-  --lavender:#E3A578;   /* terracotta (6.3:1) */
-  --lavender-soft:rgba(198, 120, 72, 0.28);
+  /* accents — muted sage, terracotta, wheat; used sparingly */
+  --accent:#7A9E48;   /* muted sage: fills, borders, rings — not text */
+  --accent-deep:#5F8236;   /* deeper sage: edges, bar starts */
+  --accent-soft:rgba(122, 158, 72, 0.18);
+  --accent-glow:rgba(122, 158, 72, 0.40);
+  --accent-ink:#A6BD8C;   /* accent as text and icons: a soft, low-saturation sage (6.7:1 on the card); #7A9E48 itself is 4.4:1 */
+  --lavender:#E0A582;   /* terracotta as text (6.4:1) */
+  --lavender-soft:rgba(192, 95, 53, 0.24);
   --group-tint: 16%;
   --group-ink-dl: 0;
-  --danger:#F09A80;   /* warm terracotta-red (6.1:1) */
-  --ok:#AFD58C;
+  --danger:#F5A098;   /* soft coral, apart from terracotta (≥ 4.5:1) */
+  --ok:#8CCB9F;   /* mint, so success isn't the sage accent */
 
-  /* the room: a floor darker than the page, lit wood seats with light clay
-     edges (5.7:1 on the floor), so desks read as objects */
-  --seat-bg: #5C4834;
-  --seat-line: #B08A63;
-  --seat-empty-bg: #33281D;
-  --seat-empty-line: #7A5A3F;
-  --chart-floor: #1E1610;
-  --room-floor: #1E1610;
-  /* sage and terracotta around the page, so green isn't a lone outlier */
-  --label-ink:#AAAE84;   /* labels step DOWN from body text: dusty sage (5.8:1) */
-  --figure-ink:#E3A578;   /* terracotta readouts */
-  --chip-line:rgba(227, 165, 120, 0.85);
-  --chip-ink:#E3A578;
+  /* the room: a floor darker than the page, green-lit seats with bright
+     edges (6.7:1 on the floor), so desks read as objects */
+  --seat-bg: #2F5A3C;
+  --seat-line:#6FA67C;
+  --seat-empty-bg: #17301F;
+  --seat-empty-line: #4F8A5C;
+  --chart-floor: #091409;
+  --room-floor: #091409;
+  --label-ink:#A3B79B;   /* grey-green labels (6.4:1) */
+  --figure-ink:var(--text-2);   /* readouts in plain text, not accent */
+  --chip-line:rgba(94, 154, 108, 0.70);   /* neutral green chip outlines */
+  --chip-ink:var(--label-ink);
 
   /* group cards cycle the palette (formula: .group → --g-pick) */
-  --group-c1: #B2C28E;              /* sage */
-  --group-c2: #8CC456;              /* moss */
-  --group-c3: #E9A57D;              /* terracotta */
-  --group-c4: #D8B693;              /* clay */
-  --group-c5: #C4B8A0;              /* stone */
+  --group-c1:#A9C487;              /* sage */
+  --group-c2:#E0A582;              /* terracotta */
+  --group-c3:#D6B456;              /* wheat */
+  --group-c4:#93C9A6;              /* mint */
+  --group-c5:#CBD8C0;              /* pale birch */
 
   /* gradients */
-  --gradient-accent:linear-gradient(180deg, rgba(166, 196, 94, 0.55), rgba(166, 196, 94, 0.16));
+  --gradient-accent:linear-gradient(180deg, rgba(122, 158, 72, 0.55), rgba(122, 158, 72, 0.16));
   --gradient-bar: linear-gradient(90deg, var(--accent-deep), var(--accent));
-  --gradient-glow-top:linear-gradient(90deg, transparent, rgba(227, 165, 120, 0.7), var(--accent-glow), transparent);
+  --gradient-glow-top:linear-gradient(90deg, transparent, rgba(192, 95, 53, 0.55), rgba(122, 158, 72, 0.35), transparent);
 
   /* rings & shadows */
-  --ring:rgba(166, 196, 94, 0.55);
-  --shadow-card:0 1px 0 rgba(240, 245, 188, 0.07) inset, 0 2px 4px rgba(12, 8, 4, 0.55), 0 10px 26px rgba(12, 8, 4, 0.5);
-  --shadow-card-hover:0 1px 0 rgba(240, 245, 188, 0.09) inset, 0 4px 8px rgba(12, 8, 4, 0.55), 0 16px 34px rgba(12, 8, 4, 0.55), 0 0 0 1px rgba(227, 165, 120, 0.35);
-  --shadow-pop:0 20px 54px rgba(10, 6, 3, 0.8);
-  --shadow-pressed:inset 0 0 0 1px var(--accent), inset 0 0 18px rgba(166, 196, 94, 0.35), 0 0 14px rgba(166, 196, 94, 0.30);
-  --shadow-text: rgba(18, 12, 7, 0.45);
+  --ring:rgba(122, 158, 72, 0.75);
+  --shadow-card:0 1px 0 rgba(234, 244, 224, 0.07) inset, 0 2px 4px rgba(2, 8, 3, 0.6), 0 10px 26px rgba(2, 8, 3, 0.55);
+  --shadow-card-hover:0 1px 0 rgba(234, 244, 224, 0.09) inset, 0 4px 8px rgba(2, 8, 3, 0.6), 0 16px 34px rgba(2, 8, 3, 0.6), 0 0 0 1px rgba(122, 158, 72, 0.45), 0 0 18px rgba(122, 158, 72, 0.18);
+  --shadow-pop:0 20px 54px rgba(1, 6, 2, 0.85);
+  --shadow-pressed:inset 0 0 0 1px var(--accent), inset 0 0 18px rgba(122, 158, 72, 0.38), 0 0 16px rgba(122, 158, 72, 0.35);
+  --shadow-text: rgba(2, 8, 3, 0.5);
 
-  /* depth: panels cast a shadow, and clickable things lift a pixel on hover */
-  --panel-shadow: 0 1px 0 rgba(240, 245, 188, 0.06) inset, 0 3px 6px rgba(12, 8, 4, 0.45), 0 14px 32px rgba(12, 8, 4, 0.45);
+  /* depth: panels cast a shadow, and clickable things lift and glow on hover */
+  --panel-shadow: 0 1px 0 rgba(234, 244, 224, 0.06) inset, 0 3px 6px rgba(2, 8, 3, 0.5), 0 14px 32px rgba(2, 8, 3, 0.5);
   --hover-lift: -1px;
-  --hover-glow: 0 3px 10px rgba(12, 8, 4, 0.5);
+  --hover-glow:0 3px 10px rgba(2, 8, 3, 0.55), 0 0 10px rgba(122, 158, 72, 0.14);
 
   /* semantic surfaces */
-  --panel-bg:rgba(58, 45, 33, 0.97);   /* panels are solid, so they read as objects over the page */
-  --panel-bg-hover:rgba(71, 55, 42, 0.98);
-  --field-bg:#2A2017;
-  --topbar-bg:rgba(33, 25, 17, 0.92);
-  --on-accent:#241A10;   /* bark on sage (8.7:1) */
+  --panel-bg:rgba(26, 51, 34, 0.97);   /* panels are solid, so they read as objects over the page */
+  --panel-bg-hover:rgba(36, 69, 46, 0.98);
+  --field-bg:#24452E;
+  --topbar-bg:rgba(66, 50, 35, 0.96);   /* the top bar is a wooden beam (--wood) */
+  --on-accent:#0D1A10;   /* forest on sage (5.8:1) */
 
-  /* semantic tints — warm stone alpha over brown */
-  --surface-tint: rgba(196, 184, 160, 0.07);
-  --surface-tint-strong:rgba(211, 199, 171, 0.38);
-  --surface-tint-present: rgba(232, 240, 163, 0.40);
-  --surface-tint-formula: rgba(196, 184, 160, 0.20);
-  --surface-tint-progress: rgba(196, 184, 160, 0.12);
-  --canvas-dot: rgba(196, 184, 160, 0.16);
+  /* wood — the secondary MATERIAL (used only by the earthy materials rules):
+     green room, wooden furniture. Each is set by value against the green it
+     sits on, not just by hue (#3A2C1E matched the card's value exactly):
+       --wood        caps, title bars, toolbars, table heads, the top bar —
+                     a touch warmer than #3A2C1E so muted text keeps AA (4.6:1)
+       --wood-inset  fields and tab-bar tracks, sunk darker (1.24:1 vs the card)
+       --wood-btn    buttons, a lighter plank (1.5:1 vs the card)
+       --clay        dividers and rules; --clay-line, a lighter clay, outlines
+                     fields and buttons (2.2:1 on the card) */
+  --wood: #423223;
+  --wood-inset: #241B12;
+  --wood-btn: #5A4430;
+  --wood-btn-hover: #66472F;   /* hover warms toward terracotta */
+  --clay: #5C4631;
+  --clay-line: #7A5C40;
+  --clay-hover: #C05F35;   /* terracotta */
+
+  /* semantic tints — pale green alpha over forest */
+  --surface-tint: rgba(207, 226, 196, 0.07);
+  --surface-tint-strong:rgba(207, 226, 196, 0.38);
+  --surface-tint-present: rgba(122, 158, 72, 0.40);
+  --surface-tint-formula: rgba(207, 226, 196, 0.20);
+  --surface-tint-progress: rgba(207, 226, 196, 0.12);
+  --canvas-dot: rgba(207, 226, 196, 0.16);
 
   /* accent overlays */
-  --accent-fill-soft:rgba(166, 196, 94, 0.14);
-  --accent-line:rgba(166, 196, 94, 0.60);
-  --accent-line-strong:rgba(166, 196, 94, 0.75);
-  --accent-ring-soft:rgba(166, 196, 94, 0.30);
-  --accent-ring-strong:rgba(166, 196, 94, 0.50);
-  --accent-inset-soft: rgba(181, 115, 74, 0.10);
-  --accent-inset-chip:rgba(166, 196, 94, 0.32);
-  --accent-icon-glow:rgba(166, 196, 94, 0.75);
+  --accent-fill-soft:rgba(122, 158, 72, 0.15);
+  --accent-line:rgba(122, 158, 72, 0.65);
+  --accent-line-strong:rgba(122, 158, 72, 0.85);
+  --accent-ring-soft:rgba(122, 158, 72, 0.32);
+  --accent-ring-strong:rgba(122, 158, 72, 0.55);
+  --accent-inset-soft: rgba(232, 116, 63, 0.10);
+  --accent-inset-chip:rgba(122, 158, 72, 0.34);
+  --accent-icon-glow:rgba(122, 158, 72, 0.40);
 
-  /* HUD tokens — sage lines; hover lines and glows brighten to citron */
+  /* HUD tokens — neutral green lines; only hover goes sage */
   --hud:              var(--accent);
-  --hud-dim:rgba(166, 196, 94, 0.45);
-  --hud-line:rgba(166, 196, 94, 0.55);   /* sage panel edges — what defines shapes, as pink does in jarvis */
-  --hud-line-strong:rgba(240, 245, 188, 0.85);
-  --hud-glow:0 0 18px rgba(166, 196, 94, 0.30), 0 0 2px rgba(240, 245, 188, 0.60);
-  --hud-glow-soft:    0 0 24px rgba(181, 115, 74, 0.16);
-  --hud-grid:         rgba(196, 184, 160, 0.035);
-  --hud-scan:         rgba(196, 184, 160, 0.025);
+  --hud-dim:rgba(122, 158, 72, 0.45);
+  --hud-line:rgba(94, 154, 108, 0.60);   /* sage panel edges — what defines shapes, as pink does in jarvis */
+  --hud-line-strong:rgba(122, 158, 72, 0.95);
+  --hud-glow:0 0 14px rgba(122, 158, 72, 0.25), 0 0 2px rgba(216, 228, 204, 0.45);
+  --hud-glow-soft:0 0 24px rgba(192, 95, 53, 0.12);
+  --hud-grid:         rgba(207, 226, 196, 0.035);
+  --hud-scan:         rgba(207, 226, 196, 0.025);
 
   /* attendance */
   --att-absent:      var(--danger);
-  --att-absent-soft: rgba(238, 146, 119, 0.16);
-  --att-tardy:       #E8B65A;
-  --att-tardy-soft:  rgba(232, 182, 90, 0.16);
+  --att-absent-soft:rgba(245, 160, 152, 0.16);
+  --att-tardy:#D6B456;   /* wheat */
+  --att-tardy-soft:rgba(201, 164, 60, 0.16);
 
-  /* wheel slices — moss, terracotta, clay, sage, stone in turn (wheel.js
-     walks r0 r4 r1 r5 r2 r6 r3 r7), dark enough for citron names (≥ 4.9:1) */
-  --wheel-r0: #3E5F26;              /* moss */
-  --wheel-r4: #8A4F2E;              /* terracotta */
-  --wheel-r1: #5E4430;              /* clay */
-  --wheel-r5: #56692F;              /* sage */
-  --wheel-r2: #5F5647;              /* stone */
-  --wheel-r6: #456829;              /* moss, brighter */
-  --wheel-r3: #7B4528;              /* terracotta, deeper */
-  --wheel-r7: #6A4C34;              /* clay, lighter */
-  --wheel-divider: rgba(232, 240, 163, 0.45);
-  --wheel-ink:        #F4F6D6;
-  --wheel-ink-shadow: rgba(24, 16, 10, 0.7);
-  --wheel-won:        #9A5A31;
-  /* the machine: dark bark frame with clay and sage edges */
-  --wheel-metal:    #45362A;
-  --wheel-metal-2:  #2F241A;
-  --wheel-metal-hi: rgba(145, 173, 91, 0.60);
-  --wheel-housing:  #4B3A2C;
-  --wheel-face-hi:  rgba(232, 240, 163, 0.10);
-  --wheel-face-lo:  rgba(18, 12, 7, 0.40);
+  /* wheel slices — forest, terracotta, wheat, sage, teal (wheel.js walks
+     r0 r4 r1 r5 r2 r6 r3 r7), deep enough for pale names (≥ 4.9:1) */
+  --wheel-r0: #2F6B2E;              /* forest */
+  --wheel-r4: #8C4019;              /* terracotta */
+  --wheel-r1: #7A5A12;              /* wheat */
+  --wheel-r5: #3C6A1E;              /* sage */
+  --wheel-r2: #1F5A45;              /* teal pine */
+  --wheel-r6: #7A3A1C;              /* rust */
+  --wheel-r3: #5E5A16;              /* olive */
+  --wheel-r7: #2E5E33;              /* moss */
+  --wheel-divider:rgba(216, 228, 204, 0.40);
+  --wheel-ink:#E6EEDC;
+  --wheel-ink-shadow: rgba(4, 12, 6, 0.7);
+  --wheel-won:#9E4E2B;
+  /* the machine: dark forest frame with sage edges */
+  --wheel-metal:    #1E3A27;
+  --wheel-metal-2:  #12241A;
+  --wheel-metal-hi: rgba(122, 158, 72, 0.60);
+  --wheel-housing:  #224230;
+  --wheel-face-hi:  rgba(234, 244, 224, 0.10);
+  --wheel-face-lo:  rgba(2, 8, 3, 0.40);
 
   /* noise zones */
   --noise-quiet: var(--ok);
   --noise-ok:    var(--att-tardy);
   --noise-loud:  var(--danger);
-  --noise-quiet-soft: rgba(169, 207, 134, 0.16);
-  --noise-ok-soft:    rgba(232, 182, 90, 0.16);
-  --noise-loud-soft:  rgba(238, 146, 119, 0.16);
+  --noise-quiet-soft:rgba(140, 203, 159, 0.16);
+  --noise-ok-soft:rgba(201, 164, 60, 0.16);
+  --noise-loud-soft:rgba(245, 160, 152, 0.16);
 }
 
 /* ==========================================================================
@@ -648,6 +665,14 @@
   --halloween-flock: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 220 70'><defs><g id='b'><path d='M32 10C30.4 10 29.2 11 28.8 12.4L27.6 8.6 26.9 13.1C23 9.6 15 7.6 4 10 8 12.4 9.6 16 8.8 19.6 12.4 18.2 16.4 19 18.4 21.6 19.6 19.6 22 18.8 24.4 19.6 26 22 28.6 25.6 32 28Z'/><path d='M32 10C30.4 10 29.2 11 28.8 12.4L27.6 8.6 26.9 13.1C23 9.6 15 7.6 4 10 8 12.4 9.6 16 8.8 19.6 12.4 18.2 16.4 19 18.4 21.6 19.6 19.6 22 18.8 24.4 19.6 26 22 28.6 25.6 32 28Z' transform='matrix(-1 0 0 1 64 0)'/></g></defs><g fill='%23523A75' fill-opacity='0.85' stroke='%23FF7518' stroke-opacity='0.22' stroke-width='0.9'><use href='%23b' transform='translate(6 18) rotate(-8 32 16) scale(1)'/><use href='%23b' transform='translate(96 4) rotate(6 21 10.5) scale(0.6599999999999999)'/><use href='%23b' transform='translate(150 34) rotate(-3 26 13) scale(0.8099999999999999)'/></g></svg>");
   --halloween-flock-far: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 220 70'><defs><g id='b'><path d='M32 10C30.4 10 29.2 11 28.8 12.4L27.6 8.6 26.9 13.1C23 9.6 15 7.6 4 10 8 12.4 9.6 16 8.8 19.6 12.4 18.2 16.4 19 18.4 21.6 19.6 19.6 22 18.8 24.4 19.6 26 22 28.6 25.6 32 28Z'/><path d='M32 10C30.4 10 29.2 11 28.8 12.4L27.6 8.6 26.9 13.1C23 9.6 15 7.6 4 10 8 12.4 9.6 16 8.8 19.6 12.4 18.2 16.4 19 18.4 21.6 19.6 19.6 22 18.8 24.4 19.6 26 22 28.6 25.6 32 28Z' transform='matrix(-1 0 0 1 64 0)'/></g></defs><g fill='%23412E5E' fill-opacity='0.75' stroke='%23FF7518' stroke-opacity='0.22' stroke-width='0.9'><use href='%23b' transform='translate(6 18) rotate(-8 32 16) scale(1)'/><use href='%23b' transform='translate(96 4) rotate(6 21 10.5) scale(0.6599999999999999)'/><use href='%23b' transform='translate(150 34) rotate(-3 26 13) scale(0.8099999999999999)'/></g></svg>");
   --halloween-head-bat: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 32'><defs><g id='b'><path d='M32 10C30.4 10 29.2 11 28.8 12.4L27.6 8.6 26.9 13.1C23 9.6 15 7.6 4 10 8 12.4 9.6 16 8.8 19.6 12.4 18.2 16.4 19 18.4 21.6 19.6 19.6 22 18.8 24.4 19.6 26 22 28.6 25.6 32 28Z'/><path d='M32 10C30.4 10 29.2 11 28.8 12.4L27.6 8.6 26.9 13.1C23 9.6 15 7.6 4 10 8 12.4 9.6 16 8.8 19.6 12.4 18.2 16.4 19 18.4 21.6 19.6 19.6 22 18.8 24.4 19.6 26 22 28.6 25.6 32 28Z' transform='matrix(-1 0 0 1 64 0)'/></g></defs><use href='%23b' fill='%23C394EE'/><circle cx='30.4' cy='14.6' r='1' fill='%23FF7518'/><circle cx='33.6' cy='14.6' r='1' fill='%23FF7518'/></svg>");
+  --font-spooky: "Pirata One", var(--font-display);   /* timer digits + label (loaded on the timer pages only) */
+  --halloween-candle: #FFD25A;   /* timer digits in the carved grin */
+  --halloween-carve: #1E0C03;    /* the carving's dark inside (digit outline) */
+  /* the timer pumpkin, three layers: spent (dark) under lit (clipped from the
+     bottom as time drains) under the carved face (always lit) */
+  --halloween-pumpkin-lit: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><path d='M46.5 20C46.6 13 45.2 8 42.4 4L49.6 2.2C52.2 7 53.6 13 53.5 20Z' fill='%23556B26' stroke='%23000' stroke-opacity='0.35' stroke-width='0.8'/><path d='M53.8 11.6C57.6 6.6 65 6.2 68.8 9.6 64 10.2 60.4 12.6 57.4 16Z' fill='%237FBF3F'/><path d='M43.6 10.6C38.6 7.8 33.8 10 34.2 13.8 34.6 17 38.4 17 38.6 14.6' fill='none' stroke='%237FBF3F' stroke-width='1.1' stroke-linecap='round'/><g stroke='%237A3005' stroke-width='0.6'><ellipse cx='28' cy='57' rx='23' ry='36' fill='%23B84A0A'/><ellipse cx='72' cy='57' rx='23' ry='36' fill='%23B84A0A'/><ellipse cx='39' cy='56.5' rx='21' ry='39.5' fill='%23E0600E'/><ellipse cx='61' cy='56.5' rx='21' ry='39.5' fill='%23E0600E'/><ellipse cx='50' cy='56' rx='17' ry='40' fill='%23FF7518'/></g><path d='M35 19Q23 56 35 93M65 19Q77 56 65 93M44.5 16.8Q41 56 44.5 95.4M55.5 16.8Q59 56 55.5 95.4' fill='none' stroke='%239A3C06' stroke-width='0.8' stroke-opacity='0.7'/><ellipse cx='17' cy='36' rx='3.5' ry='8.5' fill='%23FFFFFF' fill-opacity='0.10' transform='rotate(18 17 36)'/></svg>");
+  --halloween-pumpkin-spent: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><path d='M46.5 20C46.6 13 45.2 8 42.4 4L49.6 2.2C52.2 7 53.6 13 53.5 20Z' fill='%232E3A1A' stroke='%23000' stroke-opacity='0.35' stroke-width='0.8'/><path d='M53.8 11.6C57.6 6.6 65 6.2 68.8 9.6 64 10.2 60.4 12.6 57.4 16Z' fill='%23334A22'/><path d='M43.6 10.6C38.6 7.8 33.8 10 34.2 13.8 34.6 17 38.4 17 38.6 14.6' fill='none' stroke='%23334A22' stroke-width='1.1' stroke-linecap='round'/><g stroke='%23503570' stroke-width='0.6'><ellipse cx='28' cy='57' rx='23' ry='36' fill='%23241830'/><ellipse cx='72' cy='57' rx='23' ry='36' fill='%23241830'/><ellipse cx='39' cy='56.5' rx='21' ry='39.5' fill='%232C1E3A'/><ellipse cx='61' cy='56.5' rx='21' ry='39.5' fill='%232C1E3A'/><ellipse cx='50' cy='56' rx='17' ry='40' fill='%23332343'/></g><path d='M35 19Q23 56 35 93M65 19Q77 56 65 93M44.5 16.8Q41 56 44.5 95.4M55.5 16.8Q59 56 55.5 95.4' fill='none' stroke='%23170F20' stroke-width='0.8' stroke-opacity='0.7'/></svg>");
+  --halloween-pumpkin-face: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><defs><radialGradient id='c' cx='50%' cy='55%' r='65%'><stop offset='0' stop-color='%238A3A0A'/><stop offset='0.6' stop-color='%234A1C05'/><stop offset='1' stop-color='%231E0C03'/></radialGradient></defs><g fill='url(%23c)' stroke='%23FFB347' stroke-width='0.8' stroke-linejoin='round'><path d='M23.5 38.5 31.5 24.5 39.5 38.5Z'/><path d='M60.5 38.5 68.5 24.5 76.5 38.5Z'/><path d='M47.6 43.6 50 39.6 52.4 43.6Z'/><path d='M8 46Q50 56 92 46Q91 62 82 71L77 65 73 75Q50 84 27 75L23 65 18 71Q9 62 8 46Z'/></g></svg>");
   --halloween-jack: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 48 48'><path d='M24 14c.4-3.6 2.4-6 5.6-6.6' fill='none' stroke='%237FBF3F' stroke-width='3' stroke-linecap='round'/><ellipse cx='15.5' cy='29' rx='10.5' ry='13' fill='%23C9550B'/><ellipse cx='32.5' cy='29' rx='10.5' ry='13' fill='%23C9550B'/><ellipse cx='24' cy='29' rx='10' ry='14' fill='%23FF7518'/><path d='M19.5 16.5Q17.5 29 19.5 42.5M28.5 16.5Q30.5 29 28.5 42.5' fill='none' stroke='%23B84A0A' stroke-width='1.1' stroke-opacity='0.7'/><g fill='%23FFD25A'><path d='M13.5 26 17.5 19.5 21.5 26Z'/><path d='M26.5 26 30.5 19.5 34.5 26Z'/><path d='M22.4 29.6 24 27 25.6 29.6Z'/><path d='M12.5 31.5Q24 43 35.5 31.5L32.4 32.6 31.4 35.6 28 33.6 24 36.4 20 33.6 16.6 35.6 15.6 32.6Z'/></g></svg>");
   --halloween-vignette: radial-gradient(ellipse 85% 80% at 50% 45%, transparent 55%, rgba(4, 2, 8, 0.55) 100%);
 }
@@ -682,7 +707,7 @@ body {
   background-repeat: repeat, no-repeat, no-repeat, no-repeat;
 }
 
-a { color: var(--accent); }
+a { color: var(--accent-ink); }
 svg { display: block; }
 [hidden] { display: none !important; }
 
@@ -735,7 +760,7 @@ header.topbar {
   border-radius: 0.5rem;
   background: var(--gradient-accent);
   border: 1px solid var(--border-strong);
-  color: var(--accent);
+  color: var(--accent-ink);
   display: grid;
   place-items: center;
 }
@@ -905,7 +930,7 @@ main.page {
   padding: 0.1rem 0.45rem;
   border: 1px solid var(--accent);
   border-radius: 0.4rem;
-  color: var(--accent);
+  color: var(--accent-ink);
   font-size: var(--fs-xs);
   font-weight: var(--fw-semibold);
   font-variant-numeric: tabular-nums;
@@ -992,7 +1017,7 @@ button.big { font-size: var(--fs-md); min-height: 3rem; padding: 0.75rem 1.5rem;
   font-size: var(--fs-xs);
   font-weight: var(--fw-medium);
 }
-.link:hover { color: var(--accent); background: none; border: 0; }
+.link:hover { color: var(--accent-ink); background: none; border: 0; }
 
 input[type="text"], input[type="number"], input[type="search"], select, textarea, .search, .neu-inset {
   font: inherit;
@@ -1048,6 +1073,22 @@ input[type="radio"] { accent-color: var(--accent); width: 1rem; height: 1rem; ma
 }
 .segment input[type="number"] { min-height: 2rem; width: 4rem; padding: 0.2rem 0.4rem; }
 
+/* Earthy materials, part 1 — wooden controls. Buttons are lighter planks,
+   fields are sunk dark wood, both outlined in clay; hover warms the edge to
+   terracotta. Same specificity as the base rules above (the theme sits in
+   :where()), so components that restyle a control keep their own look and the
+   pressed / primary / focus states below still win. Part 2 (caps, toolbars,
+   tab bars) is at the end of the file. */
+:where(:root[data-theme="earthy"]) button, :where(:root[data-theme="earthy"]) .btn, :where(:root[data-theme="earthy"]) .neu-btn { background-color: var(--wood-btn); border-color: var(--clay-line); }
+:where(:root[data-theme="earthy"]) button:where(:not(.primary, [aria-pressed="true"], [role="switch"][aria-checked="true"])):hover,
+:where(:root[data-theme="earthy"]) .btn:where(:not(.primary)):hover,
+:where(:root[data-theme="earthy"]) .neu-btn:where(:not(.primary, .active)):hover { background-color: var(--wood-btn-hover); border-color: var(--clay-hover); }
+:where(:root[data-theme="earthy"]) button.ghost, :where(:root[data-theme="earthy"]) .neu-btn.ghost { background-color: var(--wood-btn); border-color: var(--clay-line); color: var(--text-2); }
+:where(:root[data-theme="earthy"]) button.ghost:hover, :where(:root[data-theme="earthy"]) .neu-btn.ghost:hover { background-color: var(--wood-btn-hover); border-color: var(--clay-hover); color: var(--text); }
+:where(:root[data-theme="earthy"]) input[type="text"], :where(:root[data-theme="earthy"]) input[type="number"], :where(:root[data-theme="earthy"]) input[type="search"], :where(:root[data-theme="earthy"]) select, :where(:root[data-theme="earthy"]) textarea, :where(:root[data-theme="earthy"]) .search, :where(:root[data-theme="earthy"]) .neu-inset, :where(:root[data-theme="earthy"]) .segment { background-color: var(--wood-inset); border-color: var(--clay-line); }
+:where(:root[data-theme="earthy"]) input[type="text"]:hover, :where(:root[data-theme="earthy"]) input[type="number"]:hover, :where(:root[data-theme="earthy"]) input[type="search"]:hover, :where(:root[data-theme="earthy"]) select:hover, :where(:root[data-theme="earthy"]) textarea:hover, :where(:root[data-theme="earthy"]) .search:hover, :where(:root[data-theme="earthy"]) .neu-inset:hover, :where(:root[data-theme="earthy"]) .segment:hover { border-color: var(--clay-hover); }
+:where(:root[data-theme="earthy"]) input[type="text"]:focus, :where(:root[data-theme="earthy"]) input[type="number"]:focus, :where(:root[data-theme="earthy"]) input[type="search"]:focus, :where(:root[data-theme="earthy"]) select:focus, :where(:root[data-theme="earthy"]) textarea:focus, :where(:root[data-theme="earthy"]) .search:focus, :where(:root[data-theme="earthy"]) .neu-inset:focus { border-color: var(--accent); }
+
 /* ==========================================================================
    PRESSED / ACTIVE / SELECTED — app-wide. Pink gradient fill fading to
    transparent, pink border + inner glow ring, white text, label/icon swap.
@@ -1081,7 +1122,7 @@ button:active, .neu-btn:active, .tab:active, summary:active, .seg label:active s
 .seg input:checked + span::before, .segment:has(input:checked)::before {
   content: "✓";
   font-weight: var(--fw-bold);
-  color: var(--accent);
+  color: var(--accent-ink);
   margin-right: 0.35rem;
 }
 
@@ -1352,12 +1393,12 @@ body.present .topnav .hud-status .hud-key, body.present .topnav .hud-status .hud
 .hud-stat { display: inline-flex; align-items: baseline; gap: 0.55rem; font-family: var(--hud-mono); font-size: 0.78rem; white-space: nowrap; }
 .hud-key { color: var(--label-ink); letter-spacing: 0.18em; font-size: 0.66rem; }
 .hud-val { color: var(--figure-ink); font-variant-numeric: tabular-nums; letter-spacing: 0.04em; }
-.hud-ok { color: var(--hud); }
+.hud-ok { color: var(--accent-ink); }
 .hud-bad { color: var(--danger); }
 .hud-quiet .hud-val { color: var(--text-muted); }
 /* a stat that links somewhere (SCHED → schedule.html) */
 a.hud-link { text-decoration: none; border-bottom: 1px dashed var(--hud-line); padding-bottom: 1px; transition: border-color 150ms ease; }
-a.hud-link:hover .hud-val, a.hud-link:focus-visible .hud-val { color: var(--hud); }
+a.hud-link:hover .hud-val, a.hud-link:focus-visible .hud-val { color: var(--accent-ink); }
 a.hud-link:hover, a.hud-link:focus-visible { border-bottom-color: var(--hud); outline: none; }
 /* the live status line: passing / lunch / before-after school read quieter than a period */
 #hud-now[data-state="passing"], #hud-now[data-state="break"], #hud-now[data-state="before"] { color: var(--text-2); }
@@ -1434,11 +1475,11 @@ a.hud-link:hover, a.hud-link:focus-visible { border-bottom-color: var(--hud); ou
 .hud-period[data-on] {
   background: var(--accent-soft);
   border-color: var(--accent);
-  color: var(--accent);
+  color: var(--accent-ink);
   font-weight: var(--fw-semibold);
 }
 .hud-period:hover { border-color: var(--border-hover); color: var(--text); }
-.hud-period[data-on]:hover { color: var(--accent); }
+.hud-period[data-on]:hover { color: var(--accent-ink); }
 
 /* ---------- panels ---------- */
 .hud-page { padding: clamp(24px, 5vh, 64px) var(--page-pad) var(--space-5); display: flex; flex-direction: column; }
@@ -1520,8 +1561,8 @@ body.present.show-nav .topnav .nav-links { display: flex; }
   cursor: pointer;
 }
 .hud-chip:hover { border-color: var(--hud); color: var(--text); background: transparent; }
-.hud-chip[aria-pressed="true"] { background: transparent; border-color: var(--hud); color: var(--hud); box-shadow: 0 0 10px var(--accent-inset-chip); }
-#chart-note a { color: var(--hud); text-decoration: none; border-bottom: 1px dashed var(--hud-line); }
+.hud-chip[aria-pressed="true"] { background: transparent; border-color: var(--hud); color: var(--accent-ink); box-shadow: 0 0 10px var(--accent-inset-chip); }
+#chart-note a { color: var(--accent-ink); text-decoration: none; border-bottom: 1px dashed var(--hud-line); }
 
 /* the read-only room: same .piece/.seat markup as the builder, scaled to fit */
 .hub-chart {
@@ -1666,7 +1707,7 @@ body.present.show-nav .topnav .nav-links { display: flex; }
 .hud-panel .br, .hud-box .br { bottom: -1px; right: -1px; border-bottom-width: 1px; border-right-width: 1px; }
 
 .hud-idx { position: absolute; top: 0.9rem; right: 1.1rem; font-family: var(--hud-mono); font-size: 0.66rem; letter-spacing: 0.18em; color: var(--text-muted); }
-.hud-icon { width: 1.75rem; height: 1.75rem; color: var(--hud); margin-bottom: auto; opacity: 0.9; transition: filter 150ms ease; }
+.hud-icon { width: 1.75rem; height: 1.75rem; color: var(--accent-ink); margin-bottom: auto; opacity: 0.9; transition: filter 150ms ease; }
 .hud-name { font-size: 1.05rem; font-weight: var(--fw-semibold); letter-spacing: 0.14em; text-transform: uppercase; }
 .hud-sub { font-family: var(--hud-mono); font-size: 0.66rem; letter-spacing: 0.16em; color: var(--text-muted); }
 
@@ -1692,7 +1733,7 @@ body.present.show-nav .topnav .nav-links { display: flex; }
 .hud-panel.setup .hud-icon { color: var(--text-muted); }
 .hud-panel.setup .hud-name { color: var(--text-2); font-weight: var(--fw-medium); }
 .hud-panel.setup:hover { border-style: solid; box-shadow: var(--hud-glow-soft); }
-.hud-panel.setup:hover .hud-icon { color: var(--hud); }
+.hud-panel.setup:hover .hud-icon { color: var(--accent-ink); }
 
 /* ---------- entrance: fast staggered sweep, under 800ms total ---------- */
 @keyframes hud-sweep { from { opacity: 0; transform: translateY(10px); clip-path: inset(0 100% 0 0); } 60% { clip-path: inset(0 0 0 0); } to { opacity: 1; transform: none; clip-path: inset(0 0 0 0); } }
@@ -1884,7 +1925,7 @@ body.editing .student .name { cursor: text; }
   font-size: var(--fs-sm);
   font-weight: var(--fw-medium);
 }
-.toast .link { color: var(--accent); font-size: var(--fs-sm); font-weight: var(--fw-semibold); }
+.toast .link { color: var(--accent-ink); font-size: var(--fs-sm); font-weight: var(--fw-semibold); }
 
 .import-dialog { width: min(40rem, 92vw); padding: var(--space-5); border-radius: var(--radius-lg); color: var(--text); box-shadow: var(--shadow-pop); }
 .import-dialog::backdrop { background: rgba(8, 6, 14, 0.6); backdrop-filter: blur(4px); }
@@ -1939,7 +1980,7 @@ body.editing .student .name { cursor: text; }
 .ov-row .ov-note { display: block; color: var(--text-muted); font-size: var(--fs-xs); }
 .ov-row.past { opacity: 0.45; }
 .ov-row.today { border-color: var(--accent); box-shadow: var(--shadow-pressed); }
-.ov-row.today .ov-date { color: var(--accent); }
+.ov-row.today .ov-date { color: var(--accent-ink); }
 .ov-empty { color: var(--text-muted); font-size: var(--fs-sm); margin: 0; }
 .bell-head { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-3); }
 .bell-head select { min-width: 14rem; }
@@ -2456,7 +2497,7 @@ body.present .fs-float:hover, body.present .fs-float:focus-within { opacity: 1; 
   border: 1px solid var(--border-strong);
 }
 .fs-float button svg { width: 1rem; height: 1rem; }
-.fs-float .fs-hint { font-family: var(--font-mono); font-size: 0.74rem; letter-spacing: 0.1em; text-transform: uppercase; color: var(--accent); padding-right: 0.4rem; }
+.fs-float .fs-hint { font-family: var(--font-mono); font-size: 0.74rem; letter-spacing: 0.1em; text-transform: uppercase; color: var(--accent-ink); padding-right: 0.4rem; }
 /* Nav: the rail slides back in over the content while the button is pressed */
 
 @media (prefers-reduced-motion: reduce) { .fs-float { transition: none; } }
@@ -2635,7 +2676,7 @@ body.present .student .remove { display: none !important; }
   line-height: 1.5;
   text-transform: uppercase;
 }
-.arr-tag.on { border-color: var(--accent); color: var(--accent); background: var(--accent-soft); }
+.arr-tag.on { border-color: var(--accent); color: var(--accent-ink); background: var(--accent-soft); }
 .arr-card-stats { display: flex; gap: 0.65rem; color: var(--text-muted); font-family: var(--font-mono); font-size: 0.72rem; font-variant-numeric: tabular-nums; }
 .arr-card-stats > span { display: inline-flex; align-items: center; gap: 0.22rem; }
 .arr-card-stats svg { width: 0.72rem; height: 0.72rem; }
@@ -2686,7 +2727,7 @@ body.present .student .remove { display: none !important; }
 .help-head { display: flex; align-items: center; justify-content: space-between; gap: var(--space-4); padding: var(--space-4) var(--space-5) var(--space-4) var(--space-6); border-bottom: 1px solid var(--border); }
 .help-head h2 { margin: 0; color: var(--text); }
 .help-body { flex: 1; min-height: 0; overflow-y: auto; padding: var(--space-2) var(--space-6) var(--space-6); scrollbar-width: thin; }
-.help-part { display: flex; align-items: center; gap: 0.5rem; margin: var(--space-5) 0 0; color: var(--accent); font-size: var(--fs-xs); font-weight: var(--fw-semibold); text-transform: uppercase; letter-spacing: 0.14em; }
+.help-part { display: flex; align-items: center; gap: 0.5rem; margin: var(--space-5) 0 0; color: var(--accent-ink); font-size: var(--fs-xs); font-weight: var(--fw-semibold); text-transform: uppercase; letter-spacing: 0.14em; }
 .help-part svg { width: 1.05rem; height: 1.05rem; flex: none; }
 .help-sec { margin-top: var(--space-4); padding-top: var(--space-3); border-top: 1px solid var(--border); }
 .help-part + .help-sec { margin-top: var(--space-2); }
@@ -3014,7 +3055,7 @@ body.present .student .remove { display: none !important; }
   background: var(--accent-soft);
 }
 .piece.front.selected { box-shadow: 0 0 0 2px var(--ring); }
-.front-text { font-size: 10px; font-weight: var(--fw-semibold); letter-spacing: 0.18em; text-transform: uppercase; color: var(--accent); white-space: nowrap; }
+.front-text { font-size: 10px; font-weight: var(--fw-semibold); letter-spacing: 0.18em; text-transform: uppercase; color: var(--accent-ink); white-space: nowrap; }
 /* Facing notch: a small triangle on the room side of the marker (its local
    bottom edge), so it's clear which way the front faces once it's turned */
 .front-face {
@@ -3818,7 +3859,7 @@ body.present .att-tile { font-size: 1.35rem; }
 .br-out-count {
   font-family: var(--font-mono);
   font-variant-numeric: tabular-nums;
-  color: var(--accent);
+  color: var(--accent-ink);
   font-size: var(--fs-lg);
   font-weight: var(--fw-bold);
 }
@@ -3911,7 +3952,7 @@ body.present .att-tile { font-size: 1.35rem; }
   font-variant-numeric: tabular-nums;
   font-size: var(--fs-lg);
   font-weight: var(--fw-bold);
-  color: var(--accent);
+  color: var(--accent-ink);
   letter-spacing: 0.02em;
 }
 .br-out-card .br-end-btn { min-height: 2rem; padding: 0 0.7rem; font-size: 0.8rem; white-space: nowrap; }
@@ -4049,7 +4090,7 @@ body.present .att-tile { font-size: 1.35rem; }
   padding: 0.1rem 0.5rem;
   border-radius: var(--radius-pill);
 }
-.br-badge.out-badge    { background: var(--accent-soft); color: var(--accent); border: 1px solid var(--accent); }
+.br-badge.out-badge    { background: var(--accent-soft); color: var(--accent-ink); border: 1px solid var(--accent); }
 .br-badge.locked-badge { background: transparent; color: var(--danger); border: 1px solid var(--danger); }
 
 /* Empty state */
@@ -4121,7 +4162,7 @@ dialog.br-review-dialog::backdrop { background: rgba(8, 6, 14, 0.55); backdrop-f
 .rv-sort { all: unset; cursor: pointer; display: inline-flex; align-items: center; gap: 0.25rem; }
 .rv-sort:hover, .rv-sort.on { color: var(--text); }
 .rv-sort:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 3px; }
-.rv-arrow { color: var(--accent); min-width: 0.6rem; }
+.rv-arrow { color: var(--accent-ink); min-width: 0.6rem; }
 .rv-who { all: unset; cursor: pointer; font-family: var(--font-body); font-weight: var(--fw-semibold); font-size: var(--fs-md); color: var(--text); }
 .rv-table tr.zero .rv-who { color: var(--text-2); }
 .rv-who:hover { text-decoration: underline; text-decoration-color: var(--accent); text-underline-offset: 3px; }
@@ -4176,7 +4217,7 @@ td.rv-used .br-passes { display: inline-flex; margin-right: 0.55rem; }
   border-radius: var(--radius-pill);
   background: var(--accent-soft);
   border: 1px solid var(--accent);
-  color: var(--accent);
+  color: var(--accent-ink);
   font-weight: var(--fw-semibold);
   cursor: pointer;
 }
@@ -4202,7 +4243,7 @@ dialog.br-confirm { width: min(24rem, 92vw); padding: var(--space-5); border: 0;
 dialog.br-confirm::backdrop { background: rgba(8, 6, 14, 0.55); backdrop-filter: blur(3px); }
 dialog.br-confirm h3 { margin: 0 0 var(--space-3); font-size: var(--fs-lg); font-weight: var(--fw-bold); font-family: var(--font-body); text-transform: none; letter-spacing: 0; }
 dialog.br-confirm .br-confirm-body { margin: 0 0 var(--space-4); color: var(--text-2); font-size: var(--fs-sm); }
-dialog.br-confirm strong { color: var(--accent); }
+dialog.br-confirm strong { color: var(--accent-ink); }
 .br-dialog-actions { display: flex; gap: var(--space-2); justify-content: flex-end; }
 .br-dialog-actions.between { justify-content: space-between; margin: 0.3rem 0 var(--space-3); }
 .br-dialog-actions button { min-height: 2.4rem; padding: 0 var(--space-4); }
@@ -4221,7 +4262,7 @@ dialog.br-settings-dialog .br-settings-grid { display: grid; gap: var(--space-3)
 .br-settings-note code { font-family: var(--font-mono); background: var(--card-2); padding: 0.05rem 0.35rem; border-radius: 4px; }
 .br-quarters-grid { display: flex; flex-direction: column; gap: 0.4rem; }
 .br-quarter-row { display: grid; grid-template-columns: 2.4rem 1fr auto 1fr; align-items: center; gap: 0.5rem; padding: 0.4rem 0.6rem; background: var(--card-2); border-radius: var(--radius-sm); }
-.br-quarter-row .hud-key { font-family: var(--font-mono); font-weight: var(--fw-bold); color: var(--accent); font-size: 0.85rem; text-align: center; }
+.br-quarter-row .hud-key { font-family: var(--font-mono); font-weight: var(--fw-bold); color: var(--accent-ink); font-size: 0.85rem; text-align: center; }
 .br-quarter-row input { min-height: 2rem; }
 .br-quarter-row > span { color: var(--text-muted); font-size: 0.8rem; text-align: center; }
 
@@ -4260,7 +4301,7 @@ dialog.br-settings-dialog .br-settings-grid { display: grid; gap: var(--space-3)
 }
 .br-bf-list li.none { display: block; text-align: center; color: var(--text-muted); font-style: italic; padding: var(--space-3); }
 .br-bf-list .bf-desc { font-weight: var(--fw-medium); }
-.br-bf-list .bf-q { font-family: var(--font-mono); font-size: 0.72rem; color: var(--accent); margin-left: 0.35rem; }
+.br-bf-list .bf-q { font-family: var(--font-mono); font-size: 0.72rem; color: var(--accent-ink); margin-left: 0.35rem; }
 .br-bf-list .bf-times { font-family: var(--font-mono); font-size: 0.78rem; color: var(--text-muted); font-variant-numeric: tabular-nums; }
 .br-bf-list .bf-count { display: inline-flex; align-items: center; gap: 0.4rem; }
 .br-bf-list .bf-count button.small { min-height: 1.7rem; width: 1.8rem; padding: 0; border-radius: var(--radius-sm); }
@@ -4347,6 +4388,16 @@ dialog.br-settings-dialog .br-settings-grid { display: grid; gap: var(--space-3)
   /* Timer zero celebration — the bits that fly out of the dial */
   --marwa-burst-heart: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'><path d='M8 14.5C8 14.5 1 10.2 1 5.6 1 3 3 1.2 5.2 1.2 6.6 1.2 7.5 2 8 2.8 8.5 2 9.4 1.2 10.8 1.2 13 1.2 15 3 15 5.6 15 10.2 8 14.5 8 14.5Z' fill='%23E8467C'/></svg>");
   --marwa-burst-spark: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'><path d='M8 0 L9.6 6.4 L16 8 L9.6 9.6 L8 16 L6.4 9.6 L0 8 L6.4 6.4 Z' fill='%239F7AEA'/></svg>");
+  /* the Timer bunny (the bunny IS the dial): pale and coloured bodies, each in
+     a calm and a perked-ears pose, and the always-on front (face + the heart
+     it holds, which shows the time) in three moods */
+  --marwa-bunny-lit: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><g stroke-linejoin='round'><ellipse cx='50' cy='80' rx='28' ry='16.5' fill='%23FFB6C9' stroke='%234A2C3D' stroke-width='2.4'/><ellipse cx='35' cy='93.6' rx='9' ry='4.3' fill='%23FFB6C9' stroke='%234A2C3D' stroke-width='2.4'/><ellipse cx='65' cy='93.6' rx='9' ry='4.3' fill='%23FFB6C9' stroke='%234A2C3D' stroke-width='2.4'/><g transform='rotate(-14 37 38)'><ellipse cx='37' cy='21' rx='8.6' ry='19' fill='%23FFB6C9' stroke='%234A2C3D' stroke-width='2.4'/><ellipse cx='37' cy='23.5' rx='4.2' ry='13' fill='%23FF89A9'/></g><g transform='rotate(14 63 38)'><ellipse cx='63' cy='21' rx='8.6' ry='19' fill='%23FFB6C9' stroke='%234A2C3D' stroke-width='2.4'/><ellipse cx='63' cy='23.5' rx='4.2' ry='13' fill='%23FF89A9'/></g><ellipse cx='50' cy='45' rx='28' ry='22.5' fill='%23FFB6C9' stroke='%234A2C3D' stroke-width='2.4'/><g transform='translate(62 26.5) rotate(8.4)' stroke='%234A2C3D' stroke-width='1.6'><path d='M0 0 L-8 -4.6 L-8 4.6Z' fill='%23E8467C'/><path d='M0 0 L8 -4.6 L8 4.6Z' fill='%23E8467C'/><circle r='2.4' fill='%23F2729F'/></g></g><ellipse cx='37' cy='36' rx='6' ry='4' fill='%23FFFFFF' fill-opacity='0.35' transform='rotate(-25 37 36)'/></svg>");
+  --marwa-bunny-lit-perk: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><g stroke-linejoin='round'><ellipse cx='50' cy='80' rx='28' ry='16.5' fill='%23FFB6C9' stroke='%234A2C3D' stroke-width='2.4'/><ellipse cx='35' cy='93.6' rx='9' ry='4.3' fill='%23FFB6C9' stroke='%234A2C3D' stroke-width='2.4'/><ellipse cx='65' cy='93.6' rx='9' ry='4.3' fill='%23FFB6C9' stroke='%234A2C3D' stroke-width='2.4'/><g transform='rotate(-3 37 38)'><ellipse cx='37' cy='21' rx='8.6' ry='19' fill='%23FFB6C9' stroke='%234A2C3D' stroke-width='2.4'/><ellipse cx='37' cy='23.5' rx='4.2' ry='13' fill='%23FF89A9'/></g><g transform='rotate(3 63 38)'><ellipse cx='63' cy='21' rx='8.6' ry='19' fill='%23FFB6C9' stroke='%234A2C3D' stroke-width='2.4'/><ellipse cx='63' cy='23.5' rx='4.2' ry='13' fill='%23FF89A9'/></g><ellipse cx='50' cy='45' rx='28' ry='22.5' fill='%23FFB6C9' stroke='%234A2C3D' stroke-width='2.4'/><g transform='translate(62 26.5) rotate(1.7999999999999998)' stroke='%234A2C3D' stroke-width='1.6'><path d='M0 0 L-8 -4.6 L-8 4.6Z' fill='%23E8467C'/><path d='M0 0 L8 -4.6 L8 4.6Z' fill='%23E8467C'/><circle r='2.4' fill='%23F2729F'/></g></g><ellipse cx='37' cy='36' rx='6' ry='4' fill='%23FFFFFF' fill-opacity='0.35' transform='rotate(-25 37 36)'/></svg>");
+  --marwa-bunny-spent: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><g stroke-linejoin='round'><ellipse cx='50' cy='80' rx='28' ry='16.5' fill='%23FFF7FA' stroke='%23F0BFD3' stroke-width='2.4'/><ellipse cx='35' cy='93.6' rx='9' ry='4.3' fill='%23FFF7FA' stroke='%23F0BFD3' stroke-width='2.4'/><ellipse cx='65' cy='93.6' rx='9' ry='4.3' fill='%23FFF7FA' stroke='%23F0BFD3' stroke-width='2.4'/><g transform='rotate(-14 37 38)'><ellipse cx='37' cy='21' rx='8.6' ry='19' fill='%23FFF7FA' stroke='%23F0BFD3' stroke-width='2.4'/><ellipse cx='37' cy='23.5' rx='4.2' ry='13' fill='%23FCE6EF'/></g><g transform='rotate(14 63 38)'><ellipse cx='63' cy='21' rx='8.6' ry='19' fill='%23FFF7FA' stroke='%23F0BFD3' stroke-width='2.4'/><ellipse cx='63' cy='23.5' rx='4.2' ry='13' fill='%23FCE6EF'/></g><ellipse cx='50' cy='45' rx='28' ry='22.5' fill='%23FFF7FA' stroke='%23F0BFD3' stroke-width='2.4'/><g transform='translate(62 26.5) rotate(8.4)' stroke='%23F0BFD3' stroke-width='1.6'><path d='M0 0 L-8 -4.6 L-8 4.6Z' fill='%23FCE6EF'/><path d='M0 0 L8 -4.6 L8 4.6Z' fill='%23FCE6EF'/><circle r='2.4' fill='%23FCE6EF'/></g></g></svg>");
+  --marwa-bunny-spent-perk: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><g stroke-linejoin='round'><ellipse cx='50' cy='80' rx='28' ry='16.5' fill='%23FFF7FA' stroke='%23F0BFD3' stroke-width='2.4'/><ellipse cx='35' cy='93.6' rx='9' ry='4.3' fill='%23FFF7FA' stroke='%23F0BFD3' stroke-width='2.4'/><ellipse cx='65' cy='93.6' rx='9' ry='4.3' fill='%23FFF7FA' stroke='%23F0BFD3' stroke-width='2.4'/><g transform='rotate(-3 37 38)'><ellipse cx='37' cy='21' rx='8.6' ry='19' fill='%23FFF7FA' stroke='%23F0BFD3' stroke-width='2.4'/><ellipse cx='37' cy='23.5' rx='4.2' ry='13' fill='%23FCE6EF'/></g><g transform='rotate(3 63 38)'><ellipse cx='63' cy='21' rx='8.6' ry='19' fill='%23FFF7FA' stroke='%23F0BFD3' stroke-width='2.4'/><ellipse cx='63' cy='23.5' rx='4.2' ry='13' fill='%23FCE6EF'/></g><ellipse cx='50' cy='45' rx='28' ry='22.5' fill='%23FFF7FA' stroke='%23F0BFD3' stroke-width='2.4'/><g transform='translate(62 26.5) rotate(1.7999999999999998)' stroke='%23F0BFD3' stroke-width='1.6'><path d='M0 0 L-8 -4.6 L-8 4.6Z' fill='%23FCE6EF'/><path d='M0 0 L8 -4.6 L8 4.6Z' fill='%23FCE6EF'/><circle r='2.4' fill='%23FCE6EF'/></g></g></svg>");
+  --marwa-bunny-face: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><defs><linearGradient id='h' x1='0' y1='0' x2='0' y2='1'><stop offset='0' stop-color='%23FFFFFF'/><stop offset='1' stop-color='%23FFE1EC'/></linearGradient></defs><g transform='matrix(1.25 0 0 1.1 -12.5 -9.9)'><path d='M50 72C50 64 39 59 31.5 63C22.5 67.5 23 80 33 88L50 99L67 88C77 80 77.5 67.5 68.5 63C61 59 50 64 50 72Z' fill='url(%23h)' stroke='%23E8467C' stroke-width='2.3' stroke-linejoin='round'/><path d='M30 68Q33 64.6 37.4 65.2' fill='none' stroke='%23FFFFFF' stroke-width='1.4' stroke-linecap='round'/></g><g transform='translate(20 77) rotate(-60)'><ellipse rx='6' ry='5' fill='%23FFB6C9' stroke='%234A2C3D' stroke-width='2'/><path d='M-2 -2.4v2.2M2 -2.4v2.2' stroke='%234A2C3D' stroke-width='1.1' stroke-linecap='round' transform='rotate(90)'/></g><g transform='translate(80 77) rotate(60)'><ellipse rx='6' ry='5' fill='%23FFB6C9' stroke='%234A2C3D' stroke-width='2'/><path d='M-2 -2.4v2.2M2 -2.4v2.2' stroke='%234A2C3D' stroke-width='1.1' stroke-linecap='round' transform='rotate(90)'/></g><ellipse cx='31' cy='52.5' rx='4.6' ry='2.8' fill='%23FF6B9E' fill-opacity='0.5'/><ellipse cx='69' cy='52.5' rx='4.6' ry='2.8' fill='%23FF6B9E' fill-opacity='0.5'/><ellipse cx='39' cy='43.5' rx='3' ry='3.6' fill='%234A2C3D'/><circle cx='40.05' cy='42.06' r='1.1' fill='%23FFFFFF'/><circle cx='37.95' cy='44.94' r='0.49500000000000005' fill='%23FFFFFF'/><ellipse cx='61' cy='43.5' rx='3' ry='3.6' fill='%234A2C3D'/><circle cx='62.05' cy='42.06' r='1.1' fill='%23FFFFFF'/><circle cx='59.95' cy='44.94' r='0.49500000000000005' fill='%23FFFFFF'/><path d='M47.8 48.6Q50 47.6 52.2 48.6L50 51.2Z' fill='%23E8467C' stroke='%234A2C3D' stroke-width='1.1' stroke-linejoin='round'/><path d='M45.6 52.6Q47.8 55.4 50 52.6Q52.2 55.4 54.4 52.6' fill='none' stroke='%234A2C3D' stroke-width='1.8' stroke-linecap='round'/></svg>");
+  --marwa-bunny-face-wide: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><defs><linearGradient id='h' x1='0' y1='0' x2='0' y2='1'><stop offset='0' stop-color='%23FFFFFF'/><stop offset='1' stop-color='%23FFE1EC'/></linearGradient></defs><g transform='matrix(1.25 0 0 1.1 -12.5 -9.9)'><path d='M50 72C50 64 39 59 31.5 63C22.5 67.5 23 80 33 88L50 99L67 88C77 80 77.5 67.5 68.5 63C61 59 50 64 50 72Z' fill='url(%23h)' stroke='%23E8467C' stroke-width='2.3' stroke-linejoin='round'/><path d='M30 68Q33 64.6 37.4 65.2' fill='none' stroke='%23FFFFFF' stroke-width='1.4' stroke-linecap='round'/></g><g transform='translate(20 77) rotate(-60)'><ellipse rx='6' ry='5' fill='%23FFB6C9' stroke='%234A2C3D' stroke-width='2'/><path d='M-2 -2.4v2.2M2 -2.4v2.2' stroke='%234A2C3D' stroke-width='1.1' stroke-linecap='round' transform='rotate(90)'/></g><g transform='translate(80 77) rotate(60)'><ellipse rx='6' ry='5' fill='%23FFB6C9' stroke='%234A2C3D' stroke-width='2'/><path d='M-2 -2.4v2.2M2 -2.4v2.2' stroke='%234A2C3D' stroke-width='1.1' stroke-linecap='round' transform='rotate(90)'/></g><ellipse cx='31' cy='52.5' rx='4.6' ry='2.8' fill='%23FF6B9E' fill-opacity='0.72'/><ellipse cx='69' cy='52.5' rx='4.6' ry='2.8' fill='%23FF6B9E' fill-opacity='0.72'/><ellipse cx='39' cy='42.8' rx='4.4' ry='5.2' fill='%234A2C3D'/><circle cx='40.54' cy='40.72' r='1.6' fill='%23FFFFFF'/><circle cx='37.46' cy='44.879999999999995' r='0.7200000000000001' fill='%23FFFFFF'/><ellipse cx='61' cy='42.8' rx='4.4' ry='5.2' fill='%234A2C3D'/><circle cx='62.54' cy='40.72' r='1.6' fill='%23FFFFFF'/><circle cx='59.46' cy='44.879999999999995' r='0.7200000000000001' fill='%23FFFFFF'/><path d='M47.8 48.6Q50 47.6 52.2 48.6L50 51.2Z' fill='%23E8467C' stroke='%234A2C3D' stroke-width='1.1' stroke-linejoin='round'/><path d='M34.5 34.6Q39 32 43.5 34.2M56.5 34.2Q61 32 65.5 34.6' fill='none' stroke='%234A2C3D' stroke-width='1.6' stroke-linecap='round'/><ellipse cx='50' cy='54.6' rx='2.2' ry='2.6' fill='%23C93168' stroke='%234A2C3D' stroke-width='1.5'/></svg>");
+  --marwa-bunny-face-party: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><defs><linearGradient id='h' x1='0' y1='0' x2='0' y2='1'><stop offset='0' stop-color='%23FFFFFF'/><stop offset='1' stop-color='%23FFE1EC'/></linearGradient></defs><g transform='matrix(1.25 0 0 1.1 -12.5 -9.9)'><path d='M50 72C50 64 39 59 31.5 63C22.5 67.5 23 80 33 88L50 99L67 88C77 80 77.5 67.5 68.5 63C61 59 50 64 50 72Z' fill='url(%23h)' stroke='%23E8467C' stroke-width='2.3' stroke-linejoin='round'/><path d='M30 68Q33 64.6 37.4 65.2' fill='none' stroke='%23FFFFFF' stroke-width='1.4' stroke-linecap='round'/></g><g transform='translate(20 77) rotate(-60)'><ellipse rx='6' ry='5' fill='%23FFB6C9' stroke='%234A2C3D' stroke-width='2'/><path d='M-2 -2.4v2.2M2 -2.4v2.2' stroke='%234A2C3D' stroke-width='1.1' stroke-linecap='round' transform='rotate(90)'/></g><g transform='translate(80 77) rotate(60)'><ellipse rx='6' ry='5' fill='%23FFB6C9' stroke='%234A2C3D' stroke-width='2'/><path d='M-2 -2.4v2.2M2 -2.4v2.2' stroke='%234A2C3D' stroke-width='1.1' stroke-linecap='round' transform='rotate(90)'/></g><ellipse cx='31' cy='52.5' rx='4.6' ry='2.8' fill='%23FF6B9E' fill-opacity='0.8'/><ellipse cx='69' cy='52.5' rx='4.6' ry='2.8' fill='%23FF6B9E' fill-opacity='0.8'/><path d='M34.6 45Q39 39 43.4 45M56.6 45Q61 39 65.4 45' fill='none' stroke='%234A2C3D' stroke-width='2.3' stroke-linecap='round'/><path d='M47.8 48.6Q50 47.6 52.2 48.6L50 51.2Z' fill='%23E8467C' stroke='%234A2C3D' stroke-width='1.1' stroke-linejoin='round'/><path d='M42.4 52.4Q50 63.5 57.6 52.4Z' fill='%23C93168' stroke='%234A2C3D' stroke-width='1.8' stroke-linejoin='round'/><path d='M45.6 57.2Q50 55 54.4 57.2Q50 61.6 45.6 57.2Z' fill='%23FF89A9'/></svg>");
 }
 
 /* Halloween extras. Everything is decoration BEHIND content: background
@@ -4595,9 +4646,17 @@ dialog.br-settings-dialog .br-settings-grid { display: grid; gap: var(--space-3)
   text-transform: uppercase;
   color: var(--text-2);
   max-width: 90%;
-  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  /* overflow: CLIP, not hidden — a hidden-overflow grid item's minimum height is
+     0, so when the stage ran short of room the label's row collapsed and the
+     label slid behind the dial. clip keeps the ellipsis without that. */
+  white-space: nowrap; overflow: clip; overflow-clip-margin: 0.6em; text-overflow: ellipsis;
+  line-height: 1.25;
 }
 .timer-label.empty { display: none; }
+/* on the Timer page its line is always reserved (an empty label keeps its
+   height), so typing a label or starting the timer never moves the dial */
+.timer-stage .timer-label.empty { display: block; visibility: hidden; }
+.timer-stage .timer-label.empty::before { content: "\00a0"; }
 
 .timer-display-wrap {
   position: relative;
@@ -4669,7 +4728,7 @@ dialog.br-settings-dialog .br-settings-grid { display: grid; gap: var(--space-3)
   letter-spacing: 0.02em;
   text-shadow: 0 0 18px var(--shadow-text), 0 0 42px var(--accent-glow);
 }
-.timer-display.warn { color: var(--accent); text-shadow: 0 0 26px var(--accent-glow); }
+.timer-display.warn { color: var(--accent-ink); text-shadow: 0 0 26px var(--accent-glow); }
 .timer-display.alert {
   color: var(--danger);
   animation: timer-flash 900ms ease-in-out infinite;
@@ -4700,13 +4759,15 @@ dialog.br-settings-dialog .br-settings-grid { display: grid; gap: var(--space-3)
   border-radius: var(--radius-pill);
   background: var(--card-2);
 }
-.timer-actions .primary.big {
+/* Start / Pause / Resume keep ONE size: the sizing hangs off .big (the
+   button drops .primary while running), so the row never resizes */
+.timer-actions .big {
   min-width: 10rem; min-height: 2.8rem;
   padding: 0.5rem 1.6rem;
   border-radius: var(--radius-pill);
   font-size: var(--fs-lg); letter-spacing: 0.08em;
-  box-shadow: 0 4px 14px var(--accent-glow);
 }
+.timer-actions .primary.big { box-shadow: 0 4px 14px var(--accent-glow); }
 .timer-actions button {
   min-height: 2.4rem; padding: 0.4rem 1.1rem;
   border-radius: var(--radius-pill);
@@ -4718,6 +4779,9 @@ dialog.br-settings-dialog .br-settings-grid { display: grid; gap: var(--space-3)
   display: flex; flex-wrap: wrap; gap: var(--space-3);
   justify-content: center; align-items: end; width: 100%;
 }
+/* running / paused / stopwatch: the row stays (so nothing moves), just inert */
+.timer-setup.locked { opacity: 0.45; }
+.timer-setup.locked button:disabled { opacity: 1; }   /* the row is already dimmed */
 .timer-custom { display: flex; align-items: end; gap: var(--space-2); }
 .timer-custom label { display: grid; gap: 0.15rem; justify-items: start; }
 .timer-custom label .hud-key { font-size: 0.62rem; }
@@ -4742,7 +4806,7 @@ dialog.br-settings-dialog .br-settings-grid { display: grid; gap: var(--space-3)
   font: var(--fw-semibold) var(--fs-xs)/1 var(--font);
   letter-spacing: 0.06em;
 }
-.timer-presets button:hover { border-color: var(--accent); color: var(--accent); background: var(--accent-soft); }
+.timer-presets button:hover { border-color: var(--accent); color: var(--accent-ink); background: var(--accent-soft); }
 
 .timer-extras {
   width: 100%;
@@ -4760,7 +4824,7 @@ dialog.br-settings-dialog .br-settings-grid { display: grid; gap: var(--space-3)
   letter-spacing: 0.04em;
 }
 .timer-extras button:hover { color: var(--text); border-color: var(--border-hover); }
-.timer-extras button[aria-checked="true"] { border-color: var(--accent); color: var(--accent); background: var(--accent-soft); }
+.timer-extras button[aria-checked="true"] { border-color: var(--accent); color: var(--accent-ink); background: var(--accent-soft); }
 #timer-popout { color: var(--text); border-color: var(--border-strong); }
 .timer-extras .when-off, .timer-extras .when-on { display: inline; }
 .timer-extras button[aria-checked="false"] .when-on { display: none; }
@@ -4807,14 +4871,101 @@ body.present .dial-arc, body.timer-popout .dial-arc { stroke-width: 6; }
 .timer-label { text-transform: uppercase; letter-spacing: var(--track-label); }
 
 /* ---------------------------------------------------------------------------
-   Timer — marwa skin: one thick rounded gradient arc, rounder digits, a
-   sentence-case label, and a mascot that reacts to the clock.
+   Timer — marwa skin: the bunny IS the dial (like halloween's pumpkin). No ring
+   and no little mascot under it. Three layers fill the wrap:
+     ::before      the spent bunny — a pale outline
+     ::after       the coloured bunny, clipped from the TOP down by --remaining
+                   (one constant sweep from the ear tips, y 2, to the feet,
+                   y 99.2: 2% + (1 − r) × 97.2%)
+     .timer-flash  the front, always shown: the face, and the paws holding a
+                   big heart with the time in it
+   Personality from data-mood (set by paintDial): calm → breathes softly;
+   excited (final minute) → ears perk up, eyes widen, an "oh!"; party (zero) →
+   the colour refills from the feet up, ears bounce, the bunny hops, a big
+   smile, and the hearts + sparkles burst. Digits: Comfortaa, sized and centred
+   in the heart per text length (see the numbers below).
    --------------------------------------------------------------------------- */
-:root[data-theme="marwa"] .dial-segs,
-:root[data-theme="marwa"] .dial-marks,
-:root[data-theme="marwa"] .dial-inner { display: none; }
-:root[data-theme="marwa"] .dial-track { stroke-width: 7; stroke: var(--card-3); opacity: 1; }
-:root[data-theme="marwa"] .dial-arc { filter: drop-shadow(0 2px 8px var(--accent-glow)); }
+:root[data-theme="marwa"] .timer-dial { display: none; }
+:root[data-theme="marwa"] .timer-mascot { display: none; }              /* the bunny is the dial now */
+:root[data-theme="marwa"] .timer-display-wrap { container-type: inline-size; isolation: isolate; width: min(50vh, 46vw, 31rem); }
+:root[data-theme="marwa"] body.present .timer-display-wrap { width: min(80vh, 90vw); }
+:root[data-theme="marwa"] body.timer-popout .timer-display-wrap { width: min(94vh, 96vw); }
+:root[data-theme="marwa"] body.timer-popout .timer-label:not(.empty) ~ .timer-display-wrap { width: min(84vh, 96vw); }
+:root[data-theme="marwa"] .timer-display-wrap::before,
+:root[data-theme="marwa"] .timer-display-wrap::after {
+  content: "";
+  position: absolute; inset: 0; z-index: 0;
+  background: var(--marwa-bunny-spent) center / contain no-repeat;
+  pointer-events: none;
+}
+:root[data-theme="marwa"] .timer-display-wrap::before { filter: drop-shadow(0 0.5rem 1rem rgba(232, 70, 124, 0.16)); }   /* the whole silhouette, never clipped */
+:root[data-theme="marwa"] .timer-display-wrap::after {
+  background-image: var(--marwa-bunny-lit);
+  clip-path: inset(calc(2% + (1 - var(--remaining, 1)) * 97.2%) 0 0 0);
+  transition: clip-path 500ms linear;   /* no drop-shadow here: the clip would cut it into a box */
+}
+:root[data-theme="marwa"] .timer-display-wrap[data-mood="excited"]::before, :root[data-theme="marwa"] .timer-display-wrap[data-mood="party"]::before { background-image: var(--marwa-bunny-spent-perk); }
+:root[data-theme="marwa"] .timer-display-wrap[data-mood="excited"]::after { background-image: var(--marwa-bunny-lit-perk); }
+:root[data-theme="marwa"] .timer-flash {
+  display: block; z-index: 1;
+  position: absolute; inset: 0; border-radius: 0; box-shadow: none; opacity: 1;
+  background: var(--marwa-bunny-face) center / contain no-repeat;
+  animation: none;
+}
+:root[data-theme="marwa"] .timer-display-wrap[data-mood="excited"] .timer-flash { background-image: var(--marwa-bunny-face-wide); }
+:root[data-theme="marwa"] .timer-display-wrap[data-mood="party"] .timer-flash { background-image: var(--marwa-bunny-face-party); }
+
+/* the time, in the heart */
+:root[data-theme="marwa"] .timer-display-wrap .timer-display {
+  z-index: 2;
+  color: var(--text);
+  /* Sized and centred per text length: the largest size whose ink box keeps
+     an even ~2.5 units of clearance inside the heart and clear of both paws,
+     at the spot where that clearance is most even. Comfortaa's ink is 0.81em
+     tall and its centre sits 0.06em above the line-box centre (hence + 0.06em).
+     Re-measure if the heart, the paws or the face change. */
+  font-size: 14cqi;
+  translate: 0 calc(29cqi + 0.06em);                  /* mm:ss → y 79 */
+}
+:root[data-theme="marwa"] .timer-display-wrap .timer-display[data-len="4"] { font-size: 15.25cqi; translate: 0 calc(29.4cqi + 0.06em); }   /* m:ss */
+:root[data-theme="marwa"] .timer-display-wrap .timer-display[data-len="7"] { font-size: 12.25cqi; translate: 0 calc(28.3cqi + 0.06em); }   /* h:mm:ss */
+:root[data-theme="marwa"] .timer-display-wrap .timer-display[data-len="8"] { font-size: 11.25cqi; translate: 0 calc(28cqi + 0.06em); }     /* hh:mm:ss */
+:root[data-theme="marwa"] .timer-display-wrap .timer-display.warn { color: var(--accent-deep); }
+:root[data-theme="marwa"] .timer-display-wrap .timer-display.alert { color: var(--accent-deep); animation: none; }
+
+/* calm: a slow breath while it runs */
+:root[data-theme="marwa"] .timer-display-wrap[data-mood="calm"] { animation: bunny-breathe 3.2s ease-in-out infinite; }
+@keyframes bunny-breathe { 0%, 100% { scale: 1; } 50% { scale: 1.018; } }
+/* zero: the colour pours back in from the feet, the ears bounce (the pose
+   flips between perked and calm), the bunny hops, the burst flies */
+:root[data-theme="marwa"] .timer-display-wrap[data-mood="party"]::after {
+  clip-path: inset(0 0 0 0);
+  transition: clip-path 700ms ease-out;
+  animation: bunny-ears 520ms steps(1, end) infinite;
+}
+@keyframes bunny-ears {
+  0%   { background-image: var(--marwa-bunny-lit-perk); }
+  50%  { background-image: var(--marwa-bunny-lit); }
+}
+:root[data-theme="marwa"] .timer-display-wrap[data-mood="party"] { animation: bunny-hop 1.04s cubic-bezier(.34, 1.56, .64, 1) infinite; }
+@keyframes bunny-hop {
+  0%, 100% { translate: 0 0; }
+  35%      { translate: 0 -4cqi; }
+  60%      { translate: 0 0; }
+}
+:root[data-theme="marwa"] .timer-burst { display: block; z-index: 3; }
+:root[data-theme="marwa"] .timer-display-wrap .timer-burst i { width: 9cqi; height: 9cqi; margin: -4.5cqi 0 0 -4.5cqi; }
+:root[data-theme="marwa"] .timer-display-wrap[data-state="alert"] .timer-burst i { animation: bunny-burst 1.5s ease-out infinite; animation-delay: calc(var(--i) * 90ms); }
+@keyframes bunny-burst {
+  0%   { opacity: 0; transform: rotate(calc(var(--i) * 45deg)) translateY(0) scale(0.5); }
+  25%  { opacity: 1; }
+  100% { opacity: 0; transform: rotate(calc(var(--i) * 45deg)) translateY(-48cqi) scale(1.2); }
+}
+@media (prefers-reduced-motion: reduce) {
+  :root[data-theme="marwa"] .timer-display-wrap, :root[data-theme="marwa"] .timer-display-wrap::after, :root[data-theme="marwa"] .timer-display-wrap .timer-burst i { animation: none !important; }
+  :root[data-theme="marwa"] .timer-display-wrap::after { transition: none; }
+}
+
 :root[data-theme="marwa"] .timer-display {
   font-family: "Comfortaa", "Quicksand", var(--font-body);
   font-weight: 700;
@@ -4828,9 +4979,7 @@ body.present .dial-arc, body.timer-popout .dial-arc { stroke-width: 6; }
   font-weight: var(--fw-semibold);
   color: var(--text-2);
 }
-/* zero: hearts + sparkles instead of a hard flash */
-:root[data-theme="marwa"] .timer-flash { display: none; }
-:root[data-theme="marwa"] .timer-burst { display: block; }
+/* the zero burst: hearts + sparkles flying outward (marwa) */
 .timer-burst i {
   position: absolute;
   left: 50%; top: 50%;
@@ -4842,37 +4991,113 @@ body.present .dial-arc, body.timer-popout .dial-arc { stroke-width: 6; }
 }
 .timer-burst i.heart { background-image: var(--marwa-burst-heart); }
 .timer-burst i.spark { background-image: var(--marwa-burst-spark); }
-:root[data-theme="marwa"] .timer-display-wrap[data-state="alert"] .timer-burst i {
-  animation: burst-out 1.5s ease-out infinite;
-  animation-delay: calc(var(--i) * 90ms);
-}
-@keyframes burst-out {
-  0%   { opacity: 0; transform: rotate(calc(var(--i) * 45deg)) translateY(0) scale(0.5); }
-  25%  { opacity: 1; }
-  100% { opacity: 0; transform: rotate(calc(var(--i) * 45deg)) translateY(-7rem) scale(1.1); }
-}
-/* mascot beside the dial: calm while running, excited in the last minute,
-   bouncing at zero */
-/* the mascot costs vertical space, so marwa's dial gives a little back —
-   the stage still has to fit 1280×720 without scrolling */
-:root[data-theme="marwa"] .timer-display-wrap { width: min(40vh, 42vw, 24rem); }
-:root[data-theme="marwa"] .timer-mascot {
-  display: block;
-  margin-top: -0.5rem;
-  width: clamp(2.4rem, 6.5vh, 3.4rem);
-  height: clamp(2.4rem, 6.5vh, 3.4rem);
-  background: var(--marwa-mascot-bunny) no-repeat center / contain;
-  filter: drop-shadow(0 3px 8px rgba(232, 70, 124, 0.18));
-}
-:root[data-theme="marwa"] .timer-mascot[data-mood="calm"] { animation: mascot-breathe 3s ease-in-out infinite; }
-:root[data-theme="marwa"] .timer-mascot[data-mood="excited"] { animation: mascot-wiggle 600ms ease-in-out infinite; }
-:root[data-theme="marwa"] .timer-mascot[data-mood="party"] { animation: mascot-bounce 700ms cubic-bezier(.34,1.56,.64,1) infinite; }
+/* the wheel's mascot still uses these */
 @keyframes mascot-breathe { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.05); } }
 @keyframes mascot-wiggle { 0%, 100% { transform: rotate(-7deg); } 50% { transform: rotate(7deg); } }
 @keyframes mascot-bounce { 0%, 100% { transform: translateY(0) scale(1); } 40% { transform: translateY(-0.7rem) scale(1.08); } }
 
+/* ---------------------------------------------------------------------------
+   Timer — halloween skin: the pumpkin IS the dial. No ring: three stacked
+   layers fill the whole wrap —
+     ::before      the spent pumpkin (dark purple, dark stem)
+     ::after       the lit pumpkin, clipped from the TOP down by --remaining
+                   (0..1, set by paintDial), so the dark spreads downward and
+                   the glow shrinks toward the base; the graphic spans y 1.8–96.3
+                   of the box, hence 1.8% + (1 − r) × 94.5% (stem included)
+     .timer-flash  the carved face, always lit like a candle inside
+   The digits sit in the grin (box x 28–72, y 50–68 of the dial), sized in cqi
+   by their length (data-len, also set by paintDial) so they never spill past
+   the carving. Final minute: the pumpkin pulses and the glow builds. Zero:
+   the face flares, then only the face glows on a dark pumpkin. A component
+   skin, so it shows in the pop-out and PiP too.
+   --------------------------------------------------------------------------- */
+:root[data-theme="halloween"] .timer-display-wrap { container-type: inline-size; isolation: isolate; width: min(48vh, 46vw, 31rem); }   /* 48vh: the whole stage fits 1366×768 with the label line and setup row always present */
+:root[data-theme="halloween"] body.present .timer-display-wrap { width: min(80vh, 90vw); }
+:root[data-theme="halloween"] body.timer-popout .timer-display-wrap { width: min(94vh, 96vw); }
+/* with a label above it, leave the label its line */
+:root[data-theme="halloween"] body.timer-popout .timer-label:not(.empty) ~ .timer-display-wrap { width: min(84vh, 96vw); }
+:root[data-theme="halloween"] .timer-dial { display: none; }
+:root[data-theme="halloween"] .timer-display-wrap::before,
+:root[data-theme="halloween"] .timer-display-wrap::after {
+  content: "";
+  position: absolute; inset: 0; z-index: 0;
+  background: var(--halloween-pumpkin-spent) center / contain no-repeat;
+  pointer-events: none;
+}
+:root[data-theme="halloween"] .timer-display-wrap::after {
+  background-image: var(--halloween-pumpkin-lit);
+  /* ONE constant-speed sweep over the whole graphic, stem included: from the
+     top of the stem (y 1.8) to the bottom of the body (y 96.3), so the stem
+     drains in its own share of the time (the first ~19%), never instantly.
+     No drop-shadow here: the clip would cut its glow into a hard box. */
+  clip-path: inset(calc(1.8% + (1 - var(--remaining, 1)) * 94.5%) 0 0 0);
+  transition: clip-path 500ms linear, opacity 400ms ease;
+}
+/* at zero everything is dark; fading the layer as well makes it certain */
+:root[data-theme="halloween"] .timer-display-wrap[data-state="alert"]::after { opacity: 0; }
+:root[data-theme="halloween"] .timer-flash {
+  display: block; z-index: 1;
+  inset: 0; border-radius: 0; box-shadow: none; opacity: 1;
+  background: var(--halloween-pumpkin-face) center / contain no-repeat;
+  filter: drop-shadow(0 0 0.5rem rgba(255, 179, 71, 0.75)) drop-shadow(0 0 1.4rem rgba(255, 117, 24, 0.45));
+  animation: none;
+}
+:root[data-theme="halloween"] .timer-display-wrap .timer-display {
+  z-index: 2;
+  font-family: var(--font-spooky);
+  letter-spacing: 0.04em;
+  font-size: 18.5cqi;
+  color: var(--halloween-candle);
+  text-shadow: 0 0 2px var(--halloween-carve), 0 0 0.35em rgba(255, 179, 71, 0.85), 0 0 0.9em rgba(255, 117, 24, 0.55);
+  /* Sized and centred per text length on the grin's VISUAL centre, not its
+     bounding box: the largest size whose ink box keeps an even ~5 units of
+     clearance from the carved edge on every side, at the spot where that
+     clearance is most even. Pirata One's ink is 0.8em tall and its centre sits
+     0.02em above the line-box centre (hence + 0.02em in y); x: letter-spacing
+     trails the last glyph. Re-measure if the mouth path or the face changes. */
+  translate: 0.02em calc(13.6cqi + 0.02em);        /* mm:ss → 18.5cqi at y 63.6 */
+}
+:root[data-theme="halloween"] .timer-display-wrap .timer-display[data-len="4"] { font-size: 20cqi; translate: 0.02em calc(14.1cqi + 0.02em); }     /* m:ss */
+:root[data-theme="halloween"] .timer-display-wrap .timer-display[data-len="7"] { font-size: 16cqi; translate: 0.02em calc(12.6cqi + 0.02em); }     /* h:mm:ss */
+:root[data-theme="halloween"] .timer-display-wrap .timer-display[data-len="8"] { font-size: 13.5cqi; translate: 0.02em calc(11.6cqi + 0.02em); }   /* hh:mm:ss */
+:root[data-theme="halloween"] .timer-display-wrap .timer-display.warn { color: var(--accent); }
+/* the label above the pumpkin in the same gothic face, a size up, with the
+   candle glow */
+:root[data-theme="halloween"] .timer-label {
+  font-family: var(--font-spooky);
+  font-weight: 400;
+  font-size: clamp(1.5rem, 2.8vw, 2.2rem);
+  letter-spacing: 0.04em;
+  text-transform: none;            /* all-caps blackletter is unreadable: keep what was typed */
+  color: var(--halloween-candle);
+  text-shadow: 0 0 0.4em rgba(255, 117, 24, 0.6);
+}
+:root[data-theme="halloween"] body.present .timer-label,
+:root[data-theme="halloween"] body.timer-popout .timer-label { font-size: clamp(2.2rem, 6vmin, 3.8rem); }
+:root[data-theme="halloween"] .timer-display-wrap .timer-display.alert { color: var(--halloween-candle); animation: none; }
+
+/* final minute: the whole pumpkin breathes and the glow builds */
+:root[data-theme="halloween"] .timer-display-wrap[data-state="warn"] { animation: pumpkin-pulse 2.4s ease-in-out infinite; }
+:root[data-theme="halloween"] .timer-display-wrap[data-state="warn"]::after { animation: pumpkin-glow 2.4s ease-in-out infinite; }
+@keyframes pumpkin-glow { 0%, 100% { filter: brightness(1); } 50% { filter: brightness(1.22) saturate(1.1); } }
+:root[data-theme="halloween"] .timer-display-wrap[data-state="warn"] .timer-flash { animation: face-build 2.4s ease-in-out infinite; }
+@keyframes pumpkin-pulse { 0%, 100% { scale: 1; } 50% { scale: 1.035; } }
+@keyframes face-build {
+  0%, 100% { filter: drop-shadow(0 0 0.6rem rgba(255, 179, 71, 0.8)) drop-shadow(0 0 1.6rem rgba(255, 117, 24, 0.5)); }
+  50%      { filter: drop-shadow(0 0 1rem rgba(255, 210, 90, 1)) drop-shadow(0 0 2.8rem rgba(255, 140, 40, 0.8)); }
+}
+/* zero: the face flares bright, then settles to a steady glow on the dark pumpkin */
+:root[data-theme="halloween"] .timer-display-wrap[data-state="alert"] .timer-flash { animation: face-flare 1.6s ease-out forwards; }
+:root[data-theme="halloween"] .timer-display-wrap[data-state="alert"] .timer-display { animation: face-flare-text 1.6s ease-out forwards; }
+@keyframes face-flare {
+  0%   { filter: brightness(1) drop-shadow(0 0 0.6rem rgba(255, 179, 71, 0.8)); }
+  18%  { filter: brightness(1.9) drop-shadow(0 0 2.2rem rgba(255, 230, 140, 1)) drop-shadow(0 0 4.5rem rgba(255, 140, 40, 1)); }
+  100% { filter: brightness(1.15) drop-shadow(0 0 0.9rem rgba(255, 190, 80, 0.95)) drop-shadow(0 0 2.4rem rgba(255, 117, 24, 0.7)); }
+}
+@keyframes face-flare-text { 0% { opacity: 1; } 18% { opacity: 1; scale: 1.08; } 100% { opacity: 1; scale: 1; } }
 @media (prefers-reduced-motion: reduce) {
-  .timer-burst i, :root[data-theme="marwa"] .timer-mascot { animation: none !important; }
+  :root[data-theme="halloween"] .timer-display-wrap, :root[data-theme="halloween"] .timer-display-wrap::after, :root[data-theme="halloween"] .timer-display-wrap .timer-flash, :root[data-theme="halloween"] .timer-display-wrap .timer-display { animation: none !important; }
+  :root[data-theme="halloween"] .timer-display-wrap::after { transition: none; }
 }
 
 /* ============================================================================
@@ -5057,7 +5282,7 @@ body.noise-popout .noise-zone { font-size: clamp(1.2rem, 5vmin, 3rem); }
 .wheel-bar .bar-spacer { flex: 1 1 0; min-width: 0; }
 .wheel-bar .icon-btn { width: var(--ctl); height: var(--ctl); padding: 0; }
 .wheel-bar .icon-btn svg { width: 1rem; height: 1rem; }
-.wheel-bar button[aria-checked="true"] { border-color: var(--accent); color: var(--accent); background: var(--accent-soft); }
+.wheel-bar button[aria-checked="true"] { border-color: var(--accent); color: var(--accent-ink); background: var(--accent-soft); }
 .wheel-bar .when-off, .wheel-bar .when-on { display: inline; }
 .wheel-bar button[aria-checked="false"] .when-on { display: none; }
 .wheel-bar button[aria-checked="true"] .when-off { display: none; }
@@ -5206,7 +5431,7 @@ body.noise-popout .noise-zone { font-size: clamp(1.2rem, 5vmin, 3rem); }
 }
 .wheel-hub-btn:hover:not(:disabled) {
   border-color: var(--accent);
-  color: var(--accent);
+  color: var(--accent-ink);
   box-shadow: inset 0 0 0 1px var(--accent-soft), 0 0 22px var(--accent-glow);
   transform: translate(-50%, -50%) scale(1.04);
 }
@@ -5222,7 +5447,7 @@ body.noise-popout .noise-zone { font-size: clamp(1.2rem, 5vmin, 3rem); }
   border-color: var(--border-strong);
   box-shadow: none;
 }
-.wheel-hub-btn[data-spinning="1"] { color: var(--accent); border-color: var(--hud-line); opacity: 0.75; }
+.wheel-hub-btn[data-spinning="1"] { color: var(--accent-ink); border-color: var(--hud-line); opacity: 0.75; }
 
 /* The viewBox is square, so the wheel's centre is the box's centre. */
 .wheel-hub-text {
@@ -5355,7 +5580,7 @@ body.noise-popout .noise-zone { font-size: clamp(1.2rem, 5vmin, 3rem); }
   color: var(--text-muted);
   font-size: 0.68rem; letter-spacing: 0.04em;
 }
-.wheel-mini:hover { color: var(--accent); border-color: var(--accent); }
+.wheel-mini:hover { color: var(--accent-ink); border-color: var(--accent); }
 
 .wheel-controls { flex: none; display: flex; flex-direction: column; gap: var(--space-2); align-items: center; }
 .wheel-control-row {
@@ -5370,7 +5595,7 @@ body.noise-popout .noise-zone { font-size: clamp(1.2rem, 5vmin, 3rem); }
 .wheel-control-row .bar-field { display: inline-flex; align-items: center; gap: 0.4rem; min-width: 0; }
 .wheel-control-row .icon-btn { width: 2rem; height: 2rem; padding: 0; }
 .wheel-control-row .icon-btn svg { width: 1rem; height: 1rem; }
-.wheel-control-row button[aria-checked="true"] { border-color: var(--accent); color: var(--accent); background: var(--accent-soft); }
+.wheel-control-row button[aria-checked="true"] { border-color: var(--accent); color: var(--accent-ink); background: var(--accent-soft); }
 /* Scoped to the switches — an aria-pressed button (the full-screen toggle)
    keeps the app-wide .when-off/.when-on swap, or it shows both icons. */
 .wheel-control-row button[aria-checked] .when-off,
@@ -5393,7 +5618,7 @@ body.noise-popout .noise-zone { font-size: clamp(1.2rem, 5vmin, 3rem); }
   font-family: var(--font-mono);
   font-variant-numeric: tabular-nums;
   font-size: 0.72rem;
-  color: var(--accent);
+  color: var(--accent-ink);
 }
 dialog.wheel-roster-dialog { width: min(42rem, 92vw); max-height: 85dvh; box-shadow: var(--shadow-pop); }
 dialog.wheel-roster-dialog::backdrop { background: rgba(8, 6, 14, 0.6); backdrop-filter: blur(4px); }
@@ -5429,7 +5654,7 @@ dialog.wheel-roster-dialog::backdrop { background: rgba(8, 6, 14, 0.6); backdrop
   width: 0.85em;
   text-align: center;
   font-weight: var(--fw-bold);
-  color: var(--accent);
+  color: var(--accent-ink);
   opacity: 0;
 }
 .wr-chip[aria-pressed="true"]::before { opacity: 1; }
@@ -5450,7 +5675,7 @@ dialog.wheel-roster-dialog::backdrop { background: rgba(8, 6, 14, 0.6); backdrop
 }
 .wr-why[data-why="absent"]      { color: var(--danger); }
 .wr-why[data-why="sitting out"] { color: var(--lavender); }
-.wr-why[data-why="called"]      { color: var(--accent); }
+.wr-why[data-why="called"]      { color: var(--accent-ink); }
 .wheel-roster-actions { display: flex; align-items: center; gap: var(--space-2); }
 .wheel-roster-actions .spacer { flex: 1; }
 .wheel-roster-actions button { min-height: 2.4rem; padding: 0 var(--space-4); }
@@ -5658,7 +5883,7 @@ body.wheel-popout .wheel-period {
 .wk-dow { font-family: var(--font-mono); font-size: 0.66rem; letter-spacing: 0.16em; color: var(--label-ink); }
 .wk-dnum { font-family: var(--font-mono); font-size: 0.9rem; line-height: 1.3; color: var(--text); }
 .wk-day.today { border-color: var(--accent); box-shadow: inset 0 -2px 0 var(--accent); }
-.wk-day.today .wk-dnum, .wk-day.today .wk-dow { color: var(--accent); }
+.wk-day.today .wk-dnum, .wk-day.today .wk-dow { color: var(--accent-ink); }
 .wk-day.off, .wk-day.off .wk-dnum { color: var(--text-muted); }
 .wk-off-note { flex-basis: 100%; text-align: center; line-height: 1.2; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: var(--fs-xs); color: var(--text-muted); }
 .wk-period {
@@ -5666,7 +5891,7 @@ body.wheel-popout .wheel-period {
   min-width: 0; padding: 0.4rem 0.6rem;
   border-left: 2px solid var(--hud-line);
 }
-.wk-pnum { font-family: var(--font-mono); font-size: 0.8rem; letter-spacing: 0.12em; color: var(--accent); }
+.wk-pnum { font-family: var(--font-mono); font-size: 0.8rem; letter-spacing: 0.12em; color: var(--accent-ink); }
 .wk-pname { color: var(--text); font-weight: var(--fw-semibold); font-size: var(--fs-sm); line-height: 1.2; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
 
 .wk-cell {
@@ -5686,7 +5911,7 @@ body.wheel-popout .wheel-period {
 .wk-cell.drop-target { border-color: var(--accent); border-style: dashed; background: var(--accent-soft); }
 /* empty: a quiet + that only speaks up on hover */
 .wk-plus { align-self: center; margin: auto; color: var(--text-muted); opacity: 0.45; font-family: var(--font-mono); font-size: 1.35rem; line-height: 1; transition: opacity var(--transition), color var(--transition); }
-.wk-cell:hover .wk-plus, .wk-cell:focus-visible .wk-plus, .wk-cell.selected .wk-plus { opacity: 1; color: var(--accent); }
+.wk-cell:hover .wk-plus, .wk-cell:focus-visible .wk-plus, .wk-cell.selected .wk-plus { opacity: 1; color: var(--accent-ink); }
 .wk-text { font-size: var(--fs-sm); line-height: 1.25; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow-wrap: anywhere; }
 .wk-text.quiet { color: var(--text-2); font-style: italic; }
 /* a planned day: the whole agenda, one ellipsised line per activity */
@@ -5730,7 +5955,7 @@ body.wheel-popout .wheel-period {
 .day-card:hover .dc-empty { color: var(--text); }
 .day-off { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0.35rem; height: 100%; min-height: 10rem; border: 1px dashed var(--border-strong); border-radius: var(--radius-md); color: var(--text-muted); background: repeating-linear-gradient(135deg, var(--card-2) 0 7px, transparent 7px 14px); }
 .day-off b { color: var(--text-2); font-size: var(--fs-lg); }
-.day-off a { color: var(--accent); }
+.day-off a { color: var(--accent-ink); }
 
 /* ---- month: Mon–Fri weeks, one mark per period that has a plan ---- */
 .mo-grid {
@@ -5750,7 +5975,7 @@ body.wheel-popout .wheel-period {
 .mo-day:hover { border-color: var(--border-hover); background: var(--card-3); }
 .mo-day.out { opacity: 0.45; }
 .mo-day.today { border-color: var(--accent); }
-.mo-day.today .mo-num { color: var(--accent); }
+.mo-day.today .mo-num { color: var(--accent-ink); }
 .mo-day.selected { box-shadow: 0 0 0 1px var(--accent); }
 .mo-num { font-family: var(--font-mono); font-size: 1rem; line-height: 1; color: var(--text-2); }
 .mo-dots { display: flex; flex-wrap: wrap; gap: 3px; }
@@ -5801,7 +6026,7 @@ body.wheel-popout .wheel-period {
 .lp-agenda-box .lp-item:hover { background: var(--card-3); }
 .lp-agenda-empty { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0.2rem; min-height: 5rem; border: 1px dashed var(--border-strong); background: transparent; color: var(--text-muted); font-weight: var(--fw-regular); }
 .lp-agenda-empty b { color: var(--text-2); font-weight: var(--fw-semibold); }
-.lp-agenda-empty span { color: var(--accent); font-size: var(--fs-sm); }
+.lp-agenda-empty span { color: var(--accent-ink); font-size: var(--fs-sm); }
 .lp-agenda-empty:hover { border-color: var(--accent); background: var(--accent-fill-soft); }
 .lp-agenda-empty[hidden], .lp-add-item[hidden] { display: none; }
 /* Materials: the Notes box, shorter */
@@ -5868,10 +6093,10 @@ body.wheel-popout .wheel-period {
 .k-slides { color: var(--att-tardy); }
 .k-doc, .k-audio { color: var(--lavender); }
 .k-sheet { color: var(--ok); }
-.k-image { color: var(--accent); }
+.k-image { color: var(--accent-ink); }
 .k-link, .k-file { color: var(--text-2); }
 .lp-att-name { display: block; min-width: 0; min-height: 0; padding: 0; border: 0; background: none; color: var(--text); font-size: var(--fs-md); font-weight: var(--fw-semibold); text-align: left; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; cursor: pointer; }
-button.lp-att-name:hover { color: var(--accent); background: none; text-decoration: underline; text-underline-offset: 3px; }
+button.lp-att-name:hover { color: var(--accent-ink); background: none; text-decoration: underline; text-underline-offset: 3px; }
 .lp-att-meta { color: var(--text-muted); font-family: var(--font-mono); font-size: 0.72rem; white-space: nowrap; }
 .lp-att-tools { display: inline-flex; gap: 0.15rem; }
 .lp-att-tools .icon-btn { width: 1.9rem; height: 1.9rem; min-height: 0; padding: 0; display: inline-flex; align-items: center; justify-content: center; border-color: transparent; background: transparent; }
@@ -5902,7 +6127,7 @@ button.lp-att-name:hover { color: var(--accent); background: none; text-decorati
   pointer-events: none;
 }
 .lp-dropping span { display: flex; flex-direction: column; align-items: center; gap: 0.6rem; color: var(--text); font-size: var(--fs-lg); text-align: center; }
-.lp-dropping svg { width: 2.4rem; height: 2.4rem; color: var(--accent); }
+.lp-dropping svg { width: 2.4rem; height: 2.4rem; color: var(--accent-ink); }
 
 /* empty state */
 .lesson-empty { flex: 1; min-height: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: var(--space-2); padding: var(--space-5); text-align: center; }
@@ -5953,7 +6178,7 @@ button.lp-att-name:hover { color: var(--accent); background: none; text-decorati
 .wk-period { gap: 0.2rem; }
 .wk-period .wk-pname { font-size: var(--fs-md); font-weight: var(--fw-bold); }
 .wk-period .wk-pnum { font-size: 0.7rem; letter-spacing: 0.08em; color: var(--text-muted); }
-.wk-period.course .wk-pnum { color: var(--accent); }
+.wk-period.course .wk-pnum { color: var(--accent-ink); }
 .wk-corner { display: flex; align-items: center; justify-content: center; }
 .wk-courses {
   display: inline-flex; align-items: center; gap: 0.3rem;
@@ -5966,7 +6191,7 @@ button.lp-att-name:hover { color: var(--accent); background: none; text-decorati
 .wk-meta .cm-split { color: var(--lavender); }
 .mo-dots { flex-direction: column; align-items: stretch; width: 100%; }
 .mo-dots i { justify-content: flex-start; min-width: 0; max-width: 100%; padding: 0 0.3rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; display: block; line-height: 1rem; font-family: var(--font-body); font-size: 0.68rem; letter-spacing: 0.01em; }
-.dc-head .wk-pnum { font-size: 0.7rem; color: var(--accent); }
+.dc-head .wk-pnum { font-size: 0.7rem; color: var(--accent-ink); }
 .dc-split { display: flex; gap: 0.4rem; margin: 0; padding-top: 0.35rem; border-top: 1px dashed var(--border-strong); color: var(--text-2); font-size: var(--fs-sm); }
 .dc-split svg { flex: none; width: 0.95rem; height: 0.95rem; margin-top: 0.15rem; color: var(--lavender); }
 .dc-split b { color: var(--lavender); font-weight: var(--fw-semibold); }
@@ -6049,7 +6274,7 @@ button.lp-att-name:hover { color: var(--accent); background: none; text-decorati
 .cd-courses, .cd-periods { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 0.35rem; }
 .cd-courses li { display: grid; grid-template-columns: minmax(0, 1fr) 5.6rem 2rem; align-items: center; gap: 0.5rem; }
 .cd-courses input { min-height: 2.2rem; font-weight: var(--fw-semibold); }
-.cd-in { color: var(--accent); font-family: var(--font-mono); font-size: 0.72rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.cd-in { color: var(--accent-ink); font-family: var(--font-mono); font-size: 0.72rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .cd-in.none { color: var(--text-muted); }
 .cd-courses .icon-btn { width: 2rem; height: 2rem; min-height: 0; padding: 0; display: inline-flex; align-items: center; justify-content: center; border-color: transparent; background: transparent; }
 .cd-courses .icon-btn:hover { color: var(--danger); border-color: var(--border-strong); }
@@ -6060,7 +6285,7 @@ button.lp-att-name:hover { color: var(--accent); background: none; text-decorati
 .cd-periods li { display: grid; grid-template-columns: 2rem minmax(0, 1fr) 9.5rem; align-items: center; gap: 0.5rem; padding: 0.3rem 0.4rem; border-radius: var(--radius-sm); }
 .cd-periods li:hover { background: var(--card-2); }
 .cd-periods li.not-taught { opacity: 0.6; }
-.cd-pnum { color: var(--accent); font-family: var(--font-mono); font-size: 0.8rem; }
+.cd-pnum { color: var(--accent-ink); font-family: var(--font-mono); font-size: 0.8rem; }
 .cd-pname { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: var(--fs-sm); }
 .cd-pname em { color: var(--text-muted); font-size: var(--fs-xs); }
 .cd-sec { min-width: 0; }
@@ -6095,3 +6320,69 @@ body.present .wk-text { font-size: var(--fs-md); }
   .lp-att-meta { display: none; }
   .lp-preview { width: 100vw; height: 100dvh; border-radius: 0; }
 }
+
+/* ==========================================================================
+   Earthy materials, part 2 — wood caps, toolbars and tab bars on the green.
+   Title bars run edge to edge across the top of their panel (negative
+   margins equal to the panel's padding) with a clay rule under them;
+   toolbars and the top bar are wood; segmented tab bars are a sunk wood track
+   with the sage pill on it. Colours only come from the --wood / --clay tokens
+   in the earthy block.
+   ========================================================================== */
+:root[data-theme="earthy"] header.topbar { border-bottom-color: var(--clay); }
+:root[data-theme="earthy"] .seg { background: var(--wood-inset); border-color: var(--clay-line); }
+:root[data-theme="earthy"] .seat-bar, :root[data-theme="earthy"] .arr-bar, :root[data-theme="earthy"] .br-bar { background: var(--wood); border-color: var(--clay-line); }
+:root[data-theme="earthy"] .seat-bar:hover, :root[data-theme="earthy"] .arr-bar:hover, :root[data-theme="earthy"] .br-bar:hover { border-color: var(--clay-hover); }
+:root[data-theme="earthy"] hr { border-color: var(--clay); }
+
+/* caps: panel title bars */
+:root[data-theme="earthy"] .lesson-head {
+  margin: calc(-1 * var(--space-3)) calc(-1 * var(--space-4)) 0;
+  padding: var(--space-2) var(--space-4);
+  background: var(--wood);
+  border-bottom-color: var(--clay);
+}
+:root[data-theme="earthy"] .cal-bar {
+  margin: calc(-1 * var(--space-3)) calc(-1 * var(--space-4)) 0;
+  padding: var(--space-2) var(--space-4);
+  background: var(--wood);
+  border-bottom: 1px solid var(--clay);
+}
+:root[data-theme="earthy"] .br-panel-head {
+  background: var(--wood);
+  border-bottom-color: var(--clay);
+  border-radius: calc(var(--radius-lg) - 1px) calc(var(--radius-lg) - 1px) 0 0;
+}
+:root[data-theme="earthy"] .names-head {
+  margin: -0.55rem -0.45rem 0.45rem;
+  padding: 0.5rem 0.7rem 0.45rem;
+  background: var(--wood);
+  border-bottom-color: var(--clay);
+  border-radius: calc(var(--radius-md) - 1px) calc(var(--radius-md) - 1px) 0 0;
+}
+:root[data-theme="earthy"] .card > .card-head {
+  margin: calc(-1 * var(--space-5)) calc(-1 * var(--space-5)) var(--space-4);
+  padding: var(--space-3) var(--space-5);
+  background: var(--wood);
+  border-bottom: 1px solid var(--clay);
+  border-radius: calc(var(--radius-lg) - 1px) calc(var(--radius-lg) - 1px) 0 0;
+}
+:root[data-theme="earthy"] .gp-title {
+  justify-self: stretch;
+  text-align: center;
+  margin: calc(-1 * var(--space-4)) calc(-1 * var(--space-4)) 0;
+  padding: var(--space-2) var(--space-4);
+  background: var(--wood);
+  border-bottom: 1px solid var(--clay);
+  border-radius: calc(var(--radius-lg) - 1px) calc(var(--radius-lg) - 1px) 0 0;
+}
+/* table header rows */
+:root[data-theme="earthy"] .bell-table th, :root[data-theme="earthy"] .rv-table th { background: var(--wood); border-bottom-color: var(--clay); }
+/* fields and buttons whose components set their own green fill */
+:root[data-theme="earthy"] .lp-text.lp-box, :root[data-theme="earthy"] .lp-text.lp-notes { background: var(--wood-inset); border-color: var(--clay-line); }
+:root[data-theme="earthy"] .lp-text.lp-box:hover, :root[data-theme="earthy"] .lp-text.lp-notes:hover { border-color: var(--clay-hover); }
+:root[data-theme="earthy"] .lp-text.lp-box:focus, :root[data-theme="earthy"] .lp-text.lp-notes:focus { border-color: var(--accent); }
+:root[data-theme="earthy"] .seat-bar .mode-seg input:not(:checked) + span { background: var(--wood-btn); border-color: var(--clay-line); }
+:root[data-theme="earthy"] .seat-bar .mode-seg label:hover input:not(:checked) + span { background: var(--wood-btn-hover); border-color: var(--clay-hover); }
+:root[data-theme="earthy"] .seat-bar .bar-cluster { background: var(--wood-btn); border-color: var(--clay-line); }
+:root[data-theme="earthy"] .seat-bar .bar-cluster .icon-btn:hover { background: var(--wood-btn-hover); border-color: var(--clay-hover); }

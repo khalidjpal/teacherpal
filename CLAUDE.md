@@ -610,6 +610,10 @@ the structure, and every other theme is a colour swap of it. A theme is
       readouts; = `--text`).
     - `--chip-line` / `--chip-ink` (`.hud-chip` at rest; = `--hud-line` /
       `--text-muted`).
+    - `--accent-ink` (every `color:` that used `--accent` / `--hud` — links,
+      icons, period numbers, today marks; = `--accent`). A theme whose accent
+      is too dark for text points it at a lighter tint (earthy). Only the
+      active tab icon keeps `--accent` itself.
   **Depth tokens** (set once in jarvis, off there and in marwa, which
   inherits them): `--panel-shadow` (under every `.hud-box`; `none`),
   `--hover-lift` (`0px`) and `--hover-glow` (`none`) — on hover, buttons,
@@ -628,7 +632,7 @@ the structure, and every other theme is a colour swap of it. A theme is
   `--accent`, and `--wheel-ink` on every `--wheel-r*` and `--wheel-won`.
   Student names (seats, group cards, wheel, attendance, full screen) are
   `--text` / `--wheel-ink`, so they stay high contrast automatically.
-- **Extras are opt-in by name.** Only marwa and halloween have any (halloween's are listed under it below); marwa's are selectors written
+- **Extras are opt-in by name.** Only marwa, halloween and earthy (its wood "materials") have any (halloween's and earthy's are listed under them below); marwa's are selectors written
   `:root[data-theme="marwa"] …` (mascots, the Timer/Wheel skins, the
   12-hour clock in `nav.js`). A theme without extras behaves exactly like
   jarvis: a 24-hour clock, no mascots (the `--marwa-mascot-*` vars are
@@ -644,55 +648,113 @@ the structure, and every other theme is a colour swap of it. A theme is
 - **`jarvis`** — the original dark HUD (deep plum-navy, near-black cards,
   subtle pink accent, Orbitron uppercase labels, corner ticks). Default for
   every account and every logged-out page. See the Design rules below.
-- **`earthy`** — a **colour swap of jarvis** (tokens only, no
-  `:root[data-theme="earthy"] …` selectors) that also switches on the three
-  depth tokens. Bark, clay and sage, with **browns for the ground so green
-  reads as an accent**. **Value steps alone left it reading as one plane**,
-  so it separates elements the way jarvis's pink edges do — keep all five
-  cues when tuning it:
-  - **Layers**: page `#211911` (a step below everything) → panels and cards
-    `#3A2D21` (`--panel-bg` nearly solid, so panels sit over the page) →
-    wells `#2A2017` (`--card-2`: inputs, chips, empty week cells — sunk
-    below the card) and raised rows `#47372A` (`--card-3`: hover, planned
-    cells).
-  - **Borders that outline**: `--border` clay `#86643F` (2.5:1 on the card),
-    `--border-strong` `#A9794F` on every button / input / chip (3.5:1 on the
-    card, 4.2:1 on a well), `--border-hover` bright terracotta `#E3A578`.
-    Panel edges are sage `--hud-line` at 0.55 (it was 0.30 and vanished).
-  - **Shadows**: `--shadow-card` / `--panel-shadow` are a tight dark
-    contact shadow plus a soft 26–32px one, with a faint citron inset top
-    highlight.
-  - **Interaction you can see**: hover = terracotta border + `--card-3` +
-    1px lift + a shadow (`--hover-lift` / `--hover-glow`); focus ring sage
-    at 0.55; pressed / selected = `--gradient-accent` at 0.55 → 0.16 with
-    an outer sage glow.
-  - **Hierarchy**: headings and names `--text` citron `#F0F5BC` (11.7:1 on
-    the card) → body `--text-2` cream `#D3C7AB` (7.9:1) → labels
-    `--label-ink` dusty sage `#AAAE84` (5.8:1) and muted stone `#B5A688`
-    (5.6:1). Labels step *down* from the body, not up.
-  - **Accents with saturation**: sage `#A6C45E` (6.8:1) on primary buttons,
-    active tabs, selected items and icons, moss `#6F9B3F` edging primaries;
-    terracotta `#E3A578` is the stand-apart colour (`--lavender`: DRAFT
-    tags, duplicates, sitting out; `--figure-ink` readouts; HUD chips at
-    rest), `--danger` `#F09A80`.
-  - **Group cards cycle sage → moss → terracotta → clay → stone** through
+- **`earthy`** — a **colour swap of jarvis** that also switches on the
+  three depth tokens, plus one opt-in extra: **wood as a secondary
+  material** (below). **Dark forest green with muted, sparing accents.** The old
+  brown base read as a muddy film. A vivid-accent pass after it was too
+  bright. **Separation comes from the surfaces and borders, not from
+  colour.** Keep these cues when tuning it:
+  - **Layers**, each a clear step lighter than the last: page `#0D1A10` →
+    canvas `--bg-1` `#122418` → panels and cards `#1A3322` (`--panel-bg`
+    nearly solid) → raised `#24452E` (`--card-2`: inputs, chips, wells,
+    empty week cells) → hover `#284B32` (`--card-3`).
+  - **Borders that outline**: `--border` `#3D6B48` on every element,
+    `--border-strong` `#5E9A6C` on buttons, inputs and chips (4.1:1 on the
+    card). Panel edges (`--hud-line`) and chip outlines are that same
+    neutral green, **not** the accent. Only hover (`--border-hover`,
+    `--hud-line-strong`) turns sage.
+  - **Shadows**: `--shadow-card` / `--panel-shadow` are a tight dark contact
+    shadow plus a soft 26–32px one, with a faint inset top highlight.
+  - **States**:
+    - Hover is a sage border, `--card-3`, a 1px lift and a dark shadow with
+      a faint sage glow.
+    - The focus ring is sage at 0.75.
+    - Pressed / selected is `--gradient-accent` (sage, 0.55 → 0.16).
+  - **Accents only where they mean something**:
+    - **Muted sage `#7A9E48`** (`--accent`) is for primary buttons, the
+      active tab, selected items, focus rings and hover borders. It is too
+      dark for text (4.4:1 on the card).
+    - Accent-coloured text and icons (links, hub and tool icons, period
+      numbers, "today" marks) use **`--accent-ink` `#A6BD8C`**, a soft
+      low-saturation sage.
+    - **Terracotta `#C05F35`** is only the card's top glow line. As text it
+      is `#E0A582` (`--lavender`: DRAFT tags, duplicates, sitting out).
+    - **Wheat `#C9A43C`** is tardy only (`#D6B456` as text).
+    - The top-bar readouts are plain `--text-2` (`--figure-ink`).
+    - `--danger` is soft coral `#F5A098`.
+    - `--ok` is mint `#8CCB9F`.
+  - **Text**: `--text` `#D8E4CC` (10.3:1 on the card) → `--text-2`
+    `#BCCDB2` (8.1:1) → `--label-ink` `#A3B79B` (6.4:1) → `--text-muted`
+    `#8BA68D`. Muted is 5.2:1 on the card and 6.8:1 on the page, but **only
+    4.0:1 on raised and 3.7:1 on hover**, below AA there. This was chosen
+    on request. Raise it toward `#9DBC9F` if muted text on inputs or chips
+    is too faint.
+  - **Group cards cycle sage → terracotta → wheat → mint → birch** through
     the optional `--group-c1…c5` tokens. `.group:nth-child(5n+k)` sets
     `--g-pick: var(--group-ck)`, and `--g` uses it when defined.
     jarvis/marwa leave them undefined, so `--g-pick` is invalid and they
-    keep the hue-shifted accent. Light tints are used so the GROUP N
-    labels pass AA on the tinted card.
-  - **Wheel slices** walk moss, terracotta, clay, sage and stone in deep
-    tones; `wheel.js` visits r0 r4 r1 r5 r2 r6 r3 r7, so the tokens are
-    assigned in that order.
-  - Measured (bg / card / well / hover): text 10.0–15.3:1, text-2
-    6.8–10.3:1, muted 4.75–7.2:1, label 4.9–7.5:1, accent 5.8–8.8:1,
-    lavender ≥ 5.4:1, danger ≥ 5.2:1, on-accent 8.7:1,
-    group labels ≥ 4.67:1, names ≥ 7.85:1 on group cards, wheel names
-    ≥ 4.9:1.
-  - **Three layers on the seat canvases**: a floor (`#1E1610`) darker than
-    the page, the panel, then lit-wood seats (`#5C4834`) with light-clay
-    edges (`#B08A63`, 5.7:1 on the floor). Names on seats are 7.2:1. Empty
-    seats are dark with clay edges.
+    keep the hue-shifted accent.
+  - **Wheel slices** use deep forest, terracotta, wheat, sage, pine, rust,
+    olive and moss. `wheel.js` visits r0 r4 r1 r5 r2 r6 r3 r7, so the
+    tokens are assigned in that order.
+  - Measured on bg / card / raised / hover:
+
+    | Pair | Ratio |
+    |---|---|
+    | text | 7.4–13.6:1 |
+    | text-2 | 5.8–10.7:1 |
+    | label | 4.6–8.4:1 |
+    | accent-ink | 4.8–8.8:1 |
+    | lavender | ≥ 4.61:1 |
+    | danger | ≥ 4.5:1 |
+    | ok | ≥ 5.2:1 |
+    | tardy | ≥ 4.9:1 |
+    | on-accent | 5.8:1 |
+    | group labels | ≥ 4.76:1 |
+    | names on group cards | ≥ 7.0:1 |
+    | wheel names | ≥ 4.9:1 |
+
+  - **Three layers on the seat canvases**: a floor `#091409` darker than
+    the page, then green seats `#2F5A3C` with `#6FA67C` edges (6.7:1 on the
+    floor). Names on seats are 6.0:1. Empty seats are `#17301F` with
+    `#4F8A5C` edges.
+  - **Wood: green room, wooden furniture.** Brown came back as a
+    *material* on top of the green ladder, never as the base. Tokens in the
+    earthy block:
+    - `--wood` `#423223`: caps, toolbars, table heads and the top bar
+      (`--topbar-bg`). It is a touch warmer than the requested `#3A2C1E`,
+      which had exactly the card's value; muted text on it is 4.6:1.
+    - `--wood-inset` `#241B12`: fields and tab-bar tracks, sunk darker
+      than the card.
+    - `--wood-btn` `#5A4430` (hover `#66472F`): buttons, a lighter plank.
+    - `--clay` `#5C4631`: dividers and rules.
+    - `--clay-line` `#7A5C40`: field and button outlines, lightened from
+      clay so the edge reads on green (2.2:1).
+    - `--clay-hover` = terracotta `#C05F35`: hover on any wood element.
+
+    Every brown was set **by value against the green it sits on**, not just
+    by hue. Two rule blocks in `style.css` apply them:
+    - **Part 1**, just before the PRESSED block: buttons (incl. ghost) and
+      the base fields. The theme sits in `:where(:root[data-theme="earthy"])`,
+      so each selector keeps the base rule's specificity. Any component that
+      restyles a control keeps its own look: week cells, seats, the
+      borderless note fields, chips. Primary buttons, pressed states and focus
+      (sage) still win.
+    - **Part 2**, at the end of the file:
+      - **caps** that run edge to edge across their panel, using negative
+        margins equal to its padding, with a clay rule under them:
+        `.lesson-head`, `.cal-bar`, `.br-panel-head`, `.names-head`,
+        `.card > .card-head`, `.gp-title`;
+      - **toolbars** `.seat-bar`, `.arr-bar`, `.br-bar`;
+      - **tab bars**: `.seg` is a sunk wood track with the sage pill on it;
+      - **table heads** `.bell-table th`, `.rv-table th`;
+      - the top bar's border, `hr`, and the few components that hard-code
+        a green fill (`.lp-box` / `.lp-notes`, the Seating mode toggle and
+        `.bar-cluster`).
+
+    The green page, canvas, cards, week cells, seats, chips and the sage
+    accent are untouched. A new panel header or toolbar needs its own line
+    in part 2. jarvis, marwa and halloween are unaffected.
   - 24-hour clock, no mascots, no pattern.
 - **`halloween`** — a **colour swap of jarvis** (tokens like earthy, depth
   tokens on) plus two small opt-in extras. Purple-black ground `#120D1A` →
@@ -737,7 +799,8 @@ the structure, and every other theme is a colour swap of it. A theme is
       with an orange `drop-shadow` glow.
     - **Section headings** (`.hub-section-title`, `.card-head h2`): a small
       lilac bat with pumpkin eyes before the text.
-  24-hour clock, jarvis Timer dial and wheel.
+  **Timer**: the dial is a carved jack-o'-lantern (see the Timer section).
+  24-hour clock, jarvis wheel.
 - **`marwa`** — a **pure colour swap of jarvis** (depth tokens off) with four tiny extras. Same
   layout, spacing, radii, borders, fonts, weights, tracks, shadows,
   animations and components: only palette tokens differ (light cream-pink
@@ -753,8 +816,9 @@ the structure, and every other theme is a colour swap of it. A theme is
   Scoped to the hub: tool pages' `.hud-box` keeps the quieter line.
   And a **faint heart pattern** on the page background — see `--body-pattern`
   below. The **Timer dial** is the one component with a real per-theme skin
-  (segment ring vs gradient arc, Comfortaa digits, sentence-case label,
-  reacting mascot, heart burst at zero) — see the Timer section. Everywhere
+  (the bunny IS the dial — it drains top to bottom, holds the time in a heart,
+  perks up in the last minute and celebrates at zero; Comfortaa digits,
+  sentence-case label) — see the Timer section. Everywhere
   else: no HUD tick suppression, no sentence-case override, no separate
   fonts, no rounded-card overrides — layout changes to jarvis carry into
   marwa automatically.
@@ -790,7 +854,7 @@ To add a new theme:
 
 1. Add `{ id: 'my-theme', label: 'My Theme' }` to `THEMES` in `shared.js`.
 2. Copy the closest colour block in `style.css` — `:root[data-theme="earthy"]`
-   for a dark theme (no extras), `:root[data-theme="marwa"]` for a light one
+   for a dark theme (its wood "materials" rules are separate and do not come along), `:root[data-theme="marwa"]` for a light one
    (its extras live in separate `:root[data-theme="marwa"] …` rules and do
    not come along) — and rename the selector. Swap colour values only:
    every colour variable listed above, none of the structural ones.
@@ -1361,23 +1425,140 @@ All styling lives in `style.css`; pages carry almost no inline styling.
   centred on the page: mode segmented control (Countdown / Stopwatch), a
   40-char label input, then the display — a `.timer-display-wrap` holding
   the digits, an optional overhead label, and **the themed dial** — one SVG
-  (`.timer-dial`) with two skins, built once per document by `buildDial()`
-  and painted by `paintDial(doc, now)` (page, pop-out and PiP all call the
-  same pair):
+  (`.timer-dial`), built once per document by `buildDial()` and painted by
+  `paintDial(doc, now)` (page, pop-out and PiP all call the same pair). jarvis
+  and earthy draw the ring; marwa and halloween hide it and turn their
+  mascot into the dial:
     - **jarvis — arc reactor.** 60 `.dial-segs` ticks around the rim, lit in
       accent with a glow and going dark one by one as time drains
       (`i >= round(remaining * 60)` → `.off`), over a faint `.dial-inner`
       ring and 36 `.dial-marks` degree markings (every 3rd longer). Mono
       digits with a glow; label above in tracked uppercase. The smooth arc
       is hidden.
-    - **marwa — soft.** One thick `.dial-arc` (`stroke-width: 7`, round
-      caps, `pathLength=1`, `stroke-dashoffset` drains it) filled with the
-      `#timer-arc-grad` accent→lavender gradient; segments, marks and inner
-      ring hidden. Digits in **Comfortaa** (rounded), label in **sentence
-      case** — the one place marwa overrides `text-transform`. A
-      `.timer-mascot` (bunny) sits under the dial and reacts: `calm`
-      breathe → `excited` wiggle in the final minute → `party` bounce at
-      zero.
+    - **marwa — the bunny IS the dial.** It is built like the halloween
+      pumpkin. There is no ring and no little mascot under it: the SVG dial
+      and `.timer-mascot` are hidden, and three layers fill the wrap (all
+      `--marwa-bunny-*` inline-SVG tokens, in the existing mascots' palette:
+      fur `#FFB6C9`, inner ear `#FF89A9`, outline `#4A2C3D` at 2.4 units,
+      bubblegum bow, blush `#FF6B9E`).
+      - `::before` is the spent bunny, a pale outline (`-spent` /
+        `-spent-perk`). It carries the soft pink drop-shadow, because a
+        shadow on the clipped layer would be cut into a box.
+      - `::after` is the coloured bunny (`-lit` / `-lit-perk`), clipped from
+        the top down by `--remaining`. That is one constant-speed sweep from
+        the ear tips (y 2) to the feet (y 99.2): `2% + (1 − r) × 97.2%`.
+      - `.timer-flash` is the front, always shown: the face, and two paws
+        hugging a big heart (scaled 1.25 × 1.1 about its tip) with the time
+        in it (`-face` / `-face-wide` / `-face-party`).
+
+      **Personality** comes from `data-mood` on the wrap, which `paintDial()`
+      sets with the old mascot rule:
+      - `calm` (running): smiling, oval eyes, a slow 1.8% breath (`scale`,
+        so no layout moves).
+      - `excited` (final minute): ears perk upright (the `-perk` poses), the
+        eyes widen with raised brows, the blush deepens, an "oh!" mouth.
+      - `party` (zero): the colour pours back in from the feet (the clip
+        transitions to `inset(0)`), and the ears bounce (`bunny-ears` flips
+        the lit pose every 260ms). The bunny hops, with happy ^ ^ eyes and a
+        big open smile, and `.timer-burst` hearts and sparkles fly out to
+        48cqi.
+
+      All of it stops under reduced motion.
+
+      **Digits** are **Comfortaa** 700 in `--text` (`--accent-deep` in the
+      final minute and at zero), sized and centred **in the heart** per text
+      length. Each size is the largest whose ink box keeps an even ~2.5 units
+      of clearance from the heart's edge and both paws:
+
+      | Format | Size | Ink centre |
+      |---|---|---|
+      | `m:ss` | 15.25cqi | y 79.4 |
+      | `mm:ss` | 14cqi | y 79 |
+      | `h:mm:ss` | 12.25cqi | y 78.3 |
+      | 8 chars | 11.25cqi | y 78 |
+
+      Each also gets `+ 0.06em` in y: Comfortaa's ink centre sits that far
+      above its line-box centre. The pop-out loads Comfortaa too. The label
+      is in **sentence case**, the one place marwa overrides
+      `text-transform`.
+
+      Sizes: the wrap is `min(50vh, 46vw, 31rem)` (it fits 1366×768 with the
+      label line and setup row), 80vh in full screen and 94vh in the pop-out
+      (84vh with a label). The page keeps marwa's heart pattern; the pop-out
+      stays flat like every projector view.
+    - **halloween — the pumpkin IS the dial.** There is no ring: the SVG dial
+      is hidden and three layers fill the wrap.
+      - `::before` is the spent pumpkin (`--halloween-pumpkin-spent`): a
+        dark purple body and a dark stem.
+      - `::after` is the lit pumpkin, stem included
+        (`--halloween-pumpkin-lit`), clipped **from the top down** by
+        `--remaining`. That is 0..1, set on the wrap by `paintDial()`.
+      - **The sweep is one constant-speed line across the whole graphic**,
+        from the top of the stem (y 1.8 of the box) to the bottom of the body
+        (y 96.3), hence a top inset of `1.8% + (1 − r) × 94.5%`. The stem
+        takes its own share of the time: it is dark by ~15% elapsed, never
+        instantly.
+      - An earlier version jumped the stem's 16% at the first tick, using a
+        `min()` term; don't bring that back. The one after that left the
+        stem out of the drain altogether.
+      - At half time the line is at mid-height.
+        The clipped layer has no drop-shadow, because the clip cuts its glow
+        into a hard box.
+      - `.timer-flash` is repurposed as the carved face
+        (`--halloween-pumpkin-face`), always lit.
+
+      **The digits sit in the grin**, centred on its **visual** centre, not
+      its bounding box (the grin is a crescent: its area centroid is y≈62,
+      and its box centre is higher).
+      - For each text length, the digits get the **largest size whose ink box
+        keeps an even ~5 units of clearance** from the carved edge on every
+        side (clear of both teeth), placed where that clearance is most even.
+      - Sizes (cqi; the wrap is an inline-size container) and ink centres:
+
+        | Format | Size | Ink centre |
+        |---|---|---|
+        | `m:ss` | 20 | y 64.1 |
+        | `mm:ss` | 18.5 | y 63.6 |
+        | `h:mm:ss` | 16 | y 62.6 |
+        | 8 chars | 13.5 | y 61.6 |
+
+        The format comes from `data-len`, which `paintDial()` sets from the
+        text.
+      - `translate` is that centre minus 50cqi, plus 0.02em, because Pirata
+        One's ink centre sits 0.02em above its line-box centre (its ink is
+        0.8em tall). Another 0.02em in x covers the trailing letter-spacing.
+      - Measured with canvas `measureText` (ink bounds) and a point-in-polygon
+        sweep of the mouth path. Change the mouth path or the face and they
+        need re-measuring.
+
+      They are candle yellow with a warm inner glow.
+
+      **Face: Pirata One** (`--font-spooky`, halloween only), a gothic
+      blackletter, on the digits and the label above the pumpkin. (Creepster
+      came first and was too drippy. Henny Penny and Griffy were the named
+      fallbacks; Pirata One read well, so they weren't needed.)
+      - It is loaded only by `timer.html` and `timer-popout.html`
+        (`&family=Pirata+One` in their Google Fonts link). PiP copies every
+        stylesheet link from the parent, so it gets the font too (it used to
+        copy only `style.css`).
+      - It is not tabular, so the digits shift a little as they change.
+      - The label is a size up from the Orbitron one, candle yellow with a
+        glow (kept visible by `.timer-label`'s `overflow-clip-margin`), and
+        **`text-transform: none`**: all-caps blackletter is unreadable.
+      - In the pop-out, a label shrinks the pumpkin to 84vh so both fit.
+
+      **Final minute**: the wrap pulses (`scale`), the lit body brightens and
+      the face glow builds. **Zero**: the face flares once, then holds a
+      steady glow, and the lit layer fades out so only the face is left. All
+      of this stops under reduced motion.
+
+      It is bigger than the other dials: the wrap is
+      `min(48vh, 46vw, 31rem)` (the most that lets the whole stage fit
+      1366×768 with the label line and setup row always present), 80vh in
+      full screen and 94vh in the pop-out.
+      Unlike the page decorations, it is not excluded from the pop-out / PiP.
+      The pop-out only gets state over `BroadcastChannel`; its `loadState()`
+      fallback returns early in pop-out mode.
   **States** come from `data-state` on `.timer-display-wrap`: `warn` (final
   minute) pulses the ring in both themes; `alert` (zero) flashes the whole
   dial via `.timer-flash` in jarvis and fires `.timer-burst` (hearts +
@@ -1387,9 +1568,24 @@ All styling lives in `style.css`; pages carry almost no inline styling.
   without it the celebration vanished a frame after it appeared, and the
   display fell back to the full target instead of 0:00. Cleared by start /
   reset / preset / +1 min / mode change.
-  Under the dial: preset chips
-  (1/3/5/10/15 min) + custom min/sec inputs (hidden while running), Start
-  → Pause → Resume, Reset, ±1 min (visible only while running/paused),
+  **Nothing on the page moves when you press Start** (measured: identical
+  rects stopped / running / paused, at 1366×768 and 1080p, in jarvis and
+  halloween):
+  - Every row is present in every state. Controls that don't apply are
+    *disabled*, never hidden. The setup row (preset chips 1/3/5/10/15 min +
+    custom min/sec) gets `.locked` (dimmed, inputs disabled) while running,
+    paused or in stopwatch mode. ±1 min is always in the button row, and
+    disabled unless a countdown is running or paused.
+  - Start → Pause → Resume keep one size: the sizing hangs off `.big`, not
+    `.primary.big`, because the button drops `.primary` while running.
+  - The label's line is always reserved on the Timer page
+    (`.timer-stage .timer-label.empty` keeps its height, invisible).
+  - `.timer-label` is `overflow: clip`, **not** `hidden`. A hidden-overflow
+    grid item has a minimum height of 0, so when the stage (capped at
+    `100dvh - 5.5rem`) ran short, the label's row collapsed and the label
+    slid behind the dial.
+
+  Under the dial: Start → Pause → Resume, Reset, −1 / +1 min, the setup row,
   and an extras row with Mute (`aria-checked`), Pop out, Picture-in-Picture
   (Chrome only — button hidden without `documentPictureInPicture`) and
   the full-screen icon. **Countdown accuracy**: the source of truth is

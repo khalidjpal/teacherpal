@@ -364,12 +364,18 @@
     wrap.dataset.mode = state.mode;          // stopwatch hides the progress, keeps the dial frame
 
     if (arc) arc.setAttribute('stroke-dashoffset', String(1 - remaining));
+    // the halloween pumpkin drains by this; its digits size by their length
+    wrap.style.setProperty('--remaining', remaining.toFixed(4));
+    const disp = doc.getElementById('timer-display') || doc.getElementById('pip-display');
+    if (disp) disp.dataset.len = String(disp.textContent.length);
     if (segs) {
       const lit = Math.round(remaining * SEGMENTS);
       const lines = segs.children;
       for (let i = 0; i < lines.length; i++) lines[i].classList.toggle('off', i >= lit);
     }
-    if (mascot) mascot.dataset.mood = st === 'alert' ? 'party' : (st === 'warn' ? 'excited' : (state.running ? 'calm' : 'idle'));
+    const mood = st === 'alert' ? 'party' : (st === 'warn' ? 'excited' : (state.running ? 'calm' : 'idle'));
+    wrap.dataset.mood = mood;                // marwa's bunny: calm / excited / party
+    if (mascot) mascot.dataset.mood = mood;
   }
 
   function render(now = Date.now()) {
@@ -390,9 +396,17 @@
       startBtn.textContent = state.running ? 'Pause' : (state.paused ? 'Resume' : 'Start');
       startBtn.classList.toggle('primary', !state.running);
     }
-    if (setup)  setup.hidden = state.mode !== 'countdown' || state.running || state.paused;
-    if (plus)   plus.hidden  = state.mode !== 'countdown' || (!state.running && !state.paused);
-    if (minus)  minus.hidden = state.mode !== 'countdown' || (!state.running && !state.paused);
+    // Nothing appears or disappears between states, so nothing on the page moves
+    // when you press Start: the setup row and ±1 min are always there and are
+    // only disabled when they don't apply.
+    const setupOff = state.mode !== 'countdown' || state.running || state.paused;
+    const nudgeOff = state.mode !== 'countdown' || (!state.running && !state.paused);
+    if (setup) {
+      setup.classList.toggle('locked', setupOff);
+      setup.querySelectorAll('input, button').forEach((el) => { el.disabled = setupOff; });
+    }
+    if (plus)  plus.disabled  = nudgeOff;
+    if (minus) minus.disabled = nudgeOff;
 
     paintDial(document, now);
 
@@ -432,11 +446,14 @@
     try {
       pipWin = await documentPictureInPicture.requestWindow({ width: 420, height: 260 });
     } catch { return; }
-    // copy stylesheet + set theme
-    const link = pipWin.document.createElement('link');
-    link.rel = 'stylesheet';
-    link.href = 'style.css';
-    pipWin.document.head.appendChild(link);
+    // copy the stylesheets (style.css + the Google Fonts sheet, so the theme's
+    // faces — Share Tech Mono, halloween's Pirata One — load there too) + set theme
+    document.querySelectorAll('link[rel="stylesheet"]').forEach((l) => {
+      const link = pipWin.document.createElement('link');
+      link.rel = 'stylesheet';
+      link.href = l.href;
+      pipWin.document.head.appendChild(link);
+    });
     pipWin.document.documentElement.setAttribute('data-theme',
       document.documentElement.getAttribute('data-theme') || 'jarvis');
     pipWin.document.body.className = 'timer-popout';
