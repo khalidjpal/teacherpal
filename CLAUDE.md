@@ -576,7 +576,7 @@ last-used period in `localStorage`), `getLastPeriodId()` / `setLastPeriodId()`,
 
 ## Themes — per-user visual styles
 
-TeacherPal ships three themes. **All three share one layout**: jarvis is
+TeacherPal ships four themes. **All four share one layout**: jarvis is
 the structure, and every other theme is a colour swap of it. A theme is
 (almost) nothing but a block of colour tokens.
 
@@ -628,18 +628,18 @@ the structure, and every other theme is a colour swap of it. A theme is
   `--accent`, and `--wheel-ink` on every `--wheel-r*` and `--wheel-won`.
   Student names (seats, group cards, wheel, attendance, full screen) are
   `--text` / `--wheel-ink`, so they stay high contrast automatically.
-- **Extras are opt-in by name.** Only marwa has any: selectors written
+- **Extras are opt-in by name.** Only marwa and halloween have any (halloween's are listed under it below); marwa's are selectors written
   `:root[data-theme="marwa"] …` (mascots, the Timer/Wheel skins, the
   12-hour clock in `nav.js`). A theme without extras behaves exactly like
   jarvis: a 24-hour clock, no mascots (the `--marwa-mascot-*` vars are
   undefined, so `.marwa-mascot` stays hidden), and the jarvis Timer dial
   and wheel. The one spot that names jarvis is the Timer rule hiding
   `.dial-arc` (`:root[data-theme="jarvis"], :root[data-theme="earthy"],
-  :root:not([data-theme])`). Any new jarvis-like theme must join that
+  :root[data-theme="halloween"], :root:not([data-theme])`). Any new jarvis-like theme must join that
   selector, or its dial shows both rings. `wheel.js`'s `wide` label gap
   is "not marwa", so it needs nothing.
 
-**The three themes:**
+**The four themes:**
 
 - **`jarvis`** — the original dark HUD (deep plum-navy, near-black cards,
   subtle pink accent, Orbitron uppercase labels, corner ticks). Default for
@@ -694,6 +694,50 @@ the structure, and every other theme is a colour swap of it. A theme is
     edges (`#B08A63`, 5.7:1 on the floor). Names on seats are 7.2:1. Empty
     seats are dark with clay edges.
   - 24-hour clock, no mascots, no pattern.
+- **`halloween`** — a **colour swap of jarvis** (tokens like earthy, depth
+  tokens on) plus two small opt-in extras. Purple-black ground `#120D1A` →
+  canvas `--bg-1` `#1A1226` → cards `#241833` (wells `#1C1329`, raised
+  `#2F2043`), borders `#4A3161` / strong `#7A55A0`. Text bone `#F5E6D3`
+  (13.7:1 on the card), body `#DCCBBE`, muted / labels `#A08BB8` (≥ 4.88:1
+  on every surface). **Pumpkin `#FF7518`** is `--accent`: primary buttons,
+  icons, active edges, rings, and every hover (`--border-hover`, `--hud-line-strong`,
+  an orange `--hover-glow`). **Purple** is the secondary: panel lines
+  (`--hud-line` `#8B4FBF` at 0.55), selected / pressed fills
+  (`--gradient-accent` is purple, edged in orange by `--shadow-pressed`) and
+  `--lavender` `#C394EE` as text (`#8B4FBF` itself is too dark for text).
+  **Witch green `#7FBF3F`** is only `--ok` (success, quiet noise zone).
+  Tardy is candy-corn `#F5C04B` so it never reads as the orange accent.
+  Groups cycle pumpkin / green / purple / candy corn / bone; wheel slices
+  are deep pumpkin, purple and green with bone names (≥ 6.8:1); seats are
+  purple `#3A2852` with lilac edges on a `#0E0A14` floor (names 10.7:1).
+  **Extras** (the halloween rules next to marwa's mascots, all scoped to
+  `:root[data-theme="halloween"]:not(:has(body.timer-popout, body.noise-popout,
+  body.wheel-popout))` so the projector pop-outs and the timer PiP stay
+  clean). **All decoration sits behind content**: body background layers, or
+  pseudo-elements at `z-index: -1` with `pointer-events: none` — never over
+  text, never in the way of a click. Every image is an inline-SVG data URI
+  token (`--halloween-*`):
+    - **Page** (`body` background, top layer first): a cobweb in each corner
+      (top `clamp(11rem, 20vw, 19rem)`, bottom smaller; bone at 8.5%), the
+      `--halloween-vignette` edge shadow, then `--body-pattern` — a 180px tile
+      of three tiny bone bats at 5%, like marwa's hearts.
+    - **Drifting bats**: `html::before` / `::after`, two purple flocks with a
+      faint pumpkin rim just under the top bar, `position: fixed; z-index:
+      -1` (under every panel — they show in the gaps, mostly on the hub),
+      looping left → right on `halloween-drift` (46s and 71s, a gentle bob).
+      Under `prefers-reduced-motion` the animation is removed and they rest
+      at their base `transform` (14vw / 68vw). The app-wide reduced-motion
+      `*` rule does **not** reach pseudo-elements, hence their own query.
+    - **Corner cobwebs** on `.hud-box`, `.card`, open dialogs and
+      `.arr-dialog-inner`: an `::after` (inset 0, `border-radius: inherit`,
+      z -1) with a 2.8rem web in each top corner; the box gets `isolation:
+      isolate` so the -1 layer stays above its own background.
+    - **Empty states** (`.list-empty`, `.chart-empty`, `.empty-state`,
+      `.lesson-empty`): a grinning jack-o'-lantern (`--halloween-jack`, 4rem)
+      with an orange `drop-shadow` glow.
+    - **Section headings** (`.hub-section-title`, `.card-head h2`): a small
+      lilac bat with pumpkin eyes before the text.
+  24-hour clock, jarvis Timer dial and wheel.
 - **`marwa`** — a **pure colour swap of jarvis** (depth tokens off) with four tiny extras. Same
   layout, spacing, radii, borders, fonts, weights, tracks, shadows,
   animations and components: only palette tokens differ (light cream-pink
@@ -997,7 +1041,8 @@ All styling lives in `style.css`; pages carry almost no inline styling.
   - **Lesson plan panel** (`lesson.js`, `.lesson-panel` hud-box, used on the
     Lesson Plans screen): header = just "<course> · <date>" (no "LESSON PLAN" key, no periods
     line, no agenda counter), a quiet SAVED (0.6rem, muted at 60%; only NOT
-    SAVED is loud), then a small **⋯** button
+    SAVED is loud), then a small **⋯** button; a 1px `--border` rule under
+    the head row separates it from the content
     (`#lp-more-btn`) — the occasional actions live in its menu, not on the
     panel: Copy from course…, Copy from day…, and Split a period… (course
     rows only, while at least two periods still follow the course).
@@ -1011,13 +1056,16 @@ All styling lives in `style.css`; pages carry almost no inline styling.
     plan; it follows the course again). The title then reads "English 9 · P2
     only · <date>". A split edits only
     its own row; the course plan is untouched. **The panel is a note, not a form.**
-    **It reads as one note**: sections sit 0.55rem apart, and only fields
-    that would otherwise be anonymous carry a label (Objective, Materials,
-    Homework, Notes, tiny); the numbered list is obviously the agenda and
-    the file list obviously the attachments, so neither has one.
-    Body = Agenda, Materials, **Attachments**, then **Notes** last (the
-    one boxed field, "What happened today?" — what happened goes after the
-    plan), then a quiet **+ Add field** whose menu offers Objective (shown
+    **It reads as one note**: sections sit 0.55rem apart under small labels
+    (Objective, Agenda, Materials, Homework, Notes); the file list is
+    obviously the attachments, so it has none.
+    Body = **Agenda** (its heading carries the time budget on the right; the
+    list sits in a `.lp-agenda-box` well with "+ Add activity" under the
+    last item, and an empty agenda shows the `.lp-agenda-empty` invitation
+    — "No activities yet / + Add the first activity" — instead), Materials
+    (`.lp-text.lp-box`: the Notes box treatment, two rows, ≥ 3rem — never a
+    one-line sliver), **Attachments**, then **Notes** last ("What happened
+    today?" — what happened goes after the plan), then a quiet **+ Add field** whose menu offers Objective (shown
     above the Agenda) and Homework (after Materials). Those two (`OPTIONAL`, `.lp-opt`) show only once
     added or while they have text; left empty on blur they fold away again
     (`opened` is per open plan). No placeholder text except Notes and the
@@ -1026,17 +1074,20 @@ All styling lives in `style.css`; pages carry almost no inline styling.
     field is a borderless `textarea.lp-text` (auto-grows, border appears on
     hover/focus) so it reads as text but edits inline; the agenda is an
     `ol.lp-agenda` of `.lp-item` rows (no checkboxes — number, text input, minutes input, × on hover; Enter adds the next item,
-    Backspace on an empty item removes it). An empty agenda is just "+ Add activity".
-    **The panel fills its height**: the agenda grows with its items, the
-    attachments sit under it with no drop box, and **Notes** (`.lp-notes-field`,
-    `flex: 1 0 auto`, ≥ 9rem) takes every spare pixel below — `autoGrow()`
+    Backspace on an empty item removes it). 
+    **The panel fills its height, shared**: Agenda (`.lp-agenda-field`) and
+    Notes (`.lp-notes-field`) are both `flex: 1 0 auto` with an 8rem floor,
+    so they split the spare height — the agenda has room to grow and Notes
+    doesn't claim everything; Materials and Attachments take only what they
+    need (measured at 1366×768: empty plan agenda 240 / notes 212px; a full
+    one 158 / 147). `autoGrow()`
     gives Notes only a `min-height` as tall as its text (measured with flex
     off), so it fills the panel when short and grows (the body scrolls) when long.
-    **Time budget** (`#lp-budget`, right of + Add activity, mono): the
+    **Time budget** (`#lp-budget`, mono, in the AGENDA heading): the
     agenda's minutes against the period's real length that day —
     `resolveSchedule(date, navReady overrides)` from `schedule.js`, so Early
     Release Monday, Tues–Fri, minimum days, finals pairs and any override
-    all count; double 2nd uses the longer of its two blocks. It shows only what's left: "27 min left" (the whole period with nothing timed), and amber (`--att-tardy`, `data-state="over"`) "1 min over". A course
+    all count; double 2nd uses the longer of its two blocks. It reads "0 of 59 min planned", then "32 of 59 min planned · 27 left", and amber (`--att-tardy`, `data-state="over"`) "60 of 59 min planned · 1 over". A course
     is held to its **shortest** period (P3's lunch-side 65 vs P1/P2's 59 →
     59); the title lists each period's length and the schedule. A split
     uses its one period. Rows carry each period's bell number (`n` in

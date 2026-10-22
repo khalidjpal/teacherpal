@@ -143,15 +143,19 @@ function initLessonPanel({ mount = '#lesson', rows: allRows = () => [], onChange
         <textarea id="lp-objective" class="lp-text lp-objective" rows="1" placeholder=" "></textarea>
       </section>
       <section class="lp-field lp-agenda-field">
-        <ol class="lp-agenda" id="lp-agenda"></ol>
-        <div class="lp-agenda-foot">
+        <h4>Agenda <span class="lp-budget hud-mono" id="lp-budget" hidden></span></h4>
+        <div class="lp-agenda-box">
+          <ol class="lp-agenda" id="lp-agenda"></ol>
           <button type="button" class="link lp-add-item" id="lp-add-item">+ Add activity</button>
-          <span class="lp-budget hud-mono" id="lp-budget" hidden></span>
+          <button type="button" class="lp-agenda-empty" id="lp-agenda-empty">
+            <b>No activities yet</b>
+            <span>+ Add the first activity</span>
+          </button>
         </div>
       </section>
       <section class="lp-field">
         <h4>Materials</h4>
-        <textarea id="lp-materials" class="lp-text" rows="1" placeholder=" "></textarea>
+        <textarea id="lp-materials" class="lp-text lp-box" rows="2" placeholder=" "></textarea>
       </section>
       <section class="lp-field lp-opt" id="lp-f-homework" hidden>
         <h4>Homework</h4>
@@ -263,7 +267,7 @@ function initLessonPanel({ mount = '#lesson', rows: allRows = () => [], onChange
     const left = limit - planned;
     el.hidden = false;
     el.dataset.state = left < 0 ? 'over' : 'ok';
-    el.textContent = left < 0 ? `${-left} min over` : `${left} min left`;
+    el.textContent = `${planned} of ${limit} min planned${planned ? ` · ${left < 0 ? `${-left} over` : `${left} left`}` : ''}`;
     const differ = new Set(lens.map((x) => x.min)).size > 1;
     el.title = `${resolveSchedule(parse(date), overridesList).name}: ${lens.map((x) => `${x.label} ${x.min} min`).join(' · ')}${differ ? ' — counted against the shortest' : ''}`;
   }
@@ -418,6 +422,8 @@ function initLessonPanel({ mount = '#lesson', rows: allRows = () => [], onChange
         <button type="button" class="lp-remove" aria-label="Remove activity" title="Remove">×</button>
       </li>`).join('');
     renderBudget();
+    $('lp-agenda-empty').hidden = plan.agenda.length > 0;
+    $('lp-add-item').hidden = !plan.agenda.length;
   }
   function attMeta(a) {
     const k = attachmentKind(a);
@@ -497,6 +503,7 @@ function initLessonPanel({ mount = '#lesson', rows: allRows = () => [], onChange
     const input = $('lp-agenda').querySelectorAll('.lp-item-text')[at]; if (input) input.focus();
   }
   $('lp-add-item').addEventListener('click', () => addItem());
+  $('lp-agenda-empty').addEventListener('click', () => addItem());
 
   // ---------- attachments ----------
   async function upload(fileList) {

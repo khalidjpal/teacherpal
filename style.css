@@ -489,6 +489,170 @@
 }
 
 /* ==========================================================================
+   Halloween — a colour swap of jarvis (tokens only, like earthy) with two
+   opt-in extras: faint corner webs on the page and a bat / pumpkin on empty
+   states. Purple-black ground, bone-white text, pumpkin orange for actions
+   and icons, purple for selected fills, witch green only for ok.
+   ========================================================================== */
+:root[data-theme="halloween"] {
+  color-scheme: dark;
+
+  /* ground — near-black with a purple cast */
+  --bg-0:#120D1A;
+  --bg-1:#1A1226;   /* canvas / radial glow centre */
+  --bg: var(--bg-0);
+  --bg-glow: rgba(139, 79, 191, 0.14);    /* faint purple wash at the top */
+  --body-pattern: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='180' height='180' viewBox='0 0 180 180'><defs><g id='b'><path d='M32 10C30.4 10 29.2 11 28.8 12.4L27.6 8.6 26.9 13.1C23 9.6 15 7.6 4 10 8 12.4 9.6 16 8.8 19.6 12.4 18.2 16.4 19 18.4 21.6 19.6 19.6 22 18.8 24.4 19.6 26 22 28.6 25.6 32 28Z'/><path d='M32 10C30.4 10 29.2 11 28.8 12.4L27.6 8.6 26.9 13.1C23 9.6 15 7.6 4 10 8 12.4 9.6 16 8.8 19.6 12.4 18.2 16.4 19 18.4 21.6 19.6 19.6 22 18.8 24.4 19.6 26 22 28.6 25.6 32 28Z' transform='matrix(-1 0 0 1 64 0)'/></g></defs><g fill='%23F5E6D3' fill-opacity='0.05'><use href='%23b' transform='translate(18 24) rotate(-12 10 5) scale(0.31)'/><use href='%23b' transform='translate(112 70) rotate(10 7 3.5) scale(0.22000000000000003)'/><use href='%23b' transform='translate(52 128) rotate(-4 5.5 2.75) scale(0.16999999999999998)'/></g></svg>");   /* tiny bats, like marwa's hearts */
+  --body-pattern-size: 180px 180px;
+
+  /* surfaces */
+  --card:#241833;   /* cards and panels */
+  --card-2:#1C1329;   /* inputs, chips, wells: sunk below the card */
+  --card-3:#2F2043;   /* raised / hover */
+  --border:#4A3161;
+  --border-strong:#7A55A0;   /* buttons, inputs, chips: 2.9:1 on the card */
+  --border-hover:#FF7518;    /* hover brightens toward orange */
+
+  /* text */
+  --text:#F5E6D3;   /* warm bone white (13.7:1 on the card) */
+  --text-2:#DCCBBE;   /* body (10.6:1) */
+  --text-muted:#A08BB8;   /* muted purple (5.5:1, 4.9:1 on raised) */
+
+  /* accents — pumpkin primary, purple secondary, green for ok */
+  --accent:#FF7518;   /* pumpkin (6.2:1 on the card) */
+  --accent-deep:#D9600E;
+  --accent-soft:rgba(255, 117, 24, 0.18);
+  --accent-glow:rgba(255, 117, 24, 0.42);
+  --lavender:#C394EE;   /* purple as text (7.0:1); #8B4FBF is the fill */
+  --lavender-soft:rgba(139, 79, 191, 0.30);
+  --group-tint: 16%;
+  --group-ink-dl: 0;
+  --danger:#FF6F61;   /* (6.1:1) */
+  --ok:#7FBF3F;       /* witch green (7.5:1) */
+
+  /* the room: a floor darker than the page, purple seats with lilac edges */
+  --seat-bg: #3A2852;
+  --seat-line: #9C78C4;   /* 5.5:1 on the floor */
+  --seat-empty-bg: #1C1329;
+  --seat-empty-line: #5A3F78;
+  --chart-floor: #0E0A14;
+  --room-floor: #0E0A14;
+  --label-ink:#A08BB8;
+  --figure-ink:#FF9A4D;   /* readouts in light pumpkin (8.0:1) */
+  --chip-line:rgba(195, 148, 238, 0.70);
+  --chip-ink:#C394EE;
+
+  /* group cards: pumpkin, witch green, purple, candy corn, bone */
+  --group-c1: #FFB27A;
+  --group-c2: #A9D873;
+  --group-c3: #CFA6F2;
+  --group-c4: #F5D06B;
+  --group-c5: #E8D6C2;
+
+  /* gradients — selected / pressed fills are purple, edged in orange */
+  --gradient-accent:linear-gradient(180deg, rgba(139, 79, 191, 0.62), rgba(139, 79, 191, 0.20));
+  --gradient-bar: linear-gradient(90deg, var(--accent-deep), var(--accent));
+  --gradient-glow-top:linear-gradient(90deg, transparent, rgba(255, 117, 24, 0.65), rgba(139, 79, 191, 0.55), transparent);
+
+  /* rings & shadows */
+  --ring:rgba(255, 117, 24, 0.55);
+  --shadow-card:0 1px 0 rgba(245, 230, 211, 0.05) inset, 0 2px 4px rgba(5, 2, 9, 0.6), 0 10px 26px rgba(5, 2, 9, 0.55);
+  --shadow-card-hover:0 1px 0 rgba(245, 230, 211, 0.07) inset, 0 4px 8px rgba(5, 2, 9, 0.6), 0 16px 34px rgba(5, 2, 9, 0.55), 0 0 0 1px rgba(255, 117, 24, 0.40);
+  --shadow-pop:0 20px 54px rgba(4, 2, 8, 0.85);
+  --shadow-pressed:inset 0 0 0 1px var(--accent), inset 0 0 18px rgba(139, 79, 191, 0.45), 0 0 14px rgba(255, 117, 24, 0.28);
+  --shadow-text: rgba(8, 4, 12, 0.5);
+
+  /* depth: panels cast a shadow, clickable things lift with an orange glow */
+  --panel-shadow: 0 1px 0 rgba(245, 230, 211, 0.04) inset, 0 3px 6px rgba(5, 2, 9, 0.5), 0 14px 32px rgba(5, 2, 9, 0.5);
+  --hover-lift: -1px;
+  --hover-glow: 0 3px 12px rgba(255, 117, 24, 0.22);
+
+  /* semantic surfaces */
+  --panel-bg:rgba(36, 24, 51, 0.96);
+  --panel-bg-hover:rgba(47, 32, 67, 0.97);
+  --field-bg:#1C1329;
+  --topbar-bg:rgba(18, 13, 26, 0.92);
+  --on-accent:#1A0D05;   /* near-black on pumpkin (7.1:1) */
+
+  /* semantic tints — bone alpha over purple */
+  --surface-tint: rgba(245, 230, 211, 0.06);
+  --surface-tint-strong:rgba(195, 148, 238, 0.36);
+  --surface-tint-present: rgba(255, 154, 77, 0.38);
+  --surface-tint-formula: rgba(195, 148, 238, 0.18);
+  --surface-tint-progress: rgba(245, 230, 211, 0.10);
+  --canvas-dot: rgba(195, 148, 238, 0.16);
+
+  /* accent overlays */
+  --accent-fill-soft:rgba(255, 117, 24, 0.12);
+  --accent-line:rgba(255, 117, 24, 0.60);
+  --accent-line-strong:rgba(255, 117, 24, 0.80);
+  --accent-ring-soft:rgba(255, 117, 24, 0.30);
+  --accent-ring-strong:rgba(255, 117, 24, 0.50);
+  --accent-inset-soft: rgba(139, 79, 191, 0.12);
+  --accent-inset-chip:rgba(255, 117, 24, 0.30);
+  --accent-icon-glow:rgba(255, 117, 24, 0.70);
+
+  /* HUD tokens — purple panel lines; hover lines and glows go orange */
+  --hud:              var(--accent);
+  --hud-dim:rgba(139, 79, 191, 0.50);
+  --hud-line:rgba(139, 79, 191, 0.55);
+  --hud-line-strong:rgba(255, 117, 24, 0.85);
+  --hud-glow:0 0 18px rgba(255, 117, 24, 0.28), 0 0 2px rgba(255, 154, 77, 0.6);
+  --hud-glow-soft:    0 0 24px rgba(139, 79, 191, 0.18);
+  --hud-grid:         rgba(195, 148, 238, 0.035);
+  --hud-scan:         rgba(195, 148, 238, 0.025);
+
+  /* attendance */
+  --att-absent:      var(--danger);
+  --att-absent-soft: rgba(255, 111, 97, 0.16);
+  --att-tardy:       #F5C04B;   /* candy-corn yellow, clear of the orange accent (10:1) */
+  --att-tardy-soft:  rgba(245, 192, 75, 0.16);
+
+  /* wheel slices — deep pumpkin, purple and green in turn (wheel.js walks
+     r0 r4 r1 r5 r2 r6 r3 r7); bone names >= 6.8:1 on every one */
+  --wheel-r0: #7A3510;
+  --wheel-r4: #4A2470;
+  --wheel-r1: #3F5E1E;
+  --wheel-r5: #8A3F12;
+  --wheel-r2: #5B2A78;
+  --wheel-r6: #35522A;
+  --wheel-r3: #6E3A14;
+  --wheel-r7: #62307F;
+  --wheel-divider: rgba(245, 230, 211, 0.45);
+  --wheel-ink:        #FFF3E4;
+  --wheel-ink-shadow: rgba(10, 5, 14, 0.7);
+  --wheel-won:        #A84A16;   /* (5.3:1) */
+  --wheel-metal:    #2A1C3B;
+  --wheel-metal-2:  #1A1226;
+  --wheel-metal-hi: rgba(255, 117, 24, 0.55);
+  --wheel-housing:  #2F2043;
+  --wheel-face-hi:  rgba(245, 230, 211, 0.08);
+  --wheel-face-lo:  rgba(5, 2, 9, 0.45);
+
+  /* noise zones */
+  --noise-quiet: var(--ok);
+  --noise-ok:    var(--att-tardy);
+  --noise-loud:  var(--danger);
+  --noise-quiet-soft: rgba(127, 191, 63, 0.16);
+  --noise-ok-soft:    rgba(245, 192, 75, 0.16);
+  --noise-loud-soft:  rgba(255, 111, 97, 0.16);
+
+  /* extras — every decoration is an inline-SVG data URI, used only by the
+     halloween rules next to marwa's mascots */
+  --halloween-web-tl: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 240 240'><path d='M0 0L230 0M0 0L222.2 59.5M0 0L199.2 115M0 0L162.6 162.6M0 0L115 199.2M0 0L59.5 222.2M0 0L0 230M34 0Q29 3.8 32.8 8.8Q27 11.2 29.4 17Q23.2 17.8 24 24Q17.8 23.2 17 29.4Q11.2 27 8.8 32.8Q3.8 29 0 34M62 0Q52.9 7 59.9 16Q49.3 20.4 53.7 31Q42.3 32.5 43.8 43.8Q32.5 42.3 31 53.7Q20.4 49.3 16 59.9Q7 52.9 0 62M92 0Q78.4 10.3 88.9 23.8Q73.1 30.3 79.7 46Q62.8 48.2 65.1 65.1Q48.2 62.8 46 79.7Q30.3 73.1 23.8 88.9Q10.3 78.4 0 92M124 0Q105.7 13.9 119.8 32.1Q98.5 40.8 107.4 62Q84.6 64.9 87.7 87.7Q64.9 84.6 62 107.4Q40.8 98.5 32.1 119.8Q13.9 105.7 0 124M158 0Q134.7 17.7 152.6 40.9Q125.5 52 136.8 79Q107.8 82.7 111.7 111.7Q82.7 107.8 79 136.8Q52 125.5 40.9 152.6Q17.7 134.7 0 158M194 0Q165.4 21.8 187.4 50.2Q154.1 63.8 168 97Q132.4 101.6 137.2 137.2Q101.6 132.4 97 168Q63.8 154.1 50.2 187.4Q21.8 165.4 0 194' fill='none' stroke='%23F5E6D3' stroke-opacity='0.085' stroke-width='1.1' stroke-linecap='round'/></svg>");
+  --halloween-web-tr: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 240 240'><path d='M0 0L230 0M0 0L222.2 59.5M0 0L199.2 115M0 0L162.6 162.6M0 0L115 199.2M0 0L59.5 222.2M0 0L0 230M34 0Q29 3.8 32.8 8.8Q27 11.2 29.4 17Q23.2 17.8 24 24Q17.8 23.2 17 29.4Q11.2 27 8.8 32.8Q3.8 29 0 34M62 0Q52.9 7 59.9 16Q49.3 20.4 53.7 31Q42.3 32.5 43.8 43.8Q32.5 42.3 31 53.7Q20.4 49.3 16 59.9Q7 52.9 0 62M92 0Q78.4 10.3 88.9 23.8Q73.1 30.3 79.7 46Q62.8 48.2 65.1 65.1Q48.2 62.8 46 79.7Q30.3 73.1 23.8 88.9Q10.3 78.4 0 92M124 0Q105.7 13.9 119.8 32.1Q98.5 40.8 107.4 62Q84.6 64.9 87.7 87.7Q64.9 84.6 62 107.4Q40.8 98.5 32.1 119.8Q13.9 105.7 0 124M158 0Q134.7 17.7 152.6 40.9Q125.5 52 136.8 79Q107.8 82.7 111.7 111.7Q82.7 107.8 79 136.8Q52 125.5 40.9 152.6Q17.7 134.7 0 158M194 0Q165.4 21.8 187.4 50.2Q154.1 63.8 168 97Q132.4 101.6 137.2 137.2Q101.6 132.4 97 168Q63.8 154.1 50.2 187.4Q21.8 165.4 0 194' fill='none' stroke='%23F5E6D3' stroke-opacity='0.085' stroke-width='1.1' stroke-linecap='round' transform='matrix(-1 0 0 1 240 0)'/></svg>");
+  --halloween-web-bl: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 240 240'><path d='M0 0L230 0M0 0L222.2 59.5M0 0L199.2 115M0 0L162.6 162.6M0 0L115 199.2M0 0L59.5 222.2M0 0L0 230M34 0Q29 3.8 32.8 8.8Q27 11.2 29.4 17Q23.2 17.8 24 24Q17.8 23.2 17 29.4Q11.2 27 8.8 32.8Q3.8 29 0 34M62 0Q52.9 7 59.9 16Q49.3 20.4 53.7 31Q42.3 32.5 43.8 43.8Q32.5 42.3 31 53.7Q20.4 49.3 16 59.9Q7 52.9 0 62M92 0Q78.4 10.3 88.9 23.8Q73.1 30.3 79.7 46Q62.8 48.2 65.1 65.1Q48.2 62.8 46 79.7Q30.3 73.1 23.8 88.9Q10.3 78.4 0 92M124 0Q105.7 13.9 119.8 32.1Q98.5 40.8 107.4 62Q84.6 64.9 87.7 87.7Q64.9 84.6 62 107.4Q40.8 98.5 32.1 119.8Q13.9 105.7 0 124M158 0Q134.7 17.7 152.6 40.9Q125.5 52 136.8 79Q107.8 82.7 111.7 111.7Q82.7 107.8 79 136.8Q52 125.5 40.9 152.6Q17.7 134.7 0 158M194 0Q165.4 21.8 187.4 50.2Q154.1 63.8 168 97Q132.4 101.6 137.2 137.2Q101.6 132.4 97 168Q63.8 154.1 50.2 187.4Q21.8 165.4 0 194' fill='none' stroke='%23F5E6D3' stroke-opacity='0.085' stroke-width='1.1' stroke-linecap='round' transform='matrix(1 0 0 -1 0 240)'/></svg>");
+  --halloween-web-br: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 240 240'><path d='M0 0L230 0M0 0L222.2 59.5M0 0L199.2 115M0 0L162.6 162.6M0 0L115 199.2M0 0L59.5 222.2M0 0L0 230M34 0Q29 3.8 32.8 8.8Q27 11.2 29.4 17Q23.2 17.8 24 24Q17.8 23.2 17 29.4Q11.2 27 8.8 32.8Q3.8 29 0 34M62 0Q52.9 7 59.9 16Q49.3 20.4 53.7 31Q42.3 32.5 43.8 43.8Q32.5 42.3 31 53.7Q20.4 49.3 16 59.9Q7 52.9 0 62M92 0Q78.4 10.3 88.9 23.8Q73.1 30.3 79.7 46Q62.8 48.2 65.1 65.1Q48.2 62.8 46 79.7Q30.3 73.1 23.8 88.9Q10.3 78.4 0 92M124 0Q105.7 13.9 119.8 32.1Q98.5 40.8 107.4 62Q84.6 64.9 87.7 87.7Q64.9 84.6 62 107.4Q40.8 98.5 32.1 119.8Q13.9 105.7 0 124M158 0Q134.7 17.7 152.6 40.9Q125.5 52 136.8 79Q107.8 82.7 111.7 111.7Q82.7 107.8 79 136.8Q52 125.5 40.9 152.6Q17.7 134.7 0 158M194 0Q165.4 21.8 187.4 50.2Q154.1 63.8 168 97Q132.4 101.6 137.2 137.2Q101.6 132.4 97 168Q63.8 154.1 50.2 187.4Q21.8 165.4 0 194' fill='none' stroke='%23F5E6D3' stroke-opacity='0.085' stroke-width='1.1' stroke-linecap='round' transform='matrix(-1 0 0 -1 240 240)'/></svg>");
+  --halloween-card-web-l: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 60 60'><path d='M0 0L60 0M0 0L55.4 23M0 0L42.4 42.4M0 0L23 55.4M0 0L0 60M16 0Q13.5 2.7 14.8 6.1Q11.4 7.6 11.3 11.3Q7.6 11.4 6.1 14.8Q2.7 13.5 0 16M30 0Q25.3 5 27.7 11.5Q21.5 14.3 21.2 21.2Q14.3 21.5 11.5 27.7Q5 25.3 0 30M46 0Q38.8 7.7 42.5 17.6Q32.9 22 32.5 32.5Q22 32.9 17.6 42.5Q7.7 38.8 0 46' fill='none' stroke='%23F5E6D3' stroke-opacity='0.16' stroke-width='0.8' stroke-linecap='round'/></svg>");
+  --halloween-card-web-r: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 60 60'><path d='M0 0L60 0M0 0L55.4 23M0 0L42.4 42.4M0 0L23 55.4M0 0L0 60M16 0Q13.5 2.7 14.8 6.1Q11.4 7.6 11.3 11.3Q7.6 11.4 6.1 14.8Q2.7 13.5 0 16M30 0Q25.3 5 27.7 11.5Q21.5 14.3 21.2 21.2Q14.3 21.5 11.5 27.7Q5 25.3 0 30M46 0Q38.8 7.7 42.5 17.6Q32.9 22 32.5 32.5Q22 32.9 17.6 42.5Q7.7 38.8 0 46' fill='none' stroke='%23F5E6D3' stroke-opacity='0.16' stroke-width='0.8' stroke-linecap='round' transform='matrix(-1 0 0 1 60 0)'/></svg>");
+  --halloween-flock: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 220 70'><defs><g id='b'><path d='M32 10C30.4 10 29.2 11 28.8 12.4L27.6 8.6 26.9 13.1C23 9.6 15 7.6 4 10 8 12.4 9.6 16 8.8 19.6 12.4 18.2 16.4 19 18.4 21.6 19.6 19.6 22 18.8 24.4 19.6 26 22 28.6 25.6 32 28Z'/><path d='M32 10C30.4 10 29.2 11 28.8 12.4L27.6 8.6 26.9 13.1C23 9.6 15 7.6 4 10 8 12.4 9.6 16 8.8 19.6 12.4 18.2 16.4 19 18.4 21.6 19.6 19.6 22 18.8 24.4 19.6 26 22 28.6 25.6 32 28Z' transform='matrix(-1 0 0 1 64 0)'/></g></defs><g fill='%23523A75' fill-opacity='0.85' stroke='%23FF7518' stroke-opacity='0.22' stroke-width='0.9'><use href='%23b' transform='translate(6 18) rotate(-8 32 16) scale(1)'/><use href='%23b' transform='translate(96 4) rotate(6 21 10.5) scale(0.6599999999999999)'/><use href='%23b' transform='translate(150 34) rotate(-3 26 13) scale(0.8099999999999999)'/></g></svg>");
+  --halloween-flock-far: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 220 70'><defs><g id='b'><path d='M32 10C30.4 10 29.2 11 28.8 12.4L27.6 8.6 26.9 13.1C23 9.6 15 7.6 4 10 8 12.4 9.6 16 8.8 19.6 12.4 18.2 16.4 19 18.4 21.6 19.6 19.6 22 18.8 24.4 19.6 26 22 28.6 25.6 32 28Z'/><path d='M32 10C30.4 10 29.2 11 28.8 12.4L27.6 8.6 26.9 13.1C23 9.6 15 7.6 4 10 8 12.4 9.6 16 8.8 19.6 12.4 18.2 16.4 19 18.4 21.6 19.6 19.6 22 18.8 24.4 19.6 26 22 28.6 25.6 32 28Z' transform='matrix(-1 0 0 1 64 0)'/></g></defs><g fill='%23412E5E' fill-opacity='0.75' stroke='%23FF7518' stroke-opacity='0.22' stroke-width='0.9'><use href='%23b' transform='translate(6 18) rotate(-8 32 16) scale(1)'/><use href='%23b' transform='translate(96 4) rotate(6 21 10.5) scale(0.6599999999999999)'/><use href='%23b' transform='translate(150 34) rotate(-3 26 13) scale(0.8099999999999999)'/></g></svg>");
+  --halloween-head-bat: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 32'><defs><g id='b'><path d='M32 10C30.4 10 29.2 11 28.8 12.4L27.6 8.6 26.9 13.1C23 9.6 15 7.6 4 10 8 12.4 9.6 16 8.8 19.6 12.4 18.2 16.4 19 18.4 21.6 19.6 19.6 22 18.8 24.4 19.6 26 22 28.6 25.6 32 28Z'/><path d='M32 10C30.4 10 29.2 11 28.8 12.4L27.6 8.6 26.9 13.1C23 9.6 15 7.6 4 10 8 12.4 9.6 16 8.8 19.6 12.4 18.2 16.4 19 18.4 21.6 19.6 19.6 22 18.8 24.4 19.6 26 22 28.6 25.6 32 28Z' transform='matrix(-1 0 0 1 64 0)'/></g></defs><use href='%23b' fill='%23C394EE'/><circle cx='30.4' cy='14.6' r='1' fill='%23FF7518'/><circle cx='33.6' cy='14.6' r='1' fill='%23FF7518'/></svg>");
+  --halloween-jack: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 48 48'><path d='M24 14c.4-3.6 2.4-6 5.6-6.6' fill='none' stroke='%237FBF3F' stroke-width='3' stroke-linecap='round'/><ellipse cx='15.5' cy='29' rx='10.5' ry='13' fill='%23C9550B'/><ellipse cx='32.5' cy='29' rx='10.5' ry='13' fill='%23C9550B'/><ellipse cx='24' cy='29' rx='10' ry='14' fill='%23FF7518'/><path d='M19.5 16.5Q17.5 29 19.5 42.5M28.5 16.5Q30.5 29 28.5 42.5' fill='none' stroke='%23B84A0A' stroke-width='1.1' stroke-opacity='0.7'/><g fill='%23FFD25A'><path d='M13.5 26 17.5 19.5 21.5 26Z'/><path d='M26.5 26 30.5 19.5 34.5 26Z'/><path d='M22.4 29.6 24 27 25.6 29.6Z'/><path d='M12.5 31.5Q24 43 35.5 31.5L32.4 32.6 31.4 35.6 28 33.6 24 36.4 20 33.6 16.6 35.6 15.6 32.6Z'/></g></svg>");
+  --halloween-vignette: radial-gradient(ellipse 85% 80% at 50% 45%, transparent 55%, rgba(4, 2, 8, 0.55) 100%);
+}
+
+/* ==========================================================================
    Base + fluid scaling
    ========================================================================== */
 
@@ -547,6 +711,10 @@ header.topbar {
   min-height: 3.6rem;
   padding: var(--space-2) var(--page-pad);
   border-bottom: 1px solid var(--border);
+  /* its sweep-in animation makes it a stacking context; lift it so the gear and
+     nav menus open over the page (they slid under the Lesson Plans editor) */
+  position: relative;
+  z-index: 20;
 }
 .topbar .spacer { flex: 1; }
 
@@ -4181,6 +4349,105 @@ dialog.br-settings-dialog .br-settings-grid { display: grid; gap: var(--space-3)
   --marwa-burst-spark: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'><path d='M8 0 L9.6 6.4 L16 8 L9.6 9.6 L8 16 L6.4 9.6 L0 8 L6.4 6.4 Z' fill='%239F7AEA'/></svg>");
 }
 
+/* Halloween extras. Everything is decoration BEHIND content: background
+   layers, or pseudo-elements at z-index -1 with pointer-events: none, so
+   nothing can cover text or take a click. The scope skips the timer / noise /
+   wheel pop-outs (and the timer's PiP window), which stay clean for students. */
+
+/* page: a web in each corner, a vignette, then the tiny-bat tile (--body-pattern) */
+:root[data-theme="halloween"]:not(:has(body.timer-popout, body.noise-popout, body.wheel-popout)) body {
+  background:
+    var(--halloween-web-tl) left top / clamp(11rem, 20vw, 19rem) auto no-repeat,
+    var(--halloween-web-tr) right top / clamp(11rem, 20vw, 19rem) auto no-repeat,
+    var(--halloween-web-bl) left bottom / clamp(9rem, 16vw, 15rem) auto no-repeat,
+    var(--halloween-web-br) right bottom / clamp(9rem, 16vw, 15rem) auto no-repeat,
+    var(--halloween-vignette),
+    var(--body-pattern) 0 0 / var(--body-pattern-size) repeat,
+    radial-gradient(60% 45% at 50% -5%, var(--bg-glow), transparent 70%) no-repeat,
+    radial-gradient(90% 70% at 30% 10%, var(--bg-1), transparent 70%) no-repeat,
+    var(--bg-0);
+}
+
+/* bats drifting across just under the top bar, behind everything (z -1 in the
+   root context sits under every panel); two flocks at different speeds */
+:root[data-theme="halloween"]:not(:has(body.timer-popout, body.noise-popout, body.wheel-popout))::before,
+:root[data-theme="halloween"]:not(:has(body.timer-popout, body.noise-popout, body.wheel-popout))::after {
+  content: "";
+  position: fixed;
+  left: 0;
+  z-index: -1;
+  pointer-events: none;
+  background: var(--halloween-flock) center / contain no-repeat;
+  animation: halloween-drift 46s linear infinite;
+}
+:root[data-theme="halloween"]:not(:has(body.timer-popout, body.noise-popout, body.wheel-popout))::before { top: 3.9rem; width: 13rem; height: 4.1rem; transform: translate(14vw, 0); }
+:root[data-theme="halloween"]:not(:has(body.timer-popout, body.noise-popout, body.wheel-popout))::after {
+  top: 6.4rem; width: 8.5rem; height: 2.7rem; transform: translate(68vw, 0);
+  background-image: var(--halloween-flock-far);
+  animation-duration: 71s;
+  animation-delay: -30s;
+}
+@keyframes halloween-drift {
+  0%   { transform: translate(-12rem, 0); }
+  25%  { transform: translate(25vw, 0.9rem); }
+  50%  { transform: translate(50vw, -0.3rem); }
+  75%  { transform: translate(75vw, 0.7rem); }
+  100% { transform: translate(calc(100vw + 2rem), 0); }
+}
+/* reduced motion: the flocks stop where their base transform puts them */
+@media (prefers-reduced-motion: reduce) {
+  :root[data-theme="halloween"]:not(:has(body.timer-popout, body.noise-popout, body.wheel-popout))::before, :root[data-theme="halloween"]:not(:has(body.timer-popout, body.noise-popout, body.wheel-popout))::after { animation: none; }
+}
+
+/* small cobwebs in the top corners of panels, cards and modals — drawn under
+   the box's own content (isolation gives the -1 layer a box to sit in) */
+:root[data-theme="halloween"]:not(:has(body.timer-popout, body.noise-popout, body.wheel-popout)) .hud-box,
+:root[data-theme="halloween"]:not(:has(body.timer-popout, body.noise-popout, body.wheel-popout)) .card,
+:root[data-theme="halloween"]:not(:has(body.timer-popout, body.noise-popout, body.wheel-popout)) dialog[open]:not(.arr-dialog),
+:root[data-theme="halloween"]:not(:has(body.timer-popout, body.noise-popout, body.wheel-popout)) .arr-dialog-inner { isolation: isolate; }
+:root[data-theme="halloween"]:not(:has(body.timer-popout, body.noise-popout, body.wheel-popout)) .hud-box::after,
+:root[data-theme="halloween"]:not(:has(body.timer-popout, body.noise-popout, body.wheel-popout)) .card::after,
+:root[data-theme="halloween"]:not(:has(body.timer-popout, body.noise-popout, body.wheel-popout)) dialog[open]:not(.arr-dialog)::after,
+:root[data-theme="halloween"]:not(:has(body.timer-popout, body.noise-popout, body.wheel-popout)) .arr-dialog-inner::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  border-radius: inherit;
+  pointer-events: none;
+  background:
+    var(--halloween-card-web-l) left top / 2.8rem auto no-repeat,
+    var(--halloween-card-web-r) right top / 2.8rem auto no-repeat;
+}
+
+/* a grinning jack-o'-lantern, glowing, above every empty state */
+:root[data-theme="halloween"]:not(:has(body.timer-popout, body.noise-popout, body.wheel-popout)) .list-empty::before,
+:root[data-theme="halloween"]:not(:has(body.timer-popout, body.noise-popout, body.wheel-popout)) .chart-empty::before,
+:root[data-theme="halloween"]:not(:has(body.timer-popout, body.noise-popout, body.wheel-popout)) .empty-state::before,
+:root[data-theme="halloween"]:not(:has(body.timer-popout, body.noise-popout, body.wheel-popout)) .lesson-empty::before {
+  content: "";
+  display: block;
+  width: 4rem;
+  height: 4rem;
+  margin: 0 auto var(--space-3);
+  background: var(--halloween-jack) no-repeat center / contain;
+  filter: drop-shadow(0 0 0.7rem rgba(255, 117, 24, 0.55)) drop-shadow(0 0 0.2rem rgba(255, 210, 90, 0.5));
+  pointer-events: none;
+}
+
+/* a bat beside section headings (hub sections, card titles) */
+:root[data-theme="halloween"]:not(:has(body.timer-popout, body.noise-popout, body.wheel-popout)) .hub-section-title::before,
+:root[data-theme="halloween"]:not(:has(body.timer-popout, body.noise-popout, body.wheel-popout)) .card-head h2::before {
+  content: "";
+  display: inline-block;
+  width: 1.9em;
+  height: 0.95em;
+  margin-right: 0.5em;
+  vertical-align: -0.1em;
+  background: var(--halloween-head-bat) no-repeat center / contain;
+  pointer-events: none;
+}
+
 /* Drop-a-mascot utility: <span class="marwa-mascot" data-mascot="cat"></span>
    Automatically collapses in any non-marwa theme (bg vars are undefined). */
 .marwa-mascot {
@@ -4536,7 +4803,7 @@ body.present .dial-arc, body.timer-popout .dial-arc { stroke-width: 6; }
    Timer — jarvis skin (default): arc-reactor dial. The segment ring and the
    instrument marks carry it; the smooth arc belongs to marwa and stays off.
    --------------------------------------------------------------------------- */
-:root[data-theme="jarvis"] .dial-arc, :root[data-theme="earthy"] .dial-arc, :root:not([data-theme]) .dial-arc { display: none; }
+:root[data-theme="jarvis"] .dial-arc, :root[data-theme="earthy"] .dial-arc, :root[data-theme="halloween"] .dial-arc, :root:not([data-theme]) .dial-arc { display: none; }
 .timer-label { text-transform: uppercase; letter-spacing: var(--track-label); }
 
 /* ---------------------------------------------------------------------------
@@ -5506,7 +5773,7 @@ body.wheel-popout .wheel-period {
 .lesson-title-main { color: var(--text); font-size: var(--fs-lg); font-weight: var(--fw-bold); line-height: 1.2; overflow-wrap: anywhere; }
 .lesson-head .hud-stat { font-size: 0.7rem; padding-top: 0.2rem; }
 /* SAVED is a whisper; only an error speaks up */
-.lesson-head { align-items: center; }
+.lesson-head { align-items: center; padding-bottom: var(--space-2); border-bottom: 1px solid var(--border); }
 .lesson-head .save-state { padding-top: 0; font-size: 0.6rem; color: var(--text-muted); opacity: 0.6; }
 .lesson-head .save-state[data-state="error"] { color: var(--danger); opacity: 1; font-size: 0.7rem; }
 .lesson-tools { flex: none; display: flex; gap: var(--space-2); flex-wrap: wrap; }
@@ -5527,11 +5794,22 @@ body.wheel-popout .wheel-period {
 /* notes is the main box: always a visible, writable surface */
 .lp-text.lp-notes { min-height: 3.6rem; border-color: var(--border); background: var(--card-2); }
 /* fill the panel: Notes takes every spare pixel below the plan */
-.lp-notes-field { flex: 1 0 auto; min-height: 9rem; }
+/* Agenda and Notes share the spare height; Materials and Attachments take what they need */
+.lp-agenda-field { flex: 1 0 auto; min-height: 8rem; }
+.lp-agenda-field h4 { justify-content: space-between; }
+.lp-agenda-box { flex: 1 1 auto; display: flex; flex-direction: column; gap: 0.1rem; padding: 0.3rem 0.25rem; border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--card-2); }
+.lp-agenda-box .lp-item:hover { background: var(--card-3); }
+.lp-agenda-empty { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0.2rem; min-height: 5rem; border: 1px dashed var(--border-strong); background: transparent; color: var(--text-muted); font-weight: var(--fw-regular); }
+.lp-agenda-empty b { color: var(--text-2); font-weight: var(--fw-semibold); }
+.lp-agenda-empty span { color: var(--accent); font-size: var(--fs-sm); }
+.lp-agenda-empty:hover { border-color: var(--accent); background: var(--accent-fill-soft); }
+.lp-agenda-empty[hidden], .lp-add-item[hidden] { display: none; }
+/* Materials: the Notes box, shorter */
+.lp-text.lp-box { min-height: 3rem; border-color: var(--border); background: var(--card-2); }
+.lp-notes-field { flex: 1 0 auto; min-height: 8rem; }
 .lp-notes-field .lp-text.lp-notes { flex: 1 1 auto; height: auto; overflow-y: auto; }
 /* agenda footer: + Add activity left, the time budget right */
-.lp-agenda-foot { display: flex; align-items: center; justify-content: space-between; gap: var(--space-2); }
-.lp-budget { padding-right: 2.2rem; color: var(--text-muted); font-size: 0.72rem; letter-spacing: 0.04em; white-space: nowrap; }
+.lp-budget { color: var(--text-muted); font-size: 0.72rem; letter-spacing: 0.04em; text-transform: none; white-space: nowrap; }
 .lp-budget[hidden] { display: none; }
 .lp-budget[data-state="over"] { color: var(--att-tardy); }
 .lp-text::placeholder { color: var(--text-muted); opacity: 0.7; }
