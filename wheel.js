@@ -378,6 +378,8 @@
 
   function startSpin() {
     if (!pool.length) return;
+    const busySkin = skinFor();
+    if (busySkin && busySkin.busy && busySkin.busy(document)) return;   // the jar pouring pearls back
     if (spin) {
       // A spin that should already be over must never block the button: if
       // its end time has passed (a dropped timer, a throttled tab), settle it
@@ -566,7 +568,10 @@
     if (spin) redraw = false;          // never redraw the wheel mid-spin
     const available = eligible.filter((s) => !removed.has(s.id));
     if (noRepeats) {
-      if (available.length && available.every((s) => called.has(s.id))) { called = new Set(); saveCalled(); }
+      // A finished round refills itself - unless the skin holds it (the
+      // bubble tea's jar stays full and celebrates until it's poured back).
+      const holds = !isPopout && skinFor() && skinFor().HOLDS_ROUND;
+      if (!holds && available.length && available.every((s) => called.has(s.id))) { called = new Set(); saveCalled(); }
       pool = available.filter((s) => !called.has(s.id));
     } else {
       pool = available;
@@ -576,14 +581,16 @@
     renderControls();
     renderPicked();
   }
-  // Who's been called this round, in pick order, for a skin that shows them
-  // (the bubble tea's Picked tray); null with No repeats off.
+  // Who's been called this round, in pick order, and how many are in the
+  // round, for a skin that shows them (the bubble tea's jar); null with No
+  // repeats off.
   function renderPicked() {
     const list = noRepeats
       ? [...called].map((id) => eligible.find((s) => s.id === id)).filter(Boolean)
         .map((s) => ({ id: s.id, label: labelFor(s, eligible) }))
       : null;
-    eachSkin((k) => k.setPicked && k.setPicked(document, list));
+    const total = eligible.filter((s) => !removed.has(s.id)).length;
+    eachSkin((k) => k.setPicked && k.setPicked(document, list, total));
   }
 
   // ---------- add / remove ----------
@@ -873,13 +880,16 @@
     // over the cup in the CSS)
     const straw = $('boba-straw');
     if (straw) straw.addEventListener('click', startSpin);
-    // the Picked tray's Reset: everyone called goes back in the cup
+    // the jar's "Pour them back": everyone called goes back in the cup
     document.addEventListener('teacherpal:wheel-reset', () => {
       if (spin || !called.size) return;
       called = new Set(); saveCalled();
       rebuildPool();
       broadcast();
     });
+    // a finished round is held only while the jar is on screen: leaving
+    // marwa refills it like any other round
+    document.addEventListener('teacherpal:theme', () => { if (!spin) { rebuildPool(); broadcast(); } });
     $('wheel-norepeat').addEventListener('click', () => {
       noRepeats = !noRepeats;
       saveSettings();

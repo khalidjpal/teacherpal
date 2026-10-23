@@ -71,7 +71,7 @@ full-screen toggle. There is no sidebar; every page uses the full width.
 | `wheel.js`     | The wheel: draws the slices as SVG into `#wheel-rotor` (the only thing that spins), runs the spin on rAF with an ease-out, ticks as each slice passes the pointer, and syncs the pop-out over `BroadcastChannel('teacherpal-wheel')`. **Winner is drawn first** (`crypto.getRandomValues`), then the landing rotation is computed — the animation can't bias it. |
 | `wheel-popout.html` | Read-only projector wheel (`body.wheel-popout`): same dial (or, in halloween, the cauldron) filling the window, fed by broadcast, no controls. The mini window is this same page in an iframe. |
 | `cauldron.js` | The Name Wheel's halloween skin, `window.Cauldron` (`isOn`, `build`, `sync`, `run`, `finish`, `setWinner`, `setDisabled`, `BOIL_MS`, `SETTLE_MS`). Draws the cauldron into `.wheel-wrap`, floats each name as an HTML bubble (rAF physics), and animates a pick from the spin descriptor `wheel.js` hands it: boil → rise → hover → pop. Owns its sounds (bubbling that builds, a pop). Never picks anything. |
-| `boba.js` | The Name Wheel's marwa skin, `window.Boba` — the same shape as `Cauldron` (`isOn`, `build`, `sync`, `run`, `finish`, `setWinner`, `setDisabled`, `setPicked`, `DURATION_MS`, `SETTLE_MS`). A bubble tea cup in `.wheel-wrap`: warm tan milk tea with a cream swirl, a domed lid, a narrow see-through pink straw, **the whole cup as the Spin button** (`#boba-straw`, a hit area over the cup), one near-black pearl per student with their first name on it in small cream type (rAF physics in box units: gravity, a swirl, soft collisions, the tapered walls), condensation, and "N left" in small flat text under the cup. A pick (~4s, the `T` timeline at its top) shakes the cup, swirls the pearls up, lights one up, draws it up the straw in sips, then the **spotlight**: the pearl grows into a big disc in front of the dimmed page with the name on it (click / Space / Enter / Esc closes it); with No repeats on it then flies into the **Picked tray** on the right (who's been called this round, with Reset). Owns its sounds (shake, slosh, slurp, pop). Never picks anything. |
+| `boba.js` | The Name Wheel's marwa skin, `window.Boba` — the same shape as `Cauldron` (`isOn`, `build`, `sync`, `run`, `finish`, `setWinner`, `setDisabled`, `setPicked`, `busy`, `HOLDS_ROUND`, `DURATION_MS`, `SETTLE_MS`). A bubble tea cup in `.wheel-wrap`: warm tan milk tea with a cream swirl, a domed lid, a narrow see-through pink straw, **the whole cup as the Spin button** (`#boba-straw`, a hit area over the cup), one near-black pearl per student with their first name on it in small cream type (rAF physics in box units: gravity, a swirl, soft collisions, the tapered walls), condensation, and "N left" in small flat text under the cup. A pick (~4s, the `T` timeline at its top) shakes the cup, swirls the pearls up, lights one up, draws it up the straw in sips, then the **spotlight**: the pearl grows into a big disc in front of the dimmed page with the name on it (click / Space / Enter / Esc closes it); with No repeats on it then arcs over into the **jar** on the right, a second cup that fills as the class is called and is poured back to start a new round. Owns its sounds (shake, slosh, slurp, pop). Never picks anything. |
 | `noise-popout.html` | Read-only projector pop-out (`body.noise-popout`): reading + bar + zone word, fed over BroadcastChannel. Never opens a mic of its own; says so when the main window isn't answering. |
 | `timer-popout.html` | Minimal read-only pop-out window (`body.timer-popout`): label + display + the same themed dial filling the window, no controls; listens for state via BroadcastChannel. |
 | `migration-lessons-bathroom.sql` | One-off migration creating `lesson_plans` + `bathroom_log` (incl. the manual-tally columns; run in the Supabase SQL editor) |
@@ -1705,7 +1705,10 @@ All styling lives in `style.css`; pages carry almost no inline styling.
   follows the bell via `suggestedPeriod()`, exactly like Attendance.
   **No repeats** (default on) drops each pick into `called`
   (`teacherpal.wheel.called.<periodId>`, date-keyed so it clears overnight);
-  when the pool empties it refills automatically.
+  when the pool empties it refills automatically — unless the active skin
+  sets `HOLDS_ROUND` (the bubble tea's jar): then the finished round is held
+  (0 left, the cup disabled) until the jar is poured back. A theme change
+  re-runs `rebuildPool`, so leaving marwa refills it as usual.
   **Taking students off** (`removed`, `teacherpal.wheel.removed.<periodId>`,
   date-keyed and this-browser-only exactly like `called`). **The page carries
   no roster lists** — there are exactly two ways in:
@@ -1930,13 +1933,13 @@ All styling lives in `style.css`; pages carry almost no inline styling.
       on the pearl, then in the spotlight.
     - **Layout** (marwa only; jarvis and halloween keep their two columns):
       **one row across the width, three columns** — the controls card ·
-      the name over the cup · the Picked tray. `.wheel-layout` is
+      the name over the cup · the jar. `.wheel-layout` is
       `minmax(--side-w, 1fr) auto minmax(--side-w, 1fr)` (`--side-w` =
       `clamp(13rem, 19vw, 20rem)`) with areas `". result ." / "controls
       stage tray"`, and `.wheel-side` is `display: contents` so its result
       and controls land in the grid (the HTML is shared). The side cards
       hug the cup (`justify-self: end` / `start`), so the spare width goes
-      to the outer edges and the three read as one group; the tray's
+      to the outer edges and the three read as one group; the jar's
       column stays reserved when it's hidden, so the cup never moves.
       **The cup takes every pixel of height**: the wrap is `height: 100%`
       of the stage row (capped at `100vw − 2 × --side-w − 7rem` wide), and
@@ -1950,39 +1953,72 @@ All styling lives in `style.css`; pages carry almost no inline styling.
       between two small hearts (`::before` / `::after`, hidden while
       `:empty`), dead centre (a `1fr auto 1fr` grid), with Put back / Take
       off to its right.
-      **Controls** are a vertical card (`--card`, the tray's card recipe):
+      **Controls** are a vertical card (`--card`, the standard card recipe):
       two `.wheel-control-row` grids on a hairline — [period select ·
       AUTO] / [Edit who's in], then [No repeats · Sound] / [First names ·
       full screen] / Full screen window / Mini window (`.win-btn` spans
       both columns). The hint line is hidden (hovering the cup says it).
       **Under 900px** it's one column — name, cup (a `min(100%, 34rem)`
-      square), tray, controls — with `flex: none` on the layout so it
+      square), jar, controls — with `flex: none` on the layout so it
       grows and `main.page` scrolls; that media query sits *after* the
       card rules so it wins. In full screen the name strip stays
       (overriding the shared `.no-present` with a higher-specificity
-      `!important`), the controls and tray hide. (Tried before: a big
+      `!important`), the controls and the jar hide. (Tried before: a big
       result panel beside a carded cup, which left half the screen empty,
       then a single centred column with a row of controls under it, which
       was a thin strip with empty sides and a gap above the cup.) The
       pop-out is unchanged.
-    - **The Picked tray** (`.bt-tray`, built by `build()` into
-      `.wheel-page .wheel-layout` as grid area `tray`, so page only; hidden in full screen):
-      who's been called this round with No repeats on, as small pearls
-      with their names in pick order, two columns, scrolling if long; a
-      "Picked N" head with **Reset**; "Nobody yet" when empty. It is
-      hidden with No repeats off. Data: `wheel.js`'s `renderPicked()`
-      (from `rebuildPool()`) calls the optional skin hook
-      `setPicked(doc, list | null)` with `called` in order, labelled like
-      the wheel. Reset dispatches `teacherpal:wheel-reset`; wheel.js
-      clears `called` and rebuilds, so the pearls drop back into the cup
-      from the top. **The picked pearl joins only when it lands**:
-      `renderTray()` leaves out the id in the spotlight; closing the
-      spotlight renders its slot invisible (`.arriving`), measures it, and
-      flies the big disc there (`.bt-spot.flying`: the backdrop clears, the
-      name fades, the disc translates and scales into the slot over 600ms).
-      Then the slot shows with a small pop (`.landed`). With No repeats
-      off the pearl drops back into the cup when the spotlight closes
-      (`respawnId`), not 1.4s after the pick.
+    - **The jar** (`.bt-jar`, built by `build()` into `.wheel-page
+      .wheel-layout` as grid area `tray`, so page only; hidden in full
+      screen and with No repeats off): **a second cup** that catches
+      everyone picked this round, so the two cups show the round's
+      progress at a glance — one empties as the other fills.
+      - **Drawing**: `JAR_MARKUP`, the same classes as the cup (outline,
+        shine, rim light, arms, feet, `.bt-pearl`s with names) minus the
+        lid, straw, tea and condensation: an open top (`.bt-jar-mouth` +
+        `.bt-jar-lip`) and its own face, centred and raised 36 units
+        (`translate(0 -36)`) so a full round's pile stays under it. It
+        stands in its whole column (`min(100%, 24rem)` square,
+        `align-self: end` on the cup's floor); its count ("7 of 28
+        picked", `.bt-jar-count`) sits under it like "N left".
+      - **Pearls** use the cup's physics in the same box units (gravity,
+        soft collisions, tapered walls, floor; no walls above the rim so a
+        pearl can fall in). Their size comes from the round's head count
+        (`jarR(total)`, half of `JAR_AREA`), so a full round fills it to
+        just under the face.
+      - **Moods** (`data-fill` on `.bt-jar-cup`, from `paintJar()`):
+        `sleepy` (empty: eyes shut, z's drifting up, a slow breath) →
+        `content` (open eyes, blinking) → `happy` (half full: a big open
+        smile, rosier) → `full` (^ ^, arms half up). When the last pearl
+        lands, `celebrate()`: `data-mood="party"` for 2.6s (four hops,
+        waving arms), a burst of hearts, a little arpeggio. It fires only
+        on the change to full (`wasFull === false` and `ready`), never on
+        a page load that finds the round already done.
+      - **A pick lands** (`flyToJar()`): when the spotlight closes, its
+        disc — name still on it — arcs over the page to just above the
+        jar's mouth on a rAF quadratic curve bowed upward (`arc()`), with
+        two full turns and shrinking to the jar's pearl size (900ms); then
+        it becomes a jar pearl that drops in with a plop. `renderJar()`
+        leaves out the id in the spotlight and the one in flight
+        (`flyingId`) until then.
+      - **Pour them back** (`.bt-jar-pour`, over the open top, shown once
+        the jar has anything; the primary pill when full): `pour()` tips
+        the jar toward the cup (`data-state="pouring"`, −58° about its
+        left foot, an "o" face), then each pearl, top first, becomes a
+        fixed `.bt-flyer` that tumbles across on its own arc with a spin
+        (staggered ≤ 60ms) and fades into the cup. It dispatches
+        `teacherpal:wheel-reset` as they leave (wheel.js clears
+        `called`); the cup keeps each returning pearl hidden
+        (`incoming`) until its flyer lands. While pouring, `busy()` is
+        true: the cup's button is disabled and `startSpin()` refuses
+        (Space included).
+      - **Data**: `wheel.js`'s `renderPicked()` (from `rebuildPool()`)
+        calls `setPicked(doc, list | null, total)` with `called` in order
+        (labelled like the wheel) and the round's size (`eligible` minus
+        `removed`). With No repeats off the pearl drops back into the cup
+        when the spotlight closes (`respawnId`).
+      - Under reduced motion the arcs are short straight moves without
+        spin; sounds respect the mute switch.
     - **Pearls**: one per name in `displayList`, real-boba
       near-black brown (`--bt-pearl*`; a purple-brown looked dirty) with a
       glossy highlight upper left and a soft shadow under each

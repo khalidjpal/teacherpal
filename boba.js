@@ -29,6 +29,12 @@
 //             into a big disc in the middle of the screen with the name on it,
 //             hearts bursting round it. A click or Space puts it away.
 //
+// With No repeats on, a SECOND CUP (the jar) stands beside it: empty and
+// sleepy at the start of a round, it catches every picked pearl (the disc
+// arcs over with a spin when the spotlight closes and drops in), fills as
+// the main cup empties, gets happier as it goes, and celebrates when it's
+// full. "Pour them back" tips it over and the pearls tumble back across.
+//
 // Everything is in the 400x400 box's units, drawn DY higher than the
 // numbers say (one translate on both SVG layers and on the pearls) so the
 // "N left" line fits under the cup; the pearls are HTML, placed in px from
@@ -58,6 +64,7 @@
   const IN_STRAW = 19;                               // the chosen pearl's size inside the straw
   const DY = -30;                                    // the whole drawing sits this much higher (centres it in the box)
   const FACE_C = { x: 186, y: 230 };                 // the middle of the cup's face (its eyes follow the pearl from here)
+  const JAR_AREA = 42200;                            // the inside of the cup below the rim (box units²): sizes the jar's pearls
   const BURST_MS = 1600;                             // a burst plays (1.3s / 1.5s in the CSS), then resets
   const PARTY_MS = 2400;                             // how long the reveal's happy pose holds
   // stable per student: a size a touch off the others
@@ -169,6 +176,50 @@
     <div class="bt-burst" aria-hidden="true"></div>
     <div class="bt-burst cup" aria-hidden="true"></div>
     <p class="bt-counter" aria-live="polite"><b>0</b><span>left</span></p>`;
+  // The jar: the same cup with no lid, no straw and no tea, open at the top,
+  // and its own face (centred: there's no straw to dodge; high, near the
+  // open rim, so a full round's pile stays under it) - sleepy eyes and
+  // z's, open eyes, a big smile, then ^ ^ (CSS, off data-fill).
+  const JAR_MARKUP = `
+    <div class="bt-jar-cup" data-fill="sleepy">
+      <svg class="bt-back" viewBox="0 0 400 400" aria-hidden="true" focusable="false">
+        <g transform="translate(0 ${DY})">
+        <ellipse class="bt-contact-core" cx="200" cy="399" rx="100" ry="4.5"/>
+        <ellipse class="bt-foot" cx="156" cy="390" rx="19" ry="9"/>
+        <ellipse class="bt-foot" cx="244" cy="390" rx="19" ry="9"/>
+        <g class="bt-arm l"><path class="bt-limb" d="M103 258 L77 293"/><path class="bt-limb-fill" d="M103 258 L77 293"/></g>
+        <g class="bt-arm r"><path class="bt-limb" d="M297 258 L323 293"/><path class="bt-limb-fill" d="M297 258 L323 293"/></g>
+        <path class="bt-cup-back" d="${CUP_PATH}"/>
+        <ellipse class="bt-jar-mouth" cx="200" cy="150" rx="116" ry="9"/>
+        </g>
+      </svg>
+      <div class="bt-pearls"></div>
+      <svg class="bt-front" viewBox="0 0 400 400" aria-hidden="true" focusable="false">
+        <g transform="translate(0 ${DY})">
+        <path class="bt-cup" d="${CUP_PATH}"/>
+        <path class="bt-jar-lip" d="M84 150 Q200 168 316 150"/>
+        <path class="bt-shine" d="M104 172 L132 362"/>
+        <path class="bt-rim-light" d="M92.5 160 L125 370"/>
+        <path class="bt-rim-light faint" d="M306 166 L279 356"/>
+        <g class="bt-face" transform="translate(0 -36)">
+          <ellipse class="bf-blush" cx="150" cy="252" rx="10" ry="6"/>
+          <ellipse class="bf-blush" cx="250" cy="252" rx="10" ry="6"/>
+          <g class="bf-eye"><ellipse class="bf-white" cx="174" cy="228" rx="14" ry="15.5"/><g class="bf-look"><circle class="bf-pupil" cx="174" cy="229" r="9.5"/><circle class="bf-hi" cx="170.4" cy="224.6" r="3.4"/><circle class="bf-hi" cx="177.2" cy="233" r="1.6"/></g></g>
+          <g class="bf-eye r"><ellipse class="bf-white" cx="226" cy="228" rx="14" ry="15.5"/><g class="bf-look"><circle class="bf-pupil" cx="226" cy="229" r="9.5"/><circle class="bf-hi" cx="222.4" cy="224.6" r="3.4"/><circle class="bf-hi" cx="229.2" cy="233" r="1.6"/></g></g>
+          <path class="bf-sleep" d="M161 229 Q174 239 187 229 M213 229 Q226 239 239 229"/>
+          <path class="bf-happy" d="M161 232 Q174 216 187 232 M213 232 Q226 216 239 232"/>
+          <path class="bf-mouth bf-smile" d="M191 252 Q200 262 209 252"/>
+          <ellipse class="bf-mouth bf-o" cx="200" cy="256" rx="5" ry="6"/>
+          <path class="bf-mouth bf-open" d="M187 250 Q200 274 213 250 Z"/>
+          <text class="bf-z a" x="246" y="206">z</text>
+          <text class="bf-z b" x="262" y="190">z</text>
+        </g>
+        </g>
+      </svg>
+      <div class="bt-burst cup jar" aria-hidden="true"></div>
+    </div>
+    <p class="bt-jar-count" aria-live="polite"><b>0</b> of <span>0</span> picked</p>
+    <button type="button" class="bt-jar-pour" hidden title="Tip them all back into the cup and start a new round">Pour them back</button>`;
 
   function build(doc) {
     if (views.has(doc)) return views.get(doc).el;
@@ -190,25 +241,42 @@
     cupBurst.style.top = `${((FACE_C.y + 20 + DY) / 4).toFixed(2)}%`;
     burst.style.left = `${(OUT.x / 4).toFixed(2)}%`;
     burst.style.top = `${((OUT.y + DY) / 4).toFixed(2)}%`;
-    // The Picked tray (No repeats): the layout's right-hand column (CSS grid
-    // area "tray"), page only.
+    // The jar (No repeats): the layout's right-hand column (CSS grid area
+    // "tray"), page only.
     const stage = doc.querySelector('.wheel-page .wheel-layout');
-    let tray = null;
+    let jar = null;
     if (stage) {
-      tray = doc.createElement('aside');
-      tray.className = 'bt-tray';
-      tray.hidden = true;
-      tray.innerHTML = '<div class="bt-tray-head"><span class="bt-tray-title">Picked <b class="bt-tray-n">0</b></span>'
-        + '<button type="button" class="bt-tray-reset" title="Put everyone back in the cup">Reset</button></div>'
-        + '<ol class="bt-tray-list"></ol><p class="bt-tray-empty">Nobody yet</p>';
-      stage.appendChild(tray);
-      tray.querySelector('.bt-tray-reset').addEventListener('click', () => {
-        doc.dispatchEvent(new CustomEvent('teacherpal:wheel-reset'));
-      });
+      const box = doc.createElement('aside');
+      box.className = 'bt-jar';
+      box.hidden = true;
+      box.setAttribute('aria-label', 'Picked this round');
+      box.innerHTML = JAR_MARKUP;
+      stage.appendChild(box);
+      const cup = box.querySelector('.bt-jar-cup');
+      const jb = box.querySelector('.bt-burst');
+      fill(jb, 16, 3);
+      jb.style.left = '50%';
+      jb.style.top = `${((230 + DY) / 4).toFixed(2)}%`;
+      jar = {
+        el: box, cup,
+        layer: box.querySelector('.bt-pearls'),
+        burst: jb,
+        count: box.querySelector('.bt-jar-count b'),
+        of: box.querySelector('.bt-jar-count span'),
+        pour: box.querySelector('.bt-jar-pour'),
+        pearls: new Map(),                       // id -> pearl (box units, like the cup's)
+        total: 0,                                // everyone in this round
+        r: 0, k: 0,
+        wasFull: null, ready: false,
+        partyUntil: 0, mood: '',
+        pouring: false,
+      };
     }
     const v = {
-      doc, el, tray,
+      doc, el, jar,
       picked: [],                                // [{ id, label }] in pick order (No repeats)
+      incoming: new Set(),                       // ids tumbling back from the jar: hidden here until they land
+      flyingId: null,                            // the picked pearl on its way over to the jar
       respawnId: null,                           // No repeats off: drops back in when the spotlight closes
       layer: el.querySelector('.bt-pearls'),
       burst, cupBurst,
@@ -226,6 +294,7 @@
       timers: [],
     };
     views.set(doc, v);
+    if (jar) jar.pour.addEventListener('click', () => pour(v));
     const win = doc.defaultView;
     const frame = (t) => { step(v, t); win.requestAnimationFrame(frame); };
     win.requestAnimationFrame(frame);
@@ -247,6 +316,7 @@
       x: lerp(wallL(y), wallR(y), rnd(0.15, 0.85)), y, vx: rnd(-20, 20), vy: 0, hidden: false,
     };
     v.pearls.set(id, pearl);
+    if (v.incoming.has(id)) { pearl.hidden = true; p.classList.add('gone'); }
     return pearl;
   }
   // One pearl per name in the list (the wheel's displayList), its name on it
@@ -287,7 +357,7 @@
     for (const x of list) {
       let p = v.pearls.get(x.id);
       if (!p) p = addPearl(v, x.id, v.k > 0);
-      else if (p.hidden && !v.active && v.gone === x.id) { show(p); v.gone = null; }
+      else if (p.hidden && !v.active && v.gone === x.id && !v.incoming.has(x.id)) { show(p); v.gone = null; }
       setLabel(p, x.label || '');
     }
     paintCount(v);
@@ -317,6 +387,7 @@
   function step(v, t) {
     const dt = Math.min(0.033, v.last ? (t - v.last) / 1000 : 0.016);
     v.last = t;
+    if (isOn(v.doc)) stepJar(v, dt);
     if (!isOn(v.doc) || !v.el.offsetParent) return;
     const B = v.el.clientWidth;
     if (!B) return;
@@ -505,7 +576,7 @@
     o.addEventListener('click', close);
     win.addEventListener('keydown', onKey, true);       // capture: before wheel.js's Space-to-spin
     v.spot = { el: o, onKey, id: p.id };
-    renderTray(v);                                // keep the picked one out of the tray until it lands
+    renderJar(v);                                 // keep the picked one out of the jar until it lands
   }
   function dismiss(v, now = false, tell = !now) {
     const sp = v.spot;
@@ -513,29 +584,11 @@
     v.spot = null;
     if (tell && spotChan) spotChan.postMessage({ type: 'boba-dismiss' });
     v.doc.defaultView.removeEventListener('keydown', sp.onKey, true);
-    if (now) { sp.el.remove(); renderTray(v); return; }
-    // No repeats: the pearl flies over to its place in the Picked tray
-    const listed = v.tray && !v.tray.hidden && v.picked.some((x) => x.id === sp.id);
-    if (listed) {
-      renderTray(v, sp.id);                       // its slot exists (invisible) so it can be measured
-      const target = v.tray.querySelector(`.bt-tray-item[data-id="${sp.id}"] .bt-tray-pearl`);
-      const disc = sp.el.querySelector('.bt-spot-pearl');
-      if (target && disc) {
-        target.scrollIntoView({ block: 'nearest' });
-        const a = disc.getBoundingClientRect(), b = target.getBoundingClientRect();
-        const dx = b.left + b.width / 2 - (a.left + a.width / 2);
-        const dy = b.top + b.height / 2 - (a.top + a.height / 2);
-        sp.el.classList.add('flying');
-        disc.style.transform = `translate(${dx.toFixed(1)}px, ${dy.toFixed(1)}px) scale(${(b.width / a.width).toFixed(4)})`;
-        setTimeout(() => {
-          sp.el.remove();
-          const item = v.tray.querySelector(`.bt-tray-item[data-id="${sp.id}"]`);
-          if (item) { item.classList.remove('arriving'); item.classList.add('landed'); }
-        }, 640);
-        return;
-      }
-    }
-    renderTray(v);
+    if (now) { sp.el.remove(); renderJar(v); return; }
+    // No repeats: the pearl arcs over into the jar
+    const listed = v.jar && !v.jar.el.hidden && v.picked.some((x) => x.id === sp.id);
+    if (listed && sp.el.querySelector('.bt-spot-pearl')) { flyToJar(v, sp); return; }
+    renderJar(v);
     if (v.respawnId) {                            // No repeats off: back into the cup
       const id = v.respawnId; v.respawnId = null;
       setTimeout(() => respawn(v, id), 200);
@@ -549,43 +602,217 @@
     if (q && q.hidden && !v.active) { show(q); if (v.gone === id) v.gone = null; paintCount(v); }
   }
 
-  // ---------- the Picked tray (No repeats) ----------
-  // Everyone called this round, in pick order, as small named pearls. The one
-  // in the spotlight joins only when it flies over (`hold` = a slot that is
-  // there to be measured but not shown yet).
-  function renderTray(v, hold = null) {
-    const t = v.tray;
-    if (!t) return;
-    const spotId = v.spot && v.spot.id;
-    const list = v.picked.filter((x) => x.id !== spotId || x.id === hold);
-    const ol = t.querySelector('.bt-tray-list');
-    const have = new Map([...ol.children].map((li) => [li.dataset.id, li]));
-    const want = new Set(list.map((x) => x.id));
-    have.forEach((li, id) => { if (!want.has(id)) li.remove(); });
-    list.forEach((x, i) => {
-      let li = have.get(x.id);
-      if (!li) {
-        li = v.doc.createElement('li');
-        li.className = 'bt-tray-item';
-        li.dataset.id = x.id;
-        li.innerHTML = '<span class="bt-tray-pearl" aria-hidden="true"></span><span class="bt-tray-name"></span>';
-      }
-      if (x.id === hold) li.classList.add('arriving');
-      li.querySelector('.bt-tray-name').textContent = x.label;
-      li.title = x.label;
-      if (ol.children[i] !== li) ol.insertBefore(li, ol.children[i] || null);
-    });
-    t.querySelector('.bt-tray-n').textContent = String(list.length);
-    t.querySelector('.bt-tray-reset').disabled = v.picked.length === 0;
-    t.dataset.empty = list.length ? '0' : '1';
+  // ---------- the jar: who's been picked this round (No repeats) ----------
+  // Its pearls live in the same box units as the cup's, so they share the
+  // walls and the floor; their size comes from the round's head count, so a
+  // full round fills the jar to just under its face.
+  const jarR = (n) => Math.min(22, Math.sqrt(0.5 * JAR_AREA / (Math.PI * Math.max(1, n))));
+  function addJarPearl(v, id, at) {
+    const J = v.jar, h = hash(id);
+    const el = v.doc.createElement('span');
+    el.className = 'bt-pearl';
+    const s = 0.88 + ((h >>> 8) % 1000) / 1000 * 0.24;
+    el.style.setProperty('--s', s.toFixed(3));
+    el.innerHTML = '<span class="bt-pearl-name"></span>';
+    J.layer.appendChild(el);
+    // already picked (a reload, a put-back elsewhere): it settles from low in the jar
+    const y = at ? at.y : rnd(250, FLOOR - 10);
+    const p = { id, el, s, label: '', x: at ? at.x : lerp(wallL(y), wallR(y), rnd(0.2, 0.8)), y, vx: at ? at.vx : 0, vy: at ? at.vy : 0 };
+    J.pearls.set(id, p);
+    return p;
   }
-  // wheel.js hands over who's been called (No repeats on), or null (off).
-  function setPicked(doc, list) {
+  function stepJar(v, dt) {
+    const J = v.jar;
+    if (!J || J.el.hidden || !J.cup.offsetParent) return;
+    const B = J.cup.clientWidth;
+    if (!B) return;
+    const k = B / 400, r = jarR(J.total || J.pearls.size);
+    if (k !== J.k || r !== J.r) { J.k = k; J.r = r; J.layer.style.setProperty('--pr', `${(r * 2 * k).toFixed(1)}px`); }
+    const mood = Date.now() < J.partyUntil ? 'party' : '';
+    if (J.mood !== mood) { J.mood = mood; J.cup.dataset.mood = mood; }
+    const live = [...J.pearls.values()];
+    for (const p of live) {
+      p.vy += 900 * dt;
+      p.vx *= Math.exp(-1.6 * dt); p.vy *= Math.exp(-0.6 * dt);
+      p.x += p.vx * dt; p.y += p.vy * dt;
+    }
+    for (let pass = 0; pass < 3; pass++) {
+      for (let i = 0; i < live.length; i++) {
+        const a = live[i];
+        for (let m = i + 1; m < live.length; m++) {
+          const b = live[m];
+          const dx = b.x - a.x, dy = b.y - a.y;
+          const d = Math.hypot(dx, dy), min = r * (a.s + b.s) * 0.9;
+          if (d >= min || d === 0) continue;
+          const nx = dx / d, ny = dy / d, push = (min - d) / 2;
+          a.x -= nx * push; a.y -= ny * push; b.x += nx * push; b.y += ny * push;
+          const rv = (b.vx - a.vx) * nx + (b.vy - a.vy) * ny;
+          if (rv < 0) { const j2 = -rv * 0.6; a.vx -= nx * j2; a.vy -= ny * j2; b.vx += nx * j2; b.vy += ny * j2; }
+        }
+      }
+      for (const p of live) {
+        const pr = r * p.s;
+        if (p.y > FLOOR - pr) { p.y = FLOOR - pr; if (p.vy > 0) p.vy *= -0.35; p.vx *= 0.97; }
+        if (p.y > CUP.top) {                         // inside: the tapered walls (above the rim it's still falling in)
+          const L = wallL(p.y) + pr, R = wallR(p.y) - pr;
+          if (p.x < L) { p.x = L; if (p.vx < 0) p.vx *= -0.6; }
+          if (p.x > R) { p.x = R; if (p.vx > 0) p.vx *= -0.6; }
+        }
+      }
+    }
+    for (const p of live) {
+      const pr = r * p.s;
+      p.el.style.zIndex = String(Math.round(p.y));
+      p.el.style.transform = `translate(${((p.x - pr) * k).toFixed(1)}px, ${((p.y + DY - pr) * k).toFixed(1)}px)`;
+    }
+  }
+  // The jar holds everyone picked this round except the one still in the
+  // spotlight or on its way over (they join when they land).
+  function renderJar(v) {
+    const J = v.jar;
+    if (!J) return;
+    const skip = new Set([v.spot && v.spot.id, v.flyingId].filter(Boolean));
+    const want = new Map(v.picked.filter((x) => !skip.has(x.id)).map((x) => [x.id, x]));
+    for (const [id, p] of J.pearls) if (!want.has(id)) { p.el.remove(); J.pearls.delete(id); }
+    for (const x of want.values()) setLabel(J.pearls.get(x.id) || addJarPearl(v, x.id, null), x.label);
+    paintJar(v);
+  }
+  // The face, the count and the pour button follow how full it is.
+  function paintJar(v) {
+    const J = v.jar;
+    if (!J) return;
+    const n = J.pearls.size, total = Math.max(J.total, n);
+    const full = total > 0 && n >= total;
+    J.cup.dataset.fill = full ? 'full' : n >= total / 2 && n ? 'happy' : n ? 'content' : 'sleepy';
+    J.count.textContent = String(n);
+    J.of.textContent = String(total);
+    J.el.dataset.full = full ? '1' : '';
+    J.pour.hidden = !n && !J.pouring;
+    J.pour.disabled = J.pouring || !!v.active;
+    J.pour.classList.toggle('primary', full);
+    if (full && J.wasFull === false && J.ready) celebrate(v);
+    J.wasFull = full;
+  }
+  // Everyone's been picked: a hop, arms waving, hearts.
+  function celebrate(v) {
+    const J = v.jar;
+    J.partyUntil = Date.now() + 2600;
+    fire(J.burst);
+    if (soundOn(v.doc)) cheerSound();
+  }
+
+  // Fly an element (already where it starts, at transform: none) along an
+  // arc to (dx, dy) px away: a quadratic curve bowed upward by `lift`, a spin,
+  // and a scale. Plain rAF, so it is one smooth curve rather than a CSS
+  // straight line.
+  const reduced = (win) => win.matchMedia && win.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  function arc(win, el, { dx, dy, lift, dur, spin = 0, scale = 1, fade = false, delay = 0 }, done) {
+    const cx = dx * 0.45, cy = Math.min(0, dy) - lift;
+    let t0 = null;
+    const frame = (now) => {
+      if (t0 === null) t0 = now + delay;
+      const t = clamp01((now - t0) / dur), u = easeInOut(t), w = 1 - u;
+      const x = 2 * w * u * cx + u * u * dx, y = 2 * w * u * cy + u * u * dy;
+      el.style.transform = `translate(${x.toFixed(1)}px, ${y.toFixed(1)}px) rotate(${(u * spin).toFixed(1)}deg) scale(${lerp(1, scale, easeOut(t)).toFixed(4)})`;
+      if (fade) el.style.opacity = String(1 - smooth(0.8, 1, t));
+      if (t < 1) win.requestAnimationFrame(frame); else done();
+    };
+    win.requestAnimationFrame(frame);
+  }
+  // The spotlight's disc, shrinking as it goes, arcs over the page with two
+  // turns and drops in through the open top.
+  function flyToJar(v, sp) {
+    const J = v.jar, win = v.doc.defaultView;
+    const disc = sp.el.querySelector('.bt-spot-pearl');
+    const who = v.picked.find((x) => x.id === sp.id);
+    v.flyingId = sp.id;
+    const a = disc.getBoundingClientRect(), c = J.cup.getBoundingClientRect(), k = c.width / 400;
+    const land = { x: rnd(160, 240), y: 70 };                   // box units, above the jar's mouth
+    const bx = c.left + land.x * k, by = c.top + (land.y + DY) * k;
+    const dx = bx - (a.left + a.width / 2), dy = by - (a.top + a.height / 2);
+    const end = (jarR(J.total) * 2 * k) / a.width;
+    const slow = reduced(win);
+    sp.el.classList.add('flying');
+    disc.style.transition = 'none';
+    arc(win, disc, { dx, dy, lift: slow ? 0 : Math.max(120, Math.hypot(dx, dy) * 0.45), dur: slow ? 320 : 900, spin: slow ? 0 : 720, scale: end }, () => {
+      sp.el.remove();
+      v.flyingId = null;
+      if (!v.picked.some((x) => x.id === sp.id)) { renderJar(v); return; }   // put back while it flew
+      const p = addJarPearl(v, sp.id, { x: land.x, y: land.y, vx: dx > 0 ? 40 : -40, vy: 260 });
+      setLabel(p, who ? who.label : '');
+      renderJar(v);
+      if (soundOn(v.doc)) plopSound();
+    });
+  }
+  // Pour them back: the jar tips toward the cup and its pearls tumble across
+  // one after another (top first), each on its own arc with a spin, and drop
+  // into the cup. The round is reset as they leave (wheel.js clears
+  // `called`); the cup keeps each one hidden until it lands (`incoming`).
+  function pour(v) {
+    const J = v.jar, doc = v.doc, win = doc.defaultView;
+    if (!J || J.pouring || v.active || !J.pearls.size) return;
+    J.pouring = true;
+    J.el.dataset.state = 'pouring';
+    setDisabled(doc, v.off);
+    paintJar(v);
+    const slow = reduced(win);
+    setTimeout(() => {
+      const items = [...J.pearls.values()].sort((p, q) => p.y - q.y);
+      const B = v.el.getBoundingClientRect(), kc = B.width / 400;
+      const STAGGER = slow ? 0 : Math.min(60, 1100 / items.length);
+      items.forEach((p, i) => {
+        // the tipped jar turns its pearls too: take the centre from the
+        // (rotated) box and the size from the untransformed one
+        const r0 = p.el.getBoundingClientRect(), w = p.el.offsetWidth;
+        const cx0 = r0.left + r0.width / 2, cy0 = r0.top + r0.height / 2;
+        const f = doc.createElement('span');
+        f.className = 'bt-pearl bt-flyer';
+        f.innerHTML = p.el.innerHTML;
+        f.style.setProperty('--s', p.s.toFixed(3));
+        f.style.setProperty('--pr', `${(w / p.s).toFixed(1)}px`);
+        f.style.setProperty('--fit', p.el.style.getPropertyValue('--fit'));
+        f.style.left = `${(cx0 - w / 2).toFixed(1)}px`;
+        f.style.top = `${(cy0 - w / 2).toFixed(1)}px`;
+        doc.body.appendChild(f);
+        p.el.remove();
+        J.pearls.delete(p.id);
+        v.incoming.add(p.id);
+        const tx = B.left + rnd(150, 250) * kc, ty = B.top + (110 + DY) * kc;
+        arc(win, f, {
+          dx: tx - cx0, dy: ty - cy0,
+          lift: slow ? 0 : rnd(70, 140), dur: slow ? 300 : 700, spin: slow ? 0 : rnd(-540, -300),
+          scale: (v.r * 2 * p.s * kc) / w, fade: true, delay: i * STAGGER,
+        }, () => {
+          f.remove();
+          v.incoming.delete(p.id);
+          const q = v.pearls.get(p.id);
+          if (q && q.hidden) { show(q); paintCount(v); }
+          if (soundOn(doc) && i % 2 === 0) blip(audio(), audio().currentTime, { type: 'triangle', f0: rnd(700, 1000), f1: 400, len: 0.05, gain: 0.04 });
+        });
+      });
+      paintJar(v);
+      doc.dispatchEvent(new CustomEvent('teacherpal:wheel-reset'));   // the round starts over
+      setTimeout(() => {
+        J.pouring = false;
+        J.el.dataset.state = '';
+        v.incoming.forEach((id) => { const q = v.pearls.get(id); if (q && q.hidden) show(q); });   // a flight that never finished
+        v.incoming.clear();
+        paintCount(v);
+        setDisabled(doc, v.off);
+        paintJar(v);
+      }, items.length * STAGGER + (slow ? 300 : 700) + 200);
+    }, slow ? 0 : 420);
+  }
+  // wheel.js hands over who's been called (No repeats on) and how many are
+  // in the round, or null (No repeats off: no jar).
+  function setPicked(doc, list, total) {
     const v = views.get(doc);
-    if (!v || !v.tray) return;
-    v.tray.hidden = !list;
+    if (!v || !v.jar) return;
+    v.jar.el.hidden = !list;
     v.picked = list || [];
-    renderTray(v);
+    v.jar.total = list ? Math.max(total || 0, v.picked.length) : 0;
+    renderJar(v);
+    v.jar.ready = true;
   }
 
   // ---------- a pick ----------
@@ -606,6 +833,7 @@
     void v.el.offsetWidth;                        // restart the shake
     v.el.dataset.state = 'shaking';
     if (sound) bobaSound();
+    paintJar(v);
   }
   function finish(doc, s, { respawn: respawnIt = false } = {}) {
     const v = views.get(doc);
@@ -620,6 +848,7 @@
     v.popped = true;
     if (!v.revealed) reveal(v);
     v.el.dataset.state = 'picked';
+    paintJar(v);
     // With No repeats off the pearl goes back in a moment later. With it on,
     // the cup stays one pearl lighter.
     if (respawnIt) {
@@ -640,10 +869,13 @@
   function setDisabled(doc, off) {
     const v = views.get(doc);
     if (!v) return;
-    v.el.setAttribute('aria-disabled', String(!!off));
+    v.off = !!off;
     const h = v.el.querySelector('.bt-handle');
-    if (h) h.disabled = !!off;
+    const no = v.off || busy(doc);                  // no picks while pearls are pouring back
+    v.el.setAttribute('aria-disabled', String(no));
+    if (h) h.disabled = no;
   }
+  const busy = (doc) => { const v = views.get(doc); return !!v && (!!(v.jar && v.jar.pouring) || v.incoming.size > 0); };
 
   // ---------- sound: a shake, the slosh, a slurp up the straw, the pop ----------
   let ctx = null, noiseBuf = null;
@@ -704,5 +936,21 @@
     blip(c, s(T.pop + 150), { f0: 2100, f1: 3200, len: 0.1, gain: 0.04 });
   }
 
-  window.Boba = { DURATION_MS, SETTLE_MS, isOn, build, sync, run, finish, setWinner, setDisabled, setPicked };
+  // the Name Wheel's mute switch (aria-checked = muted)
+  const soundOn = (doc) => { const m = doc.getElementById('wheel-mute'); return !!m && m.getAttribute('aria-checked') !== 'true'; };
+  function plopSound() {
+    const c = audio();
+    if (!c) return;
+    if (c.state === 'suspended') c.resume();
+    blip(c, c.currentTime + 0.02, { type: 'sine', f0: 520, f1: 180, len: 0.12, gain: 0.12 });
+    blip(c, c.currentTime + 0.1, { type: 'triangle', f0: 900, f1: 500, len: 0.05, gain: 0.04 });
+  }
+  function cheerSound() {
+    const c = audio();
+    if (!c) return;
+    if (c.state === 'suspended') c.resume();
+    [660, 830, 990, 1320].forEach((f, i) => blip(c, c.currentTime + i * 0.09, { f0: f, f1: f * 1.02, len: 0.16, gain: 0.06 }));
+  }
+
+  window.Boba = { DURATION_MS, SETTLE_MS, HOLDS_ROUND: true, isOn, busy, build, sync, run, finish, setWinner, setDisabled, setPicked };
 })();

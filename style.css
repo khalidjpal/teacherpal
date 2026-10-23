@@ -7073,11 +7073,10 @@ body.wheel-popout .bt-spot-hint { display: none; }   /* the projector can't be c
   75%  { opacity: 1; }
   100% { opacity: 0; transform: rotate(var(--a)) translateY(calc(-52cqi - var(--d) * 14cqi)) scale(1.2); }
 }
-/* closing with No repeats on: the backdrop clears and the pearl shrinks into
-   its place in the Picked tray (boba.js sets the transform) */
+/* closing with No repeats on: the backdrop clears and the pearl arcs over
+   into the jar, spinning and shrinking (boba.js flyToJar drives the
+   transform on rAF), its name still on it */
 .bt-spot.flying { background: transparent; backdrop-filter: none; pointer-events: none; transition: background 420ms ease, backdrop-filter 420ms ease; }
-.bt-spot.flying .bt-spot-pearl { transition: transform 600ms cubic-bezier(.55, 0, .3, 1); }
-.bt-spot.flying .bt-spot-name,
 .bt-spot.flying .bt-spot-hint,
 .bt-spot.flying .bt-spot-burst { opacity: 0; transition: opacity 200ms ease; }
 
@@ -7151,51 +7150,91 @@ body.wheel-popout .bt-spot-hint { display: none; }   /* the projector can't be c
   max-width: calc(100vw - 2 * var(--side-w) - 7rem);
 }
 
-/* ---- the Picked tray (boba.js renderTray): who's been called this round
-   (No repeats on), as small named pearls in pick order. Reset puts them all
-   back in the cup. Marwa page only; hidden with No repeats off. ---- */
-.bt-tray { display: none; }
-:root[data-theme="marwa"] .wheel-page .bt-tray:not([hidden]) {
+/* ---- the jar (boba.js renderJar / flyToJar / pour): a second cup beside
+   the main one that catches everyone picked this round (No repeats on).
+   The same drawing classes as the cup (outline, shine, arms, feet, face,
+   pearls with names) minus the lid, the straw and the tea: an open cup with
+   its own face. data-fill = sleepy (empty: closed eyes, z's) → content →
+   happy (half full: a big smile) → full (^ ^); data-mood="party" is the
+   celebration when the last one lands. Marwa page only, grid area "tray". */
+.bt-jar { display: none; }
+:root[data-theme="marwa"] .wheel-page .bt-jar:not([hidden]) {
   grid-area: tray;
-  justify-self: start; align-self: center;
-  width: var(--side-w); max-height: 100%;
-  display: flex; flex-direction: column; gap: var(--space-2);
-  padding: var(--space-3);
-  background: var(--card);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-card);
+  display: block; position: relative;
+  justify-self: start; align-self: end;        /* it stands on the same floor as the cup */
+  width: min(100%, 24rem); aspect-ratio: 1;    /* its whole column: the names on its pearls stay legible */
+  margin-bottom: 2%;
 }
-.bt-tray-head { display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; }
-.bt-tray-title { font: 700 var(--fs-md) / 1.2 "Comfortaa", var(--font-body); color: var(--text); }
-.bt-tray-n { margin-left: 0.3rem; font-weight: 700; color: var(--accent-deep); }
-.bt-tray-reset { min-height: 1.9rem; padding: 0.2rem 0.75rem; font-size: var(--fs-xs); }
-.bt-tray-list {
-  list-style: none; margin: 0; padding: 0.1rem;
-  display: grid; grid-template-columns: repeat(auto-fill, minmax(6.4rem, 1fr));
-  gap: 0.35rem 0.5rem;
-  overflow-y: auto; min-height: 0;
+.bt-jar-cup {
+  position: absolute; inset: 3%;
+  container-type: inline-size;
+  transform-origin: 18% 92%;                   /* tips over its left foot, toward the cup */
+  transition: rotate 420ms cubic-bezier(.5, 0, .3, 1.2), translate 420ms ease;
 }
-.bt-tray-item { display: flex; align-items: center; gap: 0.4rem; min-width: 0; }
-.bt-tray-pearl {
-  flex: none; width: 1.45rem; height: 1.45rem; border-radius: 50%;
-  background:
-    radial-gradient(ellipse 26% 18% at 30% 24%, rgba(255, 255, 255, 0.55) 0%, rgba(255, 255, 255, 0) 100%),
-    radial-gradient(circle at 38% 34%, var(--bt-pearl-hi) 0%, var(--bt-pearl) 46%, var(--bt-pearl-deep) 100%);
-  box-shadow: 0 0.08rem 0.15rem var(--bt-pearl-shadow);
+.bt-jar[data-state="pouring"] .bt-jar-cup { rotate: -58deg; translate: -6% -4%; }
+.bt-jar-cup .bt-pearls { z-index: 2; }
+.bt-jar-mouth { fill: var(--bt-straw-in); opacity: 0.55; }            /* the inside of the open top */
+.bt-jar-lip { fill: none; stroke: var(--bt-cup-line); stroke-width: 4.2; stroke-linecap: round; }
+/* the count under it, like the cup's "N left" */
+.bt-jar-count {
+  position: absolute; left: 0; right: 0; top: 93%; z-index: 4;
+  margin: 0; text-align: center;
+  font: 600 var(--fs-sm) / 1 "Comfortaa", "Quicksand", var(--font-body);
+  color: var(--text-muted); pointer-events: none;
 }
-.bt-tray-name {
-  min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis;
-  font: 600 var(--fs-sm) / 1.25 "Comfortaa", var(--font-body); color: var(--text-2);
+.bt-jar-count b { color: var(--accent-deep); font-weight: 700; font-size: 1.25em; }
+/* Pour them back: over the open top (there's no lid or straw up there);
+   the primary pill once the jar is full */
+.bt-jar-pour {
+  position: absolute; left: 50%; top: 6%; z-index: 5;
+  translate: -50% 0;
+  min-height: 2rem; padding: 0.25rem 0.9rem;
+  white-space: nowrap;
+  font-family: "Comfortaa", var(--font-body); font-size: var(--fs-xs);
 }
-.bt-tray-item.arriving { visibility: hidden; }      /* the slot it's flying to */
-.bt-tray-item.landed .bt-tray-pearl { animation: bt-land 420ms cubic-bezier(.34, 1.56, .64, 1); }
-.bt-tray-item.landed .bt-tray-name { animation: bt-land-name 500ms ease; }
-@keyframes bt-land { 0% { scale: 1.6; box-shadow: 0 0 0 3px var(--accent), 0 0 0.8rem var(--accent-glow); } 100% { scale: 1; } }
-@keyframes bt-land-name { 0% { opacity: 0; translate: -0.3rem 0; color: var(--accent-deep); } 100% { opacity: 1; translate: 0 0; } }
-.bt-tray-empty { display: none; margin: 0; font: 600 var(--fs-sm) / 1.3 "Comfortaa", var(--font-body); color: var(--text-muted); }
-.bt-tray[data-empty="1"] .bt-tray-empty { display: block; }
-:root[data-theme="marwa"] body.present .wheel-page .bt-tray { display: none; }
+.bt-jar-pour[hidden] { display: none; }
+.bt-jar[data-full="1"] .bt-jar-pour { animation: bt-pour-in 420ms cubic-bezier(.34, 1.56, .64, 1); }
+@keyframes bt-pour-in { 0% { scale: 0.6; opacity: 0; } 100% { scale: 1; opacity: 1; } }
+:root[data-theme="marwa"] body.present .wheel-page .bt-jar { display: none; }
+
+/* its face: centred, and its own moods */
+.bf-sleep, .bf-z { display: none; }
+.bf-sleep { fill: none; stroke: var(--bt-ink); stroke-width: 3.4; stroke-linecap: round; }
+.bf-z { font: 700 22px "Comfortaa", var(--font-body); fill: var(--bt-ink); opacity: 0; }
+.bt-jar-cup .bf-blush { opacity: 0.5; }
+/* sleepy (empty): eyes shut, a small smile, z's drifting up, a slow breath */
+.bt-jar-cup[data-fill="sleepy"] .bf-eye { display: none; }
+.bt-jar-cup[data-fill="sleepy"] .bf-sleep,
+.bt-jar-cup[data-fill="sleepy"] .bf-z { display: inline; }
+.bt-jar-cup[data-fill="sleepy"] .bf-smile { scale: 0.75; transform-box: fill-box; transform-origin: center; }
+.bt-jar-cup[data-fill="sleepy"] .bf-z { animation: bt-z 3.2s ease-in-out infinite; transform-box: fill-box; }
+.bt-jar-cup[data-fill="sleepy"] .bf-z.b { animation-delay: 1.6s; font-size: 16px; }
+@keyframes bt-z { 0% { opacity: 0; translate: 0 6px; } 30%, 70% { opacity: 0.8; } 100% { opacity: 0; translate: 8px -14px; } }
+.bt-jar-cup[data-fill="sleepy"] { animation: bt-breathe 4.2s ease-in-out infinite; }
+@keyframes bt-breathe { 50% { scale: 1.015 0.985; } }
+/* content: awake, blinking now and then */
+.bt-jar-cup:is([data-fill="content"], [data-fill="happy"]) .bf-eye { animation: bt-blink 5.4s infinite; }
+/* happy (half full or more): a big open smile, rosier */
+.bt-jar-cup[data-fill="happy"] .bf-smile { display: none; }
+.bt-jar-cup[data-fill="happy"] .bf-open { display: inline; }
+.bt-jar-cup[data-fill="happy"] .bf-blush { opacity: 0.8; scale: 1.15; }
+/* full: ^ ^ and the big smile */
+.bt-jar-cup[data-fill="full"] .bf-eye, .bt-jar-cup[data-fill="full"] .bf-smile { display: none; }
+.bt-jar-cup[data-fill="full"] .bf-happy, .bt-jar-cup[data-fill="full"] .bf-open { display: inline; }
+.bt-jar-cup[data-fill="full"] .bf-blush { opacity: 0.95; scale: 1.25; }
+.bt-jar-cup[data-fill="full"] .bt-arm.l { rotate: 40deg; }
+.bt-jar-cup[data-fill="full"] .bt-arm.r { rotate: -40deg; }
+/* the celebration: hops, arms waving, hearts all round (the burst) */
+.bt-jar-cup[data-mood="party"] { animation: bt-hop 520ms cubic-bezier(.3, .9, .4, 1) 4; }
+.bt-jar-cup[data-mood="party"] .bt-arm.l { rotate: 116deg; animation: bt-wave-l 300ms ease-in-out infinite alternate; }
+.bt-jar-cup[data-mood="party"] .bt-arm.r { rotate: -116deg; animation: bt-wave-r 300ms ease-in-out infinite alternate; }
+/* pouring: a surprised little "o" */
+.bt-jar[data-state="pouring"] .bt-jar-cup :is(.bf-smile, .bf-open, .bf-sleep, .bf-z, .bf-happy) { display: none; }
+.bt-jar[data-state="pouring"] .bt-jar-cup .bf-eye { display: inline; animation: none; }
+.bt-jar[data-state="pouring"] .bt-jar-cup .bf-o { display: inline; }
+.bt-jar[data-state="pouring"] .bt-jar-cup { animation: none; }
+/* the pearls tumbling back to the cup: fixed on the page, over everything */
+.bt-pearl.bt-flyer { position: fixed; z-index: 1001; pointer-events: none; will-change: transform, opacity; }
 :root[data-theme="marwa"] .wheel-page .wheel-stage > .tick { display: none; }
 
 /* the result strip: nothing before a pick, then the name between two
@@ -7290,8 +7329,8 @@ body.wheel-popout .bt-spot-hint { display: none; }   /* the projector can't be c
   :root[data-theme="marwa"] .wheel-page .wheel-result { margin-bottom: 0; }
   :root[data-theme="marwa"] .wheel-page .wheel-stage { align-self: start; height: auto; min-height: 0; overflow: visible; }
   :root[data-theme="marwa"] .wheel-page .wheel-stage > .wheel-wrap { height: auto; width: min(100%, 34rem); max-width: none; max-height: none; aspect-ratio: 1; margin: 0 auto; }
-  :root[data-theme="marwa"] .wheel-page .bt-tray:not([hidden]),
   :root[data-theme="marwa"] .wheel-page .wheel-controls { justify-self: stretch; width: auto; max-height: none; }
+  :root[data-theme="marwa"] .wheel-page .bt-jar:not([hidden]) { justify-self: center; align-self: start; width: min(100%, 18rem); margin-bottom: var(--space-4); }
 }
 
 /* full screen: keep the name strip above the cup, drop the controls (the
