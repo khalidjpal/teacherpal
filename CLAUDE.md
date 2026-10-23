@@ -35,7 +35,7 @@ full-screen toggle. There is no sidebar; every page uses the full width.
 | Lesson Plans | `lessons.html` | Writing plans **by course**: a Day / Week / Month calendar (courses × Mon–Fri, no-school days blocked out; one plan per course per day, shared by its periods, with an out-of-the-way per-period split) with the full editor for the selected period's day beside it; files and links attached per plan (Supabase Storage), and one search over every plan and attachment |
 | Create Groups | `groups.html` | Random / formula groups, projector view in full screen |
 | Timer | `timer.html` | Classroom countdown / stopwatch: big digits, presets, ±1 min, mute, pop-out + Picture-in-Picture for the projector while another tab is active |
-| Name Wheel | `wheel.html` | Cold-calling: spin a wheel of the period's present students, big name in the middle, no-repeats mode, full screen window + mini window. In halloween the wheel is a cauldron (names float in the brew as bubbles; the winner's bubble rises and pops), in marwa a bubble tea cup (a boba pearl per student; the cup shakes, the pearls swirl, and the winner's pearl, its name on it, travels up the straw and comes to the front of the screen as a big disc with the name readable across the room) |
+| Name Wheel | `wheel.html` | Cold-calling: spin a wheel of the period's present students, big name in the middle, no-repeats mode, full screen window + mini window. In halloween the wheel is a cauldron (names float in the brew as bubbles; the winner's bubble rises and pops), in marwa a bubble tea cup (a boba pearl per student; the cup shakes, the pearls swirl, and the winner's pearl, its name on it, travels up the straw and comes to the front of the screen as a big disc with the name readable across the room), in thanksgiving a cornucopia (a piece of produce per student; the horn tips and shakes, the produce tumbles out and rolls over the table, the chosen piece rolls to the front and the name rises above it in a burst of leaves, and No repeats collects the called ones, named, in a basket with "Tip it back in") |
 | Noise Meter | `noise.html` | Room volume from the laptop mic: big green/amber/red meter, three zones with activity presets, "Too loud" hold + chime, pop-out for the projector. Mic only while you hold it on |
 | Seating | `seating.html` | Room builder + seat assignment |
 | Bathroom | `bathroom.html` | Bathroom tracker: tap a card to sign out (quick tap or timer); per-student pass checkboxes, red flag past the limit. One centred control island (period · mode · search · gear) over a scrolling student grid, with **Out now** (live timers + End timer) and **Log** (the day's trips + a day switcher; its History button opens the quarter review — counts, CSV, print) as two fixed-height panels underneath |
@@ -67,11 +67,12 @@ full-screen toggle. There is no sidebar; every page uses the full width.
 | `timer.js`     | Countdown + stopwatch logic, plus `buildDial()` / `paintDial()` for the themed dial. **End-timestamp model**: state is `{ mode, running, paused, label, muted, targetMs, endsAt, remainingAtPause, startedAt, elapsedAtPause, zeroed }` in `localStorage['teacherpal.timer.state']`; every window computes the display from `Date.now()` against `endsAt`/`startedAt`, so tab-throttling doesn't drift. `BroadcastChannel('teacherpal-timer')` syncs main ↔ pop-out ↔ PiP. Web Audio API beep on zero (respects mute). `documentPictureInPicture.requestWindow()` on Chrome for an always-on-top floating display. Space toggles start/pause. |
 | `noise.html`   | Noise Meter screen: the `.noise-stage` in three groups — `.noise-head` (activity presets + the `#status` line, inside the card), the `.noise-meter` (reading + bar + zone word; the bunny in marwa, the ghost in halloween), `.noise-foot` (one `.noise-foot-row` of Start/Stop, chime, "Full screen window" · the two zone sliders side by side · full screen, then a one-line privacy note with a `?`) — plus `#noise-privacy-dialog` (the full mic note). Loads `noise.js`. |
 | `noise.js`     | Mic → `AnalyserNode` → RMS → a 35–95 relative "dB" reading, 500ms rolling average, three zones, "Too loud" after 3s in the red, optional chime. Polls on `setInterval` (**not** rAF — rAF freezes in a background window and the pop-out would stall). `BroadcastChannel('teacherpal-noise')` feeds the pop-out. Opens the mic only on Start; stops every track on Stop and on `pagehide`. Nothing is recorded or sent anywhere. |
-| `wheel.html`   | Name Wheel screen: the wheel on the left; on the right the result panel and the controls (period, AUTO, **Edit wheel**, First names / No repeats / tick mute / "Full screen window" / full screen), "Mini window" (PiP, Chrome only), plus the `#wheel-roster-dialog` toggle-chip modal — loads `cauldron.js`, `boba.js`, then `wheel.js`. Words that differ per skin come in `.for-wheel` / `.for-brew` / `.for-boba` triples ("Edit wheel" / "Edit who's in", "Tick on" / "Sound on", …) and CSS shows the one for the theme. |
+| `wheel.html`   | Name Wheel screen: the wheel on the left; on the right the result panel and the controls (period, AUTO, **Edit wheel**, First names / No repeats / tick mute / "Full screen window" / full screen), "Mini window" (PiP, Chrome only), plus the `#wheel-roster-dialog` toggle-chip modal — loads `cauldron.js`, `boba.js`, `cornucopia.js`, then `wheel.js`. Words that differ per skin come in `.for-wheel` / `.for-brew` / `.for-boba` / `.for-horn` sets ("Edit wheel" / "Edit who's in", "Tick on" / "Sound on", …) and CSS shows the one for the theme. |
 | `wheel.js`     | The wheel: draws the slices as SVG into `#wheel-rotor` (the only thing that spins), runs the spin on rAF with an ease-out, ticks as each slice passes the pointer, and syncs the pop-out over `BroadcastChannel('teacherpal-wheel')`. **Winner is drawn first** (`crypto.getRandomValues`), then the landing rotation is computed — the animation can't bias it. |
 | `wheel-popout.html` | Read-only projector wheel (`body.wheel-popout`): same dial (or, in halloween, the cauldron) filling the window, fed by broadcast, no controls. The mini window is this same page in an iframe. |
 | `cauldron.js` | The Name Wheel's halloween skin, `window.Cauldron` (`isOn`, `build`, `sync`, `run`, `finish`, `setWinner`, `setDisabled`, `BOIL_MS`, `SETTLE_MS`). Draws the cauldron into `.wheel-wrap`, floats each name as an HTML bubble (rAF physics), and animates a pick from the spin descriptor `wheel.js` hands it: boil → rise → hover → pop. Owns its sounds (bubbling that builds, a pop). Never picks anything. |
 | `boba.js` | The Name Wheel's marwa skin, `window.Boba` — the same shape as `Cauldron` (`isOn`, `build`, `sync`, `run`, `finish`, `setWinner`, `setDisabled`, `setPicked`, `busy`, `HOLDS_ROUND`, `DURATION_MS`, `SETTLE_MS`). A bubble tea cup in `.wheel-wrap`: warm tan milk tea with a cream swirl, a domed lid, a narrow see-through pink straw, **the whole cup as the Spin button** (`#boba-straw`, a hit area over the cup), one near-black pearl per student with their first name on it in small cream type (rAF physics in box units: gravity, a swirl, soft collisions, the tapered walls), condensation, and "N left" in small flat text under the cup. A pick (~4s, the `T` timeline at its top) shakes the cup, swirls the pearls up, lights one up, draws it up the straw in sips, then the **spotlight**: the pearl grows into a big disc in front of the dimmed page with the name on it (click / Space / Enter / Esc closes it); with No repeats on it then arcs over into the **jar** on the right, a second cup that fills as the class is called and is poured back to start a new round. Owns its sounds (shake, slosh, slurp, pop). Never picks anything. |
+| `cornucopia.js` | The Name Wheel's thanksgiving skin, `window.Cornucopia` — the same shape as `Boba` (`isOn`, `build`, `sync`, `run`, `finish`, `setWinner`, `setDisabled`, `setPicked`, `busy`, `HOLDS_ROUND`, `DURATION_MS`, `SETTLE_MS`). A woven horn on a wooden table in `.wheel-wrap` (`#horn`, the whole scene is the Spin button): one piece of produce per student (pumpkin, apple, pear, gourd, grapes, corn, wheat; type and colour from a hash, no names), in its mouth and spilling out. A pick tips the horn, the produce tumbles out and rolls (JS physics: gravity, bounces, friction, collisions by weight), the chosen piece rolls to the front and the name rises over it with a burst of leaves. With No repeats on, called pieces collect in the basket (names on them) until "Tip it back in". Owns its sounds (a wooden rumble, rolling and knocks, a chime). Never picks anything. |
 | `noise-popout.html` | Read-only projector pop-out (`body.noise-popout`): reading + bar + zone word, fed over BroadcastChannel. Never opens a mic of its own; says so when the main window isn't answering. |
 | `timer-popout.html` | Minimal read-only pop-out window (`body.timer-popout`): label + display + the same themed dial filling the window, no controls; listens for state via BroadcastChannel. |
 | `migration-lessons-bathroom.sql` | One-off migration creating `lesson_plans` + `bathroom_log` (incl. the manual-tally columns; run in the Supabase SQL editor) |
@@ -100,7 +101,7 @@ full-screen toggle. There is no sidebar; every page uses the full width.
 
 Every page: `<link rel="stylesheet" href="style.css">`, an **empty**
 `<header class="topbar"></header>` (nav.js fills it), then at the end of
-`<body>`: `shared.js`, `schedule.js`, (`cauldron.js` and `boba.js` before `wheel.js` on the Name Wheel and its pop-out; `formula.js` on Seating and Create
+`<body>`: `shared.js`, `schedule.js`, (`cauldron.js`, `boba.js` and `cornucopia.js` before `wheel.js` on the Name Wheel and its pop-out; `formula.js` on Seating and Create
 Groups, `room.js` on Seating / hub / attendance), `nav.js`, then the page's
 own script (`attendance.js` + `initAttendance()` on Attendance; `lesson.js`
 on Lesson Plans; `bathroom.js` on Bathroom; `timer.js` on Timer; nothing on
@@ -578,7 +579,7 @@ last-used period in `localStorage`), `getLastPeriodId()` / `setLastPeriodId()`,
 
 ## Themes — per-user visual styles
 
-TeacherPal ships four themes. **All four share one layout**: jarvis is
+TeacherPal ships five themes. **All five share one layout**: jarvis is
 the structure, and every other theme is a colour swap of it. A theme is
 (almost) nothing but a block of colour tokens.
 
@@ -634,18 +635,18 @@ the structure, and every other theme is a colour swap of it. A theme is
   `--accent`, and `--wheel-ink` on every `--wheel-r*` and `--wheel-won`.
   Student names (seats, group cards, wheel, attendance, full screen) are
   `--text` / `--wheel-ink`, so they stay high contrast automatically.
-- **Extras are opt-in by name.** Only marwa, halloween and earthy (its wood "materials") have any (halloween's and earthy's are listed under them below); marwa's are selectors written
+- **Extras are opt-in by name.** Only marwa, halloween, thanksgiving and earthy (its wood "materials") have any (halloween's, thanksgiving's and earthy's are listed under them below); marwa's are selectors written
   `:root[data-theme="marwa"] …` (mascots, the Timer/Wheel skins, the
   12-hour clock in `nav.js`). A theme without extras behaves exactly like
   jarvis: a 24-hour clock, no mascots (the `--marwa-mascot-*` vars are
   undefined, so `.marwa-mascot` stays hidden), and the jarvis Timer dial
   and wheel. The one spot that names jarvis is the Timer rule hiding
   `.dial-arc` (`:root[data-theme="jarvis"], :root[data-theme="earthy"],
-  :root[data-theme="halloween"], :root:not([data-theme])`). Any new jarvis-like theme must join that
+  :root[data-theme="halloween"], :root[data-theme="thanksgiving"], :root:not([data-theme])`). Any new jarvis-like theme must join that
   selector, or its dial shows both rings. `wheel.js`'s `wide` label gap
   is "not marwa", so it needs nothing.
 
-**The four themes:**
+**The five themes:**
 
 - **`jarvis`** — the original dark HUD (deep plum-navy, near-black cards,
   subtle pink accent, Orbitron uppercase labels, corner ticks). Default for
@@ -803,6 +804,50 @@ the structure, and every other theme is a colour swap of it. A theme is
       lilac bat with pumpkin eyes before the text.
   **Timer**: the dial is a carved jack-o'-lantern (see the Timer section).
   24-hour clock, jarvis wheel.
+- **`thanksgiving`** — a **colour swap of jarvis** (tokens like halloween,
+  depth tokens on) plus seasonal mascots. Page `#1F1511` → canvas `--bg-1`
+  `#2A1D16` → cards `#38281E` → wells `--card-2` `#2E2018` (sunk) →
+  raised / hover `--card-3` `#473325`; borders `#6B4A33`. Text cream
+  `#F5E6D0`. **Burnt orange `#D2691E`** is `--accent` (buttons, rings,
+  active edges; `--gradient-accent` runs orange into cranberry),
+  **cranberry `#9B2335`** the secondary fill, **amber `#E8A33D`** tardy.
+  **Three deliberate departures from the brief, for AA** (the brief asked
+  for all text to pass): muted / labels are `#C2A381`, not `#B59878`
+  (that was 4.4:1 on raised); orange is 3.9:1 on the card, so orange text
+  and icons use `--accent-ink` `#F09A55`; cranberry text is `--lavender`
+  `#F08C98`. `--on-accent` is cocoa `#1F1511`. Lowest ratio over page /
+  card / well / raised:
+
+  | Pair | Ratio |
+  |---|---|
+  | text | 9.7:1 |
+  | text-2 | 7.2:1 |
+  | muted / labels | 5.0:1 |
+  | accent-ink | 5.4:1 |
+  | lavender | 5.0:1 |
+  | danger | 5.2:1 |
+  | ok | 6.8:1 |
+  | tardy | 5.5:1 |
+  | on-accent on orange | 4.9:1 |
+  | seat names (`#4E3626` seats, `#B08560` edges, `#150E0B` floor) | 9.1:1 |
+  | wheel names | ≥ 5.7:1 |
+  | cornucopia name plate (cream on cocoa) | ≥ 13:1 |
+  | pie digits on the dish | 13.9:1 |
+
+  **Extras** (scoped like halloween's, never in the projector pop-outs; all
+  behind content):
+    - **Page**: `--body-pattern` is a 240px tile of faint leaves, and
+      `html::before` / `::after` are two fixed full-viewport layers
+      (`z-index: -1`) with a couple of leaves each, drifting slowly down and
+      across on `tg-fall` (44s and 63s). Reduced motion removes the
+      animation (their own query: the app-wide `*` rule doesn't reach
+      pseudo-elements).
+    - **Timer**: a pumpkin pie (see the Timer section). **Noise Meter**: a
+      turkey, with a feather level bar and an acorn rider (see the Noise
+      Meter section). **Name Wheel**: a cornucopia (`cornucopia.js`, see the
+      Name Wheel section).
+  Tokens: `--tg-*` (pie), `--tk-*` (turkey), `--hn-*` (cornucopia). 24-hour
+  clock.
 - **`marwa`** — a **pure colour swap of jarvis** (depth tokens off) with four tiny extras. Same
   layout, spacing, radii, borders, fonts, weights, tracks, shadows,
   animations and components: only palette tokens differ (light cream-pink
@@ -1563,6 +1608,22 @@ All styling lives in `style.css`; pages carry almost no inline styling.
       Unlike the page decorations, it is not excluded from the pop-out / PiP.
       The pop-out only gets state over `BroadcastChannel`; its `loadState()`
       fallback returns early in pop-out mode.
+    - **thanksgiving — a pumpkin pie.** `pieSvg()` in `timer.js` draws it
+      once into the wrap (`.tg-pie`, hidden in other themes; the SVG dial,
+      `.timer-flash` and `.timer-burst` hide): a cream dish seen from above,
+      then `PIE_SLICES` (8) `.tg-slice` wedges, each a crust edge, filling,
+      five crimps and a shine. `paintDial()` marks a slice `.gone` once
+      `i >= ceil(remaining × 8)`: it slides out along its own direction and
+      fades, so the slices disappear one by one and the empty
+      dish (with crumbs) shows through. Final minute (`warn`): the slices
+      glow warm and three wisps of steam rise. Zero (`alert`): the last
+      slice goes, and a fork drops in beside the dish (`tg-fork`). The
+      digits are Rajdhani 700 in cocoa `--tg-digit` with a cream halo, in
+      the middle (they sit on filling or on the dish, both light). Stopwatch
+      keeps every slice. Wrap sizes as halloween's. Reduced motion stops the
+      steam, the glow pulse and the fork's drop: the steam and glow show
+      still, the fork just appears, and the slices still go (that is the
+      reading).
   **States** come from `data-state` on `.timer-display-wrap`: `warn` (final
   minute) pulses the ring in both themes; `alert` (zero) flashes the whole
   dial via `.timer-flash` in jarvis and fires `.timer-burst` (hearts +
@@ -1835,9 +1896,25 @@ All styling lives in `style.css`; pages carry almost no inline styling.
   pop-out alike), which **is** the Spin button: clicking it or pressing
   Space or Enter calls `startSpin()`.
     - **The scene** (one 400×400 box, two SVG layers with the bubbles
-      between them): a black pot on legs over logs and five flickering
-      flames, a green brew with a glow, steam curling off the top, embers
-      rising from the fire. The near lip of the rim is in the front layer,
+      between them): a black pot on legs over a fire, a green brew with a
+      glow, steam curling off the top. **The fire** is built from
+      `flame()` in `cauldron.js`. Each flame has three layers (a deep
+      orange outer one, a bright orange middle and a yellow-white core,
+      each smaller and offset, each with a base-to-tip gradient) and
+      curved, tapering tips with a side tongue. The layers lick on their own
+      CSS beats (`cd-lick` / `-mid` / `-core`, about 1.2s, 0.75s and
+      0.5s, pivoting on the base), so the flame tears instead of pulsing.
+      Four flames sit in the back layer, behind the legs and pot, and lick
+      up round its sides; five in the front rise over its base. Under them
+      are three crossed logs (`log()`: a dark bark with a cut end and
+      ring, and glowing orange cracks) and a coal bed. A light pool on the
+      ground (`.cd-light`) and a rim light along the pot's lower curve
+      (`.cd-pot-rimlight`, plus `.cd-pot-glow`) flicker with the fire.
+      Embers rise in a wavering line and fade from yellow to orange.
+      `.cd-flame` is `transform-box: view-box`, because fill-box would flip
+      a mirrored flame (`s < 0`) about its own edge. With `--boil` the
+      flames grow up to 1.6× taller (capped so the tip stays under the
+      brew) and brighter, and the light pool swells. The near lip of the rim is in the front layer,
       so the bubbles sit *in* the brew.
     - **Bubbles**: every name in `displayList` is an HTML pill in
       `.cd-brew`, laid over the brew surface (left 15%, top 29.5%,
@@ -1873,14 +1950,78 @@ All styling lives in `style.css`; pages carry almost no inline styling.
       flicker, the name's glow pulse); the brew and the pick run, like the
       wheel's spin.
   **Skins**: `wheel.js` keeps `skins()` =
-  `[Cauldron, Boba]`, `skinFor(doc)` = the one whose `isOn(doc)` is true
-  (halloween / marwa), and `eachSkin()` to keep every skin's DOM in sync
+  `[Cauldron, Boba, Cornucopia]`, `skinFor(doc)` = the one whose `isOn(doc)` is true
+  (halloween / marwa / thanksgiving), and `eachSkin()` to keep every skin's DOM in sync
   (each is built and synced always, and hidden by CSS outside its theme).
   `startSpin()` takes the active skin's `DURATION_MS` / `SETTLE_MS`;
   `runSpin()` / `finishSpin()` call its `run()` / `finish()`;
   `renderWinner()` / `renderControls()` call every skin's `setWinner()` /
   `setDisabled()`. A new skin is one more file with that shape, one more
   entry in `skins()`, and its theme's CSS block.
+  **thanksgiving skin — a cornucopia instead of the wheel**
+  (`cornucopia.js`, the "Name Wheel — thanksgiving skin: a CORNUCOPIA"
+  block in `style.css`). CSS hides the wheel SVG, the hub button and the
+  mascot, and shows `.horn`, which **is** the Spin button (click, Space,
+  Enter). The layout is jarvis's two columns.
+    - **The scene** (one 400×400 SVG, `--hn-*` tokens): a dark back wall, a
+      wooden table (planks, grain, a lit front edge, back edge y 248), and a
+      woven horn lying on its side, tail curled up at the upper left, mouth
+      at (178, 236) facing front-right. The horn is built from a cubic
+      centreline (`P`, `radAt()`): a wicker body with a `#hn-weave`
+      pattern, shade and highlight lines, ring bands and a braided rim round
+      a dark mouth, with a blurred contact shadow.
+    - **Produce**: one `.hn-piece` per name in `displayList`, drawn at
+      radius 10 and scaled: pumpkin, apple, pear, gourd, grapes, corn or
+      wheat, coloured burnt orange / cranberry / amber / deep green / grape
+      (`TYPES`, type and palette from a hash of the student, so a piece
+      keeps its look). **No names on them.** Each lives on the table plane:
+      `x`, `y` (depth) and `z` (height), drawn at `(x, y − z)`, a touch
+      smaller further back, with its own shadow ellipse; draw order is
+      depth. Resting places (`makeSlots()`) fill the mouth first, then a
+      two-layer spill on the table nearest the mouth, so a smaller round
+      leaves a smaller heap and then an emptying horn. Size is fixed up to
+      26 and shrinks for bigger classes.
+    - **A pick** (`DURATION_MS` 2000 + `SETTLE_MS` 2000; the `T`
+      timeline):
+        - 0–1.5s: **tip**: the horn rotates 12° about its mouth (the tail
+          lifts) and rattles (`hn-tip`, `data-state="tipping"`).
+        - 0.22–0.82s: **tumble**: the produce is released front of the spill
+          first, the mouth last, each with a push forward and out, a hop and
+          a spin.
+        - **Scatter**: it rolls over the table in JS: gravity and bounces in
+          `z`, rolling friction (a constant drag plus a share of the speed,
+          so it really stops), soft circle collisions weighted by size (a
+          pumpkin shoves an apple), the table's edges, and the basket's end
+          of the table.
+        - 1.65s: the chosen piece lights up (`.chosen`, an SVG glow
+          filter) and rolls to the front (186, 374), shoving others aside,
+          growing 70%.
+        - 2.85s: **reveal**: the name rises above it on a cream-on-cocoa
+          plate (`.hn-name`, Rajdhani 700, sized from the longest word),
+          with 18 leaves bursting round it.
+        - 4.45s: the rest fly back into the horn.
+      The chosen piece and its name stay until the next pick.
+    - **No repeats / the basket** (page only, `.horn.has-basket`): at the
+      next pick, when `displayList` drops it, the piece in front arcs into
+      the wicker basket on the right of the table. The basket is filled from
+      `setPicked()` (`.hn-mini`s with the name on each in cream with a
+      dark halo, full name in `<title>`, piled up from the rim), with
+      "N picked" and **Tip it back in** (`.hn-pour`, the primary style
+      once the horn is empty) above it. `HOLDS_ROUND` is true, so a
+      finished round waits for the pour. `pour()` tips the basket, flies
+      every piece back to its slot, dispatches `teacherpal:wheel-reset`
+      and sends the piece in front home too; `busy()` blocks a pick while
+      it runs. Without No repeats there is no basket and the piece rolls
+      home at the next pick.
+    - **Counts**: "N left" (or "N in the horn" without No repeats) in the
+      top-left corner.
+    - **Sound** (main window only, respects mute): a low-passed wooden
+      rumble with knocks on the tip, rolling noise that follows the
+      produce's speed, rate-limited wooden knocks on hard hits, and a soft
+      four-note chime on the reveal.
+    - The pop-out and mini window show the scene filling the view, with no
+      basket. Under reduced motion the leaf burst and the name's rise stop
+      and the tip is shorter; the roll itself runs (it is the pick).
   **marwa skin — a bubble tea cup instead of the wheel** (`boba.js`, the
   "Name Wheel — marwa skin: a BUBBLE TEA cup" block in `style.css`). CSS
   hides the wheel SVG, the hub button and the wheel's bunny, and shows
@@ -2279,6 +2420,27 @@ All styling lives in `style.css`; pages carry almost no inline styling.
   `--virtual-time-budget` freezes transitions, so a theme or mood set after
   load is caught mid-transition (wrong colours, a ghost still sunk). Drive
   it over the DevTools protocol in real time instead.
+  **thanksgiving skin — a turkey** (the "Noise Meter — thanksgiving skin"
+  block). `TURKEY_SVG` (viewBox 0 0 200 200) in `noise.js`, built as
+  `.nt-stage` beside the bunny and the ghost, uses the shared mascot layout
+  (thanksgiving joins every `:root:is([data-theme="marwa"],
+  [data-theme="halloween"], …)` selector). Nine tail feathers, each turning
+  about (100, 130) by `rotate(--o × --fan) scale(--flen)`, so the fan opens
+  as one transition. **Per mood**:
+    - `quiet`: sitting low, head tucked, eyes half shut (closed arcs), tail
+      folded (`--fan` 6°), a slow breath, z's.
+    - `ok`: head up, bright eyes, tail half fanned (14°), a little bob,
+      leaves drifting by.
+    - `loud`: tail fully fanned (21°, full length), chest puffed
+      (`scale(1.09, 1.06)`), wide eyes with raised brows, the beak open
+      mid-gobble, the wattle swinging and going hotter red, "GOBBLE!" and
+      shout lines, the whole bird vibrating (`nt-vibrate`).
+    - `alert`: a harder vibrate, a pulsing glow, and the zone word a solid
+      orange pill.
+  **The level bar is a feather**: a quill line and barbs over a sage →
+  amber → orange → cranberry fill, with an acorn (`--noise-rider`) riding
+  its tip and rocking. Colours are `--tk-*` tokens. Under reduced motion
+  the loops stop, but the fan and the face crossfades keep their easing.
 - **Attendance view (`attendance.js`) — the Attendance screen.**
   `.attendance[data-mode="full"]` is a grid `minmax(0,1fr) clamp(19rem, 26vw,
   26rem)` — the `.att-chart` box on the left, `.att-side` (counts card with

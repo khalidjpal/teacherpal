@@ -75,12 +75,13 @@
   const $ = (id) => document.getElementById(id);
   // The skins (each is a no-op outside its own theme), and the one that is
   // showing in a given document, if any.
-  const skins = () => [window.Cauldron, window.Boba].filter(Boolean);
+  const skins = () => [window.Cauldron, window.Boba, window.Cornucopia].filter(Boolean);
   const skinFor = (doc = document) => skins().find((k) => k.isOn(doc)) || null;
   const eachSkin = (fn) => skins().forEach(fn);
   // the words follow the skin
   const onIt = () => (window.Cauldron && window.Cauldron === skinFor() ? 'in the brew'
-    : window.Boba && window.Boba === skinFor() ? 'in the cup' : 'on the wheel');
+    : window.Boba && window.Boba === skinFor() ? 'in the cup'
+    : window.Cornucopia && window.Cornucopia === skinFor() ? 'in the horn' : 'on the wheel');
   const reduceMotion = () => window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
   // ---------- names (same rule as Create Groups) ----------
@@ -875,6 +876,15 @@
       cauldron.setAttribute('aria-label', 'Stir the cauldron to pick a student');
       cauldron.addEventListener('click', startSpin);
       cauldron.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); startSpin(); } });
+    }
+    // thanksgiving: the whole cornucopia scene is the button
+    const horn = $('horn');
+    if (horn) {
+      horn.setAttribute('role', 'button');
+      horn.setAttribute('tabindex', '0');
+      horn.setAttribute('aria-label', 'Tip the cornucopia to pick a student');
+      horn.addEventListener('click', startSpin);
+      horn.addEventListener('keydown', (e) => { if (e.key === 'Enter' && e.target === horn) { e.preventDefault(); startSpin(); } });
     }
     // marwa: the whole bubble tea cup (its hit area is #boba-straw, sized
     // over the cup in the CSS)

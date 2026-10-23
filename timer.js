@@ -106,8 +106,63 @@
   const SEGMENTS = 60;        // one per second of a minute — reads as a clock
   const MARKS = 36;           // inner dial degree markings, every 10°
 
+  // thanksgiving's dial: a pumpkin pie seen from above, in PIE_SLICES slices
+  // that lift away one by one as time runs down (paintDial), leaving the dish.
+  // Hidden by CSS in the other themes.
+  const PIE_SLICES = 8;
+  const pt = (r, deg) => {
+    const a = deg * Math.PI / 180;
+    return `${(50 + r * Math.cos(a)).toFixed(2)} ${(50 + r * Math.sin(a)).toFixed(2)}`;
+  };
+  const wedge = (r, a0, a1) => `M50 50 L${pt(r, a0)} A${r} ${r} 0 0 1 ${pt(r, a1)} Z`;
+  function pieSvg() {
+    const step = 360 / PIE_SLICES;
+    let slices = '';
+    for (let i = 0; i < PIE_SLICES; i++) {
+      const a0 = -90 + i * step, a1 = a0 + step, mid = (a0 + a1) / 2;
+      const out = mid * Math.PI / 180;
+      // the crimped edge: overlapping scallops pinched by a dark crease, each
+      // with a baked highlight on its outer curve
+      const crimps = [0.1, 0.3, 0.5, 0.7, 0.9].map((f) => {
+        const a = a0 + step * f;
+        const [x, y] = pt(37.6, a).split(' ');
+        return `<ellipse class="tg-crimp" cx="${x}" cy="${y}" rx="2.9" ry="1.9" transform="rotate(${(a + 90).toFixed(1)} ${x} ${y})"/>`
+          + `<path class="tg-crimp-hi" d="M${pt(38.6, a - 4)} A38.6 38.6 0 0 1 ${pt(38.6, a + 4)}"/>`;
+      }).join('');
+      slices += `<g class="tg-slice" style="--dx:${(Math.cos(out) * 9).toFixed(2)};--dy:${(Math.sin(out) * 9).toFixed(2)}">
+          <path class="tg-crust" d="${wedge(40, a0, a1)}"/>
+          <path class="tg-filling" d="${wedge(34, a0, a1)}"/>
+          ${crimps}
+          <path class="tg-shine" d="M${pt(23, a0 + 9)} A23 23 0 0 1 ${pt(23, a1 - 9)}"/>
+          <path class="tg-cut" d="M50 50 L${pt(40, a0)}M50 50 L${pt(40, a1)}"/>
+        </g>`;
+    }
+    const crumbs = [[30, 38, 0.9], [66, 30, 0.7], [72, 62, 1], [38, 70, 0.8], [56, 74, 0.6], [26, 56, 0.7], [62, 44, 0.5]]
+      .map(([x, y, r]) => `<circle cx="${x}" cy="${y}" r="${r}"/>`).join('');
+    return `<svg class="tg-pie" viewBox="0 0 100 100" aria-hidden="true" focusable="false">
+        <defs>
+          <radialGradient id="tg-g-fill" cx="50%" cy="50%" r="50%"><stop offset="0"/><stop offset="0.7"/><stop offset="1"/></radialGradient>
+          <radialGradient id="tg-g-well" cx="42%" cy="38%" r="70%"><stop offset="0"/><stop offset="1"/></radialGradient>
+        </defs>
+        <ellipse class="tg-shadow" cx="50" cy="52.5" rx="47" ry="46.5"/>
+        <circle class="tg-dish" cx="50" cy="50" r="47"/>
+        <circle class="tg-dish-rim" cx="50" cy="50" r="43.6"/>
+        <circle class="tg-dish-well" cx="50" cy="50" r="41.6"/>
+        <g class="tg-crumbs">${crumbs}</g>
+        <g class="tg-slices">${slices}</g>
+        <g class="tg-steam"><path d="M41 40q-3-5 0-10t0-10"/><path d="M50 37q3-5 0-10t0-10"/><path d="M59 40q-3-5 0-10t0-10"/></g>
+        <g class="tg-fork"><g transform="translate(87.5 86.5) rotate(38) scale(1.15)">
+          <path class="tg-tines" d="M-3.6 -14.5H-2.6V-8.5H-1.4V-14.5H-0.4V-8.5H0.4V-14.5H1.4V-8.5H2.6V-14.5H3.6V-7Q3.6 -4 1.2 -2.6V0H-1.2V-2.6Q-3.6 -4 -3.6 -7Z"/>
+          <path class="tg-handle" d="M-1.2 0L-1.8 12Q-1.8 15 0 15Q1.8 15 1.8 12L1.2 0Z"/>
+          <path class="tg-fork-hi" d="M-0.5 1.5L-0.85 12"/>
+        </g></g>
+      </svg>`;
+  }
+
   function buildDial(doc = document) {
     const NS = 'http://www.w3.org/2000/svg';
+    const wrap = doc.getElementById('timer-dial-wrap');
+    if (wrap && !wrap.querySelector('.tg-pie')) wrap.insertAdjacentHTML('afterbegin', pieSvg());
     const segs = doc.getElementById('timer-segs');
     const marks = doc.getElementById('timer-marks');
     const burst = doc.getElementById('timer-burst');
@@ -372,6 +427,12 @@
       const lit = Math.round(remaining * SEGMENTS);
       const lines = segs.children;
       for (let i = 0; i < lines.length; i++) lines[i].classList.toggle('off', i >= lit);
+    }
+    // thanksgiving's pie: one slice per eighth of the time; the last goes at zero
+    const slices = wrap.querySelectorAll('.tg-slice');
+    if (slices.length) {
+      const lit = countdown ? Math.ceil(remaining * slices.length - 1e-6) : slices.length;
+      slices.forEach((el, i) => el.classList.toggle('gone', i >= lit));
     }
     const mood = st === 'alert' ? 'party' : (st === 'warn' ? 'excited' : (state.running ? 'calm' : 'idle'));
     wrap.dataset.mood = mood;                // marwa's bunny: calm / excited / party

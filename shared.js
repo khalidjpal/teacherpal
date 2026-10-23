@@ -1190,6 +1190,7 @@ const THEMES = [
   { id: 'marwa',  label: 'Marwa'  },
   { id: 'earthy', label: 'Earthy' },
   { id: 'halloween', label: 'Halloween' },
+  { id: 'thanksgiving', label: 'Thanksgiving' },
 ];
 
 function validTheme(id) { return !!(id && THEMES.some((t) => t.id === id)); }

@@ -30,33 +30,56 @@
 
   // ---------- markup ----------
   // Two SVG layers in one 400x400 box with the bubbles between them: the back
-  // (fire glow, steam, pot, rim, brew surface) and the front (the near lip of
-  // the rim, so bubbles sit IN the brew, then the logs and the flames).
-  const flame = (x, s, i) => `
-      <g class="cd-flame" style="--i:${i}" transform="translate(${x} 388) scale(${s})"><g class="cd-flame-boil"><g class="cd-flame-flick">
-        <path class="f-out" d="M0 0 C-18 -4 -22 -30 -6 -58 C-4 -38 8 -40 5 -54 C20 -34 22 -8 0 0 Z"/>
-        <path class="f-in" d="M0 -2 C-9 -3 -11 -18 -3 -32 C-1 -22 5 -24 3 -30 C11 -19 11 -5 0 -2 Z"/>
-      </g></g></g>`;
+  // (ground light, steam, the flames behind the pot, legs, pot, rim, brew
+  // surface) and the front (the near lip of the rim, so bubbles sit IN the
+  // brew, then the logs, the coal bed and the flames over the pot's base).
+  // A flame is three layers (deep orange, bright orange, a yellow-white core,
+  // each smaller and a little offset) that lick on their own beats in CSS.
+  // Its base is at 0; s < 0 mirrors it so neighbours don't look stamped.
+  const flame = (x, y, s, i) => `
+      <g class="cd-flame" style="--i:${i}" transform="translate(${x} ${y}) scale(${s} ${Math.abs(s)})"><g class="cd-flame-boil">
+        <path class="f-out" d="M0 0 C-22 0 -32 -16 -29 -36 C-26 -54 -12 -62 -8 -80 C-5 -92 -6 -102 -2 -114 C8 -102 16 -90 16 -76 C20 -82 24 -86 24 -94 C36 -76 38 -50 30 -28 C24 -10 14 0 0 0 Z"/>
+        <path class="f-mid" d="M2 0 C-14 0 -20 -12 -18 -27 C-16 -40 -7 -46 -4 -60 C-2 -70 -2 -76 1 -86 C9 -74 14 -64 14 -52 C17 -56 19 -60 19 -66 C27 -50 27 -34 22 -18 C18 -6 12 0 2 0 Z"/>
+        <path class="f-core" d="M3 0 C-7 0 -11 -7 -10 -17 C-9 -26 -3 -31 0 -42 C1 -46 1 -48 2 -52 C8 -42 12 -32 12 -22 C13 -14 11 -6 8 -3 C6 -1 5 0 3 0 Z"/>
+      </g></g>`;
+  // a log: a dark edge, the bark, its cut end with a ring, glowing cracks
+  const log = (x1, y1, x2, y2, cracks) => `
+      <g class="cd-log">
+        <line class="lg-edge" x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}"/>
+        <line class="lg-bark" x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}"/>
+        <ellipse class="lg-end" cx="${x1}" cy="${y1}" rx="5.5" ry="8.5"/>
+        <ellipse class="lg-ring" cx="${x1}" cy="${y1}" rx="2.6" ry="4.4"/>
+        ${cracks.map((d) => `<path class="lg-crack" d="${d}"/>`).join('')}
+      </g>`;
   const MARKUP = `
     <svg class="cd-back" viewBox="0 0 400 400" aria-hidden="true" focusable="false">
       <defs>
         <radialGradient id="cd-g-fire"><stop offset="0"/><stop offset="1"/></radialGradient>
+        <radialGradient id="cd-g-pool"><stop offset="0"/><stop offset="0.45"/><stop offset="1"/></radialGradient>
+        <radialGradient id="cd-g-bed"><stop offset="0"/><stop offset="0.5"/><stop offset="1"/></radialGradient>
+        <linearGradient id="cd-g-f-out" x1="0" y1="1" x2="0" y2="0"><stop offset="0"/><stop offset="1"/></linearGradient>
+        <linearGradient id="cd-g-f-mid" x1="0" y1="1" x2="0" y2="0"><stop offset="0"/><stop offset="1"/></linearGradient>
+        <linearGradient id="cd-g-f-core" x1="0" y1="1" x2="0" y2="0"><stop offset="0"/><stop offset="1"/></linearGradient>
+        <linearGradient id="cd-g-rimlight" x1="0" y1="0" x2="0" y2="1"><stop offset="0"/><stop offset="0.55"/><stop offset="1"/></linearGradient>
         <radialGradient id="cd-g-brew" cx="50%" cy="42%" r="62%"><stop offset="0"/><stop offset="0.55"/><stop offset="1"/></radialGradient>
         <linearGradient id="cd-g-pot" x1="0" y1="0" x2="1" y2="0"><stop offset="0"/><stop offset="0.3"/><stop offset="1"/></linearGradient>
         <radialGradient id="cd-g-under" cx="50%" cy="100%" r="75%"><stop offset="0"/><stop offset="1"/></radialGradient>
         <radialGradient id="cd-g-haze" cx="50%" cy="50%" r="50%"><stop offset="0"/><stop offset="1"/></radialGradient>
       </defs>
-      <ellipse class="cd-fireglow" cx="200" cy="370" rx="200" ry="70" fill="url(#cd-g-fire)"/>
+      <g class="cd-light"><ellipse class="cd-fireglow" cx="200" cy="372" rx="210" ry="74" fill="url(#cd-g-fire)"/>
+      <ellipse class="cd-pool" cx="200" cy="391" rx="175" ry="24" fill="url(#cd-g-pool)"/></g>
       <ellipse class="cd-haze" cx="200" cy="150" rx="190" ry="120" fill="url(#cd-g-haze)"/>
       <g class="cd-steam">
         <path d="M140 120 q-16 -24 2 -46 q18 -22 0 -46"/>
         <path d="M206 112 q16 -26 -2 -50 q-18 -24 2 -50"/>
         <path d="M268 122 q-14 -22 4 -42 q16 -20 -2 -40"/>
       </g>
+      <g class="cd-flames back">${flame(102, 384, -0.8, 5)}${flame(298, 384, 0.84, 6)}${flame(130, 386, 0.64, 7)}${flame(272, 386, -0.62, 8)}</g>
       <path class="cd-leg" d="M96 318 L78 362 L96 362 L114 326 Z"/>
       <path class="cd-leg" d="M304 318 L322 362 L304 362 L286 326 Z"/>
       <path class="cd-pot" d="M50 172 C38 264 92 346 200 350 C308 346 362 264 350 172 Z" fill="url(#cd-g-pot)"/>
       <path class="cd-pot-glow" d="M50 172 C38 264 92 346 200 350 C308 346 362 264 350 172 Z" fill="url(#cd-g-under)"/>
+      <path class="cd-pot-rimlight" d="M50 172 C38 264 92 346 200 350 C308 346 362 264 350 172" stroke="url(#cd-g-rimlight)"/>
       <path class="cd-pot-hi" d="M74 206 C70 252 92 298 130 322"/>
       <ellipse class="cd-rim" cx="200" cy="168" rx="158" ry="64"/>
       <ellipse class="cd-brew-surface" cx="200" cy="171" rx="140" ry="53" fill="url(#cd-g-brew)"/>
@@ -66,11 +89,10 @@
     <svg class="cd-front" viewBox="0 0 400 400" aria-hidden="true" focusable="false">
       <path class="cd-lip" d="M42 168 A158 64 0 0 0 358 168 L340 171 A140 53 0 0 1 60 171 Z"/>
       <path class="cd-lip-hi" d="M66 196 Q200 244 334 196"/>
-      <g class="cd-logs" transform="translate(0 -6)">
-        <rect x="96" y="376" width="208" height="16" rx="8" transform="rotate(-7 200 384)"/>
-        <rect x="96" y="376" width="208" height="16" rx="8" transform="rotate(7 200 384)"/>
-      </g>
-      <g class="cd-flames" transform="translate(0 -6)">${flame(128, 0.9, 0)}${flame(166, 1.15, 1)}${flame(204, 1.3, 2)}${flame(242, 1.1, 3)}${flame(280, 0.88, 4)}</g>
+      <g class="cd-logs">${log(282, 368, 124, 374, ['M268 369 l-9 1 l-4 -1.5 l-8 1', 'M150 373 l-8 0.5 l-4 -1'])}</g>
+      <ellipse class="cd-bed" cx="200" cy="383" rx="92" ry="15" fill="url(#cd-g-bed)"/>
+      <g class="cd-flames">${flame(150, 386, 0.68, 0)}${flame(176, 388, -0.84, 1)}${flame(202, 386, 0.92, 2)}${flame(228, 388, -0.8, 3)}${flame(253, 386, 0.66, 4)}</g>
+      <g class="cd-logs">${log(104, 393, 262, 375, ['M128 390 l10 -2 l5 1.5 l10 -2.5', 'M196 383 l9 -1 l5 -2 l8 0.5'])}${log(296, 393, 140, 376, ['M276 391 l-10 -2 l-5 1 l-9 -2', 'M236 386 l-8 -1 l-5 -2 l-7 0.5'])}</g>
     </svg>
     <div class="cd-embers" aria-hidden="true">${Array.from({ length: 12 }, (_, i) => `<i style="--i:${i}"></i>`).join('')}</div>
     <div class="cd-burst" aria-hidden="true"></div>

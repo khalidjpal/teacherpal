@@ -80,7 +80,7 @@
           <button type="button" id="wheel-spin" class="wheel-hub-btn"><span class="hub-face" aria-hidden="true"></span><span class="hub-label">Spin</span></button>
           <!-- marwa only: the bunny beside the wheel (wheel.js builds it) -->
           <div class="wheel-mascot" id="wheel-mascot" data-mood="idle" aria-hidden="true"></div>
-          <p class="wheel-empty" id="wheel-empty" hidden><span class="for-wheel">Nobody on the wheel</span><span class="for-brew">Nobody in the brew</span><span class="for-boba">No pearls in the cup</span> — everyone is absent, sitting out, or already called.</p>
+          <p class="wheel-empty" id="wheel-empty" hidden><span class="for-wheel">Nobody on the wheel</span><span class="for-brew">Nobody in the brew</span><span class="for-boba">No pearls in the cup</span><span class="for-horn">Nothing left in the horn</span> — everyone is absent, sitting out, or already called.</p>
         </div>
       </div>
 
@@ -96,12 +96,12 @@
             <button type="button" class="wheel-mini" id="wheel-remove" title="Take this student off the wheel">Take off</button>
           </div>
 
-          <p class="wheel-placeholder"><span class="for-wheel">Spin to pick a student</span><span class="for-brew">Stir the cauldron to pick a student</span><span class="for-boba">Click the cup to pick a student</span></p>
+          <p class="wheel-placeholder"><span class="for-wheel">Spin to pick a student</span><span class="for-brew">Stir the cauldron to pick a student</span><span class="for-boba">Click the cup to pick a student</span><span class="for-horn">Tip the cornucopia to pick a student</span></p>
           <p class="wheel-result-name" id="wheel-result-name" aria-live="polite"></p>
         </div>
 
         <div class="wheel-controls">
-          <span class="wheel-hint"><span class="for-wheel">Press the hub or Space to spin</span><span class="for-brew">Click the cauldron or press Space</span><span class="for-boba">Click the cup or press Space</span></span>
+          <span class="wheel-hint"><span class="for-wheel">Press the hub or Space to spin</span><span class="for-brew">Click the cauldron or press Space</span><span class="for-boba">Click the cup or press Space</span><span class="for-horn">Click the cornucopia or press Space</span></span>
 
           <div class="wheel-control-row">
             <label class="bar-field">
@@ -111,14 +111,14 @@
             <button type="button" class="hud-chip" id="btn-auto" aria-pressed="true" title="Follow the bell schedule">AUTO</button>
             <!-- the only way to manage who's on the wheel (plus the slice
                  shortcut); the count lives on the button itself -->
-            <button type="button" id="wheel-edit" title="Choose who's in"><span class="for-wheel">Edit wheel</span><span class="for-brew">Edit who&rsquo;s in</span><span class="for-boba">Edit who&rsquo;s in</span><span class="wheel-edit-n" id="wheel-edit-n">—</span></button>
+            <button type="button" id="wheel-edit" title="Choose who's in"><span class="for-wheel">Edit wheel</span><span class="for-brew">Edit who&rsquo;s in</span><span class="for-boba">Edit who&rsquo;s in</span><span class="for-horn">Edit who&rsquo;s in</span><span class="wheel-edit-n" id="wheel-edit-n">—</span></button>
           </div>
 
           <div class="wheel-control-row">
             <button type="button" id="wheel-norepeat" role="switch" aria-checked="true" title="Take each name off the wheel until everyone has been called">No repeats</button>
             <button type="button" id="wheel-mute" role="switch" aria-checked="false" title="Sound while picking">
-              <span class="when-off"><span class="for-wheel">Tick on</span><span class="for-brew">Sound on</span><span class="for-boba">Sound on</span></span>
-              <span class="when-on"><span class="for-wheel">Tick muted</span><span class="for-brew">Sound muted</span><span class="for-boba">Sound muted</span></span>
+              <span class="when-off"><span class="for-wheel">Tick on</span><span class="for-brew">Sound on</span><span class="for-boba">Sound on</span><span class="for-horn">Sound on</span></span>
+              <span class="when-on"><span class="for-wheel">Tick muted</span><span class="for-brew">Sound muted</span><span class="for-boba">Sound muted</span><span class="for-horn">Sound muted</span></span>
             </button>
             <button type="button" id="wheel-firstnames" role="switch" aria-checked="true" title="Show first names only (shared with Create Groups)">First names</button>
             <button type="button" id="wheel-popout-btn" class="win-btn" title="Opens a window you can make full screen on your projector"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/></svg><span>Full screen window</span></button>
@@ -136,7 +136,7 @@
       <dialog id="wheel-roster-dialog" class="wheel-roster-dialog card">
         <form method="dialog" class="wheel-roster-form">
           <div class="card-head">
-            <h2><span class="for-wheel">Wheel roster</span><span class="for-brew">Who&rsquo;s in the brew</span><span class="for-boba">Who&rsquo;s in the cup</span></h2>
+            <h2><span class="for-wheel">Wheel roster</span><span class="for-brew">Who&rsquo;s in the brew</span><span class="for-boba">Who&rsquo;s in the cup</span><span class="for-horn">Who&rsquo;s in the cornucopia</span></h2>
             <span class="chip"><span id="wheel-roster-count">—</span></span>
           </div>
           <p class="hint">Tap a name to put them on or take them off. Nothing here changes attendance.</p>
@@ -157,6 +157,7 @@
   <script src="nav.js"></script>
   <script src="cauldron.js"></script>
   <script src="boba.js"></script>
+  <script src="cornucopia.js"></script>
   <script src="wheel.js"></script>
 </body>
 </html>

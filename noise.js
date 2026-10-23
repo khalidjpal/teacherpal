@@ -410,6 +410,60 @@
     ${bat(36, 117, 1.15, 0)}${bat(63, 113, 1, 1)}${bat(214, 158, 0.95, 2)}
   </svg>`;
 
+  // ---------- thanksgiving: a turkey ----------
+  // data-mood sets the pose, all in CSS: quiet = sitting low, tail folded,
+  // eyes half shut; ok = head up, tail half fanned, bright eyes; loud = tail
+  // fully fanned, chest puffed, beak open mid-gobble, the wattle swinging and
+  // the whole bird vibrating. Each tail feather turns about the same point
+  // (100, 130) by its offset --o times the mood's --fan.
+  const FEATHER_ORDER = [-4, 4, -3, 3, -2, 2, -1, 1, 0];      // the middle one on top
+  const feather = (o) => `
+      <g class="nt-feather f${((o % 4) + 4) % 4}" style="--o:${o}">
+        <path class="nt-vane" d="M100 130C84 108 80 70 100 40C120 70 116 108 100 130Z"/>
+        <path class="nt-tip" d="M100 40C105.5 47 108.4 52 109.4 56Q100 51.5 90.6 56C91.6 52 94.5 47 100 40Z"/>
+        <path class="nt-band" d="M89.2 62.5Q100 56 110.8 62.5"/>
+        <path class="nt-quill" d="M100 128V50"/>
+      </g>`;
+  const foot = (x) => `<path class="nt-foot" d="M${x} 168V181M${x} 181l-7 4M${x} 181l7 4M${x} 181v6"/>`;
+  const TURKEY_SVG = `
+  <svg class="nt-svg" viewBox="0 0 200 200" aria-hidden="true" focusable="false">
+    <defs>
+      <radialGradient id="nt-g-quiet"><stop offset="0"/><stop offset="1"/></radialGradient>
+      <radialGradient id="nt-g-ok"><stop offset="0"/><stop offset="1"/></radialGradient>
+      <radialGradient id="nt-g-loud"><stop offset="0"/><stop offset="1"/></radialGradient>
+    </defs>
+    <circle class="nt-halo quiet" cx="100" cy="112" r="96" fill="url(#nt-g-quiet)"/>
+    <circle class="nt-halo ok" cx="100" cy="112" r="96" fill="url(#nt-g-ok)"/>
+    <circle class="nt-halo loud" cx="100" cy="112" r="96" fill="url(#nt-g-loud)"/>
+    <ellipse class="nt-ground" cx="100" cy="187" rx="56" ry="7"/>
+    <g class="nt-move">
+      <g class="nt-tail">${FEATHER_ORDER.map(feather).join('')}</g>
+      ${foot(86)}${foot(114)}
+      <g class="nt-body-g">
+        <path class="nt-wing l" d="M66 132C56 118 62 102 78 104C84 120 82 138 66 132Z"/>
+        <path class="nt-wing r" d="M134 132C144 118 138 102 122 104C116 120 118 138 134 132Z"/>
+        <ellipse class="nt-body" cx="100" cy="138" rx="40" ry="37"/>
+        <ellipse class="nt-chest" cx="100" cy="146" rx="25" ry="24"/>
+        <path class="nt-scallop" d="M84 140q4 5 8 0q4 5 8 0q4 5 8 0q4 5 8 0M88 152q4 5 8 0q4 5 8 0q4 5 8 0"/>
+      </g>
+      <g class="nt-head">
+        <path class="nt-neck" d="M91 122C89 110 91 101 94 96H106C109 101 111 110 109 122Z"/>
+        <circle class="nt-face" cx="100" cy="84" r="19"/>
+        <ellipse class="nt-blush" cx="87" cy="91" rx="4" ry="2.4"/>
+        <ellipse class="nt-blush" cx="113" cy="91" rx="4" ry="2.4"/>
+        <g class="nt-eyes sleep"><path d="M88 82q4 3.5 8 0M104 82q4 3.5 8 0"/></g>
+        <g class="nt-eyes open"><circle cx="92" cy="81" r="3.4"/><circle cx="108" cy="81" r="3.4"/><circle class="nt-glint" cx="93.2" cy="79.8" r="1.1"/><circle class="nt-glint" cx="109.2" cy="79.8" r="1.1"/></g>
+        <g class="nt-eyes wide"><circle cx="92" cy="80" r="4.4"/><circle cx="108" cy="80" r="4.4"/><circle class="nt-glint" cx="93.6" cy="78.4" r="1.4"/><circle class="nt-glint" cx="109.6" cy="78.4" r="1.4"/><path class="nt-brow" d="M86 72.5q5-3 9 0M105 72.5q4-3 9 0"/></g>
+        <g class="nt-beak shut"><path d="M94 88H106L100 97Z"/></g>
+        <g class="nt-beak open"><path class="nt-mouth" d="M95 92H105L100 102Z"/><path d="M93 87H107L100 93Z"/><path d="M95.5 99H104.5L100 106Z"/></g>
+        <path class="nt-wattle" d="M104 90C111 94 113 106 107 112C103 114 100 108 103 102C104 98 102 94 104 90Z"/>
+      </g>
+    </g>
+    <g class="nt-fx zzz">${fx(['<text x="132" y="62">z</text>', '<text x="145" y="46">z</text>', '<text x="159" y="29">z</text>'])}</g>
+    <g class="nt-fx leaves">${fx(['<path transform="translate(30 70) scale(0.16) translate(-50 -50)" d="M50 4 57 22 66 16 64 36 80 26 76 38 92 40 80 52 86 58 64 62 66 72 52 66 52 92 48 92 48 66 34 72 36 62 14 58 20 52 8 40 24 38 20 26 36 36 34 16 43 22Z"/>', '<path transform="translate(172 60) scale(0.13) translate(-50 -50)" d="M50 4 57 22 66 16 64 36 80 26 76 38 92 40 80 52 86 58 64 62 66 72 52 66 52 92 48 92 48 66 34 72 36 62 14 58 20 52 8 40 24 38 20 26 36 36 34 16 43 22Z"/>', '<path transform="translate(24 128) scale(0.12) translate(-50 -50)" d="M50 4 57 22 66 16 64 36 80 26 76 38 92 40 80 52 86 58 64 62 66 72 52 66 52 92 48 92 48 66 34 72 36 62 14 58 20 52 8 40 24 38 20 26 36 36 34 16 43 22Z"/>'])}</g>
+    <g class="nt-fx shout">${fx(['<path d="M140 96l12-6M142 104h14M140 112l12 6"/>', '<path d="M60 96l-12-6M58 104h-14M60 112l-12 6"/>', '<text x="100" y="22">GOBBLE!</text>'])}</g>
+  </svg>`;
+
   function buildMascot() {
     const meter = document.getElementById('noise-meter');
     if (!meter || meter.querySelector('.nm-stage')) return;
@@ -419,7 +473,10 @@
     const ghost = document.createElement('div');
     ghost.className = 'nh-stage noise-mascot';
     ghost.innerHTML = GHOST_SVG;
-    meter.prepend(stage, ghost);
+    const turkey = document.createElement('div');
+    turkey.className = 'nt-stage noise-mascot';
+    turkey.innerHTML = TURKEY_SVG;
+    meter.prepend(stage, ghost, turkey);
     // the level bar's rider (a heart, a bat, a leaf, a bright cap — per theme)
     const bar = document.getElementById('noise-bar');
     if (bar && !bar.querySelector('.noise-rider')) {
