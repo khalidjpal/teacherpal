@@ -35,7 +35,7 @@ full-screen toggle. There is no sidebar; every page uses the full width.
 | Lesson Plans | `lessons.html` | Writing plans **by course**: a Day / Week / Month calendar (courses × Mon–Fri, no-school days blocked out; one plan per course per day, shared by its periods, with an out-of-the-way per-period split) with the full editor for the selected period's day beside it; files and links attached per plan (Supabase Storage), and one search over every plan and attachment |
 | Create Groups | `groups.html` | Random / formula groups, projector view in full screen |
 | Timer | `timer.html` | Classroom countdown / stopwatch: big digits, presets, ±1 min, mute, pop-out + Picture-in-Picture for the projector while another tab is active |
-| Name Wheel | `wheel.html` | Cold-calling: spin a wheel of the period's present students, big name in the middle, no-repeats mode, full screen window + mini window. In halloween the wheel is a cauldron (names float in the brew as bubbles; the winner's bubble rises and pops), in marwa a gachapon machine (a capsule per student; the winner's capsule drops into the tray and cracks open) |
+| Name Wheel | `wheel.html` | Cold-calling: spin a wheel of the period's present students, big name in the middle, no-repeats mode, full screen window + mini window. In halloween the wheel is a cauldron (names float in the brew as bubbles; the winner's bubble rises and pops), in marwa a bubble tea cup (a boba pearl per student; the cup shakes, the pearls swirl, and the winner's pearl, its name on it, travels up the straw and comes to the front of the screen as a big disc with the name readable across the room) |
 | Noise Meter | `noise.html` | Room volume from the laptop mic: big green/amber/red meter, three zones with activity presets, "Too loud" hold + chime, pop-out for the projector. Mic only while you hold it on |
 | Seating | `seating.html` | Room builder + seat assignment |
 | Bathroom | `bathroom.html` | Bathroom tracker: tap a card to sign out (quick tap or timer); per-student pass checkboxes, red flag past the limit. One centred control island (period · mode · search · gear) over a scrolling student grid, with **Out now** (live timers + End timer) and **Log** (the day's trips + a day switcher; its History button opens the quarter review — counts, CSV, print) as two fixed-height panels underneath |
@@ -67,11 +67,11 @@ full-screen toggle. There is no sidebar; every page uses the full width.
 | `timer.js`     | Countdown + stopwatch logic, plus `buildDial()` / `paintDial()` for the themed dial. **End-timestamp model**: state is `{ mode, running, paused, label, muted, targetMs, endsAt, remainingAtPause, startedAt, elapsedAtPause, zeroed }` in `localStorage['teacherpal.timer.state']`; every window computes the display from `Date.now()` against `endsAt`/`startedAt`, so tab-throttling doesn't drift. `BroadcastChannel('teacherpal-timer')` syncs main ↔ pop-out ↔ PiP. Web Audio API beep on zero (respects mute). `documentPictureInPicture.requestWindow()` on Chrome for an always-on-top floating display. Space toggles start/pause. |
 | `noise.html`   | Noise Meter screen: the `.noise-stage` in three groups — `.noise-head` (activity presets + the `#status` line, inside the card), the `.noise-meter` (reading + bar + zone word; the bunny in marwa, the ghost in halloween), `.noise-foot` (one `.noise-foot-row` of Start/Stop, chime, "Full screen window" · the two zone sliders side by side · full screen, then a one-line privacy note with a `?`) — plus `#noise-privacy-dialog` (the full mic note). Loads `noise.js`. |
 | `noise.js`     | Mic → `AnalyserNode` → RMS → a 35–95 relative "dB" reading, 500ms rolling average, three zones, "Too loud" after 3s in the red, optional chime. Polls on `setInterval` (**not** rAF — rAF freezes in a background window and the pop-out would stall). `BroadcastChannel('teacherpal-noise')` feeds the pop-out. Opens the mic only on Start; stops every track on Stop and on `pagehide`. Nothing is recorded or sent anywhere. |
-| `wheel.html`   | Name Wheel screen: the wheel on the left; on the right the result panel and the controls (period, AUTO, **Edit wheel**, First names / No repeats / tick mute / "Full screen window" / full screen), "Mini window" (PiP, Chrome only), plus the `#wheel-roster-dialog` toggle-chip modal — loads `cauldron.js`, `gacha.js`, then `wheel.js`. Words that differ per skin come in `.for-wheel` / `.for-brew` / `.for-gacha` triples ("Edit wheel" / "Edit who's in", "Tick on" / "Sound on", …) and CSS shows the one for the theme. |
+| `wheel.html`   | Name Wheel screen: the wheel on the left; on the right the result panel and the controls (period, AUTO, **Edit wheel**, First names / No repeats / tick mute / "Full screen window" / full screen), "Mini window" (PiP, Chrome only), plus the `#wheel-roster-dialog` toggle-chip modal — loads `cauldron.js`, `boba.js`, then `wheel.js`. Words that differ per skin come in `.for-wheel` / `.for-brew` / `.for-boba` triples ("Edit wheel" / "Edit who's in", "Tick on" / "Sound on", …) and CSS shows the one for the theme. |
 | `wheel.js`     | The wheel: draws the slices as SVG into `#wheel-rotor` (the only thing that spins), runs the spin on rAF with an ease-out, ticks as each slice passes the pointer, and syncs the pop-out over `BroadcastChannel('teacherpal-wheel')`. **Winner is drawn first** (`crypto.getRandomValues`), then the landing rotation is computed — the animation can't bias it. |
 | `wheel-popout.html` | Read-only projector wheel (`body.wheel-popout`): same dial (or, in halloween, the cauldron) filling the window, fed by broadcast, no controls. The mini window is this same page in an iframe. |
 | `cauldron.js` | The Name Wheel's halloween skin, `window.Cauldron` (`isOn`, `build`, `sync`, `run`, `finish`, `setWinner`, `setDisabled`, `BOIL_MS`, `SETTLE_MS`). Draws the cauldron into `.wheel-wrap`, floats each name as an HTML bubble (rAF physics), and animates a pick from the spin descriptor `wheel.js` hands it: boil → rise → hover → pop. Owns its sounds (bubbling that builds, a pop). Never picks anything. |
-| `gacha.js` | The Name Wheel's marwa skin, `window.Gacha` — the same shape as `Cauldron` (`isOn`, `build`, `sync`, `run`, `finish`, `setWinner`, `setDisabled`, `DURATION_MS`, `SETTLE_MS`). A gachapon machine in `.wheel-wrap`: one unnamed pastel capsule per student in the globe (rAF physics: gravity, a tumble, circle collisions), the handle as the Spin button, a "N left" counter; a pick (~5s, in separate beats) turns the knob, mixes, lights up one capsule, sends it down a glass chute into the tray, bounces it, then pops it open and raises the name with hearts and sparkles. Owns its sounds (crank, rattle, pop). Never picks anything. |
+| `boba.js` | The Name Wheel's marwa skin, `window.Boba` — the same shape as `Cauldron` (`isOn`, `build`, `sync`, `run`, `finish`, `setWinner`, `setDisabled`, `setPicked`, `DURATION_MS`, `SETTLE_MS`). A bubble tea cup in `.wheel-wrap`: warm tan milk tea with a cream swirl, a domed lid, a narrow see-through pink straw, **the whole cup as the Spin button** (`#boba-straw`, a hit area over the cup), one near-black pearl per student with their first name on it in small cream type (rAF physics in box units: gravity, a swirl, soft collisions, the tapered walls), condensation, and "N left" in small flat text under the cup. A pick (~4s, the `T` timeline at its top) shakes the cup, swirls the pearls up, lights one up, draws it up the straw in sips, then the **spotlight**: the pearl grows into a big disc in front of the dimmed page with the name on it (click / Space / Enter / Esc closes it); with No repeats on it then flies into the **Picked tray** on the right (who's been called this round, with Reset). Owns its sounds (shake, slosh, slurp, pop). Never picks anything. |
 | `noise-popout.html` | Read-only projector pop-out (`body.noise-popout`): reading + bar + zone word, fed over BroadcastChannel. Never opens a mic of its own; says so when the main window isn't answering. |
 | `timer-popout.html` | Minimal read-only pop-out window (`body.timer-popout`): label + display + the same themed dial filling the window, no controls; listens for state via BroadcastChannel. |
 | `migration-lessons-bathroom.sql` | One-off migration creating `lesson_plans` + `bathroom_log` (incl. the manual-tally columns; run in the Supabase SQL editor) |
@@ -100,7 +100,7 @@ full-screen toggle. There is no sidebar; every page uses the full width.
 
 Every page: `<link rel="stylesheet" href="style.css">`, an **empty**
 `<header class="topbar"></header>` (nav.js fills it), then at the end of
-`<body>`: `shared.js`, `schedule.js`, (`cauldron.js` and `gacha.js` before `wheel.js` on the Name Wheel and its pop-out; `formula.js` on Seating and Create
+`<body>`: `shared.js`, `schedule.js`, (`cauldron.js` and `boba.js` before `wheel.js` on the Name Wheel and its pop-out; `formula.js` on Seating and Create
 Groups, `room.js` on Seating / hub / attendance), `nav.js`, then the page's
 own script (`attendance.js` + `initAttendance()` on Attendance; `lesson.js`
 on Lesson Plans; `bathroom.js` on Bathroom; `timer.js` on Timer; nothing on
@@ -1776,15 +1776,47 @@ All styling lives in `style.css`; pages carry almost no inline styling.
       face. Spinning adds a motion glow to the rim; landing lights the
       winning slice with `--wheel-won` and pulses the ring once. The stage
       is a `.hud-box` with corner ticks like the other jarvis pages.
-    - **marwa** — *(the page now shows the gachapon instead, see below; these
-      wheel rules stay for reference and for any window showing the wheel)*
-      the same machine in rose porcelain (`--wheel-metal`,
-      `--wheel-housing`, rounder legs and bracket), pastel slice ramp,
-      Comfortaa sentence-case names with a light halo, no instrument ring,
-      a rounded drop pointer, a white hub with an accent ring, and a mascot
-      under the wheel that wiggles while spinning and hops when a name
-      lands. It also gets a slightly smaller wheel, since the mascot row
-      costs height and the page still has to fit 1280×720.
+    - **marwa** — *(the page now shows the bubble tea cup instead, see
+      below; these wheel rules — pastels, heart pointer, bunny hub, the
+      bunny beside it — stay for reference, hidden by the boba block)*
+      the prettiest version of the wheel (the "Name Wheel - marwa skin"
+      block in `style.css`). Before the cup it briefly showed a gachapon
+      machine (`gacha.js`, removed).
+      - **Slices** cycle marwa's own five pastels — pink, lavender, mint,
+        peach, butter (`--wheel-p0…p4`). `drawWheel()` gives every slice
+        both `r<ramp>` and `p<pastelIndex>` classes, so a live theme
+        switch repaints without a redraw; a count that would put the last
+        slice on the first one's colour takes p2 instead. Thin white
+        dividers (`--wheel-divider`, 0.45), plum Comfortaa names
+        (`--wheel-ink`) with only a faint white halo, one line each
+        (the usual fit + ellipsis). The rim's inner shadow is plum, never
+        black, so the pastels don't go grey.
+      - **Housing**: one soft ring, no legs, no bracket, no instrument
+        ring: `.housing` stroked with `#wheel-housing-grad` (a vertical
+        gradient, `--wheel-housing-top` → `--wheel-housing-bot`) and a
+        rose drop-shadow, a white bead inside it (`.wheel-rim`) and a gloss
+        arc on its upper left (`.housing-hi`, a dashed circle; hidden in
+        the other themes).
+      - **Pointer**: a plump heart (`.pointer-heart` + `.pointer-heart-hi`
+        gloss) sitting on the ring, tip clear of the names; the same
+        per-slice `.flick` beats play `heart-tip` (−11° → 4° → 0, 200ms)
+        instead of the jarvis knock.
+      - **Hub**: the Spin button is a white disc with a 2px accent ring,
+        a white halo, and `.hub-face` (`--marwa-hub-face`, a bunny head)
+        over a Comfortaa "Spin" (`.hub-label`). The face wiggles on hover
+        and bobs while spinning.
+      - **The bunny** (`#wheel-mascot`, `.wheel-mascot`, inside
+        `.wheel-wrap`, page and pop-out): `buildBuddy()` in `wheel.js`
+        draws `BUDDY_SVG` into it (a sitting bunny with a bow, `--wb-*`
+        tokens). It sits in the square's empty lower-left corner, 17% of
+        the wrap, so it costs the wheel nothing. Poses are pure CSS off
+        `data-mood`: `idle` (calm oval eyes, ears relaxed outward, a slow
+        breath), `spin` (ears perk up, wide sparkly eyes, an "oh" mouth, a
+        little sway; `runSpin()` sets it so the pop-out follows too) and
+        `party` (^ ^ eyes, an open smile, three squash-and-stretch hops,
+        ears flapping, and eight hearts/sparkles fanning up out of its head
+        from `.wb-burst`). Under reduced motion the loops, hops and burst
+        stop; the poses still change.
   A Web Audio tick fires as each slice crosses the pointer (mute toggle,
   main window only so the pop-out doesn't double it), and the pop-out gets
   `{ list, rotation, spin, winnerId }` over `BroadcastChannel` and runs the
@@ -1837,8 +1869,8 @@ All styling lives in `style.css`; pages carry almost no inline styling.
       Under reduced motion only the decorative loops stop (steam, embers,
       flicker, the name's glow pulse); the brew and the pick run, like the
       wheel's spin.
-  **The skins are interchangeable**: `wheel.js` keeps `skins()` =
-  `[Cauldron, Gacha]`, `skinFor(doc)` = the one whose `isOn(doc)` is true
+  **Skins**: `wheel.js` keeps `skins()` =
+  `[Cauldron, Boba]`, `skinFor(doc)` = the one whose `isOn(doc)` is true
   (halloween / marwa), and `eachSkin()` to keep every skin's DOM in sync
   (each is built and synced always, and hidden by CSS outside its theme).
   `startSpin()` takes the active skin's `DURATION_MS` / `SETTLE_MS`;
@@ -1846,61 +1878,223 @@ All styling lives in `style.css`; pages carry almost no inline styling.
   `renderWinner()` / `renderControls()` call every skin's `setWinner()` /
   `setDisabled()`. A new skin is one more file with that shape, one more
   entry in `skins()`, and its theme's CSS block.
-  **marwa skin — a gachapon machine instead of the wheel** (`gacha.js`, the
-  "Name Wheel — marwa skin: a GACHAPON machine" block in `style.css`). CSS
-  hides the wheel SVG, the hub button and the old wheel mascot, and shows
-  `.gacha`.
-    - **The machine** (one 400×400 box, drawn to fill it so every part
-      reads from across the room): a big clear glass globe (centre 200,118,
-      r 112) on a collar, a pink body with a **glass chute**, a tube from
-      the globe's exit curving down the body's left side into the tray
-      (`ROUTE` in `gacha.js`; the back layer draws its outline and inside,
-      the front layer its glass over the capsule), a round knob with a bar
-      on the right (the turn handle; `#gacha-handle` is the real `<button>`
-      over it, Space works too), a dark tray mouth at the bottom, and a
-      white label strip holding the "N left" counter.
-    - **Capsules**: one per name in `displayList`, unnamed, half a pastel
-      (`--gc-cap-1…6`, a stable colour per student) and half white. They
-      live in `.gc-globe` (clipped to the glass: left 24%, top 3.5%, 52%
-      square). A rAF loop gives them gravity, bouncy circle collisions
-      (restitution 0.85) and a bouncy round wall (0.6). **Their size is fixed** for any class up to ~36, and
-      only shrinks for a bigger one, so the globe visibly empties as No
-      repeats takes capsules out. The counter shows the capsules still in.
-    - **A pick** is a row of separate, deliberate beats (`DURATION_MS` 2550
-      + `SETTLE_MS` 2450 ≈ 5s; the `T` timeline at the top of `gacha.js`,
-      all from the descriptor's timestamps). Each beat gets its own moment,
-      so the eye can follow it (an earlier ~3s version was too quick to
-      read):
-        - 0–1s: the knob turns once (`.gc-knob.turning`) and the machine
-          shakes.
-        - 0.25–1.9s: the capsules are thrown about the globe (the mix).
-        - 1.9–2.55s: they settle. At 2.15s **one capsule lights up**
-          (`.gc-cap.picked`: a pink ring, 1.35×, held still and eased off
-          the glass so the ring isn't clipped).
-        - 2.55–2.95s: it leaves the group and slides to the globe's exit.
-          `.gc-drop`, placed in box units, takes over at the same spot and
-          keeps the glow the whole way.
-        - 2.95–3.6s: it falls down the chute **accelerating** (distance ∝
-          t², `getPointAtLength` on the hidden `.gc-route`), spinning.
-        - 3.6–4.2s: into the tray: a squash on impact, bounces that lose
-          height, a roll to rest.
-        - 4.25–4.55s: a pause with a shiver.
-        - 4.6s: it pops. The halves burst apart, arc up and fall away
-          (`gc-top-off` / `gc-bot-off`), hearts and sparkles burst from the
-          tray (`.gc-burst`), and the name rises from the tray onto a white
-          pill over the globe with an overshoot and a settle (`gc-rise`).
+  **marwa skin — a bubble tea cup instead of the wheel** (`boba.js`, the
+  "Name Wheel — marwa skin: a BUBBLE TEA cup" block in `style.css`). CSS
+  hides the wheel SVG, the hub button and the wheel's bunny, and shows
+  `.boba`.
+    - **The cup** (one 400×400 box, units in `boba.js`): a clear tapered
+      cup (rim y 150, x 84–316; bottom y 386) of **warm tan milk tea** (#C89F7B; the
+      cup, lid, straw and face stay marwa pink, and the tan against pink
+      reads far better than pink on pink) under a cream foam line, a seeded scatter of condensation dots and drips. Shading
+      is flat-cute, never glossy 3D: a three-stop tea (`#bt-tea-grad`:
+      `--bt-tea` #D6B190 → `--bt-tea-mid` #C89F7B → `--bt-tea-deep`
+      #A87A55, the dark layer low where it meets the boba), three soft
+      cream ribbons through the middle (`.bt-milk`, `--bt-milk`, clipped
+      to the tea: milk that hasn't mixed in), a faint band where
+      the tea meets the plastic (`.bt-tea-edge`, a wide stroke clipped to
+      the tea, + `.bt-meniscus`), a soft shine and a bright `.bt-rim-light`
+      line down the left wall (fainter on the right), and a soft radial
+      contact shadow under its feet (`.bt-contact` + `.bt-contact-core`).
+      The lid reads as its own piece: tinted dome and band with their own
+      `--bt-lid-line` outline and white highlights, casting
+      `.bt-lid-shadow` on the cup. Outlines are thick soft plum (cup 4.2,
+      lid 3.4) because the cup is a mascot. Everything is drawn `DY` (−30) higher
+      than its numbers (one `translate` on both SVG layers, added to the
+      pearls' y) and `.boba` sits at `inset: 3%`, which centres the cup +
+      straw + "N left" in the card with even margins. "N left" is small,
+      flat, muted Comfortaa under the cup (never on the drink). The straw is soft pink and narrow (24 units,
+      `--bt-straw*`), from (236, 370) in the tea to (271, 48), drawn twice:
+      a dim inside behind the pearls (`.bt-straw-in`) and a translucent
+      wall in front (`.bt-straw`, plus a shine and a top rim), so a pearl
+      going up it shows through. Layers: `.bt-back` → `.bt-pearls` (HTML)
+      → `.bt-front` → the cup button, burst, counter.
+      **The whole cup is the button**: `.bt-handle` (`#boba-straw`, the id
+      is historical) is an invisible hit area from the straw's top to the
+      feet, arms included (left 18%, top 3%, 64% × 90% of the box; "N left"
+      stays outside), `cursor: pointer`. It is transparent in **every**
+      state (`:is(:hover, :active, :focus, :disabled)`), because the app's
+      button hover fill, 0.97 press and 45% disabled opacity would paint a
+      box over the cup. Hover, at rest only (`data-mood="idle"`, not
+      disabled): the cup lifts with `transform: translateY(-1.8%)` on
+      `.boba` itself (never top / margin / padding; `transform` composes
+      with the bob / hop / shake animations, which own `translate` /
+      `rotate` / `scale`), and `.bt-handle` counter-moves `translate: 0
+      2%` on the same curve so the click area stays put (otherwise a
+      pointer near the cup's bottom edge falls off it and the lift
+      flickers on and off). The cheeks
+      blush and the right eye winks (`.bf-eye.r` swaps for the
+      `.bf-wink` arc; keyboard focus winks too). Space still picks. There
+      is no hint line ("Click the cup or press Space" exists in the HTML
+      and is hidden in marwa; hover says it). **No name badge on
+      the cup** (a white pill over the straw read as clip art): the name is
+      on the pearl, then in the spotlight.
+    - **Layout** (marwa only; jarvis and halloween keep their two columns):
+      **one row across the width, three columns** — the controls card ·
+      the name over the cup · the Picked tray. `.wheel-layout` is
+      `minmax(--side-w, 1fr) auto minmax(--side-w, 1fr)` (`--side-w` =
+      `clamp(13rem, 19vw, 20rem)`) with areas `". result ." / "controls
+      stage tray"`, and `.wheel-side` is `display: contents` so its result
+      and controls land in the grid (the HTML is shared). The side cards
+      hug the cup (`justify-self: end` / `start`), so the spare width goes
+      to the outer edges and the three read as one group; the tray's
+      column stays reserved when it's hidden, so the cup never moves.
+      **The cup takes every pixel of height**: the wrap is `height: 100%`
+      of the stage row (capped at `100vw − 2 × --side-w − 7rem` wide), and
+      `main.wheel-page` pads only `--space-2` top and bottom. Measured at
+      1366×768: straw tip to "N left" 583px = 76vh. The pearl's hop and the
+      26cqi burst above the straw still stay inside `main.page`.
+      **The name sits on the cup**: the result strip is `align-self: end`
+      with a small negative bottom margin (into the box's empty top) and
+      reserves `clamp(3rem, 8.5vh, 4.6rem)` so nothing moves when it fills;
+      before a pick it is empty (no placeholder), then big Comfortaa
+      between two small hearts (`::before` / `::after`, hidden while
+      `:empty`), dead centre (a `1fr auto 1fr` grid), with Put back / Take
+      off to its right.
+      **Controls** are a vertical card (`--card`, the tray's card recipe):
+      two `.wheel-control-row` grids on a hairline — [period select ·
+      AUTO] / [Edit who's in], then [No repeats · Sound] / [First names ·
+      full screen] / Full screen window / Mini window (`.win-btn` spans
+      both columns). The hint line is hidden (hovering the cup says it).
+      **Under 900px** it's one column — name, cup (a `min(100%, 34rem)`
+      square), tray, controls — with `flex: none` on the layout so it
+      grows and `main.page` scrolls; that media query sits *after* the
+      card rules so it wins. In full screen the name strip stays
+      (overriding the shared `.no-present` with a higher-specificity
+      `!important`), the controls and tray hide. (Tried before: a big
+      result panel beside a carded cup, which left half the screen empty,
+      then a single centred column with a row of controls under it, which
+      was a thin strip with empty sides and a gap above the cup.) The
+      pop-out is unchanged.
+    - **The Picked tray** (`.bt-tray`, built by `build()` into
+      `.wheel-page .wheel-layout` as grid area `tray`, so page only; hidden in full screen):
+      who's been called this round with No repeats on, as small pearls
+      with their names in pick order, two columns, scrolling if long; a
+      "Picked N" head with **Reset**; "Nobody yet" when empty. It is
+      hidden with No repeats off. Data: `wheel.js`'s `renderPicked()`
+      (from `rebuildPool()`) calls the optional skin hook
+      `setPicked(doc, list | null)` with `called` in order, labelled like
+      the wheel. Reset dispatches `teacherpal:wheel-reset`; wheel.js
+      clears `called` and rebuilds, so the pearls drop back into the cup
+      from the top. **The picked pearl joins only when it lands**:
+      `renderTray()` leaves out the id in the spotlight; closing the
+      spotlight renders its slot invisible (`.arriving`), measures it, and
+      flies the big disc there (`.bt-spot.flying`: the backdrop clears, the
+      name fades, the disc translates and scales into the slot over 600ms).
+      Then the slot shows with a small pop (`.landed`). With No repeats
+      off the pearl drops back into the cup when the spotlight closes
+      (`respawnId`), not 1.4s after the pick.
+    - **Pearls**: one per name in `displayList`, real-boba
+      near-black brown (`--bt-pearl*`; a purple-brown looked dirty) with a
+      glossy highlight upper left and a soft shadow under each
+      (`--bt-pearl-shadow`). Each is 0.88–1.12× the base size (`--s`,
+      stable per student from a hash) so they don't look stamped.
+      Physics in box units, placed in px from the box width: gravity,
+      damping, soft circle collisions at 0.9 of the touching distance (so
+      the pile overlaps and clusters instead of stacking in a grid), the
+      tapered walls (`wallL/wallR`), floor y 378, ceiling just under the
+      tea surface. Lower pearls draw in front (`z-index` = y). They have
+      **no faces**, but **each carries the student's name**
+      (`.bt-pearl-name`: the wheel's label, so first names unless that's
+      off; cream `--bt-pearl-ink` Comfortaa 700, shortened past 9
+      characters to 8 + "…", the full name in `title`). **Centred
+      exactly**: it is pinned with `left/top: 50%` + `translate(-50%, …)`,
+      so an over-long name can't push it sideways (laid-out text overflowed
+      to the right and was clipped, which is how it sat off-centre). Its
+      size is `pearl × --s × --fit`, where `fitFor()` measures the name in
+      Comfortaa 700 on a canvas so the ink spans 78% of the pearl (max 0.3;
+      a per-letter estimate until the font loads, then every pearl is
+      re-measured). Vertically it sits on the **cap-height centre**: with
+      line-height 1, Comfortaa's baseline is 0.825em down and its caps
+      0.78em tall, so the ink centre is 0.065em above the box centre, hence
+      `+ 0.065em` (the spotlight's name, at line-height 1.1, works out to
+      the same 0.065em). It's a close-up
+      detail, not meant for the back of the room. **Base size is fixed** (radius 14.5) up to
+      ~28 and only shrinks for bigger classes, so the cup visibly empties
+      as No repeats takes pearls out. "N left" counts pearls still in.
+    - **The cup is the character** (an earlier pass put faces on the pearls;
+      the cup reads far better from the back of the room). In the marwa
+      mascot style (thick plum `--bt-ink` outlines, flat fills):
+      `.bt-face` in the front layer, over the straw, centred at
+      `FACE_C` (186, 230), a little left of the cup's middle so the
+      straw misses the eyes: two big white eyes with plum pupils and two
+      highlights (`.bf-look`), `--bt-blush` cheeks, a smile;
+      `.bt-arm.l/.r` (rounded strokes, `--bt-limb` inside a plum edge,
+      behind the cup, turning about their shoulder with `transform-box:
+      fill-box`) and two `.bt-foot` ovals under it. **The mood is
+      `data-mood` on `.boba`**, set every frame in `step()`:
+      - `idle`: smiling, arms down, a blink every ~5s, a gentle bob
+        (`bt-bob`).
+      - `wow` (the shake and swirl, until the pick): wide eyes (whites
+        1.14×, smaller pupils), puffed cheeks (blush 1.5×), a little "o",
+        arms up and flapping. The shake now runs through the swirl: the
+        big `bt-shake` then a smaller `bt-churn` to ~2.3s.
+      - `look` (1.6s → the reveal): arms half raised, a small "o", and
+        **the pupils follow the chosen pearl** — `--lx` / `--ly` (−1..1)
+        from its position against `FACE_C`, so the eyes go down to it,
+        across to the straw and up as it climbs.
+      - `party` (the reveal, for `PARTY_MS` 2400): ^ ^ eyes, a big open
+        smile, rosy cheeks, arms thrown up and waving, three squash and
+        stretch hops (`bt-hop`), and a second burst of 16 hearts and
+        sparkles all round the cup (`.bt-burst.cup`, `bt-burst-wide`) on
+        top of the one at the straw.
+      Under reduced motion the bob, blink, shake, flap, wave and hops stop;
+      the poses still change.
+    - **A pick** (`DURATION_MS` 2100 + `SETTLE_MS` 1900 = 4s; the `T`
+      timeline, all from the descriptor's timestamps):
+        - 0–1s: the cup shakes (`.boba[data-state="shaking"]`).
+        - 0.15–2.3s: the swirl builds (to 0.6s), holds, lets go (1.7–2.3s):
+          a turn about the tea's middle plus lift and random kicks, so the
+          pearls tumble and bounce off the sides.
+        - 1.6s: **one pearl lights up** (`.bt-pearl.picked`: a pink ring
+          and glow, 1.3×; 19 units inside the straw) and leaves the physics.
+        - 1.6–2.1s: it glides to the straw's mouth.
+        - 2.1–3.1s: it travels up the straw in three sips (an eased
+          position with surges, `u − 0.6·sin(6πu)/6π`).
+        - 3.1–3.35s: it hops out of the top; at 3.35s **the spotlight**
+          (`spotlight()`): a fixed `.bt-spot` overlay on the body dims and
+          blurs the page (`--bt-spot-dim`), and the pearl grows out of where
+          it left the straw (FLIP: built at full size, started from the small
+          pearl's box, 760ms spring) into a `min(56vmin, 32rem)` disc dead in
+          the middle of the viewport (the hint line is absolutely placed at
+          the bottom, out of the flow) with a pink ring and glow. The
+          overlay is `position: fixed` on `<body>`, so no parent's
+          overflow can clip it; the hearts end 52–66cqi from the centre so
+          they stay on screen. The name on it is sized in cqi
+          from the **longest word** (`min(22, 118 / longest)`) and wraps
+          only between words (`overflow-wrap: normal`), so it's never split.
+          18 hearts and sparkles burst out from the disc's edge, and "Click
+          or press Space to go back" fades in under it (hidden in the
+          pop-out). Click, Space, Enter or Esc close it (a capture-phase
+          keydown so Space doesn't also start a new pick); so does the next
+          pick or a reset. Closing it in one window posts `{ type:
+          'boba-dismiss' }` on `teacherpal-wheel`, which closes it in the
+          pop-out and mini window too (wheel.js's handlers ignore that type).
+          Behind it the cup does its party and the name also lands in the
+          strip above the cup, so it's still there once the spotlight closes.
       `finish()` also sets the final pose, so a window that missed frames
-      still ends right. With No repeats off, the capsule drops back into the
-      globe 1.4s later.
-    - **Sound** (main window only, respects the mute switch), on the same
-      beats: a ratchet of clicks for the crank, capsules rattling loudest
-      mid-mix, a clack at the exit then clacks down the chute coming faster,
-      a clunk and two smaller bounces in the tray, a pop and a sparkle.
+      still ends right. With No repeats off, the pearl drops back in when
+      the spotlight closes (1.4s later if there is no spotlight). The
+      hearts bursting at the top of the straw travel 26cqi, not 44: further
+      went past the top of `main.page` and got cut off.
+      **Bursts reset after playing** (`fire()`: `.go` comes off after
+      `BURST_MS` 1600). Their hearts end on `fill-mode: forwards`, invisible
+      but parked far from the cup, and one parked below the page made
+      `main.page` scroll after every pick: a 15px scrollbar that came and
+      went as the cup bobbed and lifted on hover, shifting the whole page
+      7.5px. As a guard, marwa's `main.wheel-page` is `overflow: clip`
+      above 900px (the three-column layout always fits there, so it never
+      needs to scroll). Check for this with real scrollbars: the test
+      harness's `--hide-scrollbars` hides it.
+    - **Sound** (main window only, respects the mute switch): eight rattly
+      shakes, a low slosh under the swirl, a rising gurgling slurp with a
+      surge per sip, a pop and a sparkle.
     - Same rules as the wheel (it *is* the wheel's state): absent and
-      sitting-out students aren't in the machine, No repeats takes a picked
-      capsule out until everyone's been called, and "Edit who's in" opens the
-      same roster modal ("Who's in the machine"). Colours are `--gc-*` tokens
-      in the marwa block. Under reduced motion only the jiggle stops.
+      sitting-out students aren't in the cup, No repeats takes a picked
+      pearl out until everyone's been called, and "Edit who's in" opens
+      the same roster modal ("Who's in the cup"). Colours are `--bt-*`
+      tokens in the marwa block. Under reduced motion only the loops stop (see the cup above).
+      Testing: rAF doesn't run under `--virtual-time-budget`, so drive
+      Edge over the DevTools protocol in real time.
 - **Noise Meter** (`noise.html` + `noise-popout.html` + `noise.js`). One
   `.noise-stage` `.hud-box`: the `.seg` of activity presets (Silent work /
   Partner talk / Group work — each moves both zone handles), then the

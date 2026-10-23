@@ -24,6 +24,10 @@
                 <stop class="face-hi" offset="0%"/>
                 <stop class="face-lo" offset="100%"/>
               </radialGradient>
+              <linearGradient id="wheel-housing-grad" x1="0" y1="0" x2="0" y2="1">
+                <stop class="hg-top" offset="0%"/>
+                <stop class="hg-bot" offset="100%"/>
+              </linearGradient>
               <radialGradient id="wheel-ish" cx="50%" cy="50%" r="50%">
                 <stop class="ish-clear" offset="74%"/>
                 <stop class="ish-mid" offset="93%"/>
@@ -33,6 +37,7 @@
 
             <circle class="housing" cx="50" cy="50" r="48.6"/>
             <path class="housing-foot" d="M9.9 77 A48.6 48.6 0 0 0 90.1 77"/>
+            <circle class="housing-hi" cx="50" cy="50" r="50"/>
 
             <g id="wheel-rotor"></g>
             <circle class="face-sheen" cx="50" cy="50" r="46"/>
@@ -55,18 +60,20 @@
               <g class="pointer-arm" id="wheel-pointer">
                 <path class="pointer-hud" d="M47.3 1.4 L50 6.2 L52.7 1.4"/>
                 <path class="pointer-soft" d="M50 6.6 C48.2 4.6 47.3 3.7 47.3 2.7 A2.7 2.7 0 0 1 52.7 2.7 C52.7 3.7 51.8 4.6 50 6.6 Z"/>
+                <path class="pointer-heart" d="M50 7.6 C48 6.1 44.9 4 44.9 1.2 A2.55 2.55 0 0 1 50 1.2 A2.55 2.55 0 0 1 55.1 1.2 C55.1 4 52 6.1 50 7.6 Z"/>
+                <ellipse class="pointer-heart-hi" cx="47.1" cy="0.6" rx="1" ry="0.65" transform="rotate(-30 47.1 0.6)"/>
               </g>
             </g>
           </svg>
       <div class="wheel-hub-text">
         <span class="wheel-hub-name" id="wheel-hub-name"></span>
       </div>
+      <div class="wheel-mascot" id="wheel-mascot" data-mood="idle" aria-hidden="true"></div>
       <p class="wheel-empty" id="wheel-empty" hidden>Waiting for the Name Wheel tab…</p>
     </div>
-    <span class="wheel-mascot marwa-mascot" id="wheel-mascot" data-mascot="bunny" data-mood="idle"></span>
   </div>
   <script src="cauldron.js"></script>
-  <script src="gacha.js"></script>
+  <script src="boba.js"></script>
   <script src="wheel.js"></script>
 </body>
 </html>

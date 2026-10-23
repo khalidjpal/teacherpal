@@ -20,9 +20,9 @@
 //
 // Two themes swap the wheel for a SKIN: halloween a cauldron (cauldron.js -
 // names float in the brew as bubbles; a pick boils it, lifts the winner's
-// bubble and pops it), marwa a gachapon machine (gacha.js - a capsule per
-// student; a pick turns the handle, drops a capsule into the tray and cracks
-// it open). Everything above still holds - the winner is drawn first, here -
+// bubble and pops it), marwa a bubble tea cup (boba.js - a pearl per
+// student; a pick shakes the cup, swirls the pearls and draws one up the
+// straw). Everything above still holds - the winner is drawn first, here -
 // only the picture differs: runSpin() hands the spin descriptor to the
 // active skin instead of turning the rotor. Both skins have the same shape
 // (isOn, build, sync, run, finish, setWinner, setDisabled, DURATION_MS,
@@ -75,12 +75,12 @@
   const $ = (id) => document.getElementById(id);
   // The skins (each is a no-op outside its own theme), and the one that is
   // showing in a given document, if any.
-  const skins = () => [window.Cauldron, window.Gacha].filter(Boolean);
+  const skins = () => [window.Cauldron, window.Boba].filter(Boolean);
   const skinFor = (doc = document) => skins().find((k) => k.isOn(doc)) || null;
   const eachSkin = (fn) => skins().forEach(fn);
   // the words follow the skin
   const onIt = () => (window.Cauldron && window.Cauldron === skinFor() ? 'in the brew'
-    : window.Gacha && window.Gacha === skinFor() ? 'in the machine' : 'on the wheel');
+    : window.Boba && window.Boba === skinFor() ? 'in the cup' : 'on the wheel');
   const reduceMotion = () => window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
   // ---------- names (same rule as Create Groups) ----------
@@ -166,6 +166,16 @@
     if (n % 2 === 1 && i === n - 1 && step === 0) step = 2;
     return step;
   }
+  // marwa paints from its own five pastels (--wheel-p0 ... p4: pink, lavender,
+  // mint, peach, butter) in order; every slice carries both classes so a live
+  // theme switch repaints without a redraw. A count that leaves the last
+  // slice on the first one's colour takes a colour clear of both neighbours.
+  const PASTELS = 5;
+  function pastelIndex(i, n) {
+    let p = i % PASTELS;
+    if (n > 1 && i === n - 1 && p === 0) p = 2;
+    return p;
+  }
   function labelSize(n) {
     if (n <= 8) return 5.2;
     if (n <= 14) return 4.2;
@@ -198,9 +208,8 @@
         shape = doc.createElementNS(NS, 'path');
         shape.setAttribute('d', slicePath(a0, a1));
       }
-      // r0-r7 is jarvis's graduated ramp; marwa repaints the same elements
-      // from its pastel palette via the same classes.
-      shape.setAttribute('class', `slice r${rampIndex(i, n)}`);
+      // r0-r7 is the graduated ramp; p0-p4 is marwa's pastel cycle.
+      shape.setAttribute('class', `slice r${rampIndex(i, n)} p${pastelIndex(i, n)}`);
       shape.setAttribute('data-id', item.id);
       rotor.appendChild(shape);
 
@@ -402,8 +411,7 @@
     // tool's whole function and only happens on an explicit click. A 400ms
     // version of five turns is a blur, not an accommodation.
     const slow = reduceMotion();
-    // A skin's timeline (the cauldron's boil and pop, the gachapon's turn,
-    // drop and crack) replaces the spin's. The rotation is still worked out,
+    // A skin's timeline (the cauldron's boil and pop) replaces the spin's. The rotation is still worked out,
     // so a window showing the wheel instead still lands on the same name.
     const skin = skinFor();
     winnerId = null;
@@ -441,9 +449,11 @@
     if (!rotor) return;
     clearTimers();
     if (stage) stage.dataset.state = 'spinning';
+    const buddy = doc.getElementById('wheel-mascot');
+    if (buddy) buddy.dataset.mood = 'spin';           // the pop-out never calls renderWinner mid-spin
     const skin = skinFor(doc);
     if (skin) {
-      // a skin plays the pick (cauldron / gachapon) - then the same finish
+      // a skin plays the pick (the cauldron) - then the same finish
       skin.run(doc, s, { sound: sound && !muted });
       timers.push(setTimeout(() => finishSpin(doc, s), s.duration + s.settle + 40));
       return;
@@ -564,6 +574,16 @@
     if (redraw) syncWheel();
     renderEditButton();
     renderControls();
+    renderPicked();
+  }
+  // Who's been called this round, in pick order, for a skin that shows them
+  // (the bubble tea's Picked tray); null with No repeats off.
+  function renderPicked() {
+    const list = noRepeats
+      ? [...called].map((id) => eligible.find((s) => s.id === id)).filter(Boolean)
+        .map((s) => ({ id: s.id, label: labelFor(s, eligible) }))
+      : null;
+    eachSkin((k) => k.setPicked && k.setPicked(document, list));
   }
 
   // ---------- add / remove ----------
@@ -759,6 +779,52 @@
     }
   }
 
+  // marwa's bunny beside the wheel. One inline SVG so its parts can move:
+  // the pose is pure CSS off data-mood on #wheel-mascot (idle: calm, ears
+  // relaxed; spin: ears perk, eyes go wide; party: happy eyes, a bounce and a
+  // burst of hearts). Built in every theme, shown only in marwa.
+  const BUDDY_SVG = `<svg class="wb-svg" viewBox="0 0 80 96" aria-hidden="true">
+    <ellipse class="wb-shadow" cx="40" cy="92" rx="21" ry="3.2"/>
+    <g class="wb-hop"><g class="wb-breathe">
+      <g class="wb-ear wb-ear-l"><ellipse class="wb-fur" cx="29" cy="19" rx="6.6" ry="15.5"/><ellipse class="wb-inner" cx="29" cy="20.5" rx="2.8" ry="10"/></g>
+      <g class="wb-ear wb-ear-r"><ellipse class="wb-fur" cx="51" cy="19" rx="6.6" ry="15.5"/><ellipse class="wb-inner" cx="51" cy="20.5" rx="2.8" ry="10"/></g>
+      <ellipse class="wb-fur" cx="40" cy="74" rx="20.5" ry="16.5"/>
+      <ellipse class="wb-belly" cx="40" cy="77.5" rx="11.5" ry="9.5"/>
+      <ellipse class="wb-fur" cx="29.5" cy="89" rx="7.2" ry="3.9"/>
+      <ellipse class="wb-fur" cx="50.5" cy="89" rx="7.2" ry="3.9"/>
+      <circle class="wb-fur" cx="40" cy="48" r="20"/>
+      <g class="wb-bow"><path d="M40 30.5 L33.5 26.5 L33.5 34.5 Z"/><path d="M40 30.5 L46.5 26.5 L46.5 34.5 Z"/><circle cx="40" cy="30.5" r="2.3"/></g>
+      <circle class="wb-blush" cx="26.5" cy="54.5" r="3.3"/>
+      <circle class="wb-blush" cx="53.5" cy="54.5" r="3.3"/>
+      <g class="wb-eyes wb-eyes-calm">
+        <ellipse class="wb-ink" cx="32.5" cy="48" rx="2.5" ry="3.1"/><ellipse class="wb-ink" cx="47.5" cy="48" rx="2.5" ry="3.1"/>
+        <circle class="wb-shine" cx="33.4" cy="46.8" r="0.9"/><circle class="wb-shine" cx="48.4" cy="46.8" r="0.9"/>
+      </g>
+      <g class="wb-eyes wb-eyes-wide">
+        <circle class="wb-ink" cx="32.5" cy="47.5" r="4.3"/><circle class="wb-ink" cx="47.5" cy="47.5" r="4.3"/>
+        <circle class="wb-shine" cx="34" cy="45.8" r="1.6"/><circle class="wb-shine" cx="49" cy="45.8" r="1.6"/>
+        <circle class="wb-shine" cx="31.3" cy="49.3" r="0.7"/><circle class="wb-shine" cx="46.3" cy="49.3" r="0.7"/>
+        <path class="wb-line" d="M28.5 40.6 Q32.5 38.6 36 40.4 M44 40.4 Q47.5 38.6 51.5 40.6"/>
+      </g>
+      <g class="wb-eyes wb-eyes-happy">
+        <path class="wb-line wb-thick" d="M29 49.2 Q32.5 44.4 36 49.2 M44 49.2 Q47.5 44.4 51 49.2"/>
+      </g>
+      <ellipse class="wb-nose" cx="40" cy="53.2" rx="1.6" ry="1.1"/>
+      <path class="wb-line wb-mouth wb-mouth-calm" d="M36.6 55.6 Q38.3 57.6 40 55.9 Q41.7 57.6 43.4 55.6"/>
+      <ellipse class="wb-ink wb-mouth wb-mouth-wow" cx="40" cy="58" rx="1.9" ry="2.4"/>
+      <g class="wb-mouth wb-mouth-happy"><path class="wb-ink" d="M35 55.6 Q40 63.4 45 55.6 Z"/><path class="wb-tongue" d="M37.4 59.4 Q40 57.6 42.6 59.4 Q40 61.4 37.4 59.4 Z"/></g>
+      <ellipse class="wb-fur" cx="31" cy="68" rx="5" ry="4"/>
+      <ellipse class="wb-fur" cx="49" cy="68" rx="5" ry="4"/>
+    </g></g>
+  </svg>
+  <span class="wb-burst">${'<i></i>'.repeat(8)}</span>`;
+  function buildBuddy(doc) {
+    const box = doc.getElementById('wheel-mascot');
+    if (!box || box.childElementCount) return;
+    box.innerHTML = BUDDY_SVG;
+    box.querySelectorAll('.wb-burst i').forEach((bit, i) => bit.style.setProperty('--i', String(i)));
+  }
+
   // ---------- main window ----------
   async function initMain() {
     loadSettings();
@@ -766,6 +832,7 @@
     drawWheel(document, []);
     buildDialRing(document);
     buildSparks(document);
+    buildBuddy(document);
 
     const nav = await navReady;
     periods = nav.periods || [];
@@ -802,9 +869,17 @@
       cauldron.addEventListener('click', startSpin);
       cauldron.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); startSpin(); } });
     }
-    // marwa: the gachapon's handle
-    const handle = $('gacha-handle');
-    if (handle) handle.addEventListener('click', startSpin);
+    // marwa: the whole bubble tea cup (its hit area is #boba-straw, sized
+    // over the cup in the CSS)
+    const straw = $('boba-straw');
+    if (straw) straw.addEventListener('click', startSpin);
+    // the Picked tray's Reset: everyone called goes back in the cup
+    document.addEventListener('teacherpal:wheel-reset', () => {
+      if (spin || !called.size) return;
+      called = new Set(); saveCalled();
+      rebuildPool();
+      broadcast();
+    });
     $('wheel-norepeat').addEventListener('click', () => {
       noRepeats = !noRepeats;
       saveSettings();
@@ -911,6 +986,7 @@
     eachSkin((k) => k.build(document));
     drawWheel(document, []);
     buildDialRing(document);
+    buildBuddy(document);
     if (bc) {
       bc.onmessage = (ev) => {
         if (!ev.data || ev.data.type !== 'state') return;
