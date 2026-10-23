@@ -17,6 +17,16 @@
 // attendance table, the same source as everywhere else) minus anyone sitting
 // out in Create Groups. With "No repeats" on, picked students drop off until
 // the pool empties and the wheel refills.
+//
+// Two themes swap the wheel for a SKIN: halloween a cauldron (cauldron.js -
+// names float in the brew as bubbles; a pick boils it, lifts the winner's
+// bubble and pops it), marwa a gachapon machine (gacha.js - a capsule per
+// student; a pick turns the handle, drops a capsule into the tray and cracks
+// it open). Everything above still holds - the winner is drawn first, here -
+// only the picture differs: runSpin() hands the spin descriptor to the
+// active skin instead of turning the rotor. Both skins have the same shape
+// (isOn, build, sync, run, finish, setWinner, setDisabled, DURATION_MS,
+// SETTLE_MS).
 
 (function () {
   const isPopout = document.body.classList.contains('wheel-popout');
@@ -63,6 +73,14 @@
   let drawnSig = '';
 
   const $ = (id) => document.getElementById(id);
+  // The skins (each is a no-op outside its own theme), and the one that is
+  // showing in a given document, if any.
+  const skins = () => [window.Cauldron, window.Gacha].filter(Boolean);
+  const skinFor = (doc = document) => skins().find((k) => k.isOn(doc)) || null;
+  const eachSkin = (fn) => skins().forEach(fn);
+  // the words follow the skin
+  const onIt = () => (window.Cauldron && window.Cauldron === skinFor() ? 'in the brew'
+    : window.Gacha && window.Gacha === skinFor() ? 'in the machine' : 'on the wheel');
   const reduceMotion = () => window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
   // ---------- names (same rule as Create Groups) ----------
@@ -158,6 +176,7 @@
 
   // Draw the slices into whichever document asks (page or pop-out).
   function drawWheel(doc, list) {
+    eachSkin((k) => k.sync(doc, list));                       // the brew's bubbles / the capsules
     const rotor = doc.getElementById('wheel-rotor');
     const empty = doc.getElementById('wheel-empty');
     if (!rotor) return;
@@ -383,12 +402,16 @@
     // tool's whole function and only happens on an explicit click. A 400ms
     // version of five turns is a blur, not an accommodation.
     const slow = reduceMotion();
+    // A skin's timeline (the cauldron's boil and pop, the gachapon's turn,
+    // drop and crack) replaces the spin's. The rotation is still worked out,
+    // so a window showing the wheel instead still lands on the same name.
+    const skin = skinFor();
     winnerId = null;
     spin = {
       from, to,
-      overshoot: slow ? 0 : OVERSHOOT,
-      duration: SPIN_MS,
-      settle: slow ? 0 : SETTLE_MS,
+      overshoot: (slow || skin) ? 0 : OVERSHOOT,
+      duration: skin ? skin.DURATION_MS : SPIN_MS,
+      settle: skin ? skin.SETTLE_MS : (slow ? 0 : SETTLE_MS),
       slices: pool.length,
       startedAt: Date.now(),
       winnerId: chosen.id,
@@ -418,6 +441,13 @@
     if (!rotor) return;
     clearTimers();
     if (stage) stage.dataset.state = 'spinning';
+    const skin = skinFor(doc);
+    if (skin) {
+      // a skin plays the pick (cauldron / gachapon) - then the same finish
+      skin.run(doc, s, { sound: sound && !muted });
+      timers.push(setTimeout(() => finishSpin(doc, s), s.duration + s.settle + 40));
+      return;
+    }
 
     const target = s.to + s.overshoot;
     setTransition(rotor, 0, 'linear');
@@ -444,6 +474,8 @@
     rotation = s.to;
     winnerId = s.winnerId;
     spin = null;
+    const skin = skinFor(doc);
+    if (skin) skin.finish(doc, s, { respawn: !noRepeats });
     if (!isPopout) {
       if (noRepeats) { called.add(winnerId); saveCalled(); }
       // Counts update, but the wheel keeps the winner under the pointer
@@ -627,6 +659,8 @@
     // marwa's mascot reacts to the landing (collapses in other themes)
     const mascot = $('wheel-mascot');
     if (mascot) mascot.dataset.mood = winnerId ? 'party' : (spin ? 'spin' : 'idle');
+    // the skins show the name too (above the cauldron / out of the capsule)
+    eachSkin((k) => k.setWinner(document, name, winnerId ? 'picked' : (spin ? 'boiling' : '')));
   }
 
   function renderControls() {
@@ -637,9 +671,10 @@
       spinBtn.disabled = !!spin || pool.length === 0;
       spinBtn.dataset.spinning = spin ? '1' : '';
     }
+    eachSkin((k) => k.setDisabled(document, !!spin || pool.length === 0));
     const avail = eligible.filter((s) => !removed.has(s.id)).length;
     const left = $('wheel-left');
-    if (left) left.textContent = noRepeats ? `${pool.length} left of ${avail}` : `${avail} on the wheel`;
+    if (left) left.textContent = noRepeats ? `${pool.length} left of ${avail}` : `${avail} ${onIt()}`;
     const rep = $('wheel-norepeat');
     if (rep) rep.setAttribute('aria-checked', String(noRepeats));
     const fn = $('wheel-firstnames');
@@ -676,14 +711,14 @@
     if (!list) return;
     const on = roster.filter((s) => onWheel(s.id)).length;
     const count = $('wheel-roster-count');
-    if (count) count.textContent = `${on} of ${roster.length} on the wheel`;
+    if (count) count.textContent = `${on} of ${roster.length} ${onIt()}`;
     list.innerHTML = roster.map((s) => {
       const is = onWheel(s.id);
       const why = is ? null : offReason(s);
       const tag = why && REASON_LABEL[why] ? `<span class="wr-why" data-why="${why}">${REASON_LABEL[why]}</span>` : '';
       const lock = locked(s);
       return `<button type="button" class="wr-chip" data-id="${s.id}" aria-pressed="${is}"${lock ? ' disabled' : ''}
-        title="${escapeHtml(s.name)}${lock ? ` — ${REASON_LABEL[why].toLowerCase()} today` : (is ? ' — on the wheel' : ' — off the wheel')}">
+        title="${escapeHtml(s.name)}${lock ? ` — ${REASON_LABEL[why].toLowerCase()} today` : (is ? ` — ${onIt()}` : ' — left out')}">
         <span class="wr-name">${escapeHtml(s.name)}</span>${tag}</button>`;
     }).join('') || '<p class="hint">No students in this period.</p>';
   }
@@ -694,7 +729,7 @@
     if (!n) return;
     n.textContent = `${pool.length} on`;
     const btn = $('wheel-edit');
-    if (btn) btn.title = `${pool.length} on the wheel — click to choose who's on it`;
+    if (btn) btn.title = `${pool.length} ${onIt()} — click to choose who's in`;
   }
 
   // ---------- broadcast ----------
@@ -727,6 +762,7 @@
   // ---------- main window ----------
   async function initMain() {
     loadSettings();
+    eachSkin((k) => k.build(document));
     drawWheel(document, []);
     buildDialRing(document);
     buildSparks(document);
@@ -757,6 +793,18 @@
     document.addEventListener('teacherpal:tick', (e) => autoPick(e.detail.now, e.detail.sched));
 
     $('wheel-spin').addEventListener('click', startSpin);
+    // halloween: the whole cauldron is the button (Space works too, below)
+    const cauldron = $('cauldron');
+    if (cauldron) {
+      cauldron.setAttribute('role', 'button');
+      cauldron.setAttribute('tabindex', '0');
+      cauldron.setAttribute('aria-label', 'Stir the cauldron to pick a student');
+      cauldron.addEventListener('click', startSpin);
+      cauldron.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); startSpin(); } });
+    }
+    // marwa: the gachapon's handle
+    const handle = $('gacha-handle');
+    if (handle) handle.addEventListener('click', startSpin);
     $('wheel-norepeat').addEventListener('click', () => {
       noRepeats = !noRepeats;
       saveSettings();
@@ -809,6 +857,26 @@
       if (w) w.focus();
       setTimeout(broadcast, 300);
     });
+    // Mini window (Chrome's Document Picture-in-Picture): an always-on-top
+    // window holding the same read-only view as the full screen window, in an
+    // iframe - it is fed over the same BroadcastChannel, so it needs nothing
+    // from here but a broadcast once it has loaded.
+    const pipBtn = $('wheel-pip');
+    if (pipBtn && 'documentPictureInPicture' in window) {
+      pipBtn.hidden = false;
+      pipBtn.addEventListener('click', async () => {
+        let pip;
+        try { pip = await window.documentPictureInPicture.requestWindow({ width: 420, height: 420 }); } catch { return; }
+        const d = pip.document;
+        d.body.style.cssText = 'margin:0;height:100vh;overflow:hidden;background:#000';
+        const frame = d.createElement('iframe');
+        frame.src = new URL('wheel-popout.html', location.href).href;
+        frame.title = 'Name Wheel';
+        frame.style.cssText = 'border:0;width:100%;height:100%;display:block';
+        frame.addEventListener('load', () => setTimeout(broadcast, 100));
+        d.body.appendChild(frame);
+      });
+    }
 
     // Space spins (not while typing or with a dialog open)
     document.addEventListener('keydown', (e) => {
@@ -840,6 +908,7 @@
 
   // ---------- pop-out ----------
   function initPopout() {
+    eachSkin((k) => k.build(document));
     drawWheel(document, []);
     buildDialRing(document);
     if (bc) {
@@ -852,6 +921,7 @@
         if (label) { label.textContent = s.period || ''; label.hidden = !s.period; }
         winnerId = s.winnerId;
         rotation = s.rotation;
+        noRepeats = !!s.noRepeats;           // the cauldron re-floats a popped name only without it
         if (s.spin) {
           // a spin just started in the main window - run the same curve here
           if (!spin || spin.startedAt !== s.spin.startedAt) {

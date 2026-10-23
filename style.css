@@ -302,13 +302,77 @@
   --wheel-face-hi:  rgba(255, 255, 255, 0.55);
   --wheel-face-lo:  rgba(232, 70, 124, 0.06);
 
-  /* noise zones — darker green/amber so the fill reads on the cream ground */
+  /* noise zones — the zone word's colour (marwa's meter is the bunny, no bar):
+     mint-green quiet, the rose accent for OK, danger red for too loud */
   --noise-quiet: #2F9E6E;
-  --noise-ok:    #D99412;
+  --noise-ok:    var(--accent-deep);
   --noise-loud:  var(--danger);
   --noise-quiet-soft: rgba(47, 158, 110, 0.14);
   --noise-ok-soft:    rgba(217, 148, 18, 0.16);
   --noise-loud-soft:  rgba(214, 55, 87, 0.12);
+  /* level bar: lavender (quiet) → pink (OK) → rose-red (too loud) on a pale
+     blush track, a glossy top, and a little heart riding the tip */
+  --noise-bar-fill:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.5), rgba(255, 255, 255, 0) 55%),
+    linear-gradient(90deg, #C3ABF5 0%, #D7A8EC 27%, #F59BC2 33%, #F2729F 67%, #E8467C 73%, #D63757 100%);
+  --noise-bar-track: #FBE4EE;
+  --noise-bar-line:  #F4CFDD;
+  --noise-bar-mark:  rgba(74, 44, 61, 0.45);
+  --noise-bar-tick:  transparent;
+  --noise-bar-inset: inset 0 2px 4px rgba(201, 49, 104, 0.12);
+  --noise-rider: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='-2 -2 20 20'><path d='M8 14.5C8 14.5 1 10.2 1 5.6 1 3 3 1.2 5.2 1.2 6.6 1.2 7.5 2 8 2.8 8.5 2 9.4 1.2 10.8 1.2 13 1.2 15 3 15 5.6 15 10.2 8 14.5 8 14.5Z' fill='%23E8467C' stroke='%23FFFFFF' stroke-width='2' stroke-linejoin='round'/><ellipse cx='5' cy='5' rx='1.7' ry='1' fill='%23FFFFFF' fill-opacity='0.65' transform='rotate(-30 5 5)'/></svg>");
+
+  /* the Noise Meter bunny (noise.js builds it; marwa only). Same palette as
+     the Timer bunny; "hot" is the too-loud colour the fur warms to. */
+  --nm-fur:       #FFB6C9;
+  --nm-fur-hot:   #FFB08C;
+  --nm-ear:       #FF89A9;
+  --nm-ear-hot:   #FF7F57;
+  --nm-tummy:     #FFE1EC;
+  --nm-tummy-hot: #FFE2D2;
+  --nm-line:      #4A2C3D;
+  --nm-glint:     #FFFFFF;
+  --nm-sheen:     rgba(255, 255, 255, 0.38);
+  --nm-shadow:    rgba(74, 44, 61, 0.12);
+  --nm-blush:     #FF6B9E;
+  --nm-blush-hot: #F2552E;
+  --nm-bow:       #E8467C;
+  --nm-bow-knot:  #F2729F;
+  --nm-z:         #3FAE80;
+  --nm-star:      #F5B83D;
+  --nm-drop:      #7CC5EC;
+  --nm-glow-quiet: rgba(110, 216, 170, 0.50);
+  --nm-glow-ok:    rgba(255, 137, 169, 0.34);
+  --nm-glow-loud:  rgba(255, 112, 62, 0.72);
+  /* the Name Wheel gachapon (gacha.js; marwa only) */
+  --gc-body:      #FF9EC0;
+  --gc-body-2:    #F583AD;
+  --gc-body-hi:   rgba(255, 255, 255, 0.5);
+  --gc-line:      #4A2C3D;
+  --gc-foot:      #E8467C;
+  --gc-label:     #FFFFFF;
+  --gc-mouth:     #4A2C3D;
+  --gc-glass:     rgba(255, 255, 255, 0.42);
+  --gc-glass-line: rgba(232, 70, 124, 0.6);
+  --gc-shine:     rgba(255, 255, 255, 0.95);
+  --gc-neck:      #E8467C;
+  --gc-knob-ring: #FFFFFF;
+  --gc-knob-face: #FFD3E2;
+  --gc-knob-bar:  #E8467C;
+  --gc-shadow:    rgba(74, 44, 61, 0.14);
+  --gc-cap-1:     #FFB3CE;      /* pink */
+  --gc-cap-2:     #C9B2F7;      /* lavender */
+  --gc-cap-3:     #A8E6C9;      /* mint */
+  --gc-cap-4:     #FFE08A;      /* butter */
+  --gc-cap-5:     #9FD8FF;      /* sky */
+  --gc-cap-6:     #FFC59E;      /* peach */
+  --gc-cap-shell: #FFFFFF;
+  --gc-cap-line:  rgba(74, 44, 61, 0.55);
+  --gc-tube:      rgba(255, 244, 248, 0.96);   /* the chute's inside */
+  --gc-tube-glass: rgba(255, 255, 255, 0.3);   /* its glass, over the capsule */
+  --gc-pick-ring: #E8467C;                     /* the chosen capsule's highlight (accent pink: white vanished on the glass) */
+  /* a heart shape for masks (the checked preset pill) */
+  --nm-heart-mask: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'><path d='M8 14.5C8 14.5 1 10.2 1 5.6 1 3 3 1.2 5.2 1.2 6.6 1.2 7.5 2 8 2.8 8.5 2 9.4 1.2 10.8 1.2 13 1.2 15 3 15 5.6 15 10.2 8 14.5 8 14.5Z' fill='black'/></svg>");
 }
 
 /* ---------- Tokens: earthy (forest, sage, terracotta, wheat) ----------
@@ -503,6 +567,17 @@
   --noise-quiet-soft:rgba(140, 203, 159, 0.16);
   --noise-ok-soft:rgba(201, 164, 60, 0.16);
   --noise-loud-soft:rgba(245, 160, 152, 0.16);
+  /* level bar: a vine growing along a sunk wooden groove, a leaf at its tip */
+  --noise-bar-fill:
+    url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 48 24'><g fill='%23223D1C' fill-opacity='0.6'><path d='M0 12 C8 4 16 4 24 12 S40 20 48 12' fill='none' stroke='%23223D1C' stroke-opacity='0.6' stroke-width='2.2'/><path d='M12 7.4 q4 -6.4 9.4 -4.2 q-3 5.4 -9.4 4.2Z'/><path d='M36 16.6 q4 6.4 9.4 4.2 q-3 -5.4 -9.4 -4.2Z'/></g></svg>") left center / auto 100% repeat-x,
+    linear-gradient(180deg, rgba(255, 255, 255, 0.22), rgba(255, 255, 255, 0) 55%),
+    linear-gradient(90deg, #5E8A3A 0%, #7A9E48 27%, #C9A43C 33%, #D6B456 67%, #C05F35 73%, #A9472A 100%);
+  --noise-bar-track: var(--wood-inset);
+  --noise-bar-line:  var(--clay-line);
+  --noise-bar-mark:  var(--text);
+  --noise-bar-tick:  transparent;
+  --noise-bar-inset: inset 0 2px 5px rgba(0, 0, 0, 0.45);
+  --noise-rider: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><path d='M4 20 C4 10.5 10.5 4 20.5 3.5 C20 13.5 13.5 20 4 20 Z' fill='%23A6BD8C' stroke='%231C3318' stroke-width='1.5' stroke-linejoin='round'/><path d='M4 20 L15.5 8.5 M9 15 l-0.4 -3.6 M12 12 l3.4 0.4' fill='none' stroke='%231C3318' stroke-width='1.2' stroke-linecap='round'/><path d='M4 20 l-2 2' stroke='%231C3318' stroke-width='1.6' stroke-linecap='round'/></svg>");
 }
 
 /* ==========================================================================
@@ -653,6 +728,73 @@
   --noise-quiet-soft: rgba(127, 191, 63, 0.16);
   --noise-ok-soft:    rgba(245, 192, 75, 0.16);
   --noise-loud-soft:  rgba(255, 111, 97, 0.16);
+  /* level bar: a glowing potion / ember trail (witch green → candle →
+     pumpkin) in a dark purple vial with a faint inner glow; a bat rides the
+     tip, and the fill flickers like flame once it's too loud */
+  --noise-bar-fill:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.32), rgba(255, 255, 255, 0) 50%, rgba(0, 0, 0, 0.18)),
+    linear-gradient(90deg, #4E9A2A 0%, #7FBF3F 27%, #F5C04B 33%, #FF9A3C 67%, #FF7518 73%, #FF4A12 100%);
+  --noise-bar-track: #170E22;
+  --noise-bar-line:  #4A3161;
+  --noise-bar-mark:  rgba(245, 230, 211, 0.55);
+  --noise-bar-tick:  transparent;
+  --noise-bar-inset: inset 0 0 0.8rem rgba(139, 79, 191, 0.5);
+  --noise-rider: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 4 64 28'><g fill='%23241634' stroke='%23C394EE' stroke-width='1.6' stroke-linejoin='round'><path d='M32 10C30.4 10 29.2 11 28.8 12.4L27.6 8.6 26.9 13.1C23 9.6 15 7.6 4 10 8 12.4 9.6 16 8.8 19.6 12.4 18.2 16.4 19 18.4 21.6 19.6 19.6 22 18.8 24.4 19.6 26 22 28.6 25.6 32 28Z'/><path d='M32 10C30.4 10 29.2 11 28.8 12.4L27.6 8.6 26.9 13.1C23 9.6 15 7.6 4 10 8 12.4 9.6 16 8.8 19.6 12.4 18.2 16.4 19 18.4 21.6 19.6 19.6 22 18.8 24.4 19.6 26 22 28.6 25.6 32 28Z' transform='matrix(-1 0 0 1 64 0)'/></g><circle cx='30.2' cy='15' r='1.4' fill='%23FF7518'/><circle cx='33.8' cy='15' r='1.4' fill='%23FF7518'/></svg>");
+
+  /* the Noise Meter ghost (noise.js builds the grave scene; halloween only).
+     The ghost is pale blue-white when quiet, warm bone when OK, hot orange
+     when too loud; --nh-ghost / --nh-glow are registered (@property) so the
+     shift between them is a smooth colour transition. */
+  --nh-ghost-quiet: #D2E4FF;
+  --nh-ghost-ok:    #FFF2DA;
+  --nh-ghost-loud:  #FFC089;
+  --nh-glow-quiet:  rgba(140, 180, 255, 0.30);
+  --nh-glow-ok:     rgba(255, 222, 160, 0.28);
+  --nh-glow-loud:   rgba(255, 117, 24, 0.78);
+  --nh-ghost-line:  rgba(36, 20, 56, 0.55);
+  --nh-eye:         #1A1226;
+  --nh-glint:       #FFFFFF;
+  --nh-blush:       rgba(255, 130, 165, 0.55);
+  --nh-stone:       #5E5574;
+  --nh-stone-hi:    #8479A0;
+  --nh-stone-line:  #2A2238;
+  --nh-ground:      #382950;
+  --nh-ground-hi:   #5A4580;
+  --nh-hole:        #060309;
+  --nh-grass:       #4F7A2A;
+  --nh-wood:        #6B4A35;
+  --nh-bat:         #0B0810;
+  --nh-bat-eye:     #FF7518;
+
+  /* the Name Wheel cauldron (cauldron.js; halloween only) */
+  --cd-pot-1:      #1A1424;
+  --cd-pot-2:      #2C2340;
+  --cd-pot-3:      #07050B;
+  --cd-pot-line:   #3A2E4A;
+  --cd-pot-hi:     rgba(255, 255, 255, 0.1);
+  --cd-leg:        #0B0810;
+  --cd-log:        #4A2E1C;
+  --cd-log-line:   #24150C;
+  --cd-brew-1:     #A8FF82;
+  --cd-brew-2:     #3CCB47;
+  --cd-brew-3:     #145C22;
+  --cd-sheen:      rgba(255, 255, 255, 0.2);
+  --cd-glow:       rgba(120, 255, 120, 0.75);
+  --cd-glow-soft:  rgba(120, 255, 120, 0.35);
+  --cd-haze:       rgba(110, 255, 120, 0.32);
+  --cd-fire-glow:  rgba(255, 140, 40, 0.7);
+  --cd-under-glow: rgba(255, 117, 24, 0.55);
+  --cd-flame-out:  #FF7518;
+  --cd-flame-in:   #FFD25A;
+  --cd-ember:      #FFA040;
+  --cd-steam:      rgba(225, 255, 228, 0.2);
+  --cd-bubble:     rgba(24, 84, 36, 0.92);
+  --cd-bubble-edge: rgba(10, 46, 18, 0.95);
+  --cd-bubble-hi:  rgba(255, 255, 255, 0.55);
+  --cd-bubble-line: rgba(170, 255, 160, 0.85);
+  --cd-ink:        #F5E6D3;          /* names on the bubbles: bone on deep green, >= 9:1 */
+  --cd-spark:      #8CFF5A;
+  --cd-winner:     #EAFFDC;
 
   /* extras — every decoration is an inline-SVG data URI, used only by the
      halloween rules next to marwa's mascots */
@@ -1206,6 +1348,17 @@ button:active, .neu-btn:active, .tab:active, summary:active, .seg label:active s
   --noise-quiet-soft: rgba(111, 211, 166, 0.16);
   --noise-ok-soft:    rgba(245, 184, 75, 0.16);
   --noise-loud-soft:  rgba(255, 122, 138, 0.16);
+  /* the level bar: the fill is one full-width gradient revealed by clip-path,
+     so its stops sit on the zone boundaries (30% / 70%, see QUIET_AT in
+     noise.js) and the leading edge always wears the current zone's colour.
+     jarvis: an instrument — tick marks, a thin bright fill, a glowing cap. */
+  --noise-bar-fill:  linear-gradient(90deg, var(--noise-quiet) 0 27%, var(--noise-ok) 33% 67%, var(--noise-loud) 73% 100%);
+  --noise-bar-track: var(--card-2);
+  --noise-bar-line:  var(--border-strong);
+  --noise-bar-mark:  var(--text-2);
+  --noise-bar-tick:  var(--border-hover);
+  --noise-bar-inset: none;
+  --noise-rider:     none;
 }
 
 body.hub {
@@ -4826,7 +4979,7 @@ dialog.br-settings-dialog .br-settings-grid { display: grid; gap: var(--space-3)
 .timer-extras button:hover { color: var(--text); border-color: var(--border-hover); }
 .timer-extras button[aria-checked="true"] { border-color: var(--accent); color: var(--accent-ink); background: var(--accent-soft); }
 #timer-popout { color: var(--text); border-color: var(--border-strong); }
-.timer-extras .when-off, .timer-extras .when-on { display: inline; }
+.timer-extras [role="switch"] .when-off, .timer-extras [role="switch"] .when-on { display: inline; }   /* switches only: the full-screen button keeps the app-wide icon swap */
 .timer-extras button[aria-checked="false"] .when-on { display: none; }
 .timer-extras button[aria-checked="true"]  .when-off { display: none; }
 
@@ -5100,6 +5253,13 @@ body.present .dial-arc, body.timer-popout .dial-arc { stroke-width: 6; }
   :root[data-theme="halloween"] .timer-display-wrap::after { transition: none; }
 }
 
+/* The window buttons on Timer, Noise Meter and Name Wheel: "Full screen
+   window" (the projector pop-out) and "Mini window" (the Timer's
+   always-on-top Picture-in-Picture), each an icon + label. */
+.win-btn { display: inline-flex; align-items: center; gap: 0.45rem; }
+.win-btn svg { width: 1.05em; height: 1.05em; flex: none; }
+.win-btn[hidden] { display: none; }
+
 /* ============================================================================
    Noise Meter (noise.html + noise-popout.html)
    One stage box: presets, the meter (big number + bar + zone word), controls,
@@ -5141,30 +5301,70 @@ body.present .dial-arc, body.timer-popout .dial-arc { stroke-width: 6; }
 }
 .noise-unit .approx { margin-left: 0.1em; }
 
+/* The level bar, every theme: one continuous track filling left → right.
+   noise.js sets --level (0..1, zone-aligned: quiet 0–30%, OK 30–70%, too
+   loud 70–100%) on .noise-meter at every poll; the fill and the rider ease
+   between polls, so the bar glides with the (already 500ms-smoothed) level
+   instead of stepping. The fill is a full-width gradient revealed by
+   clip-path, so its colour shifts through the zones exactly as it crosses
+   each marker. Look per theme comes from the --noise-bar-* tokens. */
 .noise-bar {
+  --bar-h: clamp(1.5rem, 4vh, 2.4rem);
+  --bar-ease: 260ms linear;
   position: relative;
   width: 100%;
-  height: clamp(2rem, 6vh, 3.2rem);
+  height: var(--bar-h);
   border-radius: var(--radius-pill);
-  background: var(--card-2);
-  border: 1px solid var(--border-strong);
-  overflow: hidden;
+  background: var(--noise-bar-track);
+  border: 1px solid var(--noise-bar-line);
+  box-shadow: var(--noise-bar-inset);
+  transition: border-color 400ms ease, box-shadow 400ms ease;
 }
 .noise-fill {
-  height: 100%;
-  width: 0%;
+  position: absolute; inset: 0;
   border-radius: inherit;
-  background: var(--text-muted);
-  transition: width 120ms linear, background-color 260ms ease;
+  background: var(--noise-bar-fill);
+  clip-path: inset(0 calc((1 - var(--level, 0)) * 100%) 0 0 round var(--radius-pill));
+  transition: clip-path var(--bar-ease);
 }
-/* zone boundary handles, drawn on the track so the scale is legible */
+/* the two thresholds: thin markers standing a little proud of the track */
 .noise-mark {
-  position: absolute; top: 0; bottom: 0;
+  position: absolute; top: -0.3rem; bottom: -0.3rem; z-index: 1;
   width: 2px; margin-left: -1px;
-  background: var(--border-hover);
+  border-radius: 1px;
+  background: var(--noise-bar-mark);
+  pointer-events: none;
 }
+#mark-quiet { left: 30%; }
+#mark-loud  { left: 70%; }
+/* the rider at the fill's leading edge: jarvis a bright cap line in the
+   zone colour, the other themes their --noise-rider picture */
+.noise-rider {
+  position: absolute; top: 50%; left: calc(var(--level, 0) * 100%); z-index: 2;
+  width: 1rem; height: calc(var(--bar-h) + 0.7rem);
+  translate: -50% -50%;
+  display: grid; place-items: center;
+  pointer-events: none;
+  transition: left var(--bar-ease), opacity 300ms ease;
+}
+.noise-rider i { display: block; width: 3px; height: 100%; border-radius: 2px; background: currentColor; box-shadow: 0 0 0.5rem currentColor, 0 0 1rem currentColor; }
+.noise-meter[data-zone="quiet"] .noise-rider { color: var(--noise-quiet); }
+.noise-meter[data-zone="ok"]    .noise-rider { color: var(--noise-ok); }
+.noise-meter[data-zone="loud"]  .noise-rider { color: var(--noise-loud); }
+.noise-meter[data-running="0"] .noise-rider { opacity: 0; }
+/* jarvis: an instrument. Tick marks along the track (short every 5%, long
+   every 10%), and a thin bright fill down the middle of it. */
+.noise-bar::before {
+  content: ""; position: absolute; inset: 0 0.6rem; pointer-events: none;
+  background:
+    repeating-linear-gradient(90deg, var(--noise-bar-tick) 0 1px, transparent 1px 10%) center / 100% 70% no-repeat,
+    repeating-linear-gradient(90deg, var(--noise-bar-tick) 0 1px, transparent 1px 5%) center / 100% 34% no-repeat;
+  opacity: 0.8;
+}
+:root:not([data-theme]) .noise-fill, :root[data-theme="jarvis"] .noise-fill { inset: 36% 0; }
 .noise-scale {
-  display: flex; justify-content: space-between;
+  display: grid; grid-template-columns: 30% 40% 30%;   /* under their own bands */
+  text-align: center;
   width: 100%;
   font-family: var(--font-mono);
   font-size: 0.66rem;
@@ -5179,10 +5379,7 @@ body.present .dial-arc, body.timer-popout .dial-arc { stroke-width: 6; }
   color: var(--text-2);
 }
 
-/* zone colours — fill, zone word, and (in the red) the bar outline */
-.noise-meter[data-zone="quiet"] .noise-fill { background: var(--noise-quiet); }
-.noise-meter[data-zone="ok"]    .noise-fill { background: var(--noise-ok); }
-.noise-meter[data-zone="loud"]  .noise-fill { background: var(--noise-loud); }
+/* zone colours — the zone word, and (in the red) the bar outline */
 .noise-meter[data-zone="quiet"] .noise-zone { color: var(--noise-quiet); }
 .noise-meter[data-zone="ok"]    .noise-zone { color: var(--noise-ok); }
 .noise-meter[data-zone="loud"]  .noise-zone { color: var(--noise-loud); }
@@ -5203,33 +5400,62 @@ body.present .dial-arc, body.timer-popout .dial-arc { stroke-width: 6; }
   50%      { opacity: 0.5; }
 }
 
-.noise-controls { display: flex; flex-wrap: wrap; gap: var(--space-2); align-items: center; justify-content: center; width: 100%; }
-.noise-controls .spacer { flex: 1; }
+.noise-controls { display: flex; flex-wrap: wrap; gap: var(--space-2); align-items: center; }
 .noise-controls .primary.big { min-width: 9rem; min-height: 2.8rem; padding: 0.5rem 1.6rem; font-size: var(--fs-lg); letter-spacing: 0.08em; }
 .noise-controls button { min-height: 2.4rem; padding: 0.4rem 1rem; }
-.noise-controls .icon-btn { width: 2.4rem; padding: 0; }
-.noise-controls .when-off, .noise-controls .when-on { display: inline; }
-.noise-controls button[aria-checked="false"] .when-on { display: none; }
-.noise-controls button[aria-checked="true"]  .when-off { display: none; }
+.noise-foot-row .icon-btn { width: 2.4rem; min-height: 2.4rem; padding: 0; flex: none; }
+/* the chime switch's two labels (scoped: the full-screen button's icons use the app-wide aria-pressed swap) */
+#noise-mute .when-off, #noise-mute .when-on { display: inline; }
+#noise-mute[aria-checked="false"] .when-on { display: none; }
+#noise-mute[aria-checked="true"]  .when-off { display: none; }
 
-.noise-zones { display: grid; gap: var(--space-2); width: min(34rem, 100%); }
-.noise-zone-field { display: grid; grid-template-columns: 9.5rem 1fr 2.5rem; align-items: center; gap: var(--space-3); }
+/* the two zone handles side by side: one row, short labels */
+.noise-zones { flex: 1 1 24rem; min-width: 0; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-4); }
+.noise-zone-field { display: grid; grid-template-columns: auto minmax(4rem, 1fr) 2ch; align-items: center; gap: var(--space-2); }
+.noise-zone-field .hud-key { white-space: nowrap; }
 .noise-zone-field .hud-key { text-align: left; }
-.noise-zone-field input[type="range"] { width: 100%; accent-color: var(--accent); }
+.noise-zone-field input[type="range"] { width: 100%; min-width: 0; accent-color: var(--accent); }   /* its intrinsic ~130px would push the stage past a phone screen */
 .noise-out { font-family: var(--font-mono); font-variant-numeric: tabular-nums; color: var(--text-2); text-align: right; }
 
+/* header row: presets centred, the status line (Listening / Microphone off /
+   errors) at the right, inside the card instead of floating above it */
+.noise-head {
+  width: 100%;
+  display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  align-items: center; gap: var(--space-3);
+}
+.noise-head .noise-preset-seg { grid-column: 2; }
+.noise-head .status { grid-column: 3; justify-self: end; margin: 0; min-height: 0; font-size: var(--fs-xs); text-align: right; }
+.noise-head .status:empty { display: none; }
+@media (max-width: 900px) {
+  .noise-head { grid-template-columns: minmax(0, 1fr); justify-items: center; }
+  .noise-head .noise-preset-seg, .noise-head .status { grid-column: 1; justify-self: center; text-align: center; }
+}
+
+/* footer: the controls, then the one-line privacy note (full text behind "?") */
+/* footer: [buttons] [two handles] [full screen] on one row (wrapping on a
+   narrow screen), the privacy line centred under it */
+.noise-foot { width: 100%; display: grid; gap: var(--space-2); justify-items: center; }
+.noise-foot-row { width: 100%; display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: var(--space-3) var(--space-5); }
 .noise-privacy {
   margin: 0;
-  max-width: 44rem;
+  display: inline-flex; align-items: center; gap: 0.4rem;
   font-size: var(--fs-xs);
-  line-height: 1.5;
   color: var(--text-muted);
 }
+.noise-privacy svg { width: 0.95em; height: 0.95em; flex: none; }
+.noise-info-btn {
+  width: 1.35rem; height: 1.35rem; min-height: 0; padding: 0;
+  border-radius: 50%;
+  font-size: 0.72rem; font-weight: var(--fw-bold); line-height: 1;
+}
+dialog.noise-dialog { width: min(30rem, 94vw); }
+dialog.noise-dialog p:not(.gs-note) { margin: 0 0 var(--space-3); color: var(--text-2); line-height: 1.5; }
 
 /* Full screen: chrome goes (.no-present), the meter takes the room */
 body.present .noise-stage { border: none; box-shadow: none; background: transparent; max-height: none; width: 96vw; }
 body.present .noise-db { font-size: clamp(6rem, 30vh, 18rem); }
-body.present .noise-bar { height: clamp(3.5rem, 12vh, 7rem); border-width: 2px; }
+body.present .noise-bar { --bar-h: clamp(2.6rem, 8vh, 5rem); border-width: 2px; }
 body.present .noise-zone { font-size: clamp(2rem, 7vh, 4.5rem); }
 body.present .noise-scale { font-size: clamp(0.8rem, 1.6vh, 1.1rem); }
 
@@ -5246,15 +5472,427 @@ body.noise-popout .noise-popout-inner {
   display: grid; place-items: center; gap: 0.9rem;
 }
 body.noise-popout .noise-db { font-size: clamp(4rem, 22vmin, 12rem); }
-body.noise-popout .noise-bar { height: clamp(2.5rem, 9vmin, 5rem); }
+body.noise-popout .noise-bar { --bar-h: clamp(2rem, 7vmin, 4rem); }
 body.noise-popout .noise-zone { font-size: clamp(1.2rem, 5vmin, 3rem); }
 .noise-link { margin: 0; font-size: var(--fs-sm); color: var(--text-muted); }
 .noise-link[hidden] { display: none; }
 
+/* Reduced motion: the bar keeps its easing — it IS the reading, and an eased
+   value is calmer than a jumping one (the app-wide `* { transition: none
+   !important }` needs the !important). The riders' bob / flap / sway and
+   the flame flicker stop. */
 @media (prefers-reduced-motion: reduce) {
-  .noise-fill { transition: width 200ms linear; }
+  .noise-fill { transition: clip-path 260ms linear !important; }
+  .noise-rider { transition: left 260ms linear, opacity 300ms ease !important; }
+  .noise-rider i, .noise-fill { animation: none !important; }
   .noise-meter[data-alert="1"] .noise-zone,
   .noise-meter[data-alert="1"] .noise-db { animation: none; }
+}
+
+/* ---------------------------------------------------------------------------
+   Noise Meter — marwa skin: the bunny IS the meter (like the Timer bunny).
+   noise.js builds .nm-stage (one inline SVG) into every .noise-meter;
+   outside marwa it stays hidden. In marwa the bunny shows the room's mood and
+   the level bar under it (lavender → pink → rose, a heart at the tip) the level:
+     data-mood="off"    asleep and greyed (mic off)
+     data-mood="quiet"  asleep: closed eyes, ears relaxed, soft breath, z's,
+                        a mint glow
+     data-mood="ok"     awake and happy: ears up and wiggling, a gentle bob,
+                        little hearts, the pink glow
+     data-mood="loud"   paws clamped over its ears, ears pressed flat, wide
+                        worried eyes, a wobbly mouth, a shake; the fur warms to
+                        coral and the hearts become sweat drops and stars
+     data-alert="1"     (the existing 3s hold) a harder shake, a pulsing warm
+                        halo, and the zone word as a solid red pill
+   data-mood is the zone debounced by MOOD_HOLD_MS in noise.js, and every pose
+   change is a transition, so a reading on a boundary never makes it flicker.
+   Transform origins are in viewBox units (transform-box: view-box), so a
+   moving ear never shifts the head's pivot.
+   --------------------------------------------------------------------------- */
+.nm-stage, .nh-stage { display: none; }
+/* Shared by the two mascot themes (marwa's bunny, halloween's ghost): the bar,
+   its scale and the dB unit go; the card fills the page and the mascot takes
+   whatever height is left, in three groups: presets (+ status) · mascot,
+   level, word, reading · the footer row. A flex column, not a grid, so full
+   screen can drop the head and foot (.no-present) and the meter simply grows
+   into their space. */
+:root:is([data-theme="marwa"], [data-theme="halloween"]) .noise-scale,
+:root:is([data-theme="marwa"], [data-theme="halloween"]) .noise-unit { display: none; }
+:root:is([data-theme="marwa"], [data-theme="halloween"]) .noise-meter[data-running="1"] .noise-db::before { content: "~"; }   /* "~55", not "55 DB≈" */
+:root:is([data-theme="marwa"], [data-theme="halloween"]) .noise-page { padding-top: var(--space-4); }
+:root:is([data-theme="marwa"], [data-theme="halloween"]) .noise-stage {
+  flex: 1 1 auto; align-self: center;         /* main.page is a flex column */
+  width: min(76rem, 100%); max-height: none; min-height: 26rem;
+  display: flex; flex-direction: column; align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-5) var(--space-3);
+}
+:root:is([data-theme="marwa"], [data-theme="halloween"]) .noise-meter {
+  flex: 1 1 0; min-height: 0;
+  display: flex; flex-direction: column; align-items: center; gap: 0;
+}
+:root:is([data-theme="marwa"], [data-theme="halloween"]) .noise-meter .noise-mascot { order: 0; flex: 1 1 0; min-height: 9rem; max-width: 100%; aspect-ratio: 1; }
+:root[data-theme="marwa"] .noise-meter .nm-stage,
+:root[data-theme="halloween"] .noise-meter .nh-stage { display: block; }
+:root:is([data-theme="marwa"], [data-theme="halloween"]) .noise-meter .noise-bar { order: 1; width: min(40rem, 92%); margin-top: var(--space-1, 0.25rem); flex: none; }
+:root:is([data-theme="marwa"], [data-theme="halloween"]) .noise-meter .noise-zone { order: 2; margin-top: var(--space-2); }
+:root:is([data-theme="marwa"], [data-theme="halloween"]) .noise-meter .noise-read { order: 3; margin-top: 0.15rem; }
+:root:is([data-theme="marwa"], [data-theme="halloween"]) .noise-db { font-size: clamp(0.95rem, 2.2vh, 1.25rem); color: var(--text-muted); text-shadow: none; }
+:root:is([data-theme="marwa"], [data-theme="halloween"]) .noise-meter[data-alert="1"] .noise-db { color: var(--text-muted); animation: none; }
+:root:is([data-theme="marwa"], [data-theme="halloween"]) .noise-head .status:not(:empty) {
+  padding: 0.3rem 0.85rem;
+  border-radius: var(--radius-pill);
+  background: var(--card-2);
+}
+/* the footer row sits on a hairline so it reads as one strip */
+:root:is([data-theme="marwa"], [data-theme="halloween"]) .noise-foot { border-top: 1px solid var(--border); padding-top: var(--space-3); }
+:root:is([data-theme="marwa"], [data-theme="halloween"]) body.present .noise-stage { padding-block: var(--space-2); }
+:root:is([data-theme="marwa"], [data-theme="halloween"]) body.noise-popout .noise-popout-inner { gap: 0.6rem; }
+:root:is([data-theme="marwa"], [data-theme="halloween"]) body.noise-popout .noise-meter .noise-mascot { flex: none; width: min(calc(100vh - 11.5rem), 92vw); min-width: 10rem; }
+:root:is([data-theme="marwa"], [data-theme="halloween"]) body.noise-popout .noise-db { font-size: clamp(0.9rem, 2.6vh, 1.4rem); }
+
+.nm-svg { display: block; width: 100%; height: 100%; overflow: visible; }
+.nm-svg * { transform-box: view-box; }
+
+/* drawing */
+.nm-fur { fill: var(--nm-fur); stroke: var(--nm-line); stroke-width: 4.6; stroke-linejoin: round; transition: fill 700ms ease; }
+.nm-ear-in { fill: var(--nm-ear); transition: fill 700ms ease; }
+.nm-tummy { fill: var(--nm-tummy); transition: fill 700ms ease; }
+.nm-sheen { fill: var(--nm-sheen); }
+.nm-shadow { fill: var(--nm-shadow); }
+.nm-bow path { fill: var(--nm-bow); stroke: var(--nm-line); stroke-width: 3; stroke-linejoin: round; }
+.nm-knot { fill: var(--nm-bow-knot); stroke: var(--nm-line); stroke-width: 2.4; }
+.nm-blush { fill: var(--nm-blush); opacity: 0.5; transition: fill 700ms ease, opacity 500ms ease; }
+.nm-eyes ellipse { fill: var(--nm-line); }
+.nm-glint { fill: var(--nm-glint); }
+.nm-eyes.sleep path, .nm-brow, .nm-mouth, .nm-toe { fill: none; stroke: var(--nm-line); stroke-linecap: round; stroke-linejoin: round; }
+.nm-eyes.sleep path { stroke-width: 4.2; }
+.nm-brow { stroke-width: 3.6; }
+.nm-mouth { stroke-width: 3.4; }
+.nm-toe { stroke-width: 2.4; }
+.nm-nose { fill: var(--nm-bow); stroke: var(--nm-line); stroke-width: 2.2; stroke-linejoin: round; }
+
+/* glows behind — one per zone, crossfaded */
+/* both stops share the colour and the outer one fades by stop-opacity: SVG
+   gradients don't premultiply, so fading to `transparent` (black) goes grey */
+#nm-g-quiet stop { stop-color: var(--nm-glow-quiet); }
+#nm-g-ok    stop { stop-color: var(--nm-glow-ok); }
+#nm-g-loud  stop { stop-color: var(--nm-glow-loud); }
+.nm-svg radialGradient stop:last-child { stop-opacity: 0; }
+.nm-halo { opacity: 0; transform-origin: 100px 112px; transition: opacity 800ms ease; }
+.noise-meter[data-mood="quiet"] .nm-halo.quiet,
+.noise-meter[data-mood="ok"]    .nm-halo.ok,
+.noise-meter[data-mood="loud"]  .nm-halo.loud { opacity: 1; }
+.noise-meter[data-alert="1"] .nm-halo.loud { animation: nm-halo-pulse 1.1s ease-in-out infinite; }
+@keyframes nm-halo-pulse { 0%, 100% { opacity: 0.75; transform: scale(0.94); } 50% { opacity: 1; transform: scale(1.06); } }
+
+/* faces — one set shown per mood; the eyes open/close as they fade */
+.nm-eyes, .nm-mouth { opacity: 0; transition: opacity 320ms ease, transform 380ms ease; }
+.nm-eyes { transform-origin: 100px 88px; transform: scaleY(0.25); }
+.nm-mouth { transform-origin: 100px 112px; }
+.noise-meter:is([data-mood="off"], [data-mood="quiet"]) :is(.nm-eyes.sleep, .nm-mouth.sleep),
+.noise-meter[data-mood="ok"]   :is(.nm-eyes.open, .nm-mouth.open),
+.noise-meter[data-mood="loud"] :is(.nm-eyes.wide, .nm-mouth.wide) { opacity: 1; transform: none; }
+
+/* ears: relaxed asleep, up when happy, pressed flat when it's too loud */
+.nm-ear { transition: transform 650ms cubic-bezier(.34, 1.4, .64, 1); }
+.nm-ear.l, .nm-ear.l .nm-ear-wig { transform-origin: 72px 76px; }
+.nm-ear.r, .nm-ear.r .nm-ear-wig { transform-origin: 128px 76px; }
+.nm-ear.l { transform: rotate(-26deg); }
+.nm-ear.r { transform: rotate(26deg); }
+.noise-meter[data-mood="ok"] .nm-ear.l { transform: rotate(-6deg); }
+.noise-meter[data-mood="ok"] .nm-ear.r { transform: rotate(6deg); }
+.noise-meter[data-mood="loud"] .nm-ear.l { transform: rotate(-64deg) scaleY(0.84); }
+.noise-meter[data-mood="loud"] .nm-ear.r { transform: rotate(64deg) scaleY(0.84); }
+.noise-meter[data-mood="ok"] .nm-ear-wig { animation: nm-ear-wig 2.8s ease-in-out infinite; }
+.noise-meter[data-mood="ok"] .nm-ear.r .nm-ear-wig { animation-delay: -1.4s; }
+@keyframes nm-ear-wig { 0%, 70%, 100% { transform: rotate(0); } 80% { transform: rotate(-7deg); } 90% { transform: rotate(4deg); } }
+
+/* asleep, the head tips a little to one side */
+.nm-head { transform-origin: 100px 137px; transition: transform 800ms ease; }
+.noise-meter:is([data-mood="off"], [data-mood="quiet"]) .nm-head { transform: rotate(-5deg); }
+
+/* paws: folded on the tummy, up over the ears when it's too loud */
+.nm-paw { transition: transform 520ms cubic-bezier(.34, 1.45, .64, 1); }
+.nm-paw.l { transform-origin: 80px 150px; }
+.nm-paw.r { transform-origin: 120px 150px; }
+.noise-meter[data-mood="loud"] .nm-paw.l { transform: translate(-28px, -82px) rotate(-35deg); }
+.noise-meter[data-mood="loud"] .nm-paw.r { transform: translate(28px, -82px) rotate(35deg); }
+
+/* too loud: the colour warms */
+.noise-meter[data-mood="loud"] .nm-fur   { fill: var(--nm-fur-hot); }
+.noise-meter[data-mood="loud"] .nm-ear-in { fill: var(--nm-ear-hot); }
+.noise-meter[data-mood="loud"] .nm-tummy { fill: var(--nm-tummy-hot); }
+.noise-meter[data-mood="loud"] .nm-blush { fill: var(--nm-blush-hot); opacity: 0.7; }
+.noise-meter[data-mood="ok"] .nm-blush { opacity: 0.62; }
+
+/* whole-body motion: breathe asleep, bob when happy, shake when loud */
+.nm-move { transform-origin: 100px 195px; transition: opacity 600ms ease, filter 600ms ease; }
+.noise-meter[data-mood="off"] .nm-move { opacity: 0.62; filter: saturate(0.35); }
+.noise-meter[data-mood="quiet"] .nm-move { animation: nm-breathe 3.6s ease-in-out infinite; }
+.noise-meter[data-mood="ok"]    .nm-move { animation: nm-bob 1.5s ease-in-out infinite; }
+.noise-meter[data-mood="loud"]  .nm-move { animation: nm-shake 380ms ease-in-out infinite; }
+.noise-meter[data-mood="loud"][data-alert="1"] .nm-move { animation: nm-shake-hard 260ms linear infinite; }
+@keyframes nm-breathe { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.022, 1.016); } }
+@keyframes nm-bob     { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-4px); } }
+@keyframes nm-shake   { 0%, 100% { transform: translateX(0); } 25% { transform: translateX(-2px) rotate(-0.6deg); } 75% { transform: translateX(2px) rotate(0.6deg); } }
+@keyframes nm-shake-hard { 0%, 100% { transform: translateX(0); } 25% { transform: translateX(-4px) rotate(-1.4deg); } 75% { transform: translateX(4px) rotate(1.4deg); } }
+
+/* the little extras around it — z's, hearts, then stars + sweat drops */
+.nm-fx { opacity: 0; transition: opacity 500ms ease; }
+.nm-fx > g { transform-box: fill-box; transform-origin: center; }
+.noise-meter[data-mood="quiet"] .nm-fx.zzz,
+.noise-meter[data-mood="ok"]    .nm-fx.hearts,
+.noise-meter[data-mood="loud"]  .nm-fx.stars,
+.noise-meter[data-mood="loud"]  .nm-fx.drops { opacity: 1; }
+.nm-fx.zzz text { fill: var(--nm-z); font: 700 16px "Comfortaa", "Quicksand", var(--font-body); }
+.nm-fx.zzz g:nth-child(2) text { font-size: 20px; }
+.nm-fx.zzz g:nth-child(3) text { font-size: 25px; }
+.nm-fx.zzz > g   { animation: nm-z 3.3s ease-in-out infinite; animation-delay: calc(var(--i) * 1.1s); }
+.nm-fx.hearts path { fill: var(--nm-bow); }
+.nm-fx.hearts > g { animation: nm-float 3s ease-in-out infinite; animation-delay: calc(var(--i) * 0.75s); }
+.nm-fx.stars path { fill: var(--nm-star); stroke: var(--nm-line); stroke-width: 1.4; stroke-linejoin: round; }
+.nm-fx.stars > g { animation: nm-twinkle 0.9s ease-in-out infinite alternate; animation-delay: calc(var(--i) * -0.3s); }
+.nm-fx.drops path { fill: var(--nm-drop); stroke: var(--nm-line); stroke-width: 1.4; }
+.nm-fx.drops > g { animation: nm-drip 1.3s ease-in infinite; animation-delay: calc(var(--i) * 0.42s); }
+@keyframes nm-z       { 0% { opacity: 0; transform: translate(-4px, 6px) scale(0.7); } 30%, 60% { opacity: 1; } 100% { opacity: 0; transform: translate(6px, -8px) scale(1); } }
+@keyframes nm-float   { 0% { opacity: 0; transform: translateY(8px) scale(0.6); } 30%, 65% { opacity: 1; } 100% { opacity: 0; transform: translateY(-16px) scale(1); } }
+@keyframes nm-twinkle { from { transform: rotate(-12deg) scale(0.75); } to { transform: rotate(18deg) scale(1.15); } }
+@keyframes nm-drip    { 0% { opacity: 0; transform: translateY(-4px); } 20% { opacity: 1; } 100% { opacity: 0; transform: translateY(12px); } }
+
+/* the level bar's rider: a heart that bobs at the tip */
+:root[data-theme="marwa"] .noise-rider,
+:root[data-theme="earthy"] .noise-rider,
+:root[data-theme="halloween"] .noise-rider { width: calc(var(--bar-h) * 1.55); height: calc(var(--bar-h) * 1.55); }
+:root:is([data-theme="marwa"], [data-theme="earthy"], [data-theme="halloween"]) .noise-rider i {
+  width: 100%; height: 100%; border-radius: 0; box-shadow: none;
+  background: var(--noise-rider) center / contain no-repeat;
+}
+:root[data-theme="marwa"] .noise-rider i { filter: drop-shadow(0 2px 3px rgba(201, 49, 104, 0.3)); animation: nm-ride 1.1s ease-in-out infinite; }
+@keyframes nm-ride { 0%, 100% { transform: translateY(-6%) scale(1); } 50% { transform: translateY(6%) scale(1.06); } }
+
+/* words: the zone in Comfortaa; the number small and secondary */
+:root[data-theme="marwa"] .noise-zone {
+  font-family: "Comfortaa", "Quicksand", var(--font-body);
+  font-weight: 700;
+  text-transform: none;
+  letter-spacing: 0.01em;
+  font-size: clamp(1.2rem, 3.4vh, 2rem);
+  padding: 0.2em 0.8em;
+  border-radius: var(--radius-pill);
+  transition: background-color 400ms ease, color 400ms ease;
+}
+:root[data-theme="marwa"] .noise-meter[data-alert="1"] .noise-zone { background: var(--noise-loud); color: var(--on-accent); }
+
+/* the presets as pill buttons */
+:root[data-theme="marwa"] .noise-preset-seg { display: flex; flex-wrap: wrap; justify-content: center; gap: 0.6rem; padding: 0; border: none; background: none; }
+:root[data-theme="marwa"] .noise-preset-seg span {
+  font-family: "Comfortaa", "Quicksand", var(--font-body);
+  font-weight: 700; font-size: var(--fs-sm);
+  text-transform: none; letter-spacing: 0.01em;
+  padding: 0.5rem 1.25rem;
+  border: 2px solid var(--border-strong);
+  border-radius: var(--radius-pill);
+  background: var(--card);
+  color: var(--text-2);
+  box-shadow: var(--shadow-card);
+}
+:root[data-theme="marwa"] .noise-preset-seg label:hover span { border-color: var(--accent); color: var(--text); }
+:root[data-theme="marwa"] .noise-preset-seg input:checked + span {
+  background: var(--accent); border-color: var(--accent); color: var(--on-accent);
+  box-shadow: 0 4px 14px var(--accent-glow);
+}
+:root[data-theme="marwa"] .noise-preset-seg input:checked + span::before {
+  content: ""; display: inline-block;
+  width: 0.85em; height: 0.85em; margin-right: 0.4em; vertical-align: -0.08em;
+  background: currentColor;
+  -webkit-mask: var(--nm-heart-mask) center / contain no-repeat;
+          mask: var(--nm-heart-mask) center / contain no-repeat;
+}
+
+/* full screen + the pop-out: the bunny fills the room */
+:root[data-theme="marwa"] body.present .noise-zone { font-size: clamp(2rem, 6.5vh, 4.2rem); }
+:root[data-theme="marwa"] body.noise-popout .noise-zone { font-size: clamp(1.3rem, 6vh, 3.6rem); }
+
+/* Reduced motion: the loops stop (no breathing, bob, shake, drifting extras),
+   but the pose changes still crossfade instead of snapping — fades and colour
+   shifts aren't motion, and a hard swap is the flicker this skin avoids. The
+   app-wide `* { transition: none !important }` needs the !important here. */
+@media (prefers-reduced-motion: reduce) {
+  .nm-move, .nm-ear-wig, .nm-fx > g, .nm-halo { animation: none !important; }
+  .nm-svg :is(.nm-fur, .nm-ear-in, .nm-tummy, .nm-blush, .nm-eyes, .nm-mouth, .nm-halo, .nm-fx, .nm-move) {
+    transition: opacity 400ms ease, fill 600ms ease, filter 600ms ease !important;
+  }
+}
+
+/* earthy: the level bar's leaf sways at the tip of the vine */
+:root[data-theme="earthy"] .noise-rider { translate: -30% -62%; }
+:root[data-theme="earthy"] .noise-rider i { transform-origin: 15% 85%; animation: eb-leaf 2.4s ease-in-out infinite; filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.5)); }
+@keyframes eb-leaf { 0%, 100% { transform: rotate(-8deg); } 50% { transform: rotate(9deg); } }
+
+/* ---------------------------------------------------------------------------
+   Noise Meter — halloween skin: a ghost rising from a grave. Its HEIGHT is the
+   level: noise.js sets --rise on .noise-meter (0..1 on the zone-aligned scale
+   marwa's hearts use: 0–0.3 quiet, 0.3–0.7 OK, 0.7–1 too loud; −0.45 = sunk,
+   mic off) and .nh-rise follows it on a 450ms ease, so it rises and sinks
+   with the room instead of stepping. The ghost is clipped at the grave's mouth
+   (#nh-clip) and the front lip of the ground is drawn over it, so it really
+   comes up out of the ground; its tattered tail fades into the hole.
+     data-mood="quiet"  barely out, translucent, eyes closed, a slow drift,
+                        pale blue-white
+     data-mood="ok"     half risen, more solid, a friendly face, a gentle hover,
+                        warm bone
+     data-mood="loud"   fully risen and solid, arms thrown up, wailing, hot
+                        orange with a glow over the whole scene, shaking; the
+                        bats on the headstone and the cross scatter
+     data-alert="1"     a harder shake, the scene glow pulses, the zone word
+                        becomes a solid pumpkin pill
+   --nh-ghost / --nh-glow are registered so the colour shift interpolates.
+   Parts inside the moving ghost use transform-box: fill-box (their own
+   boxes), since view-box origins wouldn't follow the ghost.
+   --------------------------------------------------------------------------- */
+@property --nh-ghost { syntax: '<color>'; inherits: true; initial-value: #D2E4FF; }
+@property --nh-glow  { syntax: '<color>'; inherits: true; initial-value: rgba(140, 180, 255, 0.3); }
+:root[data-theme="halloween"] .noise-meter {
+  --nh-ghost: var(--nh-ghost-quiet); --nh-glow: var(--nh-glow-quiet);
+  transition: --nh-ghost 900ms ease, --nh-glow 900ms ease;
+}
+:root[data-theme="halloween"] .noise-meter[data-mood="ok"]   { --nh-ghost: var(--nh-ghost-ok);   --nh-glow: var(--nh-glow-ok); }
+:root[data-theme="halloween"] .noise-meter[data-mood="loud"] { --nh-ghost: var(--nh-ghost-loud); --nh-glow: var(--nh-glow-loud); }
+
+.nh-svg { display: block; width: 100%; height: 100%; overflow: visible; }
+.nh-svg * { transform-box: view-box; }
+.nh-svg .nh-rise *, .nh-svg .nh-bat * { transform-box: fill-box; }
+
+/* gradients: one colour per gradient, faded by stop-opacity (never to
+   transparent: SVG gradients don't premultiply, so that goes grey) */
+#nh-g-glow stop { stop-color: var(--nh-glow); }
+#nh-g-glow stop:nth-child(2) { stop-opacity: 0.45; }
+#nh-g-glow stop:last-child { stop-opacity: 0; }
+#nh-g-body stop, #nh-g-wisp stop { stop-color: var(--nh-ghost); }
+#nh-g-body stop:last-child { stop-opacity: 0.3; }
+#nh-g-wisp stop:last-child { stop-opacity: 0; }
+
+/* the grave */
+.nh-ground { fill: var(--nh-ground); }
+.nh-hole { fill: var(--nh-hole); stroke: var(--nh-ground-hi); stroke-width: 2; }
+.nh-stone-body { fill: var(--nh-stone); stroke: var(--nh-stone-line); stroke-width: 3; stroke-linejoin: round; }
+.nh-stone-hi { fill: none; stroke: var(--nh-stone-hi); stroke-width: 3; stroke-linecap: round; opacity: 0.75; }
+.nh-rip { font: 25px var(--font-spooky); letter-spacing: 1px; fill: var(--nh-stone-line); }
+.nh-crack { fill: none; stroke: var(--nh-stone-line); stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.nh-cross rect { fill: var(--nh-wood); stroke: var(--nh-stone-line); stroke-width: 2; }
+.nh-grass { fill: var(--nh-grass); }
+
+/* the glow over the whole scene: only when it's too loud */
+.nh-aura { opacity: 0; transform-origin: 148px 118px; transition: opacity 700ms ease; }
+.noise-meter[data-mood="loud"] .nh-aura { opacity: 0.95; }
+.noise-meter[data-alert="1"] .nh-aura { animation: nh-aura-pulse 900ms ease-in-out infinite; }
+@keyframes nh-aura-pulse { 0%, 100% { opacity: 0.7; transform: scale(0.92); } 50% { opacity: 1; transform: scale(1.08); } }
+
+/* the rise: the level indicator itself */
+.nh-rise { transform: translateY(calc((1 - var(--rise, -0.45)) * 120px)); transition: transform 450ms cubic-bezier(.3, .7, .4, 1); }
+.nh-halo { opacity: 0.85; }
+
+/* the ghost: more solid the higher it gets, fully solid and glowing when loud */
+.nh-ghost { opacity: calc(0.4 + 0.6 * clamp(0, var(--rise, 0), 1)); transition: opacity 500ms ease, filter 600ms ease; }
+.noise-meter[data-mood="loud"] .nh-ghost { opacity: 1; filter: drop-shadow(0 0 5px var(--nh-glow-loud)) drop-shadow(0 0 16px var(--nh-glow-loud)); }
+.nh-body { fill: url(#nh-g-body); stroke: var(--nh-ghost-line); stroke-width: 2.2; stroke-linejoin: round; }
+.nh-arm  { fill: var(--nh-ghost); stroke: var(--nh-ghost-line); stroke-width: 2.2; stroke-linejoin: round; transition: transform 550ms cubic-bezier(.34, 1.5, .64, 1); }
+.nh-arm.l { transform-origin: 96% 4%; }
+.nh-arm.r { transform-origin: 4% 4%; }
+.noise-meter[data-mood="loud"] .nh-arm.l { transform: rotate(88deg); }
+.noise-meter[data-mood="loud"] .nh-arm.r { transform: rotate(-88deg); }
+.nh-tail path { fill: none; stroke: url(#nh-g-wisp); stroke-width: 7; stroke-linecap: round; }
+.nh-sheen { fill: none; stroke: var(--nh-glint); stroke-opacity: 0.5; stroke-width: 3; stroke-linecap: round; }
+.nh-blush { fill: var(--nh-blush); opacity: 0; transition: opacity 400ms ease; }
+.noise-meter[data-mood="ok"] .nh-blush { opacity: 1; }
+
+/* faces: one per mood, crossfaded */
+.nh-face { opacity: 0; transition: opacity 350ms ease; }
+.noise-meter:is([data-mood="off"], [data-mood="quiet"]) .nh-face.sleep,
+.noise-meter[data-mood="ok"]   .nh-face.happy,
+.noise-meter[data-mood="loud"] .nh-face.wail { opacity: 1; }
+.nh-face ellipse, .nh-mouth { fill: var(--nh-eye); }
+.nh-face.sleep path, .nh-smile { fill: none; stroke: var(--nh-eye); stroke-width: 3; stroke-linecap: round; }
+.nh-glint { fill: var(--nh-glint); }
+.nh-mouth { transform-origin: center; }
+.noise-meter[data-mood="loud"] .nh-mouth { animation: nh-wail 520ms ease-in-out infinite alternate; }
+@keyframes nh-wail { from { transform: scale(0.86, 0.8); } to { transform: scale(1.04, 1.12); } }
+
+/* motion: drift asleep, hover when OK, shake when too loud */
+.nh-float { transform-origin: 50% 40%; }
+.noise-meter[data-mood="quiet"] .nh-float { animation: nh-drift 6s ease-in-out infinite; }
+.noise-meter[data-mood="ok"]    .nh-float { animation: nh-hover 2.6s ease-in-out infinite; }
+.noise-meter[data-mood="loud"]  .nh-float { animation: nh-shake 190ms linear infinite; }
+.noise-meter[data-mood="loud"][data-alert="1"] .nh-float { animation: nh-shake-hard 140ms linear infinite; }
+@keyframes nh-drift { 0%, 100% { transform: translate(-4px, 0) rotate(-2deg); } 50% { transform: translate(4px, -3px) rotate(2deg); } }
+@keyframes nh-hover { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-6px); } }
+@keyframes nh-shake { 0%, 100% { transform: translateX(0); } 25% { transform: translateX(-2.5px) rotate(-1.2deg); } 75% { transform: translateX(2.5px) rotate(1.2deg); } }
+@keyframes nh-shake-hard { 0%, 100% { transform: translateX(0); } 25% { transform: translateX(-5px) rotate(-2.4deg); } 75% { transform: translateX(5px) rotate(2.4deg); } }
+
+/* wisps peeling off its sides as it rises */
+.nh-wisps { opacity: 0.45; transition: opacity 600ms ease; }
+.noise-meter:is([data-mood="ok"], [data-mood="loud"]) .nh-wisps { opacity: 1; }
+.noise-meter[data-mood="off"] .nh-wisps { opacity: 0; }
+.nh-wisps path { fill: none; stroke: var(--nh-ghost); stroke-width: 2.4; stroke-linecap: round; opacity: 0; animation: nh-wisp 2.8s ease-out infinite; }
+.nh-wisps path:nth-child(2) { animation-delay: -0.95s; --dx: 10px; }
+.nh-wisps path:nth-child(3) { animation-delay: -1.9s; }
+@keyframes nh-wisp { 0% { opacity: 0; transform: translate(0, 0); } 25% { opacity: 0.6; } 100% { opacity: 0; transform: translate(var(--dx, -10px), 18px) scale(0.8); } }
+
+/* bats: perched on the headstone and the cross; scattered by "too loud" */
+.nh-bat path { fill: var(--nh-bat); }
+.nh-bat-eye { fill: var(--nh-bat-eye); }
+.nh-bat-wings { opacity: 0; transform-origin: center; }
+.nh-bat-fly { transform-origin: center; transition: transform 1.5s cubic-bezier(.45, 0, .75, .5), opacity 1.5s ease-in; transition-delay: calc(var(--i) * 140ms); }
+.noise-meter[data-mood="loud"] .nh-bat-perch { opacity: 0; }
+.noise-meter[data-mood="loud"] .nh-bat-wings { opacity: 1; animation: nh-flap 120ms linear infinite alternate; }
+.noise-meter[data-mood="loud"] .nh-bat.b0 .nh-bat-fly { transform: translate(-70px, -150px) rotate(-18deg) scale(0.7); opacity: 0; }
+.noise-meter[data-mood="loud"] .nh-bat.b1 .nh-bat-fly { transform: translate(30px, -175px) rotate(14deg) scale(0.65); opacity: 0; }
+.noise-meter[data-mood="loud"] .nh-bat.b2 .nh-bat-fly { transform: translate(60px, -160px) rotate(20deg) scale(0.7); opacity: 0; }
+@keyframes nh-flap { from { transform: scaleY(1); } to { transform: scaleY(0.3); } }
+
+/* the level bar: a bat flapping at the tip (riding a little above the
+   trail), the trail glowing, and flickering like flame once it's too loud */
+:root[data-theme="halloween"] .noise-rider { width: calc(var(--bar-h) * 2.8); height: calc(var(--bar-h) * 1.5); translate: -50% -74%; }
+:root[data-theme="halloween"] .noise-rider i { transform-origin: 50% 45%; animation: nh-ride 150ms ease-in-out infinite alternate; filter: drop-shadow(0 0 4px rgba(255, 117, 24, 0.55)); }
+@keyframes nh-ride { from { transform: scaleY(1.1) translateY(-3%); } to { transform: scaleY(0.72) translateY(5%); } }
+:root[data-theme="halloween"] .noise-meter[data-zone="loud"] .noise-bar { box-shadow: var(--noise-bar-inset), 0 0 1.1rem var(--nh-glow-loud); }
+:root[data-theme="halloween"] .noise-meter[data-zone="loud"] .noise-fill { animation: nh-flame 620ms steps(1, end) infinite; }
+@keyframes nh-flame {
+  0%   { filter: brightness(1)    saturate(1); }
+  17%  { filter: brightness(1.28) saturate(1.2); }
+  31%  { filter: brightness(0.9)  saturate(1); }
+  46%  { filter: brightness(1.18) saturate(1.3); }
+  63%  { filter: brightness(1.36) saturate(1.1); }
+  78%  { filter: brightness(0.95) saturate(1); }
+  90%  { filter: brightness(1.22) saturate(1.25); }
+}
+
+/* words: the zone in the spooky face; "too loud" held = a pumpkin pill */
+:root[data-theme="halloween"] .noise-zone {
+  font-family: var(--font-spooky);
+  font-weight: 400;
+  text-transform: none;
+  letter-spacing: 0.03em;
+  font-size: clamp(1.6rem, 4.6vh, 2.8rem);
+  padding: 0.05em 0.75em 0.12em;
+  border-radius: var(--radius-pill);
+  transition: background-color 400ms ease, color 400ms ease, box-shadow 400ms ease;
+}
+:root[data-theme="halloween"] .noise-meter[data-alert="1"] .noise-zone { background: var(--accent); color: var(--on-accent); box-shadow: 0 0 1.6rem var(--nh-glow-loud); }
+:root[data-theme="halloween"] body.present .noise-zone { font-size: clamp(2.4rem, 7vh, 4.6rem); }
+:root[data-theme="halloween"] body.noise-popout .noise-zone { font-size: clamp(1.6rem, 7vh, 4rem); }
+
+/* Reduced motion: the loops stop and the bats only fade; the rise itself, the
+   colour shift and the face/arm crossfades keep their easing (the rise IS the
+   reading, and an eased value is calmer than a jumping one). The app-wide
+   `* { transition: none !important }` needs the !important here. */
+@media (prefers-reduced-motion: reduce) {
+  .nh-float, .nh-wisps path, .nh-bat-wings, .nh-aura, .nh-mouth { animation: none !important; }
+  .nh-rise { transition: transform 450ms cubic-bezier(.3, .7, .4, 1) !important; }
+  :root[data-theme="halloween"] .noise-meter { transition: --nh-ghost 900ms ease, --nh-glow 900ms ease !important; }
+  .nh-svg :is(.nh-face, .nh-ghost, .nh-aura, .nh-blush, .nh-wisps) { transition: opacity 400ms ease !important; }
+  .nh-bat-fly { transition: opacity 600ms ease !important; }
 }
 
 /* ============================================================================
@@ -5283,7 +5921,7 @@ body.noise-popout .noise-zone { font-size: clamp(1.2rem, 5vmin, 3rem); }
 .wheel-bar .icon-btn { width: var(--ctl); height: var(--ctl); padding: 0; }
 .wheel-bar .icon-btn svg { width: 1rem; height: 1rem; }
 .wheel-bar button[aria-checked="true"] { border-color: var(--accent); color: var(--accent-ink); background: var(--accent-soft); }
-.wheel-bar .when-off, .wheel-bar .when-on { display: inline; }
+.wheel-bar [role="switch"] .when-off, .wheel-bar [role="switch"] .when-on { display: inline; }   /* switches only: the full-screen button keeps the app-wide icon swap */
 .wheel-bar button[aria-checked="false"] .when-on { display: none; }
 .wheel-bar button[aria-checked="true"] .when-off { display: none; }
 
@@ -5803,6 +6441,376 @@ body.wheel-popout .wheel-period {
     transition-duration: var(--wheel-dur, 0s) !important;
     transition-timing-function: var(--wheel-ease, linear) !important;
   }
+}
+
+/* ---------------------------------------------------------------------------
+   Name Wheel — halloween skin: a CAULDRON instead of the wheel (cauldron.js).
+   Every name floats in the green brew as a bubble (HTML pills moved by a rAF
+   physics loop); a pick boils the brew (--boil, 0..1, set by cauldron.js
+   every frame: brighter brew, higher flames, more steam and embers), lifts
+   the winner's bubble above the surface, hovers, pops it in green sparks, and
+   the name rises above the cauldron in Pirata One. Clicking anywhere on the
+   cauldron is the Spin button here (the hub button and the wheel SVG hide).
+   Layers in the 400x400 box: .cd-back (glow, steam, pot, rim, brew) →
+   .cd-brew (the bubbles, over the brew surface: left 15%, top 29.5%, 70% ×
+   26.5%) → .cd-front (the near lip of the rim, logs, flames) → embers →
+   the burst → the winner's name.
+   --------------------------------------------------------------------------- */
+.cauldron, .for-brew { display: none; }
+:root[data-theme="halloween"] .cauldron { display: block; }
+:root[data-theme="halloween"] .for-brew { display: inline; }
+:root[data-theme="halloween"] .for-wheel,
+:root[data-theme="halloween"] .wheel-wrap > .wheel-svg,
+:root[data-theme="halloween"] #wheel-spin,
+:root[data-theme="halloween"] .wheel-hub-text { display: none; }
+:root[data-theme="halloween"] .wheel-result-name { font-family: var(--font-spooky); text-transform: none; letter-spacing: 0.02em; }
+
+.cauldron {
+  position: absolute; inset: 0;
+  container-type: inline-size;
+  cursor: pointer;
+  border-radius: var(--radius-lg);
+  -webkit-tap-highlight-color: transparent;
+}
+.cauldron[aria-disabled="true"] { cursor: default; }
+body.wheel-popout .cauldron { cursor: default; }
+.cauldron:focus-visible { outline: 2px solid var(--accent); outline-offset: 4px; }
+.cd-back, .cd-front { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; pointer-events: none; }
+.cd-back { z-index: 1; }
+.cd-front { z-index: 3; }
+.cauldron svg * { transform-box: fill-box; }
+
+/* gradients: one colour per gradient, faded by stop-opacity (SVG gradients
+   don't premultiply, so fading to `transparent` goes grey) */
+#cd-g-fire stop { stop-color: var(--cd-fire-glow); }
+#cd-g-under stop { stop-color: var(--cd-under-glow); }
+#cd-g-haze stop { stop-color: var(--cd-haze); }
+#cd-g-fire stop:last-child, #cd-g-under stop:last-child, #cd-g-haze stop:last-child { stop-opacity: 0; }
+#cd-g-brew stop:nth-child(1) { stop-color: var(--cd-brew-1); }
+#cd-g-brew stop:nth-child(2) { stop-color: var(--cd-brew-2); }
+#cd-g-brew stop:nth-child(3) { stop-color: var(--cd-brew-3); }
+#cd-g-pot stop:nth-child(1) { stop-color: var(--cd-pot-1); }
+#cd-g-pot stop:nth-child(2) { stop-color: var(--cd-pot-2); }
+#cd-g-pot stop:nth-child(3) { stop-color: var(--cd-pot-3); }
+
+/* the pot */
+.cd-pot { stroke: var(--cd-pot-line); stroke-width: 3; stroke-linejoin: round; }
+.cd-pot-glow { opacity: calc(0.35 + var(--boil, 0) * 0.55); }
+.cd-pot-hi { fill: none; stroke: var(--cd-pot-hi); stroke-width: 7; stroke-linecap: round; }
+.cd-leg { fill: var(--cd-leg); }
+.cd-rim, .cd-lip { fill: var(--cd-pot-1); stroke: var(--cd-pot-line); stroke-width: 3; stroke-linejoin: round; }
+.cd-lip-hi { fill: none; stroke: var(--cd-pot-hi); stroke-width: 3; stroke-linecap: round; }
+.cd-logs rect { fill: var(--cd-log); stroke: var(--cd-log-line); stroke-width: 2; }
+
+/* the brew: glowing, brighter as it boils */
+.cd-brew-surface {
+  filter: brightness(calc(1 + var(--boil, 0) * 0.5)) drop-shadow(0 0 calc(6px + var(--boil, 0) * 14px) var(--cd-glow));
+}
+.cd-brew-sheen { fill: var(--cd-sheen); }
+.cd-haze { opacity: calc(0.4 + var(--boil, 0) * 0.6); }
+.cd-fireglow { opacity: calc(0.55 + var(--boil, 0) * 0.45); }
+.cauldron:not([aria-disabled="true"]):hover .cd-brew-surface { filter: brightness(1.15) drop-shadow(0 0 10px var(--cd-glow)); }
+
+/* steam curling up off the top */
+.cd-steam path { fill: none; stroke: var(--cd-steam); stroke-width: 10; stroke-linecap: round; opacity: 0; transform-origin: 50% 100%; animation: cd-steam 4.6s ease-out infinite; }
+.cd-steam path:nth-child(2) { animation-delay: -1.5s; }
+.cd-steam path:nth-child(3) { animation-delay: -3s; }
+.cd-steam { opacity: calc(0.6 + var(--boil, 0) * 0.4); }
+@keyframes cd-steam {
+  0%   { opacity: 0; transform: translateY(16px) scale(0.7, 0.6); }
+  30%  { opacity: 1; }
+  100% { opacity: 0; transform: translateY(-26px) scale(1.25, 1.1); }
+}
+
+/* the fire: each flame flickers on its own beat and leaps with the boil */
+.cd-flame .f-out { fill: var(--cd-flame-out); }
+.cd-flame .f-in  { fill: var(--cd-flame-in); }
+.cd-flame-boil { transform-origin: 50% 100%; scale: 1 calc(1 + var(--boil, 0) * 0.9); transition: scale 220ms ease-out; }
+.cd-flame-flick { transform-origin: 50% 100%; animation: cd-flick 0.5s ease-in-out infinite alternate; animation-delay: calc(var(--i) * -0.17s); }
+.cd-flame:nth-child(even) .cd-flame-flick { animation-duration: 0.37s; }
+@keyframes cd-flick { from { transform: scale(0.92, 0.9) skewX(-4deg); } to { transform: scale(1.06, 1.1) skewX(4deg); } }
+
+/* embers drifting up from the fire */
+.cd-embers { position: absolute; inset: 0; z-index: 4; pointer-events: none; opacity: calc(0.45 + var(--boil, 0) * 0.55); }
+.cd-embers i {
+  position: absolute; bottom: 5%; left: calc(29% + var(--i) * 3.7%);
+  width: 0.9cqi; height: 0.9cqi; border-radius: 50%;
+  background: var(--cd-ember); box-shadow: 0 0 1.2cqi var(--cd-ember);
+  opacity: 0;
+  animation: cd-ember 2.8s linear infinite; animation-delay: calc(var(--i) * -0.29s);
+}
+.cd-embers i:nth-child(odd) { animation-duration: 2.2s; --dx: -5cqi; }
+@keyframes cd-ember {
+  0%   { opacity: 0; transform: translate(0, 0) scale(1); }
+  15%  { opacity: 1; }
+  100% { opacity: 0; transform: translate(var(--dx, 5cqi), -30cqi) scale(0.4); }
+}
+
+/* the bubbles */
+.cd-brew { position: absolute; left: 15%; top: 29.5%; width: 70%; height: 26.5%; z-index: 2; pointer-events: none; }
+.cd-bubble {
+  position: absolute; left: 50%; top: 50%;
+  display: grid; place-items: center;
+  border-radius: 999px;
+  background:
+    radial-gradient(circle at 16% 26%, var(--cd-bubble-hi) 0 0.14em, transparent 0.2em),
+    radial-gradient(ellipse at 50% 62%, var(--cd-bubble), var(--cd-bubble-edge));
+  border: 2px solid var(--cd-bubble-line);
+  box-shadow: 0 0 0.6em var(--cd-glow-soft), inset 0 -0.2em 0.4em rgba(0, 0, 0, 0.3);
+  color: var(--cd-ink);
+  font-family: var(--font-body); font-weight: 700; line-height: 1;
+  white-space: nowrap;
+  will-change: transform;
+  transform-origin: center;
+}
+.cd-name { max-width: 100%; padding: 0 0.35em; overflow: hidden; text-overflow: ellipsis; text-shadow: 0 1px 2px rgba(0, 0, 0, 0.9); }
+.cd-bubble.born { animation: cd-born 650ms cubic-bezier(.34, 1.56, .64, 1); }
+.cd-bubble.lifted { z-index: 5; box-shadow: 0 0 1.2em var(--cd-glow), 0 0 2.4em var(--cd-glow-soft), inset 0 -0.2em 0.4em rgba(0, 0, 0, 0.3); }
+.cd-bubble.pop { animation: cd-pop 300ms ease-out forwards; }
+.cd-bubble.popped { visibility: hidden; }
+@keyframes cd-born { from { scale: 0.2; opacity: 0; } to { scale: 1; opacity: 1; } }
+@keyframes cd-pop  { 0% { scale: 1; opacity: 1; } 40% { scale: 1.25; opacity: 1; } 100% { scale: 1.9; opacity: 0; } }
+
+/* the pop: green sparks flying out from where the bubble was */
+.cd-burst { position: absolute; z-index: 6; width: 0; height: 0; pointer-events: none; }
+.cd-burst i {
+  position: absolute; left: -1.1cqi; top: -1.1cqi;
+  width: 2.2cqi; height: 2.2cqi; border-radius: 50%;
+  background: var(--cd-spark); box-shadow: 0 0 1.4cqi var(--cd-spark), 0 0 3cqi var(--cd-glow);
+  opacity: 0;
+}
+.cd-burst.go i { animation: cd-spark 700ms cubic-bezier(.2, .7, .3, 1) forwards; }
+@keyframes cd-spark {
+  0%   { opacity: 1; transform: rotate(var(--a)) translateY(0) scale(1.2); }
+  100% { opacity: 0; transform: rotate(var(--a)) translateY(calc(var(--d) * -27cqi)) scale(0.3); }
+}
+
+/* the winner, above the cauldron */
+.cd-winner {
+  position: absolute; left: 3%; right: 3%; top: 1%; height: 24%; z-index: 7;
+  margin: 0; display: grid; place-items: center;
+  font-family: var(--font-spooky); font-size: 12cqi; line-height: 1;
+  color: var(--cd-winner);
+  text-align: center; white-space: nowrap; overflow: visible;
+  text-shadow: 0 0 0.12em var(--cd-glow), 0 0 0.4em var(--cd-glow), 0 0 0.9em var(--cd-glow-soft);
+  opacity: 0; scale: 0.6;
+  transition: opacity 300ms ease, scale 300ms ease;
+  pointer-events: none;
+}
+.cd-winner[data-len="long"] { font-size: 8.5cqi; }
+.cauldron[data-state="picked"] .cd-winner { opacity: 1; scale: 1; transition: opacity 260ms ease, scale 520ms cubic-bezier(.34, 1.56, .64, 1); }
+.cauldron[data-state="picked"] .cd-winner { animation: cd-glow 2.4s ease-in-out 600ms infinite; }
+@keyframes cd-glow { 50% { text-shadow: 0 0 0.16em var(--cd-glow), 0 0 0.6em var(--cd-glow), 0 0 1.3em var(--cd-glow-soft); } }
+
+/* full screen + the projector windows: the cauldron fills the view */
+:root[data-theme="halloween"] body.present .wheel-wrap { width: auto; height: min(86vh, 94vw); }
+
+/* Reduced motion: the loops that are only decoration stop (steam, embers,
+   flicker, the name's glow pulse); the brew itself — bubbles drifting, the
+   boil, the rise and the pop — is the tool, run on a click, so it stays. The
+   flames' boil scale keeps its easing against the app-wide `* { transition:
+   none !important }`. */
+@media (prefers-reduced-motion: reduce) {
+  .cd-steam path, .cd-embers i, .cd-flame-flick, .cauldron[data-state="picked"] .cd-winner { animation: none !important; }
+  .cd-embers { display: none; }
+  .cd-flame-boil { transition: scale 220ms ease-out !important; }
+  .cd-winner { transition: opacity 300ms ease !important; }
+}
+
+/* ---------------------------------------------------------------------------
+   Name Wheel — marwa skin: a GACHAPON machine instead of the wheel
+   (gacha.js). A pink body, a clear glass globe full of pastel capsules (one
+   per student still in, no names, so the globe empties as No repeats takes
+   them), a turn handle, a tray at the bottom, and a counter on the label
+   strip. A pick is a row of separate beats (~5s, timeline at the top of
+   gacha.js): the knob turns and the machine shakes; the capsules mix; they
+   settle and ONE lights up (.gc-cap.picked); it slides to the exit and falls
+   down the glass chute, accelerating; it bounces in the tray and settles; a
+   pause; then it pops — the halves fly apart and fall away, hearts burst, the
+   name scales up with an overshoot. The handle is the Spin button here (the
+   wheel SVG, its hub button and the mascot hide). Layers in the 400x400 box:
+   .gc-back (base, body, tray mouth, label, the glass's back, the collar, the
+   chute's tube) → .gc-globe (the capsules, clipped to the glass: centre
+   200,118, r 104) → .gc-front (the glass's rim and shine, the tube's glass,
+   the knob, the tray's lip) → the travelling capsule (.gc-drop, placed in box
+   units by gacha.js), the burst, the name, the counter.
+   --------------------------------------------------------------------------- */
+.gacha, .for-gacha { display: none; }
+:root[data-theme="marwa"] .gacha { display: block; }
+:root[data-theme="marwa"] .for-gacha { display: inline; }
+:root[data-theme="marwa"] .for-wheel,
+:root[data-theme="marwa"] .wheel-wrap > .wheel-svg,
+:root[data-theme="marwa"] #wheel-spin,
+:root[data-theme="marwa"] .wheel-hub-text,
+:root[data-theme="marwa"] .wheel-stage .wheel-mascot { display: none; }
+
+.gacha { position: absolute; inset: 0; container-type: inline-size; }
+.gc-back, .gc-front { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; pointer-events: none; }
+.gc-back { z-index: 1; }
+.gc-front { z-index: 3; }
+.gacha svg * { transform-box: fill-box; }
+
+/* the machine */
+.gc-shadow { fill: var(--gc-shadow); }
+.gc-foot { fill: var(--gc-foot); stroke: var(--gc-line); stroke-width: 3; }
+.gc-body { fill: var(--gc-body); stroke: var(--gc-line); stroke-width: 3.4; stroke-linejoin: round; }
+.gc-body-hi { fill: none; stroke: var(--gc-body-hi); stroke-width: 6; stroke-linecap: round; }
+.gc-label { fill: var(--gc-label); stroke: var(--gc-line); stroke-width: 2; }
+.gc-mouth { fill: var(--gc-mouth); stroke: var(--gc-line); stroke-width: 3; }
+.gc-lip { fill: var(--gc-body-2); stroke: var(--gc-line); stroke-width: 2.6; stroke-linejoin: round; }
+.gc-glass-back { fill: var(--gc-glass); }
+.gc-glass-rim { fill: none; stroke: var(--gc-glass-line); stroke-width: 5; }
+.gc-shine { fill: none; stroke: var(--gc-shine); stroke-width: 7; stroke-linecap: round; }
+.gc-shine.small { stroke-width: 5; }
+.gc-neck, .gc-cap-top { fill: var(--gc-neck); stroke: var(--gc-line); stroke-width: 3; }
+.gc-knob-ring { fill: var(--gc-knob-ring); stroke: var(--gc-line); stroke-width: 3; }
+.gc-knob-face { fill: var(--gc-knob-face); }
+.gc-knob-bar { fill: var(--gc-knob-bar); stroke: var(--gc-line); stroke-width: 2.4; }
+.gc-knob-dot { fill: var(--gc-line); }
+.gc-knob { transform-origin: center; }
+.gc-knob.turning { animation: gc-turn 1000ms cubic-bezier(.5, 0, .25, 1); }
+@keyframes gc-turn { to { transform: rotate(360deg); } }
+.gacha[data-state="turning"] { animation: gc-jiggle 160ms ease-in-out 6; }
+/* the chute: a glass tube from the globe's exit down to the tray */
+.gc-tube-edge { fill: none; stroke: var(--gc-line); stroke-width: 46; stroke-linecap: round; stroke-linejoin: round; }
+.gc-tube { fill: none; stroke: var(--gc-tube); stroke-width: 40; stroke-linecap: round; stroke-linejoin: round; }
+.gc-tube-rim { fill: none; stroke: var(--gc-tube-glass); stroke-width: 40; stroke-linecap: round; stroke-linejoin: round; }
+.gc-tube-shine { fill: none; stroke: var(--gc-shine); stroke-width: 4; stroke-linecap: round; }
+.gc-route { fill: none; stroke: none; }
+@keyframes gc-jiggle { 25% { rotate: -0.9deg; translate: -0.4% 0; } 75% { rotate: 0.9deg; translate: 0.4% 0; } }
+
+/* the handle is the button: a round hit area over the knob */
+.gc-handle {
+  position: absolute; left: 60.25%; top: 65.75%; width: 15.5%; height: 15.5%; z-index: 4;
+  margin: 0; padding: 0; min-height: 0;
+  border: 0; border-radius: 50%;
+  background: transparent; box-shadow: none;
+  cursor: pointer;
+}
+.gc-handle:hover:not(:disabled) { background: rgba(255, 255, 255, 0.18); box-shadow: 0 0 0 4px var(--accent-glow); translate: none; }
+.gc-handle:focus-visible { outline: 3px solid var(--accent); outline-offset: 3px; }
+.gc-handle:disabled { cursor: default; }
+body.wheel-popout .gc-handle { display: none; }
+
+/* the capsules: top half a pastel, bottom half white, a seam between */
+.gc-globe {
+  position: absolute; left: 24%; top: 3.5%; width: 52%; height: 52%; z-index: 2;
+  border-radius: 50%; overflow: hidden; pointer-events: none;
+}
+.gc-cap, .gc-drop {
+  --cap-c: var(--gc-cap-1);
+  border-radius: 50%;
+  background:
+    radial-gradient(circle at 32% 24%, rgba(255, 255, 255, 0.85) 0 9%, transparent 11%),
+    linear-gradient(180deg, var(--cap-c) 0 48%, var(--gc-cap-line) 48% 52%, var(--gc-cap-shell) 52% 100%);
+  box-shadow: inset 0 0 0 2px var(--gc-cap-line);
+}
+.gc-cap { position: absolute; left: 50%; top: 50%; width: var(--cap, 26px); height: var(--cap, 26px); will-change: transform; }
+.gc-cap.gone { display: none; }
+/* the chosen one, still in the globe: it lights up and grows, so the eye
+   finds it before it leaves */
+.gc-cap.picked {
+  z-index: 2; scale: 1.35;
+  box-shadow: inset 0 0 0 2px var(--gc-cap-line), 0 0 0 3px var(--gc-pick-ring), 0 0 1.1em 0.35em var(--accent-glow);
+  animation: gc-pick 260ms cubic-bezier(.34, 1.56, .64, 1);
+}
+@keyframes gc-pick { from { scale: 1; } }
+[data-c="2"] { --cap-c: var(--gc-cap-2); }
+[data-c="3"] { --cap-c: var(--gc-cap-3); }
+[data-c="4"] { --cap-c: var(--gc-cap-4); }
+[data-c="5"] { --cap-c: var(--gc-cap-5); }
+[data-c="6"] { --cap-c: var(--gc-cap-6); }
+
+/* the capsule in the tray (gacha.js moves it); on the crack its top flies off */
+.gc-drop {
+  position: absolute; left: 50%; top: 50%; width: 9%; aspect-ratio: 1; z-index: 2;
+  opacity: 0; background: none; box-shadow: none; pointer-events: none;
+  /* it keeps the highlight it caught in the globe, all the way to the tray */
+  filter: drop-shadow(0 0 0.25em var(--gc-pick-ring)) drop-shadow(0 0 0.7em var(--accent-glow));
+  font-size: 2cqi;
+}
+.gc-drop.squash { scale: 1.16 0.84; }
+.gc-half { position: absolute; left: 0; right: 0; height: 50%; box-shadow: inset 0 0 0 2px var(--gc-cap-line); }
+.gc-top { top: 0; border-radius: 999px 999px 0 0; background: radial-gradient(circle at 32% 48%, rgba(255, 255, 255, 0.85) 0 18%, transparent 22%), var(--cap-c); }
+.gc-bot { bottom: 0; border-radius: 0 0 999px 999px; background: var(--gc-cap-shell); }
+/* the pop: the halves burst apart, arc up, and fall away out of the tray */
+.gacha.cracked .gc-top { animation: gc-top-off 950ms cubic-bezier(.25, .7, .45, 1) forwards; }
+.gacha.cracked .gc-bot { animation: gc-bot-off 950ms cubic-bezier(.25, .7, .45, 1) forwards; }
+@keyframes gc-top-off {
+  0%   { transform: none; opacity: 1; }
+  28%  { transform: translate(-60%, -170%) rotate(-55deg); opacity: 1; }
+  100% { transform: translate(-190%, 230%) rotate(-210deg); opacity: 0; }
+}
+@keyframes gc-bot-off {
+  0%   { transform: none; opacity: 1; }
+  28%  { transform: translate(70%, -60%) rotate(48deg); opacity: 1; }
+  100% { transform: translate(200%, 260%) rotate(190deg); opacity: 0; }
+}
+/* the tube and the tray mouth sit over the travelling capsule while it is in
+   them: .gc-front (z 3) is above .gc-drop (z 2), so it reads as being inside */
+
+/* the name, rising out of the capsule to the front of the globe */
+.gc-winner {
+  position: absolute; left: 4%; right: 4%; top: 22%; z-index: 6;
+  margin: 0; display: flex; justify-content: center;
+  pointer-events: none;
+}
+.gc-winner span {
+  max-width: 100%;
+  padding: 0.18em 0.6em 0.24em;
+  border-radius: 999px;
+  background: var(--card);
+  border: 0.06em solid var(--accent);
+  box-shadow: 0 0.12em 0 var(--gc-body-2), 0 0.3em 0.9em var(--accent-glow);
+  font: 700 10.5cqi/1.1 "Comfortaa", "Quicksand", var(--font-body);
+  color: var(--text);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  opacity: 0; transform: translateY(180%) scale(0.25);
+}
+.gc-winner[data-len="long"] span { font-size: 7.5cqi; }
+/* out of the capsule in the tray, up to the front of the globe, with an
+   overshoot and a settle */
+.gacha[data-state="picked"] .gc-winner span { animation: gc-rise 900ms cubic-bezier(.3, .8, .4, 1) forwards; }
+@keyframes gc-rise {
+  0%   { opacity: 0; transform: translateY(55cqi) scale(0.15); }
+  20%  { opacity: 1; }
+  55%  { opacity: 1; transform: translateY(-2cqi) scale(1.18); }
+  75%  { opacity: 1; transform: translateY(0) scale(0.95); }
+  90%  { opacity: 1; transform: translateY(0) scale(1.03); }
+  100% { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+/* hearts and sparkles bursting out of the opened capsule */
+.gc-burst { position: absolute; left: 50%; top: 80%; width: 0; height: 0; z-index: 5; pointer-events: none; }
+.gc-burst i { position: absolute; left: -3cqi; top: -3cqi; width: calc(6cqi * var(--s, 1)); height: calc(6cqi * var(--s, 1)); opacity: 0; background: no-repeat center / contain; }
+.gc-burst i.heart { background-image: var(--marwa-burst-heart); }
+.gc-burst i.spark { background-image: var(--marwa-burst-spark); }
+.gc-burst.go i { animation: gc-burst 1.3s cubic-bezier(.15, .7, .35, 1) forwards; }
+@keyframes gc-burst {
+  0%   { opacity: 0; transform: rotate(var(--a)) translateY(0) scale(0.4); }
+  20%  { opacity: 1; }
+  70%  { opacity: 1; }
+  100% { opacity: 0; transform: rotate(var(--a)) translateY(calc(var(--d) * -44cqi)) scale(1.15); }
+}
+
+/* the counter on the label strip */
+.gc-counter {
+  position: absolute; left: 47.5%; top: 59%; width: 28%; height: 5.5%; z-index: 4;
+  margin: 0; display: flex; align-items: center; justify-content: center; gap: 0.35em;
+  font: 700 3.1cqi/1 "Comfortaa", "Quicksand", var(--font-body);
+  color: var(--text-2); pointer-events: none;
+}
+.gc-counter b { color: var(--accent-deep); font-weight: 700; }
+.gacha[data-empty="1"] .gc-counter b { color: var(--text-muted); }
+
+/* full screen + the projector windows: the machine fills the view */
+:root[data-theme="marwa"] body.present .wheel-wrap { width: auto; height: min(86vh, 94vw); }
+
+/* Reduced motion: the jiggle stops; the pick itself (turn, drop, crack, the
+   name) is the tool, run on a click, so it plays. The crack keeps its
+   easing against the app-wide `* { transition: none !important }`. */
+@media (prefers-reduced-motion: reduce) {
+  .gacha[data-state="turning"] { animation: none !important; }
 }
 
 /* ==========================================================================

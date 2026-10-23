@@ -35,7 +35,7 @@ full-screen toggle. There is no sidebar; every page uses the full width.
 | Lesson Plans | `lessons.html` | Writing plans **by course**: a Day / Week / Month calendar (courses × Mon–Fri, no-school days blocked out; one plan per course per day, shared by its periods, with an out-of-the-way per-period split) with the full editor for the selected period's day beside it; files and links attached per plan (Supabase Storage), and one search over every plan and attachment |
 | Create Groups | `groups.html` | Random / formula groups, projector view in full screen |
 | Timer | `timer.html` | Classroom countdown / stopwatch: big digits, presets, ±1 min, mute, pop-out + Picture-in-Picture for the projector while another tab is active |
-| Name Wheel | `wheel.html` | Cold-calling: spin a wheel of the period's present students, big name in the middle, no-repeats mode, projector pop-out |
+| Name Wheel | `wheel.html` | Cold-calling: spin a wheel of the period's present students, big name in the middle, no-repeats mode, full screen window + mini window. In halloween the wheel is a cauldron (names float in the brew as bubbles; the winner's bubble rises and pops), in marwa a gachapon machine (a capsule per student; the winner's capsule drops into the tray and cracks open) |
 | Noise Meter | `noise.html` | Room volume from the laptop mic: big green/amber/red meter, three zones with activity presets, "Too loud" hold + chime, pop-out for the projector. Mic only while you hold it on |
 | Seating | `seating.html` | Room builder + seat assignment |
 | Bathroom | `bathroom.html` | Bathroom tracker: tap a card to sign out (quick tap or timer); per-student pass checkboxes, red flag past the limit. One centred control island (period · mode · search · gear) over a scrolling student grid, with **Out now** (live timers + End timer) and **Log** (the day's trips + a day switcher; its History button opens the quarter review — counts, CSV, print) as two fixed-height panels underneath |
@@ -63,13 +63,15 @@ full-screen toggle. There is no sidebar; every page uses the full width.
 | `bathroom.html` | Bathroom Tracker screen: `#bathroom` built by `bathroom.js` |
 | `lesson.js`    | `initLessonPanel({ mount, rows, onChange, onAttachments, onScope })` — the lesson-plan editor for one calendar row (a course, or a period with none) on one day (numbered agenda with minutes, materials, attachments, then notes last; objective / homework only via + Add field; inline editing, 800ms autosave, a ⋯ menu with Copy from course / Copy from day / Split a period, Merge back). `panel.show(row, date, split?)`, `panel.upload(files)`, `panel.focusAttachment(id)`. Also the attachment helpers the page shares: `attachmentKind()`, `KIND_LABEL`, `lpIcon()`. |
 | `bathroom.js`  | `initBathroom()` — the bathroom tracker (tiles, sign out/in, live elapsed, flag + cap settings in localStorage, log, history). |
-| `timer.html`   | Timer screen: the `.timer-stage` (mode toggle, label, big display + ring, presets, custom min/sec, start/reset/±1, mute, Pop out, PiP, full screen) — loads `timer.js`. |
+| `timer.html`   | Timer screen: the `.timer-stage` (mode toggle, label, big display + ring, presets, custom min/sec, start/reset/±1, mute, "Full screen window" (the pop-out), "Mini window" (PiP), full screen) — loads `timer.js`. |
 | `timer.js`     | Countdown + stopwatch logic, plus `buildDial()` / `paintDial()` for the themed dial. **End-timestamp model**: state is `{ mode, running, paused, label, muted, targetMs, endsAt, remainingAtPause, startedAt, elapsedAtPause, zeroed }` in `localStorage['teacherpal.timer.state']`; every window computes the display from `Date.now()` against `endsAt`/`startedAt`, so tab-throttling doesn't drift. `BroadcastChannel('teacherpal-timer')` syncs main ↔ pop-out ↔ PiP. Web Audio API beep on zero (respects mute). `documentPictureInPicture.requestWindow()` on Chrome for an always-on-top floating display. Space toggles start/pause. |
-| `noise.html`   | Noise Meter screen: the `.noise-stage` (activity presets, big reading + bar + zone word, Start/Stop, chime mute, Pop out, full screen, the two zone sliders, privacy line) — loads `noise.js`. |
+| `noise.html`   | Noise Meter screen: the `.noise-stage` in three groups — `.noise-head` (activity presets + the `#status` line, inside the card), the `.noise-meter` (reading + bar + zone word; the bunny in marwa, the ghost in halloween), `.noise-foot` (one `.noise-foot-row` of Start/Stop, chime, "Full screen window" · the two zone sliders side by side · full screen, then a one-line privacy note with a `?`) — plus `#noise-privacy-dialog` (the full mic note). Loads `noise.js`. |
 | `noise.js`     | Mic → `AnalyserNode` → RMS → a 35–95 relative "dB" reading, 500ms rolling average, three zones, "Too loud" after 3s in the red, optional chime. Polls on `setInterval` (**not** rAF — rAF freezes in a background window and the pop-out would stall). `BroadcastChannel('teacherpal-noise')` feeds the pop-out. Opens the mic only on Start; stops every track on Stop and on `pagehide`. Nothing is recorded or sent anywhere. |
-| `wheel.html`   | Name Wheel screen: the wheel on the left; on the right the result panel and the controls (period, AUTO, **Edit wheel**, First names / No repeats / tick mute / Pop out / full screen), plus the `#wheel-roster-dialog` toggle-chip modal — loads `wheel.js`. |
+| `wheel.html`   | Name Wheel screen: the wheel on the left; on the right the result panel and the controls (period, AUTO, **Edit wheel**, First names / No repeats / tick mute / "Full screen window" / full screen), "Mini window" (PiP, Chrome only), plus the `#wheel-roster-dialog` toggle-chip modal — loads `cauldron.js`, `gacha.js`, then `wheel.js`. Words that differ per skin come in `.for-wheel` / `.for-brew` / `.for-gacha` triples ("Edit wheel" / "Edit who's in", "Tick on" / "Sound on", …) and CSS shows the one for the theme. |
 | `wheel.js`     | The wheel: draws the slices as SVG into `#wheel-rotor` (the only thing that spins), runs the spin on rAF with an ease-out, ticks as each slice passes the pointer, and syncs the pop-out over `BroadcastChannel('teacherpal-wheel')`. **Winner is drawn first** (`crypto.getRandomValues`), then the landing rotation is computed — the animation can't bias it. |
-| `wheel-popout.html` | Read-only projector wheel (`body.wheel-popout`): same dial filling the window, fed by broadcast, no controls. |
+| `wheel-popout.html` | Read-only projector wheel (`body.wheel-popout`): same dial (or, in halloween, the cauldron) filling the window, fed by broadcast, no controls. The mini window is this same page in an iframe. |
+| `cauldron.js` | The Name Wheel's halloween skin, `window.Cauldron` (`isOn`, `build`, `sync`, `run`, `finish`, `setWinner`, `setDisabled`, `BOIL_MS`, `SETTLE_MS`). Draws the cauldron into `.wheel-wrap`, floats each name as an HTML bubble (rAF physics), and animates a pick from the spin descriptor `wheel.js` hands it: boil → rise → hover → pop. Owns its sounds (bubbling that builds, a pop). Never picks anything. |
+| `gacha.js` | The Name Wheel's marwa skin, `window.Gacha` — the same shape as `Cauldron` (`isOn`, `build`, `sync`, `run`, `finish`, `setWinner`, `setDisabled`, `DURATION_MS`, `SETTLE_MS`). A gachapon machine in `.wheel-wrap`: one unnamed pastel capsule per student in the globe (rAF physics: gravity, a tumble, circle collisions), the handle as the Spin button, a "N left" counter; a pick (~5s, in separate beats) turns the knob, mixes, lights up one capsule, sends it down a glass chute into the tray, bounces it, then pops it open and raises the name with hearts and sparkles. Owns its sounds (crank, rattle, pop). Never picks anything. |
 | `noise-popout.html` | Read-only projector pop-out (`body.noise-popout`): reading + bar + zone word, fed over BroadcastChannel. Never opens a mic of its own; says so when the main window isn't answering. |
 | `timer-popout.html` | Minimal read-only pop-out window (`body.timer-popout`): label + display + the same themed dial filling the window, no controls; listens for state via BroadcastChannel. |
 | `migration-lessons-bathroom.sql` | One-off migration creating `lesson_plans` + `bathroom_log` (incl. the manual-tally columns; run in the Supabase SQL editor) |
@@ -98,7 +100,7 @@ full-screen toggle. There is no sidebar; every page uses the full width.
 
 Every page: `<link rel="stylesheet" href="style.css">`, an **empty**
 `<header class="topbar"></header>` (nav.js fills it), then at the end of
-`<body>`: `shared.js`, `schedule.js`, (`formula.js` on Seating and Create
+`<body>`: `shared.js`, `schedule.js`, (`cauldron.js` and `gacha.js` before `wheel.js` on the Name Wheel and its pop-out; `formula.js` on Seating and Create
 Groups, `room.js` on Seating / hub / attendance), `nav.js`, then the page's
 own script (`attendance.js` + `initAttendance()` on Attendance; `lesson.js`
 on Lesson Plans; `bathroom.js` on Bathroom; `timer.js` on Timer; nothing on
@@ -818,7 +820,9 @@ the structure, and every other theme is a colour swap of it. A theme is
   below. The **Timer dial** is the one component with a real per-theme skin
   (the bunny IS the dial — it drains top to bottom, holds the time in a heart,
   perks up in the last minute and celebrates at zero; Comfortaa digits,
-  sentence-case label) — see the Timer section. Everywhere
+  sentence-case label) — see the Timer section; the **Noise Meter** has the
+  other one (the bunny IS the meter — see the Noise Meter section; halloween
+  has its own there too, a ghost rising from a grave). Everywhere
   else: no HUD tick suppression, no sentence-case override, no separate
   fonts, no rounded-card overrides — layout changes to jarvis carry into
   marwa automatically.
@@ -1586,9 +1590,16 @@ All styling lives in `style.css`; pages carry almost no inline styling.
     slid behind the dial.
 
   Under the dial: Start → Pause → Resume, Reset, −1 / +1 min, the setup row,
-  and an extras row with Mute (`aria-checked`), Pop out, Picture-in-Picture
-  (Chrome only — button hidden without `documentPictureInPicture`) and
-  the full-screen icon. **Countdown accuracy**: the source of truth is
+  and an extras row with Mute (`aria-checked`), **Full screen window** (the
+  pop-out, `#timer-popout`), **Mini window** (Picture-in-Picture,
+  `#timer-pip`; Chrome only — button hidden without
+  `documentPictureInPicture`) and the full-screen icon. Those two labels
+  are the user-facing names everywhere (Noise Meter and Name Wheel have the
+  same "Full screen window" button; neither has a mini window): `.win-btn`
+  = an icon (maximize arrows / a screen with a small inset window) + the
+  label, with the tooltips "Opens a window you can make full screen on your
+  projector" and "A small window that floats above other apps". Don't call
+  them "Pop out" / "Picture-in-Picture" in the UI. **Countdown accuracy**: the source of truth is
   `state.endsAt = Date.now() + remaining` (or `state.startedAt` in
   stopwatch mode); every window renders from `Date.now()` against those
   anchors, so a background-throttled tab never drifts. Last minute pulls
@@ -1623,7 +1634,7 @@ All styling lives in `style.css`; pages carry almost no inline styling.
   small `.wheel-result-sub`: the remaining count and the contextual
   put-back / take-off button. Controls follow below: the "press the hub or
   Space" hint, period + AUTO + **Edit wheel**, then the toggles (No repeats,
-  tick mute, First names, Pop out, full screen).
+  tick mute, First names, "Full screen window", full screen).
   **The hub IS the Spin button** (`.wheel-hub-btn`, `#wheel-spin`): a small
   disc at the centre, 28% of the wrap = radius 14 in viewBox units, with
   hover (accent ring + glow + a nudge up in scale), pressed (scale down,
@@ -1765,7 +1776,9 @@ All styling lives in `style.css`; pages carry almost no inline styling.
       face. Spinning adds a motion glow to the rim; landing lights the
       winning slice with `--wheel-won` and pulses the ring once. The stage
       is a `.hud-box` with corner ticks like the other jarvis pages.
-    - **marwa** — the same machine in rose porcelain (`--wheel-metal`,
+    - **marwa** — *(the page now shows the gachapon instead, see below; these
+      wheel rules stay for reference and for any window showing the wheel)*
+      the same machine in rose porcelain (`--wheel-metal`,
       `--wheel-housing`, rounder legs and bracket), pastel slice ramp,
       Comfortaa sentence-case names with a light halo, no instrument ring,
       a rounded drop pointer, a white hub with an accent ring, and a mascot
@@ -1776,14 +1789,135 @@ All styling lives in `style.css`; pages carry almost no inline styling.
   main window only so the pop-out doesn't double it), and the pop-out gets
   `{ list, rotation, spin, winnerId }` over `BroadcastChannel` and runs the
   same `runSpin()` descriptor, so both windows follow the same curve.
+  **Mini window** (`#wheel-pip`, Chrome's `documentPictureInPicture`,
+  hidden elsewhere): an always-on-top window holding `wheel-popout.html` in
+  an iframe. It is fed over the same BroadcastChannel; the main window
+  broadcasts once the iframe loads.
+  **halloween skin — a cauldron instead of the wheel** (`cauldron.js`, the
+  "Name Wheel — halloween skin" block in `style.css`). The other themes keep
+  the wheel. CSS hides the wheel SVG and the hub button, and shows
+  `.cauldron` (built into `.wheel-wrap` by `Cauldron.build()`, page and
+  pop-out alike), which **is** the Spin button: clicking it or pressing
+  Space or Enter calls `startSpin()`.
+    - **The scene** (one 400×400 box, two SVG layers with the bubbles
+      between them): a black pot on legs over logs and five flickering
+      flames, a green brew with a glow, steam curling off the top, embers
+      rising from the fire. The near lip of the rim is in the front layer,
+      so the bubbles sit *in* the brew.
+    - **Bubbles**: every name in `displayList` is an HTML pill in
+      `.cd-brew`, laid over the brew surface (left 15%, top 29.5%,
+      70% × 26.5%). `drawWheel()` calls `Cauldron.sync()` so the brew always
+      matches the wheel's list. Sizes come from the brew's area and the head
+      count (about 60% cover, so 30 names fit). A rAF loop gives each one a
+      wander, a swirl while boiling, a soft elliptical separation (they bob
+      against each other) and an elliptical wall at the brew's edge. The
+      loop idles in the other themes.
+    - **A pick**: `startSpin()` still draws the winner first and still
+      computes the wheel's rotation (so a window showing the wheel lands on
+      the same name), but in halloween the descriptor's `duration` is
+      `Cauldron.BOIL_MS` (3600) and `settle` is `Cauldron.SETTLE_MS` (2000).
+      `runSpin()` sees `brewing(doc)` and calls `Cauldron.run()` instead of
+      turning the rotor, then the usual `finishSpin()` at duration + settle.
+      From the descriptor's timestamps: `--boil` (0..1) builds through the
+      churn (bubbles faster, brew brighter, flames higher, more steam and
+      embers), then the winner's bubble drifts to the middle and rises clear
+      of the surface (48% of settle), hovers (36%), and pops in 16 green
+      sparks (`.cd-burst`). `finishSpin()` → `Cauldron.finish()` keeps the
+      popped bubble gone, or with No repeats off re-floats it 1.6s later.
+      `renderWinner()` → `Cauldron.setWinner()` puts the name above the
+      cauldron (`.cd-winner`, Pirata One, a green glow); the result panel
+      shows it too.
+    - **Sound** (main window only, respects the mute switch): sine "bloops"
+      whose rate climbs from ~3/s to ~27/s with a low-passed noise simmer
+      swelling under them, then a pop at the reveal.
+    - Same rules as the wheel, because it *is* the wheel's state: absent and
+      sitting-out students aren't in the brew, No repeats removes a popped
+      name until everyone's been called, and "Edit who's in" opens the same
+      roster modal. Colours are `--cd-*` tokens in the halloween block.
+      Under reduced motion only the decorative loops stop (steam, embers,
+      flicker, the name's glow pulse); the brew and the pick run, like the
+      wheel's spin.
+  **The skins are interchangeable**: `wheel.js` keeps `skins()` =
+  `[Cauldron, Gacha]`, `skinFor(doc)` = the one whose `isOn(doc)` is true
+  (halloween / marwa), and `eachSkin()` to keep every skin's DOM in sync
+  (each is built and synced always, and hidden by CSS outside its theme).
+  `startSpin()` takes the active skin's `DURATION_MS` / `SETTLE_MS`;
+  `runSpin()` / `finishSpin()` call its `run()` / `finish()`;
+  `renderWinner()` / `renderControls()` call every skin's `setWinner()` /
+  `setDisabled()`. A new skin is one more file with that shape, one more
+  entry in `skins()`, and its theme's CSS block.
+  **marwa skin — a gachapon machine instead of the wheel** (`gacha.js`, the
+  "Name Wheel — marwa skin: a GACHAPON machine" block in `style.css`). CSS
+  hides the wheel SVG, the hub button and the old wheel mascot, and shows
+  `.gacha`.
+    - **The machine** (one 400×400 box, drawn to fill it so every part
+      reads from across the room): a big clear glass globe (centre 200,118,
+      r 112) on a collar, a pink body with a **glass chute**, a tube from
+      the globe's exit curving down the body's left side into the tray
+      (`ROUTE` in `gacha.js`; the back layer draws its outline and inside,
+      the front layer its glass over the capsule), a round knob with a bar
+      on the right (the turn handle; `#gacha-handle` is the real `<button>`
+      over it, Space works too), a dark tray mouth at the bottom, and a
+      white label strip holding the "N left" counter.
+    - **Capsules**: one per name in `displayList`, unnamed, half a pastel
+      (`--gc-cap-1…6`, a stable colour per student) and half white. They
+      live in `.gc-globe` (clipped to the glass: left 24%, top 3.5%, 52%
+      square). A rAF loop gives them gravity, bouncy circle collisions
+      (restitution 0.85) and a bouncy round wall (0.6). **Their size is fixed** for any class up to ~36, and
+      only shrinks for a bigger one, so the globe visibly empties as No
+      repeats takes capsules out. The counter shows the capsules still in.
+    - **A pick** is a row of separate, deliberate beats (`DURATION_MS` 2550
+      + `SETTLE_MS` 2450 ≈ 5s; the `T` timeline at the top of `gacha.js`,
+      all from the descriptor's timestamps). Each beat gets its own moment,
+      so the eye can follow it (an earlier ~3s version was too quick to
+      read):
+        - 0–1s: the knob turns once (`.gc-knob.turning`) and the machine
+          shakes.
+        - 0.25–1.9s: the capsules are thrown about the globe (the mix).
+        - 1.9–2.55s: they settle. At 2.15s **one capsule lights up**
+          (`.gc-cap.picked`: a pink ring, 1.35×, held still and eased off
+          the glass so the ring isn't clipped).
+        - 2.55–2.95s: it leaves the group and slides to the globe's exit.
+          `.gc-drop`, placed in box units, takes over at the same spot and
+          keeps the glow the whole way.
+        - 2.95–3.6s: it falls down the chute **accelerating** (distance ∝
+          t², `getPointAtLength` on the hidden `.gc-route`), spinning.
+        - 3.6–4.2s: into the tray: a squash on impact, bounces that lose
+          height, a roll to rest.
+        - 4.25–4.55s: a pause with a shiver.
+        - 4.6s: it pops. The halves burst apart, arc up and fall away
+          (`gc-top-off` / `gc-bot-off`), hearts and sparkles burst from the
+          tray (`.gc-burst`), and the name rises from the tray onto a white
+          pill over the globe with an overshoot and a settle (`gc-rise`).
+      `finish()` also sets the final pose, so a window that missed frames
+      still ends right. With No repeats off, the capsule drops back into the
+      globe 1.4s later.
+    - **Sound** (main window only, respects the mute switch), on the same
+      beats: a ratchet of clicks for the crank, capsules rattling loudest
+      mid-mix, a clack at the exit then clacks down the chute coming faster,
+      a clunk and two smaller bounces in the tray, a pop and a sparkle.
+    - Same rules as the wheel (it *is* the wheel's state): absent and
+      sitting-out students aren't in the machine, No repeats takes a picked
+      capsule out until everyone's been called, and "Edit who's in" opens the
+      same roster modal ("Who's in the machine"). Colours are `--gc-*` tokens
+      in the marwa block. Under reduced motion only the jiggle stops.
 - **Noise Meter** (`noise.html` + `noise-popout.html` + `noise.js`). One
   `.noise-stage` `.hud-box`: the `.seg` of activity presets (Silent work /
   Partner talk / Group work — each moves both zone handles), then the
-  `.noise-meter` (huge mono reading + `dB≈` unit, a pill `.noise-bar` whose
-  `.noise-fill` grows and recolours, boundary marks on the track, the
-  QUIET / OK / TOO LOUD scale, and the zone word), then Start/Stop, the
-  chime `role="switch"`, Pop out, full screen, the two range handles
-  ("Quiet up to" / "Too loud above") and the privacy line.
+  `.noise-meter` (huge mono reading + `dB≈` unit, the level bar, the
+  QUIET / OK / TOO LOUD scale under its bands, and the zone word), then
+  `.noise-foot`: **one
+  footer row** (`.noise-foot-row`, flex-wrap) of Start/Stop, the chime
+  `role="switch"` and "Full screen window" · **the two range handles side by side**
+  (`.noise-zones`, two columns; compact labels "Quiet" / "Too loud", the full
+  meaning in each `title` / `aria-label`) · full screen. **The handles stay
+  on the main page, not in a settings dialog** (asked for explicitly). Under
+  the row, one short privacy line ("Audio never leaves this browser.") whose
+  `?` opens `#noise-privacy-dialog` with the full text. The presets share
+  `.noise-head` with `#status` (right-aligned inside the card: just
+  "Listening" while on, cleared on Stop because the zone word says "Mic
+  off", errors in red). The chime's `.when-off/.when-on` rules are scoped to
+  `#noise-mute`, so the full-screen button keeps the app-wide icon swap.
   **Measurement**: `getUserMedia({ audio: { echoCancellation: false,
   noiseSuppression: false, autoGainControl: false } })` — those three would
   normalise away the thing being measured — into an `AnalyserNode`
@@ -1811,6 +1945,110 @@ All styling lives in `style.css`; pages carry almost no inline styling.
   `teacherpal.noise.settings`; dragging a handle sets the preset to
   `custom`. Full screen hides the chrome (`.no-present`) and scales the
   reading/bar/zone word for the room.
+  **The level bar** (every theme; the "level bar" rules at the top of the
+  noise block, its look in each theme block's `--noise-bar-*` tokens): one
+  continuous `.noise-bar` track filling left → right. **It is on a
+  zone-aligned scale, not raw dB**: `levelFrac()` maps the smoothed reading
+  so the quiet band fills 0–30%, OK 30–70%, and the room above "too loud"
+  70–100% (`QUIET_AT` / `LOUD_AT` in `noise.js`); the threshold markers
+  `#mark-quiet` / `#mark-loud` therefore sit at 30% / 70% in CSS, and the
+  fill crosses one exactly as the zone changes. `renderLevel()` sets
+  `--level` (0..1) on `.noise-meter` every poll (and `--rise` for the
+  ghost). `.noise-fill` is a **full-width gradient revealed by `clip-path:
+  inset(0 (1 − level)·100% 0 0 round …)`**, so the gradient's stops sit on
+  the boundaries and the leading edge always wears the current zone's
+  colour; clip-path and the rider's `left` ease 260ms linear between polls,
+  so it glides instead of stepping (kept under reduced motion — it is the
+  reading). `.noise-rider` (added by `buildMascot()`) rides the edge; the
+  bar's height is `--bar-h`. Per theme:
+    - **jarvis**: an instrument. Tick marks (`::before`, short every 5%,
+      long every 10%), a thin bright fill down the middle (`inset: 36% 0`),
+      and a glowing cap line in the zone colour as the rider.
+    - **earthy**: a vine (an SVG stem-and-leaf tile over a sage → wheat →
+      terracotta gradient) in a sunk wood groove, with a leaf at the tip that
+      sways.
+    - **marwa**: lavender → pink → rose-red on a pale blush track with a
+      glossy top, and a heart at the tip that bobs. It replaced the old
+      row of hearts.
+    - **halloween**: a glowing potion / ember trail (witch green → candle →
+      pumpkin) in a dark purple vial with an inner glow, and a dark bat at
+      the tip that flaps. Once it's too loud the trail glows orange and
+      flickers like flame (`nh-flame`, stepped brightness).
+  **marwa skin — the bunny IS the meter** (the "Noise Meter — marwa skin"
+  block after the noise rules in `style.css`). `buildMascot()` in `noise.js`
+  puts `.nm-stage` (one inline SVG, viewBox 0 0 200 200, built from
+  `MASCOT_SVG`) at the top of every `.noise-meter`, page and pop-out alike
+  (and halloween's `.nh-stage`, below). Outside marwa it is `display: none`.
+  **The mascot layout is shared by marwa and halloween** (rules under
+  `:root:is([data-theme="marwa"], [data-theme="halloween"])`, at the top of
+  the marwa skin block): `.noise-scale` and `.noise-unit` hide; the reading
+  is small and muted, shown as "~55" (the `~` is a `::before` while
+  running); flex `order` stacks mascot (`.noise-mascot`) → level bar
+  (`min(40rem, 92%)` wide) → zone word → reading. The card fills the page (`flex: 1` in
+  `main.page`'s flex column, up to 76rem wide) and is itself a flex column
+  of head · meter · foot, the footer on a hairline; the meter takes the
+  leftover height and `.noise-mascot` (`flex: 1 1 0` + `aspect-ratio: 1`)
+  grows into it. Full screen drops head and foot (`.no-present`) and the
+  mascot takes their space too. Marwa's zone word is Comfortaa, a solid
+  `--noise-loud` pill while `data-alert="1"`. **Poses are pure CSS off `data-mood`** on
+  `.noise-meter`:
+    - `off`: asleep, greyed.
+    - `quiet`: asleep (closed eyes, relaxed ears, head tipped, a breath), z's,
+      a mint glow.
+    - `ok`: awake (open eyes, ears up with a wiggle, a bob), floating hearts,
+      a pink glow.
+    - `loud`: paws up over its ears, ears pressed flat, wide worried eyes, a
+      wobbly mouth, a shake. The fur, inner ears and blush warm to the
+      `--nm-*-hot` coral, a warm glow, stars and sweat drops. Alert shakes
+      harder and pulses the glow.
+  **`state.mood` is the zone debounced by `MOOD_HOLD_MS` 600** (main window
+  only, broadcast to the pop-out), so a reading on a boundary can't flicker
+  the pose. Zones, the 3s hold and the chime are unchanged. Every pose change
+  is a transition. Under reduced motion the loops stop, but the
+  opacity/fill crossfades are exempted from the app-wide `transition: none
+  !important`. SVG transforms use
+  `transform-box: view-box` with origins in viewBox units, and each fx item
+  has its own `<g>` so its animation never overrides its placement. The
+  radial glows fade by `stop-opacity`, never to `transparent`: SVG gradients
+  don't premultiply, so that goes grey. The presets are pill buttons (a
+  heart on the checked one). The colours are `--nm-*` tokens in the marwa
+  block, and marwa's `--noise-ok` is the accent. The pop-out isn't a flex
+  layout, so there `.noise-mascot` is `flex: none` at `min(100vh − 11.5rem,
+  92vw)`. The pop-out loads Comfortaa and Pirata One.
+  **halloween skin — a ghost rising from a grave** (the "Noise Meter —
+  halloween skin" block right after marwa's). `GHOST_SVG` (viewBox 0 0 240
+  240) is a static scene — a weathered headstone with RIP and a crack, a
+  crooked wooden cross, grass tufts, a rounded mound with the grave's dark
+  mouth — and the ghost. **Its height IS the level**: `renderLevel()` sets
+  `--rise` on `.noise-meter` to `levelFrac()` (−0.45 with the mic off =
+  fully sunk), and `.nh-rise` is `translateY((1 − rise) × 120)` on a 450ms
+  ease, so it rises and sinks with the room instead of stepping. Quiet
+  (0–0.3) only the head is out; OK (0.3–0.7) it's half risen; too loud
+  (0.7–1) it's all the way up. The ghost sits in a group clipped at the
+  grave's mouth (`#nh-clip`, y < 207), and the front lip of the mound is
+  drawn over it, so it really comes up out of the ground; its tattered tail
+  strands fade into the hole (`#nh-g-wisp`). Its opacity climbs with
+  `--rise` (0.4 → 1). **Per mood** (`data-mood`, debounced like marwa's):
+    - `quiet`: eyes closed, a slow drift, pale blue-white.
+    - `ok`: a friendly face with blush, a gentle hover, warm bone.
+    - `loud`: arms thrown up (rotated 88°), a wailing mouth that pulses,
+      hot orange, a drop-shadow glow, a big orange aura over the whole scene,
+      and a shake. The three bats (two on the headstone, one on the cross)
+      spread their wings and scatter off-screen, staggered, then fly back
+      when it calms down.
+    - `alert`: a harder shake, a pulsing aura, and the zone word (Pirata One,
+      `--font-spooky`) becomes a solid pumpkin pill with a glow.
+  Wisps peel off its sides as it rises. The colour shift is smooth because
+  `--nh-ghost` / `--nh-glow` are registered with `@property` (`<color>`) and
+  transitioned on the meter; every ghost colour reads them (gradient stops,
+  arms, wisps, glows). Parts inside the moving ghost and the bats use
+  `transform-box: fill-box` (view-box origins wouldn't follow the ghost).
+  Colours are `--nh-*` tokens in the halloween block. Under reduced motion
+  the loops stop and the bats only fade, but the rise and the colour/face
+  crossfades keep their easing. **Testing animations in headless Edge**:
+  `--virtual-time-budget` freezes transitions, so a theme or mood set after
+  load is caught mid-transition (wrong colours, a ghost still sunk). Drive
+  it over the DevTools protocol in real time instead.
 - **Attendance view (`attendance.js`) — the Attendance screen.**
   `.attendance[data-mode="full"]` is a grid `minmax(0,1fr) clamp(19rem, 26vw,
   26rem)` — the `.att-chart` box on the left, `.att-side` (counts card with

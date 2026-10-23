@@ -7,7 +7,7 @@
   <meta name="color-scheme" content="dark">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Comfortaa:wght@400;500;600;700&family=Quicksand:wght@400;500;600;700&family=JetBrains+Mono&family=Nunito:wght@400;600;700&family=Orbitron:wght@500;600;700&family=Rajdhani:wght@500;600;700&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Comfortaa:wght@400;500;600;700&family=Quicksand:wght@400;500;600;700&family=JetBrains+Mono&family=Nunito:wght@400;600;700&family=Orbitron:wght@500;600;700&family=Pirata+One&family=Rajdhani:wght@500;600;700&family=Share+Tech+Mono&display=swap" rel="stylesheet">
   <script>(function(){try{var t=localStorage.getItem('teacherpal.theme')||'jarvis';document.documentElement.setAttribute('data-theme',t);}catch(e){document.documentElement.setAttribute('data-theme','jarvis');}})();</script>
   <link rel="stylesheet" href="style.css">
 </head>
@@ -71,7 +71,7 @@
           </svg>
           <!-- the hub is the Spin button; the wheel turns around it -->
           <button type="button" id="wheel-spin" class="wheel-hub-btn">Spin</button>
-          <p class="wheel-empty" id="wheel-empty" hidden>Nobody on the wheel — everyone is absent, sitting out, or already called.</p>
+          <p class="wheel-empty" id="wheel-empty" hidden><span class="for-wheel">Nobody on the wheel</span><span class="for-brew">Nobody in the brew</span><span class="for-gacha">Nobody in the machine</span> — everyone is absent, sitting out, or already called.</p>
         </div>
 
         <!-- marwa only: reacts when a name lands -->
@@ -90,12 +90,12 @@
             <button type="button" class="wheel-mini" id="wheel-remove" title="Take this student off the wheel">Take off</button>
           </div>
 
-          <p class="wheel-placeholder">Spin to pick a student</p>
+          <p class="wheel-placeholder"><span class="for-wheel">Spin to pick a student</span><span class="for-brew">Stir the cauldron to pick a student</span><span class="for-gacha">Turn the handle to pick a student</span></p>
           <p class="wheel-result-name" id="wheel-result-name" aria-live="polite"></p>
         </div>
 
         <div class="wheel-controls">
-          <span class="wheel-hint">Press the hub or Space to spin</span>
+          <span class="wheel-hint"><span class="for-wheel">Press the hub or Space to spin</span><span class="for-brew">Click the cauldron or press Space</span><span class="for-gacha">Turn the handle or press Space</span></span>
 
           <div class="wheel-control-row">
             <label class="bar-field">
@@ -105,17 +105,18 @@
             <button type="button" class="hud-chip" id="btn-auto" aria-pressed="true" title="Follow the bell schedule">AUTO</button>
             <!-- the only way to manage who's on the wheel (plus the slice
                  shortcut); the count lives on the button itself -->
-            <button type="button" id="wheel-edit" title="Choose who's on the wheel">Edit wheel<span class="wheel-edit-n" id="wheel-edit-n">—</span></button>
+            <button type="button" id="wheel-edit" title="Choose who's in"><span class="for-wheel">Edit wheel</span><span class="for-brew">Edit who&rsquo;s in</span><span class="for-gacha">Edit who&rsquo;s in</span><span class="wheel-edit-n" id="wheel-edit-n">—</span></button>
           </div>
 
           <div class="wheel-control-row">
             <button type="button" id="wheel-norepeat" role="switch" aria-checked="true" title="Take each name off the wheel until everyone has been called">No repeats</button>
-            <button type="button" id="wheel-mute" role="switch" aria-checked="false" title="Tick sound while spinning">
-              <span class="when-off">Tick on</span>
-              <span class="when-on">Tick muted</span>
+            <button type="button" id="wheel-mute" role="switch" aria-checked="false" title="Sound while picking">
+              <span class="when-off"><span class="for-wheel">Tick on</span><span class="for-brew">Sound on</span><span class="for-gacha">Sound on</span></span>
+              <span class="when-on"><span class="for-wheel">Tick muted</span><span class="for-brew">Sound muted</span><span class="for-gacha">Sound muted</span></span>
             </button>
             <button type="button" id="wheel-firstnames" role="switch" aria-checked="true" title="Show first names only (shared with Create Groups)">First names</button>
-            <button type="button" id="wheel-popout-btn">Pop out ↗</button>
+            <button type="button" id="wheel-popout-btn" class="win-btn" title="Opens a window you can make full screen on your projector"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/></svg><span>Full screen window</span></button>
+            <button type="button" id="wheel-pip" class="win-btn" title="A small window that floats above other apps" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="4" width="20" height="16" rx="2"/><rect x="12.5" y="11.5" width="7" height="5.5" rx="1" fill="currentColor"/></svg><span>Mini window</span></button>
             <button type="button" class="icon-btn" data-fullscreen aria-pressed="false" title="Full screen (F)" aria-label="Toggle full screen"><span class="when-off"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 3H5a2 2 0 0 0-2 2v3M16 3h3a2 2 0 0 1 2 2v3M8 21H5a2 2 0 0 1-2-2v-3M16 21h3a2 2 0 0 0 2-2v-3"/></svg></span><span class="when-on"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 3v3a2 2 0 0 1-2 2H3M21 8h-3a2 2 0 0 1-2-2V3M3 16h3a2 2 0 0 1 2 2v3M16 21v-3a2 2 0 0 1 2-2h3"/></svg></span></button>
           </div>
 
@@ -129,7 +130,7 @@
       <dialog id="wheel-roster-dialog" class="wheel-roster-dialog card">
         <form method="dialog" class="wheel-roster-form">
           <div class="card-head">
-            <h2>Wheel roster</h2>
+            <h2><span class="for-wheel">Wheel roster</span><span class="for-brew">Who&rsquo;s in the brew</span><span class="for-gacha">Who&rsquo;s in the machine</span></h2>
             <span class="chip"><span id="wheel-roster-count">—</span></span>
           </div>
           <p class="hint">Tap a name to put them on or take them off. Nothing here changes attendance.</p>
@@ -148,6 +149,8 @@
   <script src="shared.js"></script>
   <script src="schedule.js"></script>
   <script src="nav.js"></script>
+  <script src="cauldron.js"></script>
+  <script src="gacha.js"></script>
   <script src="wheel.js"></script>
 </body>
 </html>
