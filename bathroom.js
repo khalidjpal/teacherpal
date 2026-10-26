@@ -510,7 +510,6 @@ function initBathroom({ mount = '#bathroom' } = {}) {
       trips   = trips.filter((x) => x.id !== id);
       renderGrid(); renderOutStrip(); renderLogPanel();
       hideUndoToast();
-      setStatus('Undone.', 'ok');
     } catch (err) { showError(err); }
   });
 
@@ -546,8 +545,6 @@ function initBathroom({ mount = '#bathroom' } = {}) {
       const saved = await bathroomSignIn(id);
       Object.assign(trip, saved);
       history = history.map((t) => (t.id === id ? trip : t));
-      const s = studentById(trip.student_id);
-      setStatus(`${s ? s.name : 'Student'} back after ${fmtDur(elapsedSec(trip))}.`, 'ok');
     } catch (err) { showError(err); return; }
     renderGrid(); renderOutStrip(); renderLogPanel();
   });

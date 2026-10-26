@@ -173,7 +173,6 @@
       try {
         const p = await createPeriod(name.trim(), periods.length);
         await loadPeriods(p.id);
-        setStatus(`Created "${p.name}".`, 'ok');
       } catch (err) { showError(err); }
     }
 
@@ -185,7 +184,6 @@
       try {
         await renamePeriod(p.id, name.trim());
         await loadPeriods(p.id);
-        setStatus('Renamed.', 'ok');
       } catch (err) { showError(err); }
     }
 
@@ -196,7 +194,6 @@
       try {
         await deletePeriod(p.id);
         await loadPeriods();
-        setStatus(`Deleted "${p.name}".`, 'ok');
       } catch (err) { showError(err); }
     }
 
@@ -360,7 +357,6 @@
         await addStudents(currentPeriodId, [name], nextSortOrder());
         addInput.value = '';
         await loadStudents();
-        setStatus(`Added ${name}.`, 'ok');
         addInput.focus();
       } catch (err) { showError(err); }
     });
@@ -409,7 +405,6 @@
         await addStudents(currentPeriodId, names, nextSortOrder());
         importDialog.close();
         await loadStudents();
-        setStatus(`Imported ${names.length} student${names.length === 1 ? '' : 's'}.`, 'ok');
       } catch (err) { showError(err); }
     });
 

@@ -530,8 +530,6 @@ function initLessonPanel({ mount = '#lesson', rows: allRows = () => [], onChange
       }
       if (here(job)) render();
     }));
-    const failed = jobs.filter((j) => j.error).length;
-    if (!failed) setStatus(`Attached ${files.length === 1 ? files[0].name : `${files.length} files`}.`, 'ok');
   }
   $('lp-pick').addEventListener('click', () => $('lp-file').click());
   // + Attach: one button, both ways in
@@ -695,18 +693,16 @@ function initLessonPanel({ mount = '#lesson', rows: allRows = () => [], onChange
       exists = true;
       render(); markDirty();
     }
-    let added = 0;
     if (withAtt) {
       const have = new Set(attachments.map((a) => a.storage_path || a.url));
       const fresh = atts.filter((a) => !have.has(a.storage_path || a.url));
       try {
         const rows = await copyLessonAttachments(fresh, target(), date, attachments.length);
-        attachments.push(...rows); added = rows.length;
+        attachments.push(...rows);
         rows.forEach((row) => onAttachments && onAttachments({ type: 'add', row }));
       } catch (err) { showError(err); }
       render();
     }
-    setStatus(`Copied ${label}${added ? ` with ${added} attachment${added === 1 ? '' : 's'}` : ''}.`, 'ok');
   }
   function dialogRow(i, title, r, atts) {
     const has = (r && !isEmptyPlan(r)) || atts.length;

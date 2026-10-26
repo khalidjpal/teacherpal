@@ -1595,7 +1595,7 @@
       const from = currentArr();
       const name = await askName(title, freeName(from ? `${from.name} copy` : 'Draft'), okLabel);
       if (!name) return;
-      if (await createAndOpen(name, { seats: clone(assignments) })) setStatus(`Working in “${name}” now.`, 'ok');
+      await createAndOpen(name, { seats: clone(assignments) });
     }
 
     // + New: name it, then copy the open one (desks + seats) or start from a
@@ -1620,7 +1620,7 @@
         name = (r.value || freeName('Draft')).slice(0, 60);
         if (nameTaken(name)) { error = `There’s already an arrangement called “${name}” in this period.`; continue; }
         if (r.act === 'blank') await createAndOpen(name, { seats: {}, desks: blankRoom() });
-        else if (await createAndOpen(name, { seats: clone(assignments) })) setStatus(`Working in “${name}” — a copy you can change freely.`, 'ok');
+        else await createAndOpen(name, { seats: clone(assignments) });
         return;
       }
     }
@@ -1661,7 +1661,6 @@
         arrangements = arrangements.filter((x) => x.id !== a.id);
         if (a.id === currentArrId) { openBest(); fitIfHidden(); }   // back to the live chart
         renderArrangements();
-        setStatus(`Deleted “${a.name}”.`, 'ok');
       } catch (err) { showError(err); }
     }
 

@@ -118,7 +118,6 @@
         await deleteScheduleOverride(id);
         overrides = overrides.filter((o) => o.id !== id);
         renderList(); renderToday();
-        setStatus(`Removed override for ${fmtDate(row.date)}.`, 'ok');
       } catch (err) { showError(err); }
     });
 
@@ -143,7 +142,6 @@
         overrides = overrides.filter((o) => o.date !== date).concat(saved).sort((a, b) => a.date.localeCompare(b.date));
         renderList(); renderToday();
         $('ov-note').value = '';
-        setStatus(`${fmtDate(date)} → ${scheduleFor(schedule, finals_pair).name}.`, 'ok');
       } catch (err) { showError(err); }
       finally { $('ov-save').disabled = false; }
     });
