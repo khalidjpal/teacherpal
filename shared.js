@@ -1042,6 +1042,29 @@ function fillPeriodSelect(selectEl, periods, preferredId) {
   return chosen;
 }
 
+// Roster numbers: each student's place in the period's roster sorted by last
+// name (the last word of the name, then the whole name), from 1 — the number
+// Aeries uses. A hand-set students.roster_number wins, and the alphabetical
+// numbering skips the numbers those take. students = one period's rows.
+// Returns Map<studentId, number>.
+function rosterLastName(name) {
+  const parts = String(name || '').trim().split(/\s+/);
+  return parts[parts.length - 1] || '';
+}
+function rosterNumbers(students) {
+  const nums = new Map();
+  const taken = new Set();
+  for (const s of students) {
+    if (Number.isInteger(s.roster_number) && s.roster_number > 0) { nums.set(s.id, s.roster_number); taken.add(s.roster_number); }
+  }
+  const key = (s) => `${rosterLastName(s.name)} ${s.name}`;
+  const rest = students.filter((s) => !nums.has(s.id))
+    .sort((a, b) => key(a).localeCompare(key(b), undefined, { sensitivity: 'base' }));
+  let n = 1;
+  for (const s of rest) { while (taken.has(n)) n++; nums.set(s.id, n++); }
+  return nums;
+}
+
 function escapeHtml(s) {
   return String(s)
     .replace(/&/g, '&amp;')

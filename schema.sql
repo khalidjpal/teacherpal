@@ -36,6 +36,8 @@
 --     period_id   uuid        -> periods.id (cascade delete)
 --     name        text
 --     sort_order  integer     display order within the period
+--     roster_number integer   1–999, nullable: a hand-set roster number (Aeries);
+--                             empty = numbered alphabetically by last name
 --     created_at  timestamptz
 --
 --   room_layouts                (LEGACY — the old shared room per OWNER; key = 'default'.
@@ -186,8 +188,10 @@ create table if not exists public.students (
   period_id   uuid not null references public.periods(id) on delete cascade,
   name        text not null,
   sort_order  integer not null default 0,
+  roster_number integer check (roster_number between 1 and 999),
   created_at  timestamptz not null default now()
 );
+alter table public.students add column if not exists roster_number integer;
 create index if not exists students_period_id_idx on public.students(period_id);
 create index if not exists students_owner_idx on public.students(owner_id);
 

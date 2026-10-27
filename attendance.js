@@ -348,9 +348,20 @@ function initAttendance({ mount = '#attendance', mode = 'full' } = {}) {
   // =====================================================================
   // Summary, copy, reset, autosave
   // =====================================================================
+  // The absent / tardy students in roster-number order (rosterNumbers() in
+  // shared.js: alphabetical by last name unless set by hand on Rosters), so
+  // they can be typed into Aeries top to bottom.
+  function markedLists() {
+    const nums = rosterNumbers(students);
+    const of = (status) => students
+      .filter((s) => marks[s.id] && marks[s.id].status === status)
+      .sort((a, b) => nums.get(a.id) - nums.get(b.id));
+    return { nums, absent: of('absent'), tardy: of('tardy') };
+  }
+  const numberedName = (s, nums) => `<span class="rn">${nums.get(s.id)}</span><span class="sep">·</span><span class="who" title="${escapeHtml(s.name)}">${escapeHtml(s.name)}</span>`;
+
   function renderSummary() {
-    const absent = students.filter((s) => marks[s.id] && marks[s.id].status === 'absent');
-    const tardy = students.filter((s) => marks[s.id] && marks[s.id].status === 'tardy');
+    const { nums, absent, tardy } = markedLists();
     const present = students.length - absent.length - tardy.length;
     $('att-counts').innerHTML = currentPeriodId && students.length
       ? `<b>${present}</b> present <i>·</i> <b class="c-absent">${absent.length}</b> absent <i>·</i> <b class="c-tardy">${tardy.length}</b> tardy`
@@ -358,15 +369,16 @@ function initAttendance({ mount = '#attendance', mode = 'full' } = {}) {
     $('exp-counts').innerHTML = students.length ? `<span class="hud-key">P</span><span class="hud-val">${present}</span><span class="hud-key c-absent">A</span><span class="hud-val">${absent.length}</span><span class="hud-key c-tardy">T</span><span class="hud-val">${tardy.length}</span>` : '';
     $('absent-n').textContent = pad(absent.length);
     $('tardy-n').textContent = pad(tardy.length);
-    $('absent-list').innerHTML = absent.map((s) => `<li>${escapeHtml(s.name)}</li>`).join('') || '<li class="none">none</li>';
-    $('tardy-list').innerHTML = tardy.map((s) => `<li>${escapeHtml(s.name)}<span class="at">${fmtTime(marks[s.id].at)}</span></li>`).join('') || '<li class="none">none</li>';
+    $('absent-list').innerHTML = absent.map((s) => `<li>${numberedName(s, nums)}</li>`).join('') || '<li class="none">none</li>';
+    $('tardy-list').innerHTML = tardy.map((s) => `<li>${numberedName(s, nums)}<span class="at">${fmtTime(marks[s.id].at)}</span></li>`).join('') || '<li class="none">none</li>';
     if (full) $('btn-copy').disabled = $('btn-reset').disabled = !currentPeriodId || students.length === 0;
     document.dispatchEvent(new CustomEvent('teacherpal:attendance', { detail: { periodId: currentPeriodId, date: viewDate, present, absent: absent.length, tardy: tardy.length, total: students.length } }));
   }
 
   function listText() {
-    const absent = students.filter((s) => marks[s.id] && marks[s.id].status === 'absent').map((s) => s.name);
-    const tardy = students.filter((s) => marks[s.id] && marks[s.id].status === 'tardy').map((s) => `${s.name} (${fmtTime(marks[s.id].at)})`);
+    const lists = markedLists();
+    const absent = lists.absent.map((s) => `${lists.nums.get(s.id)} · ${s.name}`);
+    const tardy = lists.tardy.map((s) => `${lists.nums.get(s.id)} · ${s.name} (${fmtTime(marks[s.id].at)})`);
     return `Absent: ${absent.length ? absent.join(', ') : 'none'} / Tardy: ${tardy.length ? tardy.join(', ') : 'none'}`;
   }
   if (full) {

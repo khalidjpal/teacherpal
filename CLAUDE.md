@@ -55,6 +55,7 @@ full-screen toggle. There is no sidebar; every page uses the full width.
 | `migration-rekey-owner.sql` | One-off migration for when the auth user was deleted and recreated: repoints every `owner_id` from the old UID to the new one and rebuilds the `profiles.khalid` row |
 | `migration-themes.sql` | One-off migration that adds `profiles.theme text default 'jarvis'` and the `set_my_theme(text)` SECURITY DEFINER RPC (validated `^[a-z0-9_-]+$`, updates only the caller's own row) |
 | `migration-teaches-periods.sql` | One-off migration that adds `profiles.teaches_periods integer[]` (each entry 0-7) and the `set_my_teaches_periods(int[])` RPC. Seeds `khalid` to `{1,2,3,5,6}` and `marwa` to `{2,3,4,5,6}` |
+| `migration-roster-numbers.sql` | One-off migration that adds `students.roster_number integer` (1–999, nullable): a hand-set roster number for when Aeries numbers a student differently. Ends with a check query |
 | `migration-display-name.sql` | One-off migration that adds `profiles.display_name text` (how the teacher is addressed — the top-bar USER chip) and seeds `khalid` → "Mr. Pal", `marwa` → "Ms. Mohammadi" |
 | `index.html`   | Hub launcher (`body.hub.launcher`): `.hub-sections` — four labelled sections (Daily, Teacher tools, Planning, System) each with its own `.hub-panels` row of `.hud-panel` links; loads only `shared.js`, `schedule.js`, `nav.js` (top bar **without** nav links — the panels are the nav) |
 | `attendance.html` | Attendance screen: `#attendance` in **full** mode — big chart + side column with counts, lists, Copy, Reset, date |
@@ -85,7 +86,7 @@ full-screen toggle. There is no sidebar; every page uses the full width.
 | `schedule.js`  | West High bell schedules as data (`SCHEDULES`, `FINALS_PAIRS`, `SCHEDULE_OPTIONS`) + pure helpers: `resolveSchedule(date, overrides)`, `scheduleStatus(now, sched, teaches)`, `teachingMap(periods, teachesPeriods?)`, `parsePeriodName`, `dateKey`, `formatCountdown`, `fmt12`, `fmtWallClock(date, {hour12, seconds})`. No DOM, no Supabase. |
 | `formula.js`   | Shared Formula **algorithms and modal only** — never rule data (the modal's Rules tab is an SVG relationship map): type metadata per scope (`RULE_TYPES`, `SCOPE_TYPES`, `KEY_TYPES`), priorities (`sortByPriority`, `priorityWeight`, `planRules`), feasibility (`findImpossibleHard`, `confirmImpossible`), the `annealAssign()` solver, `groupWithFormula()`, `summarizeRun()`, `absentTodayFor()`, `createFormulaModal({ scope, … })`. No Supabase calls. |
 | `style.css`    | Shared styling for every page (dark pink dashboard theme; all tokens at the top) |
-| `roster.html`  | Two-panel roster: period panel (search, sort, add, import modal, edit mode, full screen) + name-card grid with undo-toast remove |
+| `roster.html`  | Two-panel roster: period panel (search, sort, add, import modal, edit mode, full screen) + name-card grid with undo-toast remove. Each card shows the student's roster number (`rosterNumbers()`). A hand-set number is in the accent colour, and a number two students share is lavender. In edit mode, click the number to set it by hand; leave it empty to go back to alphabetical. The Last name sort follows the roster numbers |
 | `groups.html`  | **Create Groups**: three identical panels across the top — **Group size** (mode toggle + number), **Roster** (period, one-line summary, Edit Roster → the roster modal) and **Options** (Formula, Follow-rules switch, gear, full screen) — then the centred Create Groups / Reshuffle button, then the group cards filling everything below. First names is the only field left in the `.groups-settings-dialog`. FLIP-animated: names fly out of the Roster panel on Create and between cards on Reshuffle |
 | `seating.html` | Freeform room builder: starter layouts or a desk rail on a zoomable dot-grid canvas (Arrange room), then drag or click names onto seats (Assign seats); several arrangements per period as thumbnail cards, each with its own desks + seats (one active), autosaved, full screen |
 | `migration-room-builder.sql` | One-off migration for the room builder tables (run in the Supabase SQL editor) |
@@ -265,7 +266,18 @@ old course with no periods keeps its plans (search still finds them).
 | `period_id`  | uuid        | FK → periods.id, `on delete cascade` |
 | `name`       | text        | |
 | `sort_order` | integer     | display order within period, default 0 |
+| `roster_number` | integer  | 1–999, nullable: a **hand-set** roster number (when Aeries differs). Empty = numbered by `rosterNumbers()` |
 | `created_at` | timestamptz | default now() |
+
+**Roster numbers** (for entering attendance in Aeries) are **computed, not
+stored**: `rosterNumbers(students)` in `shared.js` numbers one period's
+roster alphabetically by last name (the last word of the name, then the
+whole name) from 1. A student with `roster_number` set keeps it, and the
+alphabetical numbering skips the numbers those take. So adding, removing
+or moving a student renumbers the period on the next load. A number set
+by hand stays with the student, even if they move to another period.
+Attendance's absent / tardy lists and Copy list show and sort by it;
+Rosters shows it on every card.
 
 ### `seating_arrangements` — named seating charts, several per period, each with its own room
 | column        | type        | notes |
@@ -471,7 +483,7 @@ Auth:
 Data helpers (owner_id is filled by the DB default, so no helper here ever
 sends it):
 - `getPeriods()`, `createPeriod(name, sortOrder)`, `renamePeriod(id, name)`, `deletePeriod(id)`
-- `getStudents(periodId)`, `addStudents(periodId, names[], startSortOrder)`, `updateStudent(id, fields)`, `deleteStudent(id)`, `countStudents()` (all periods, ids only), `getAllStudents()` (every period, full rows)
+- `getStudents(periodId)`, `addStudents(periodId, names[], startSortOrder)`, `updateStudent(id, fields)`, `deleteStudent(id)`, `rosterNumbers(students)` → `Map<id, n>` (one period; see the `students` table), `countStudents()` (all periods, ids only), `getAllStudents()` (every period, full rows)
 - `getActiveSeating(periodId)` → `{ layout, assignments }` of the period's **active arrangement** (layout `null` = no desks) — what Attendance draws
 - Legacy, read-only fallbacks: `getRoomLayout()` (the old shared room), `getSeatAssignments(periodId)`; `saveRoomLayout()` still exists but nothing calls it
 - `getSeatingArrangements(periodId)` → rows by `created_at`; `createSeatingArrangement(periodId, { name, assignments, layout, isActive })`; `updateSeatingArrangement(id, { name?, assignments?, layout? })`; `deleteSeatingArrangement(id)`; `setActiveSeatingArrangement(id)` (RPC)
@@ -2503,10 +2515,17 @@ All styling lives in `style.css`; pages carry almost no inline styling.
   - **Side column**: `.att-card` = `.att-counts` "**23** present · **2**
     absent · **2** tardy" (present = roster − absent − tardy; red / amber
     numbers) plus the action row; `.att-lists-box` (`flex: 1`) = two
-    `.att-list` columns (ABSENT nn / TARDY nn, names in roster order at
-    `--fs-md`, tardy time in amber mono, "none" when empty). Actions (full
+    `.att-list`s, ABSENT nn **above** TARDY nn, each the column's full width
+    and only as tall as it needs (scrolling only when both don't fit). **One
+    compact line per student** (0.95rem, 22px rows): a small muted roster
+    number (`rosterNumbers()`), a `·`, the name (ellipsis if it must, full
+    name in `title`) and, for a tardy, its time in amber mono on the right;
+    sorted by roster number so they go into Aeries in order; "none" when
+    empty. The size is set twice, in the block and in the Type system block
+    at the end (which wins). Change both. Under 900px the lists grow with
+    the page instead of scrolling. Actions (full
     mode): **Copy list**
-    (writes `Absent: A, B / Tardy: C (9:42 AM)` with "none" for empty
+    (writes `Absent: 2 · A, 22 · B / Tardy: 8 · C (9:42 AM)` with "none" for empty
     sides via `navigator.clipboard`, textarea fallback, and echoes it in
     `#status`), **Reset attendance** (confirm → `marks = {}` → immediate
     save) and the mono `.save-state` (SAVING… / ● SAVED green / NOT SAVED

@@ -149,6 +149,11 @@
       return parts[parts.length - 1] || '';
     }
 
+    function numTitle(s, dupe) {
+      const how = s.roster_number ? 'Roster number, set by hand' : 'Roster number (alphabetical by last name)';
+      return `${how}${dupe ? ' — another student has this number too' : ''}${editMode ? '. Click to change.' : ''}`;
+    }
+
     function sortKey(s) {
       return (sortMode === 'last' ? `${lastName(s.name)} ${s.name}` : s.name).toLocaleLowerCase();
     }
@@ -220,10 +225,16 @@
       document.getElementById('period-course').textContent = course;
       document.title = `${p ? title : 'Rosters'} — TeacherPal`;
 
+      // Roster numbers (rosterNumbers() in shared.js): alphabetical by last
+      // name, or set by hand — what Attendance shows for Aeries. Sorting by
+      // last name follows them, so the list reads in Aeries order.
+      const nums = rosterNumbers(students);
+      const counts = new Map();
+      nums.forEach((n) => counts.set(n, (counts.get(n) || 0) + 1));
       const q = query.trim().toLocaleLowerCase();
       const visible = students
         .filter((s) => !q || s.name.toLocaleLowerCase().includes(q))
-        .sort((a, b) => sortKey(a).localeCompare(sortKey(b)));
+        .sort((a, b) => sortMode === 'last' ? nums.get(a.id) - nums.get(b.id) : sortKey(a).localeCompare(sortKey(b)));
 
       // "34 students", or "12 of 34 students" while a search is active
       const total = `${students.length} student${students.length === 1 ? '' : 's'}`;
@@ -231,13 +242,13 @@
         !p ? '' : (q ? `${visible.length} of ${total}` : total);
 
       gridEl.innerHTML = '';
-      visible.forEach((s, i) => {
+      visible.forEach((s) => {
         const card = document.createElement('div');
         card.className = 'student';
         card.dataset.id = s.id;
         card.setAttribute('role', 'listitem');
         card.innerHTML = `
-          <span class="num" aria-hidden="true">${i + 1}</span>
+          <span class="num${s.roster_number ? ' manual' : ''}${counts.get(nums.get(s.id)) > 1 ? ' dupe' : ''}" title="${numTitle(s, counts.get(nums.get(s.id)) > 1)}">${nums.get(s.id)}</span>
           <span class="divider" aria-hidden="true"></span>
           <span class="name" title="${escapeHtml(s.name)}">${escapeHtml(s.name)}</span>
           <button type="button" class="remove" data-action="remove" aria-label="Remove ${escapeHtml(s.name)}" title="Remove">
@@ -270,7 +281,54 @@
       editMode = on;
       document.body.classList.toggle('editing', on);
       editBtn.setAttribute('aria-pressed', String(on));
+      render();
     }
+
+    // Click a roster number in edit mode → type the student's Aeries number.
+    // Empty puts them back on the alphabetical numbering.
+    gridEl.addEventListener('click', (e) => {
+      if (!editMode) return;
+      const numEl = e.target.closest('.num');
+      if (!numEl) return;
+      const card = numEl.closest('.student');
+      const student = students.find((s) => s.id === card.dataset.id);
+      if (!student) return;
+      const input = document.createElement('input');
+      input.type = 'number'; input.min = '1'; input.max = '999'; input.step = '1';
+      input.className = 'neu-inset num-edit';
+      input.value = student.roster_number || '';
+      input.placeholder = numEl.textContent;
+      input.setAttribute('aria-label', `Roster number for ${student.name} (empty = alphabetical)`);
+      numEl.replaceWith(input);
+      input.focus();
+      input.select();
+
+      let done = false;
+      const finish = async (save) => {
+        if (done) return;
+        done = true;
+        const raw = input.value.trim();
+        const n = raw === '' ? null : Math.round(Number(raw));
+        if (save && (n === null || (n >= 1 && n <= 999)) && n !== (student.roster_number || null)) {
+          card.classList.add('saving');
+          try {
+            await updateStudent(student.id, { roster_number: n });
+            student.roster_number = n;
+          } catch (err) {
+            if (/roster_number/.test(String(err.message))) setStatus("Roster numbers can't be saved yet — run migration-roster-numbers.sql in the Supabase SQL editor.", 'error');
+            else showError(err);
+          }
+        } else if (save && n !== null && !(n >= 1 && n <= 999)) {
+          setStatus('A roster number is a whole number from 1 to 999.', 'error');
+        }
+        render();
+      };
+      input.addEventListener('keydown', (ev) => {
+        if (ev.key === 'Enter') { ev.preventDefault(); finish(true); }
+        if (ev.key === 'Escape') { ev.preventDefault(); finish(false); }
+      });
+      input.addEventListener('blur', () => finish(true));
+    });
 
     // Click a name in edit mode → inline inset input
     gridEl.addEventListener('click', (e) => {
@@ -339,7 +397,8 @@
         render();
         showToast(`Removed ${student.name}`, async () => {
           try {
-            await addStudents(currentPeriodId, [student.name], student.sort_order);
+            const [back] = await addStudents(currentPeriodId, [student.name], student.sort_order);
+            if (back && student.roster_number) await updateStudent(back.id, { roster_number: student.roster_number });
             await loadStudents();
           } catch (err) { showError(err); }
         });
