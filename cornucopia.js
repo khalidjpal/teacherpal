@@ -706,6 +706,8 @@
   // flies back to its place (wheel.js clears `called` as they leave)
   function pour(v) {
     if (v.pouring || v.active || !v.items.children.length) return;
+    // the wheel may say no (a saved pick list asks before it is reset)
+    if (!v.doc.dispatchEvent(new CustomEvent('teacherpal:wheel-reset-request', { cancelable: true }))) return;
     v.pouring = true;
     v.el.setAttribute('aria-disabled', 'true');
     v.basket.dataset.state = 'pouring';

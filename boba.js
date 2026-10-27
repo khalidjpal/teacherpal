@@ -751,6 +751,8 @@
   function pour(v) {
     const J = v.jar, doc = v.doc, win = doc.defaultView;
     if (!J || J.pouring || v.active || !J.pearls.size) return;
+    // the wheel may say no (a saved pick list asks before it is reset)
+    if (!doc.dispatchEvent(new CustomEvent('teacherpal:wheel-reset-request', { cancelable: true }))) return;
     J.pouring = true;
     J.el.dataset.state = 'pouring';
     setDisabled(doc, v.off);

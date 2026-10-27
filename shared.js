@@ -658,6 +658,57 @@ async function getAttendanceForDate(date) {
 }
 
 // ---------------------------------------------------------------------------
+// Pick lists — the Name Wheel's named rotations per period ("Board work",
+// "Cold call"). A list's picked students are rows in pick_list_picks; no row
+// = still to go. Picks last until the list is reset, across days and devices.
+// ---------------------------------------------------------------------------
+
+async function getPickLists(periodId) {
+  return sb('pick_lists', {
+    params: { select: '*', period_id: `eq.${periodId}`, order: 'sort_order.asc,created_at.asc' },
+  });
+}
+async function createPickList(periodId, name, sortOrder = 0) {
+  const rows = await sb('pick_lists', { method: 'POST', body: { period_id: periodId, name: name.trim(), sort_order: sortOrder } });
+  return rows[0];
+}
+async function renamePickList(id, name) {
+  const rows = await sb('pick_lists', { method: 'PATCH', params: { id: `eq.${id}` }, body: { name: name.trim() } });
+  return rows[0];
+}
+// its picks go with it (cascade)
+async function deletePickList(id) {
+  return sb('pick_lists', { method: 'DELETE', params: { id: `eq.${id}` } });
+}
+// → [{ student_id, picked_at, manual }] oldest first
+async function getPickListPicks(listId) {
+  return sb('pick_list_picks', {
+    params: { select: 'student_id,picked_at,manual', list_id: `eq.${listId}`, order: 'picked_at.asc' },
+  });
+}
+// Mark picked. Picking someone already picked moves their date to now.
+async function addPickListPick(listId, studentId, { manual = false, at = new Date().toISOString() } = {}) {
+  const rows = await sb('pick_list_picks', {
+    method: 'POST',
+    params: { on_conflict: 'list_id,student_id' },
+    prefer: 'resolution=merge-duplicates,return=representation',
+    body: { list_id: listId, student_id: studentId, picked_at: at, manual },
+  });
+  return rows[0];
+}
+async function removePickListPick(listId, studentId) {
+  return sb('pick_list_picks', {
+    method: 'DELETE',
+    params: { list_id: `eq.${listId}`, student_id: `eq.${studentId}` },
+    prefer: 'return=minimal',
+  });
+}
+// Reset: everyone back to "still to go".
+async function clearPickListPicks(listId) {
+  return sb('pick_list_picks', { method: 'DELETE', params: { list_id: `eq.${listId}` }, prefer: 'return=minimal' });
+}
+
+// ---------------------------------------------------------------------------
 // Courses — what a teacher teaches. Several periods share one through
 // periods.course_id; lesson plans belong to the course, not the period.
 // Attendance, seating, groups and bathroom stay per period.

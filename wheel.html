@@ -114,6 +114,21 @@
             <button type="button" id="wheel-edit" title="Choose who's in"><span class="for-wheel">Edit wheel</span><span class="for-brew">Edit who&rsquo;s in</span><span class="for-boba">Edit who&rsquo;s in</span><span class="for-horn">Edit who&rsquo;s in</span><span class="wheel-edit-n" id="wheel-edit-n">—</span></button>
           </div>
 
+          <!-- the period's saved pick lists: picks stay picked (across days and
+               devices) until the list is reset. A <section>, not a div, so
+               marwa's :first-of-type row rules still find the period row. -->
+          <section class="pick-list-bar" id="pick-list-bar" hidden>
+            <div class="wheel-control-row">
+              <label class="bar-field">
+                <span class="lbl">List</span>
+                <select id="pick-list-select" aria-label="Pick list"></select>
+              </label>
+              <button type="button" id="pick-list-view" title="See who's been picked and when, or mark someone by hand">Who&rsquo;s picked</button>
+              <button type="button" id="pick-list-reset">Reset</button>
+            </div>
+            <p class="pick-list-line" id="pick-list-line" aria-live="polite"></p>
+          </section>
+
           <div class="wheel-control-row">
             <button type="button" id="wheel-norepeat" role="switch" aria-checked="true" title="Take each name off the wheel until everyone has been called">No repeats</button>
             <button type="button" id="wheel-mute" role="switch" aria-checked="false" title="Sound while picking">
@@ -146,6 +161,35 @@
             <button type="button" id="wheel-all-off">All off</button>
             <span class="spacer"></span>
             <button type="button" class="primary" id="wheel-roster-done">Done</button>
+          </div>
+        </form>
+      </dialog>
+
+      <!-- Who's picked on the open list: picked (in order, with the date) and
+           still to go. Tap a name to move it across. -->
+      <dialog id="pick-list-dialog" class="wheel-roster-dialog pick-list-dialog card">
+        <form method="dialog" class="wheel-roster-form">
+          <div class="card-head">
+            <h2 id="pl-title">List</h2>
+            <span class="chip"><span id="pl-count">—</span></span>
+          </div>
+          <p class="hint">Picked students stay picked until you reset the list. Tap a name to mark them picked or put them back in.</p>
+          <div class="pl-cols">
+            <section class="pl-col">
+              <h3>Picked <span class="pl-n" id="pl-n-picked">0</span></h3>
+              <ol class="pl-list" id="pl-picked"></ol>
+            </section>
+            <section class="pl-col">
+              <h3>Still to go <span class="pl-n" id="pl-n-left">0</span></h3>
+              <ul class="pl-list" id="pl-left"></ul>
+            </section>
+          </div>
+          <div class="wheel-roster-actions">
+            <button type="button" id="pl-rename">Rename</button>
+            <button type="button" id="pl-delete">Delete list</button>
+            <span class="spacer"></span>
+            <button type="button" id="pl-reset">Reset list</button>
+            <button type="button" class="primary" id="pl-done">Done</button>
           </div>
         </form>
       </dialog>

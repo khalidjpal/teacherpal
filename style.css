@@ -622,8 +622,8 @@
   --bg-1:#1A1226;   /* canvas / radial glow centre */
   --bg: var(--bg-0);
   --bg-glow: rgba(139, 79, 191, 0.14);    /* faint purple wash at the top */
-  --body-pattern: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='180' height='180' viewBox='0 0 180 180'><defs><g id='b'><path d='M32 10C30.4 10 29.2 11 28.8 12.4L27.6 8.6 26.9 13.1C23 9.6 15 7.6 4 10 8 12.4 9.6 16 8.8 19.6 12.4 18.2 16.4 19 18.4 21.6 19.6 19.6 22 18.8 24.4 19.6 26 22 28.6 25.6 32 28Z'/><path d='M32 10C30.4 10 29.2 11 28.8 12.4L27.6 8.6 26.9 13.1C23 9.6 15 7.6 4 10 8 12.4 9.6 16 8.8 19.6 12.4 18.2 16.4 19 18.4 21.6 19.6 19.6 22 18.8 24.4 19.6 26 22 28.6 25.6 32 28Z' transform='matrix(-1 0 0 1 64 0)'/></g></defs><g fill='%23F5E6D3' fill-opacity='0.05'><use href='%23b' transform='translate(18 24) rotate(-12 10 5) scale(0.31)'/><use href='%23b' transform='translate(112 70) rotate(10 7 3.5) scale(0.22000000000000003)'/><use href='%23b' transform='translate(52 128) rotate(-4 5.5 2.75) scale(0.16999999999999998)'/></g></svg>");   /* tiny bats, like marwa's hearts */
-  --body-pattern-size: 180px 180px;
+  --body-pattern: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='560' height='560' viewBox='0 0 560 560'><defs><g id='b'><path d='M32 10C30.4 10 29.2 11 28.8 12.4L27.6 8.6 26.9 13.1C23 9.6 15 7.6 4 10 8 12.4 9.6 16 8.8 19.6 12.4 18.2 16.4 19 18.4 21.6 19.6 19.6 22 18.8 24.4 19.6 26 22 28.6 25.6 32 28Z'/><path d='M32 10C30.4 10 29.2 11 28.8 12.4L27.6 8.6 26.9 13.1C23 9.6 15 7.6 4 10 8 12.4 9.6 16 8.8 19.6 12.4 18.2 16.4 19 18.4 21.6 19.6 19.6 22 18.8 24.4 19.6 26 22 28.6 25.6 32 28Z' transform='matrix(-1 0 0 1 64 0)'/></g></defs><use href='%23b' fill='%23F5E6D3' fill-opacity='0.04' transform='translate(40 60) rotate(-10 17.6 9.9) scale(0.55)'/><use href='%23b' fill='%23F5E6D3' fill-opacity='0.055' transform='translate(310 24) rotate(8 9.6 5.4) scale(0.3)'/><use href='%23b' fill='%23F5E6D3' fill-opacity='0.065' transform='translate(462 150) rotate(-6 7 4) scale(0.22)'/><use href='%23b' fill='%23F5E6D3' fill-opacity='0.07' transform='translate(150 214) rotate(12 5.8 3.2) scale(0.18)'/><use href='%23b' fill='%23F5E6D3' fill-opacity='0.035' transform='translate(372 290) rotate(-4 24 13.5) scale(0.75)'/><use href='%23b' fill='%23F5E6D3' fill-opacity='0.06' transform='translate(48 372) rotate(6 9 5) scale(0.28)'/><use href='%23b' fill='%23F5E6D3' fill-opacity='0.045' transform='translate(236 432) rotate(-12 13.4 7.6) scale(0.42)'/><use href='%23b' fill='%23F5E6D3' fill-opacity='0.065' transform='translate(486 476) rotate(10 6.4 3.6) scale(0.2)'/><use href='%23b' fill='%23F5E6D3' fill-opacity='0.07' transform='translate(168 532) rotate(0 4.8 2.7) scale(0.15)'/><use href='%23b' fill='%23F5E6D3' fill-opacity='0.07' transform='translate(520 360) rotate(-14 4.2 2.3) scale(0.13)'/></svg>");   /* bats of every size across the whole page; the big ones fainter */
+  --body-pattern-size: 560px 560px;
 
   /* surfaces */
   --card:#241833;   /* cards and panels */
@@ -858,6 +858,11 @@
   --halloween-pumpkin-face: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><defs><radialGradient id='c' cx='50%' cy='55%' r='65%'><stop offset='0' stop-color='%238A3A0A'/><stop offset='0.6' stop-color='%234A1C05'/><stop offset='1' stop-color='%231E0C03'/></radialGradient></defs><g fill='url(%23c)' stroke='%23FFB347' stroke-width='0.8' stroke-linejoin='round'><path d='M23.5 38.5 31.5 24.5 39.5 38.5Z'/><path d='M60.5 38.5 68.5 24.5 76.5 38.5Z'/><path d='M47.6 43.6 50 39.6 52.4 43.6Z'/><path d='M8 46Q50 56 92 46Q91 62 82 71L77 65 73 75Q50 84 27 75L23 65 18 71Q9 62 8 46Z'/></g></svg>");
   --halloween-jack: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 48 48'><path d='M24 14c.4-3.6 2.4-6 5.6-6.6' fill='none' stroke='%237FBF3F' stroke-width='3' stroke-linecap='round'/><ellipse cx='15.5' cy='29' rx='10.5' ry='13' fill='%23C9550B'/><ellipse cx='32.5' cy='29' rx='10.5' ry='13' fill='%23C9550B'/><ellipse cx='24' cy='29' rx='10' ry='14' fill='%23FF7518'/><path d='M19.5 16.5Q17.5 29 19.5 42.5M28.5 16.5Q30.5 29 28.5 42.5' fill='none' stroke='%23B84A0A' stroke-width='1.1' stroke-opacity='0.7'/><g fill='%23FFD25A'><path d='M13.5 26 17.5 19.5 21.5 26Z'/><path d='M26.5 26 30.5 19.5 34.5 26Z'/><path d='M22.4 29.6 24 27 25.6 29.6Z'/><path d='M12.5 31.5Q24 43 35.5 31.5L32.4 32.6 31.4 35.6 28 33.6 24 36.4 20 33.6 16.6 35.6 15.6 32.6Z'/></g></svg>");
   --halloween-vignette: radial-gradient(ellipse 85% 80% at 50% 45%, transparent 55%, rgba(4, 2, 8, 0.55) 100%);
+  /* more decoration (the "Halloween extras, part 2" rules): bats across the
+     whole page, a graveyard along the bottom, a ghost for empty lists */
+  --halloween-grave: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1600 150' preserveAspectRatio='xMidYMax meet'><g fill='%2307040C' fill-opacity='0.82' stroke='%238B4FBF' stroke-opacity='0.14' stroke-width='1.2'><path d='M0 150V130Q200 116 400 127T800 124T1200 129T1600 121V150Z'/><path transform='rotate(-4 207 132)' d='M190 134V99A17 17 0 0 1 224 99V134Z'/><path transform='rotate(3 272 132)' d='M268 134V90H258V82H268V72H276V82H286V90H276V134Z'/><path transform='rotate(6 534 132)' d='M520 134V108A14 14 0 0 1 548 108V134Z'/><path transform='rotate(2 1069 132)' d='M1050 134V95A19 19 0 0 1 1088 95V134Z'/><path transform='rotate(-5 1160 132)' d='M1156 134V98H1146V90H1156V80H1164V90H1174V98H1164V134Z'/><path transform='rotate(-3 1375 132)' d='M1360 134V105A15 15 0 0 1 1390 105V134Z'/></g><g fill='none' stroke='%2307040C' stroke-opacity='0.82' stroke-linecap='round'><path d='M70 140Q74 60 64 18' stroke-width='9'/><path d='M72 92Q100 76 122 48' stroke-width='4'/><path d='M100 76Q114 74 128 80' stroke-width='4'/><path d='M71 72Q44 56 30 30' stroke-width='2.6'/><path d='M44 56Q30 58 18 52' stroke-width='2.6'/><path d='M73 48Q88 34 92 14' stroke-width='2.6'/><path d='M67 34Q56 22 58 6' stroke-width='2.6'/><path d='M1530 140Q1526 60 1536 18' stroke-width='9'/><path d='M1528 92Q1500 76 1478 48' stroke-width='4'/><path d='M1500 76Q1486 74 1472 80' stroke-width='4'/><path d='M1529 72Q1556 56 1570 30' stroke-width='2.6'/><path d='M1556 56Q1570 58 1582 52' stroke-width='2.6'/><path d='M1527 48Q1512 34 1508 14' stroke-width='2.6'/><path d='M1533 34Q1544 22 1542 6' stroke-width='2.6'/></g></svg>");
+  --halloween-ghost: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 48 48'><defs><g id='b'><path d='M32 10C30.4 10 29.2 11 28.8 12.4L27.6 8.6 26.9 13.1C23 9.6 15 7.6 4 10 8 12.4 9.6 16 8.8 19.6 12.4 18.2 16.4 19 18.4 21.6 19.6 19.6 22 18.8 24.4 19.6 26 22 28.6 25.6 32 28Z'/><path d='M32 10C30.4 10 29.2 11 28.8 12.4L27.6 8.6 26.9 13.1C23 9.6 15 7.6 4 10 8 12.4 9.6 16 8.8 19.6 12.4 18.2 16.4 19 18.4 21.6 19.6 19.6 22 18.8 24.4 19.6 26 22 28.6 25.6 32 28Z' transform='matrix(-1 0 0 1 64 0)'/></g></defs><path d='M11 42V21A13 13 0 0 1 37 21V42L33 38.4 29 42 25 38.4 21 42 17 38.4 13 42Z' fill='%23F5E6D3' fill-opacity='0.88'/><ellipse cx='19.5' cy='22' rx='2.4' ry='3.2' fill='%232A1A3A'/><ellipse cx='28.5' cy='22' rx='2.4' ry='3.2' fill='%232A1A3A'/><ellipse cx='24' cy='30' rx='2.2' ry='2.8' fill='%232A1A3A'/><use href='%23b' fill='%23C394EE' transform='translate(31 2) rotate(-10 6 3) scale(0.26)'/></svg>");
+  --halloween-fog: rgba(139, 79, 191, 0.13);
 }
 
 /* ==========================================================================
@@ -4882,19 +4887,7 @@ dialog.br-settings-dialog .br-settings-grid { display: grid; gap: var(--space-3)
    nothing can cover text or take a click. The scope skips the timer / noise /
    wheel pop-outs (and the timer's PiP window), which stay clean for students. */
 
-/* page: a web in each corner, a vignette, then the tiny-bat tile (--body-pattern) */
-:root[data-theme="halloween"]:not(:has(body.timer-popout, body.noise-popout, body.wheel-popout)) body {
-  background:
-    var(--halloween-web-tl) left top / clamp(11rem, 20vw, 19rem) auto no-repeat,
-    var(--halloween-web-tr) right top / clamp(11rem, 20vw, 19rem) auto no-repeat,
-    var(--halloween-web-bl) left bottom / clamp(9rem, 16vw, 15rem) auto no-repeat,
-    var(--halloween-web-br) right bottom / clamp(9rem, 16vw, 15rem) auto no-repeat,
-    var(--halloween-vignette),
-    var(--body-pattern) 0 0 / var(--body-pattern-size) repeat,
-    radial-gradient(60% 45% at 50% -5%, var(--bg-glow), transparent 70%) no-repeat,
-    radial-gradient(90% 70% at 30% 10%, var(--bg-1), transparent 70%) no-repeat,
-    var(--bg-0);
-}
+/* the page background (webs, graveyard, bat tile) is in part 2 below */
 
 /* bats drifting across just under the top bar, behind everything (z -1 in the
    root context sits under every panel); two flocks at different speeds */
@@ -4927,26 +4920,12 @@ dialog.br-settings-dialog .br-settings-grid { display: grid; gap: var(--space-3)
   :root[data-theme="halloween"]:not(:has(body.timer-popout, body.noise-popout, body.wheel-popout))::before, :root[data-theme="halloween"]:not(:has(body.timer-popout, body.noise-popout, body.wheel-popout))::after { animation: none; }
 }
 
-/* small cobwebs in the top corners of panels, cards and modals — drawn under
+/* panels, cards and modals get webs + a drip (drawn in part 2) under
    the box's own content (isolation gives the -1 layer a box to sit in) */
 :root[data-theme="halloween"]:not(:has(body.timer-popout, body.noise-popout, body.wheel-popout)) .hud-box,
 :root[data-theme="halloween"]:not(:has(body.timer-popout, body.noise-popout, body.wheel-popout)) .card,
 :root[data-theme="halloween"]:not(:has(body.timer-popout, body.noise-popout, body.wheel-popout)) dialog[open]:not(.arr-dialog),
 :root[data-theme="halloween"]:not(:has(body.timer-popout, body.noise-popout, body.wheel-popout)) .arr-dialog-inner { isolation: isolate; }
-:root[data-theme="halloween"]:not(:has(body.timer-popout, body.noise-popout, body.wheel-popout)) .hud-box::after,
-:root[data-theme="halloween"]:not(:has(body.timer-popout, body.noise-popout, body.wheel-popout)) .card::after,
-:root[data-theme="halloween"]:not(:has(body.timer-popout, body.noise-popout, body.wheel-popout)) dialog[open]:not(.arr-dialog)::after,
-:root[data-theme="halloween"]:not(:has(body.timer-popout, body.noise-popout, body.wheel-popout)) .arr-dialog-inner::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  z-index: -1;
-  border-radius: inherit;
-  pointer-events: none;
-  background:
-    var(--halloween-card-web-l) left top / 2.8rem auto no-repeat,
-    var(--halloween-card-web-r) right top / 2.8rem auto no-repeat;
-}
 
 /* a grinning jack-o'-lantern, glowing, above every empty state */
 :root[data-theme="halloween"]:not(:has(body.timer-popout, body.noise-popout, body.wheel-popout)) .list-empty::before,
@@ -4974,6 +4953,113 @@ dialog.br-settings-dialog .br-settings-grid { display: grid; gap: var(--space-3)
   vertical-align: -0.1em;
   background: var(--halloween-head-bat) no-repeat center / contain;
   pointer-events: none;
+}
+
+/* Halloween extras, part 2. Same rules as above: behind content, no clicks,
+   off the pop-outs, still under reduced motion. */
+
+/* the graveyard along the bottom of the page: one wide silhouette (dead trees
+   at the ends, a few stones), under the corner webs */
+:root[data-theme="halloween"]:not(:has(body.timer-popout, body.noise-popout, body.wheel-popout)) body {
+  background:
+    var(--halloween-web-tl) left top / clamp(11rem, 20vw, 19rem) auto no-repeat,
+    var(--halloween-web-tr) right top / clamp(11rem, 20vw, 19rem) auto no-repeat,
+    var(--halloween-web-bl) left bottom / clamp(9rem, 16vw, 15rem) auto no-repeat,
+    var(--halloween-web-br) right bottom / clamp(9rem, 16vw, 15rem) auto no-repeat,
+    var(--halloween-grave) center bottom / max(100%, 70rem) auto no-repeat,
+    var(--halloween-vignette),
+    var(--body-pattern) 0 0 / var(--body-pattern-size) repeat,
+    radial-gradient(60% 45% at 50% -5%, var(--bg-glow), transparent 70%) no-repeat,
+    radial-gradient(90% 70% at 30% 10%, var(--bg-1), transparent 70%) no-repeat,
+    var(--bg-0);
+}
+
+/* purple fog drifting across the bottom: a strip two screens wide whose
+   pattern repeats every screen, so sliding it one screen loops seamlessly */
+:root[data-theme="halloween"]:not(:has(body.timer-popout, body.noise-popout, body.wheel-popout)) body::after {
+  content: "";
+  position: fixed;
+  left: 0;
+  bottom: 0;
+  width: 200vw;
+  height: 32vh;
+  z-index: -1;
+  pointer-events: none;
+  background:
+    radial-gradient(28% 60% at 18% 100%, var(--halloween-fog), transparent 70%) 0 0 / 100vw 100% repeat-x,
+    radial-gradient(34% 75% at 62% 100%, var(--halloween-fog), transparent 72%) 0 0 / 100vw 100% repeat-x,
+    radial-gradient(22% 45% at 88% 100%, var(--halloween-fog), transparent 70%) 0 0 / 100vw 100% repeat-x;
+  animation: halloween-fog 140s linear infinite;
+}
+@keyframes halloween-fog {
+  from { transform: translateX(0); }
+  to   { transform: translateX(-100vw); }
+}
+
+/* webs in the top corners of every panel and card (the boxes above, plus
+   the Create Groups and Bathroom panels and the hub's tool panels) */
+:root[data-theme="halloween"]:not(:has(body.timer-popout, body.noise-popout, body.wheel-popout)) .gp-panel,
+:root[data-theme="halloween"]:not(:has(body.timer-popout, body.noise-popout, body.wheel-popout)) .br-panel { position: relative; }
+:root[data-theme="halloween"]:not(:has(body.timer-popout, body.noise-popout, body.wheel-popout)) .gp-panel,
+:root[data-theme="halloween"]:not(:has(body.timer-popout, body.noise-popout, body.wheel-popout)) .br-panel,
+:root[data-theme="halloween"]:not(:has(body.timer-popout, body.noise-popout, body.wheel-popout)) .hud-panel { isolation: isolate; }
+:root[data-theme="halloween"]:not(:has(body.timer-popout, body.noise-popout, body.wheel-popout)) .hud-box::after,
+:root[data-theme="halloween"]:not(:has(body.timer-popout, body.noise-popout, body.wheel-popout)) .card::after,
+:root[data-theme="halloween"]:not(:has(body.timer-popout, body.noise-popout, body.wheel-popout)) dialog[open]:not(.arr-dialog)::after,
+:root[data-theme="halloween"]:not(:has(body.timer-popout, body.noise-popout, body.wheel-popout)) .arr-dialog-inner::after,
+:root[data-theme="halloween"]:not(:has(body.timer-popout, body.noise-popout, body.wheel-popout)) .gp-panel::after,
+:root[data-theme="halloween"]:not(:has(body.timer-popout, body.noise-popout, body.wheel-popout)) .br-panel::after,
+:root[data-theme="halloween"]:not(:has(body.timer-popout, body.noise-popout, body.wheel-popout)) .hud-panel::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  border-radius: inherit;
+  pointer-events: none;
+  background:
+    var(--halloween-card-web-l) left top / 2.8rem auto no-repeat,
+    var(--halloween-card-web-r) right top / 2.8rem auto no-repeat;
+}
+
+/* a mark beside every section heading: a jack-o'-lantern on the hub's
+   sections, a bat on panel titles (the hub/card rule above draws the bat) */
+:root[data-theme="halloween"]:not(:has(body.timer-popout, body.noise-popout, body.wheel-popout)) .hub-section-title::before {
+  width: 1.25em;
+  height: 1.25em;
+  vertical-align: -0.28em;
+  background-image: var(--halloween-jack);
+  filter: drop-shadow(0 0 0.3rem rgba(255, 117, 24, 0.45));
+}
+:root[data-theme="halloween"]:not(:has(body.timer-popout, body.noise-popout, body.wheel-popout)) .gp-title::before,
+:root[data-theme="halloween"]:not(:has(body.timer-popout, body.noise-popout, body.wheel-popout)) .br-panel-head h3::before {
+  content: "";
+  display: inline-block;
+  width: 1.9em;
+  height: 0.95em;
+  margin-right: 0.5em;
+  vertical-align: -0.1em;
+  background: var(--halloween-head-bat) no-repeat center / contain;
+  pointer-events: none;
+}
+
+/* empty lists: a little ghost (with a bat) instead of the jack-o'-lantern,
+   which stays on the big empty states (no chart, no plan) */
+:root[data-theme="halloween"]:not(:has(body.timer-popout, body.noise-popout, body.wheel-popout)) .list-empty::before { background-image: var(--halloween-ghost); filter: drop-shadow(0 0 0.6rem rgba(195, 148, 238, 0.4)); }
+:root[data-theme="halloween"]:not(:has(body.timer-popout, body.noise-popout, body.wheel-popout)) .att-names li.none::before,
+:root[data-theme="halloween"]:not(:has(body.timer-popout, body.noise-popout, body.wheel-popout)) .br-none::before {
+  content: "";
+  display: inline-block;
+  width: 1.15em;
+  height: 1.15em;
+  margin-right: 0.4em;
+  vertical-align: -0.22em;
+  background: var(--halloween-ghost) no-repeat center / contain;
+  opacity: 0.8;
+  pointer-events: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root[data-theme="halloween"]:not(:has(body.timer-popout, body.noise-popout, body.wheel-popout)) body::after { animation: none; }
 }
 
 /* Thanksgiving extras: a few autumn leaves drifting slowly down the page,
@@ -6933,6 +7019,79 @@ dialog.wheel-roster-dialog::backdrop { background: rgba(8, 6, 14, 0.6); backdrop
 .wheel-roster-actions .spacer { flex: 1; }
 .wheel-roster-actions button { min-height: 2.4rem; padding: 0 var(--space-4); }
 
+/* ---- pick lists: the List select + "Who's picked" / Reset, and one line
+   under them ("Board work · 12 of 28 picked", or Round complete) ---- */
+.pick-list-bar { width: 100%; display: flex; flex-direction: column; align-items: center; gap: 0.3rem; }
+.pick-list-bar[hidden] { display: none; }
+.pick-list-line {
+  margin: 0;
+  font-family: var(--font-mono); font-variant-numeric: tabular-nums;
+  font-size: 0.72rem; letter-spacing: 0.04em;
+  color: var(--text-muted);
+  text-align: center;
+}
+.pick-list-line b { font-weight: inherit; color: var(--text); }
+.pick-list-bar[data-done="1"] .pick-list-line b { color: var(--ok); }
+
+/* the dialog: two columns, picked (numbered, with the date) and still to go */
+dialog.pick-list-dialog { width: min(48rem, 94vw); }
+.pl-cols {
+  flex: 1 1 auto; min-height: 0;
+  display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: var(--space-3);
+}
+.pl-col { display: flex; flex-direction: column; min-height: 0; gap: var(--space-2); }
+.pl-col h3 {
+  margin: 0;
+  font-family: var(--font-display); font-size: 0.68rem; font-weight: 600;
+  letter-spacing: var(--track-label); text-transform: uppercase;
+  color: var(--label-ink);
+}
+.pl-n { margin-left: 0.3rem; font-family: var(--font-mono); color: var(--accent-ink); }
+.pl-list {
+  flex: 1 1 auto; min-height: 0; overflow-y: auto;
+  margin: 0; padding: 2px; list-style: none;
+  display: flex; flex-direction: column; gap: 0.3rem;
+  counter-reset: pl;
+}
+.pl-item {
+  width: 100%;
+  display: grid; grid-template-columns: minmax(0, 1fr) auto; grid-template-areas: "who act" "when act";
+  align-items: center; column-gap: var(--space-2);
+  min-height: var(--touch);
+  padding: 0.3rem 0.7rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--card-2);
+  color: var(--text);
+  text-align: left;
+}
+.pl-item:hover { border-color: var(--accent); }
+.pl-who {
+  grid-area: who;
+  font-size: var(--fs-sm); font-weight: var(--fw-semibold);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.pl-when { grid-area: when; font-family: var(--font-mono); font-size: 0.68rem; color: var(--text-muted); }
+.pl-when:empty { display: none; }
+.pl-act {
+  grid-area: act;
+  font-size: 0.68rem; letter-spacing: 0.04em;
+  color: var(--text-muted);
+  opacity: 0; transition: opacity var(--transition);
+}
+.pl-item:hover .pl-act, .pl-item:focus-visible .pl-act { opacity: 1; color: var(--accent-ink); }
+/* the picked side is numbered in the order they were called */
+#pl-picked .pl-who::before {
+  counter-increment: pl; content: counter(pl) ". ";
+  font-family: var(--font-mono); font-weight: 400; color: var(--text-muted);
+}
+.pl-none { padding: 0.4rem 0.2rem; font-size: var(--fs-sm); color: var(--text-muted); }
+@media (max-width: 600px) {
+  .pl-cols { grid-template-columns: minmax(0, 1fr); overflow-y: auto; }
+  .pl-list { overflow: visible; }
+}
+
 /* slices are clickable (take that student off); the label must not swallow it */
 .slice { cursor: pointer; }
 .slice-label { pointer-events: none; }
@@ -8156,6 +8315,16 @@ body.wheel-popout .bt-spot-hint { display: none; }   /* the projector can't be c
 :root[data-theme="marwa"] .wheel-page .wheel-control-row .icon-btn { width: auto; justify-self: stretch; order: 1; }
 :root[data-theme="marwa"] .wheel-page .wheel-control-row .icon-btn svg { margin: 0 auto; }
 :root[data-theme="marwa"] .wheel-page .wheel-hint { display: none; }
+/* the pick list group between them, on its own hairline: [List ▾] across,
+   then Who's picked / Reset, then the count line */
+:root[data-theme="marwa"] .wheel-page .pick-list-bar,
+:root[data-theme="marwa"] .wheel-page .pick-list-bar + .wheel-control-row {
+  padding-top: var(--space-3);
+  border-top: 1px solid var(--border);
+}
+:root[data-theme="marwa"] .wheel-page .pick-list-bar { align-items: stretch; gap: 0.4rem; }
+:root[data-theme="marwa"] .wheel-page .pick-list-bar .wheel-control-row { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+:root[data-theme="marwa"] .wheel-page .pick-list-bar .bar-field { grid-column: 1 / -1; }
 /* narrow screens: one column — name, cup, Picked, controls — and the page
    scrolls. After the card rules above so it wins the cascade. */
 @media (max-width: 900px) {

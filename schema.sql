@@ -84,6 +84,22 @@
 --     use_formula boolean     this scope's "Formula on/off" toggle
 --     updated_at  timestamptz
 --
+--   pick_lists                  (Name Wheel: named rotations per period, e.g. "Board work")
+--     id          uuid        primary key
+--     owner_id    uuid        -> auth.users.id (cascade delete)
+--     period_id   uuid        -> periods.id (cascade delete)
+--     name        text        1–40 chars; UNIQUE (period_id, lower(name))
+--     sort_order  integer
+--     created_at  timestamptz
+--
+--   pick_list_picks             (one row per student picked on a list; reset = delete them)
+--     id          uuid        primary key
+--     owner_id    uuid        -> auth.users.id (cascade delete)
+--     list_id     uuid        -> pick_lists.id (cascade delete)
+--     student_id  uuid        -> students.id (cascade delete); UNIQUE (list_id, student_id)
+--     picked_at   timestamptz when they were called
+--     manual      boolean     marked by hand rather than by the wheel
+--
 --   attendance                  (one row per period AND date; present students
 --                                are not stored)
 --     id          uuid        primary key
@@ -357,6 +373,30 @@ create index if not exists bathroom_log_owner_idx   on public.bathroom_log (owne
 create unique index if not exists bathroom_log_manual_owner_uidx
   on public.bathroom_log (owner_id, student_id, quarter) where manual;
 
+create table if not exists public.pick_lists (
+  id          uuid primary key default gen_random_uuid(),
+  owner_id    uuid not null default auth.uid() references auth.users(id) on delete cascade,
+  period_id   uuid not null references public.periods(id) on delete cascade,
+  name        text not null check (length(btrim(name)) between 1 and 40),
+  sort_order  integer not null default 0,
+  created_at  timestamptz not null default now()
+);
+create index if not exists pick_lists_owner_idx  on public.pick_lists (owner_id);
+create index if not exists pick_lists_period_idx on public.pick_lists (period_id);
+create unique index if not exists pick_lists_period_name_uidx on public.pick_lists (period_id, lower(name));
+
+create table if not exists public.pick_list_picks (
+  id          uuid primary key default gen_random_uuid(),
+  owner_id    uuid not null default auth.uid() references auth.users(id) on delete cascade,
+  list_id     uuid not null references public.pick_lists(id) on delete cascade,
+  student_id  uuid not null references public.students(id) on delete cascade,
+  picked_at   timestamptz not null default now(),
+  manual      boolean not null default false
+);
+create index if not exists pick_list_picks_owner_idx on public.pick_list_picks (owner_id);
+create unique index if not exists pick_list_picks_list_student_uidx on public.pick_list_picks (list_id, student_id);
+create index if not exists pick_list_picks_student_idx on public.pick_list_picks (student_id);
+
 create table if not exists public.schedule_overrides (
   id           uuid primary key default gen_random_uuid(),
   owner_id     uuid not null default auth.uid() references auth.users(id) on delete cascade,
@@ -392,6 +432,8 @@ alter table public.lesson_plans       enable row level security;
 alter table public.lesson_attachments enable row level security;
 alter table public.bathroom_log       enable row level security;
 alter table public.schedule_overrides enable row level security;
+alter table public.pick_lists         enable row level security;
+alter table public.pick_list_picks    enable row level security;
 
 do $$
 declare
@@ -400,7 +442,8 @@ declare
 begin
   foreach t in array array[
     'periods','courses','students','room_layouts','seat_assignments','seating_arrangements','seating_rules',
-    'attendance','lesson_plans','lesson_attachments','bathroom_log','schedule_overrides'
+    'attendance','lesson_plans','lesson_attachments','bathroom_log','schedule_overrides',
+    'pick_lists','pick_list_picks'
   ] loop
     policy_name := format('%s owner select', t);
     if not exists (select 1 from pg_policies where schemaname='public' and tablename=t and policyname=policy_name) then

@@ -15,8 +15,14 @@
 //
 // Who is on the wheel: the period's roster minus today's absentees (the
 // attendance table, the same source as everywhere else) minus anyone sitting
-// out in Create Groups. With "No repeats" on, picked students drop off until
-// the pool empties and the wheel refills.
+// out in Create Groups. With "No repeats" on, picked students drop off.
+//
+// PICK LISTS: each period has named rotations ("Board work", "Cold call") in
+// Supabase (pick_lists + pick_list_picks). The open list's picks ARE `called`:
+// a pick stays picked across days and devices until the list is reset, so a
+// round no longer refills itself - it says "Round complete" and offers Reset.
+// Absent and sitting-out students are skipped, never marked. Without the
+// migration the old behaviour stays: `called` is per day, in this browser.
 //
 // Two themes swap the wheel for a SKIN: halloween a cauldron (cauldron.js -
 // names float in the brew as bubbles; a pick boils it, lifts the winner's
@@ -38,6 +44,9 @@
   const REPEAT_KEY = 'teacherpal.wheel.noRepeats';
   const calledKey  = (pid) => `teacherpal.wheel.called.${pid}`;
   const removedKey = (pid) => `teacherpal.wheel.removed.${pid}`;
+  const listKey    = (pid) => `teacherpal.wheel.list.${pid}`;   // the open pick list, per period
+  const DEFAULT_LIST = 'Cold call';                              // every period starts with one
+  const NEW_LIST = '__new';
 
   const SPIN_MS = 4500;
   const MIN_TURNS = 5;                // whole rotations before the offset
@@ -58,7 +67,14 @@
                                       // one spin so the winner stays under the
                                       // pointer to be seen, and only drops off
                                       // when the next spin starts.
-  let called = new Set();             // picked already (No repeats)
+  let called = new Set();             // picked already: the open list's picks
+                                      // (or today's, without pick lists)
+  let lists = [];                     // this period's pick_lists rows
+  let listId = null;                  // the open one
+  let picks = new Map();              // student id -> { at, manual } on the open list
+  let listsReady = false;             // false = no pick_lists table: per-day `called`
+  let listsWarned = false;
+  let loadSeq = 0;                    // drops a stale period load
   let firstNamesOnly = true;
   let noRepeats = true;
   let muted = false;
@@ -141,7 +157,165 @@
     } catch { /* ignore */ }
   }
   const loadCalled = (pid) => loadIdSet(calledKey(pid));
-  function saveCalled() { if (currentPeriodId) saveIdSet(calledKey(currentPeriodId), called); }
+  function saveCalled() { if (currentPeriodId && !useLists()) saveIdSet(calledKey(currentPeriodId), called); }
+
+  // ---------- pick lists ----------
+  const useLists = () => listsReady && !!listId;
+  const openList = () => lists.find((l) => l.id === listId) || null;
+  const pickedCount = () => roster.filter((s) => picks.has(s.id)).length;
+  function listWriteFailed(err) {
+    showError(err);
+    reloadPicks();                     // show what was actually saved
+  }
+  // writes go out one at a time, in order: a quick pick-then-unpick must
+  // never reach the server the other way round
+  let writes = Promise.resolve();
+  const queueWrite = (fn) => { writes = writes.then(fn).catch(listWriteFailed); };
+  // `called` changes go through these three, so the list is written as it moves
+  function callAdd(id, { manual = false } = {}) {
+    if (!useLists()) { called.add(id); saveCalled(); return; }
+    const at = new Date().toISOString();
+    picks.delete(id);                  // picked again: to the end, with the new date
+    picks.set(id, { at, manual });
+    called.add(id);
+    const lid = listId;
+    queueWrite(() => addPickListPick(lid, id, { manual, at }));
+  }
+  function callDelete(id) {
+    if (!called.has(id) && !picks.has(id)) return false;
+    called.delete(id);
+    if (!useLists()) { saveCalled(); return true; }
+    picks.delete(id);
+    const lid = listId;
+    queueWrite(() => removePickListPick(lid, id));
+    return true;
+  }
+  function callClear() {
+    called = new Set();
+    if (!useLists()) { saveCalled(); return; }
+    picks = new Map();
+    const lid = listId;
+    queueWrite(() => clearPickListPicks(lid));
+  }
+
+  // This period's lists, the remembered one open, and its picks. A period
+  // with none gets "Cold call", so a pick always lands on a list.
+  async function loadLists(pid, seq) {
+    lists = []; listId = null; picks = new Map();
+    if (!pid) return;
+    try {
+      lists = await getPickLists(pid);
+      listsReady = true;
+    } catch (err) {
+      listsReady = false;
+      if (!isMissingTableError(err)) showError(err);
+      else if (!listsWarned) {
+        listsWarned = true;
+        setStatus('Run migration-pick-lists.sql in Supabase to keep pick lists. Until then, picks last for today only.', 'info');
+      }
+      return;
+    }
+    if (seq !== loadSeq) return;
+    if (!lists.length) {
+      try { lists = [await createPickList(pid, DEFAULT_LIST, 0)]; }
+      catch { lists = await getPickLists(pid).catch(() => []); }   // another tab made it first
+    }
+    let remembered = null;
+    try { remembered = localStorage.getItem(listKey(pid)); } catch { /* ignore */ }
+    listId = (lists.find((l) => l.id === remembered) || lists[0] || {}).id || null;
+    await loadPicks();
+  }
+  async function loadPicks() {
+    const id = listId;
+    const next = new Map();
+    if (id) (await getPickListPicks(id)).forEach((r) => next.set(r.student_id, { at: r.picked_at, manual: !!r.manual }));
+    if (id === listId) picks = next;
+  }
+  const pickedOnRoster = () => new Set([...picks.keys()].filter((id) => roster.some((s) => s.id === id)));
+  // Picks made on another device (or after a failed write): read them again,
+  // and repaint if anything moved. Never mid-spin.
+  async function reloadPicks() {
+    if (!useLists() || spin) return;
+    const before = [...picks.keys()].join();
+    await writes;                      // read after our own writes have landed
+    try { await loadPicks(); } catch { return; }
+    if (spin) return;
+    called = pickedOnRoster();
+    if ([...picks.keys()].join() !== before) { rebuildPool(); broadcast(); }
+    else renderListBar();
+  }
+  async function switchList(id) {
+    if (spin || !id || id === listId) { renderListBar(); return; }
+    listId = id;
+    try { localStorage.setItem(listKey(currentPeriodId), id); } catch { /* ignore */ }
+    picks = new Map();
+    try { await loadPicks(); } catch (err) { showError(err); }
+    if (id !== listId) return;
+    called = pickedOnRoster();
+    winnerId = null;
+    rebuildPool();
+    broadcast();
+  }
+  const nameTaken = (name, except) => lists.some((l) => l !== except && l.name.toLocaleLowerCase() === name.toLocaleLowerCase());
+  async function newList() {
+    const name = (prompt('Name the new list (for example "Board work" or "Read aloud"):') || '').trim().slice(0, 40);
+    if (!name) { renderListBar(); return; }
+    if (nameTaken(name)) {
+      setStatus(`This period already has a list called “${name}”.`, 'error');
+      renderListBar();
+      return;
+    }
+    try {
+      const row = await createPickList(currentPeriodId, name, lists.length);
+      lists.push(row);
+      await switchList(row.id);
+    } catch (err) { showError(err); renderListBar(); }
+  }
+  async function renameList() {
+    const list = openList();
+    if (!list) return;
+    const name = (prompt('Rename this list:', list.name) || '').trim().slice(0, 40);
+    if (!name || name === list.name) return;
+    if (nameTaken(name, list)) { setStatus(`This period already has a list called “${name}”.`, 'error'); return; }
+    try { Object.assign(list, await renamePickList(list.id, name)); }
+    catch (err) { showError(err); }
+    renderListBar();
+    renderPickDialog();
+  }
+  async function deleteList() {
+    const list = openList();
+    if (!list || lists.length < 2) return;
+    if (!confirm(`Delete the list “${list.name}”?\n\nWho has been picked on it is forgotten. Your other lists are not affected.`)) return;
+    try { await deletePickList(list.id); } catch (err) { showError(err); return; }
+    lists = lists.filter((l) => l !== list);
+    await switchList(lists[0].id);
+    renderPickDialog();
+  }
+  // Reset = everyone back in. Asks first unless the caller already has.
+  function confirmReset() {
+    const list = openList();
+    const n = pickedCount();
+    if (!list || !n) return true;
+    return confirm(`Start “${list.name}” over?\n\nThe ${n} student${n === 1 ? '' : 's'} picked so far go back in.`);
+  }
+  function resetList({ ask = true } = {}) {
+    if (spin || (!called.size && !picks.size)) return;
+    if (ask && useLists() && !confirmReset()) return;
+    callClear();
+    winnerId = null;
+    rebuildPool();
+    broadcast();
+    renderPickDialog();
+  }
+  // Mark someone picked / not picked by hand (called on without the picker).
+  // The wheel catches up when the dialog closes.
+  function togglePicked(id) {
+    if (spin || !roster.some((s) => s.id === id)) return;
+    if (picks.has(id)) callDelete(id);
+    else callAdd(id, { manual: true });
+    renderListBar();
+    renderPickDialog();
+  }
   function saveRemoved() { if (currentPeriodId) saveIdSet(removedKey(currentPeriodId), removed); }
 
   // ---------- wheel geometry ----------
@@ -490,7 +664,8 @@
     const skin = skinFor(doc);
     if (skin) skin.finish(doc, s, { respawn: !noRepeats });
     if (!isPopout) {
-      if (noRepeats) { called.add(winnerId); saveCalled(); }
+      // a saved list records every pick (its history), No repeats or not
+      if (useLists() || noRepeats) callAdd(winnerId);
       // Counts update, but the wheel keeps the winner under the pointer
       // until the next spin - the landing is the whole point.
       rebuildPool({ redraw: false });
@@ -542,12 +717,16 @@
 
   // ---------- data ----------
   async function loadPeriod() {
+    const seq = ++loadSeq;
+    const pid = currentPeriodId;
     roster = []; eligible = []; pool = [];
     called = new Set(); removed = new Set();
     absentIds = new Set(); sitOutIds = new Set();
     winnerId = null;
     if (currentPeriodId) {
       try { roster = await getStudents(currentPeriodId); } catch (err) { showError(err); }
+      await loadLists(pid, seq).catch(showError);
+      if (seq !== loadSeq) return;
       const ids = new Set(roster.map((s) => s.id));
       try {
         const att = await getAttendance(currentPeriodId, todayKey());
@@ -555,7 +734,8 @@
       } catch { absentIds = readAbsentCache(currentPeriodId); }
       sitOutIds = readSitOutCache(currentPeriodId);
       eligible = roster.filter((s) => !absentIds.has(s.id) && !sitOutIds.has(s.id));
-      called  = new Set([...loadCalled(currentPeriodId)].filter((id) => ids.has(id)));
+      called  = useLists() ? pickedOnRoster()
+        : new Set([...loadCalled(currentPeriodId)].filter((id) => ids.has(id)));
       removed = new Set([...loadIdSet(removedKey(currentPeriodId))].filter((id) => ids.has(id)));
     }
     rebuildPool();
@@ -571,7 +751,8 @@
     if (noRepeats) {
       // A finished round refills itself - unless the skin holds it (the
       // bubble tea's jar stays full and celebrates until it's poured back).
-      const holds = !isPopout && skinFor() && skinFor().HOLDS_ROUND;
+      // A saved list never refills on its own: "Round complete" offers Reset.
+      const holds = useLists() || (!isPopout && skinFor() && skinFor().HOLDS_ROUND);
       if (!holds && available.length && available.every((s) => called.has(s.id))) { called = new Set(); saveCalled(); }
       pool = available.filter((s) => !called.has(s.id));
     } else {
@@ -581,6 +762,7 @@
     renderEditButton();
     renderControls();
     renderPicked();
+    renderListBar();
   }
   // Who's been called this round, in pick order, and how many are in the
   // round, for a skin that shows them (the bubble tea's jar); null with No
@@ -608,7 +790,7 @@
     if (!id || spin) return;
     let changed = false;
     if (removed.delete(id)) { saveRemoved(); changed = true; }
-    if (called.delete(id))  { saveCalled();  changed = true; }
+    if (callDelete(id)) changed = true;
     if (!changed) return;
     rebuildPool();
     broadcast();
@@ -622,14 +804,15 @@
       removed.add(id); saveRemoved();
     } else {
       removed.delete(id); saveRemoved();
-      called.delete(id);  saveCalled();
+      callDelete(id);
     }
     renderRosterDialog();
   }
   function allOnWheel(on) {
     if (on) {
       removed = new Set(); saveRemoved();
-      called = new Set();  saveCalled();
+      // a saved list keeps its picks: only Reset starts it over
+      if (!useLists()) { called = new Set(); saveCalled(); }
       winnerId = null;
     } else {
       // everyone eligible goes off; absent / sitting out are already off
@@ -703,6 +886,8 @@
     const avail = eligible.filter((s) => !removed.has(s.id)).length;
     const left = $('wheel-left');
     if (left) left.textContent = noRepeats ? `${pool.length} left of ${avail}` : `${avail} ${onIt()}`;
+    const sel = $('pick-list-select');
+    if (sel) sel.disabled = !!spin;
     const rep = $('wheel-norepeat');
     if (rep) rep.setAttribute('aria-checked', String(noRepeats));
     const fn = $('wheel-firstnames');
@@ -729,7 +914,7 @@
     : sitOutIds.has(s.id) ? 'sitting out'
     : removed.has(s.id) ? 'off'
     : (noRepeats && called.has(s.id)) ? 'called' : null);
-  const REASON_LABEL = { absent: 'Absent', 'sitting out': 'Sitting out', called: 'Called', off: '' };
+  const REASON_LABEL = { absent: 'Absent', 'sitting out': 'Sitting out', called: 'Picked', off: '' };
   // Absent / sitting out aren't ours to undo — Attendance and Create Groups
   // own those, so their chips are locked.
   const locked = (s) => absentIds.has(s.id) || sitOutIds.has(s.id);
@@ -758,6 +943,72 @@
     n.textContent = `${pool.length} on`;
     const btn = $('wheel-edit');
     if (btn) btn.title = `${pool.length} ${onIt()} — click to choose who's in`;
+  }
+
+  // ---------- pick list bar + the "Who's picked" dialog ----------
+  // "Board work · 12 of 28 picked", or Round complete with Reset lit up once
+  // everyone here has been picked.
+  function renderListBar() {
+    const bar = $('pick-list-bar');
+    if (!bar || isPopout) return;
+    bar.hidden = !useLists();
+    if (!useLists()) return;
+    const sel = $('pick-list-select');
+    sel.innerHTML = lists.map((l) => `<option value="${l.id}">${escapeHtml(l.name)}</option>`).join('')
+      + `<option value="${NEW_LIST}">+ New list…</option>`;
+    sel.value = listId;
+    const list = openList();
+    const n = pickedCount();
+    const available = eligible.filter((s) => !removed.has(s.id));
+    const done = available.length > 0 && available.every((s) => picks.has(s.id));
+    const away = roster.filter((s) => !picks.has(s.id) && !available.includes(s)).length;
+    bar.dataset.done = done ? '1' : '';
+    $('pick-list-line').innerHTML = done
+      ? `<b>Round complete</b> · everyone here has been picked${away ? ` (${away} not here still to go)` : ''}`
+      : `${escapeHtml(list ? list.name : '')} · <b>${n}</b> of ${roster.length} picked`;
+    const reset = $('pick-list-reset');
+    reset.classList.toggle('primary', done);
+    reset.disabled = !n;
+    reset.title = list ? `Start “${list.name}” over` : '';
+    $('pick-list-view').disabled = !roster.length;
+  }
+
+  function fmtPicked(iso) {
+    const d = new Date(iso), now = new Date();
+    const day = d.toDateString() === now.toDateString() ? 'Today'
+      : d.toLocaleDateString([], { weekday: 'short', month: 'short', day: 'numeric', ...(d.getFullYear() !== now.getFullYear() ? { year: 'numeric' } : {}) });
+    return `${day} · ${d.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}`;
+  }
+  // Picked (in the order they were called, with the date) and still to go.
+  // Tap a name to move it across.
+  function renderPickDialog() {
+    const dlg = $('pick-list-dialog');
+    if (!dlg || !dlg.open) return;
+    const list = openList();
+    $('pl-title').textContent = list ? list.name : '';
+    const picked = [...picks.entries()]
+      .map(([id, p]) => ({ s: roster.find((x) => x.id === id), p }))
+      .filter((x) => x.s);
+    const left = roster.filter((s) => !picks.has(s.id));
+    $('pl-count').textContent = `${picked.length} of ${roster.length} picked`;
+    $('pl-n-picked').textContent = picked.length;
+    $('pl-n-left').textContent = left.length;
+    $('pl-picked').innerHTML = picked.map(({ s, p }) => `<li><button type="button" class="pl-item" data-id="${s.id}" title="Put ${escapeHtml(s.name)} back in">
+        <span class="pl-who">${escapeHtml(s.name)}</span>
+        <span class="pl-when">${fmtPicked(p.at)}${p.manual ? ' · by hand' : ''}</span>
+        <span class="pl-act">Unpick</span></button></li>`).join('')
+      || '<li class="pl-none">Nobody yet</li>';
+    $('pl-left').innerHTML = left.map((s) => {
+      const why = absentIds.has(s.id) ? 'Absent today' : sitOutIds.has(s.id) ? 'Sitting out' : '';
+      return `<li><button type="button" class="pl-item" data-id="${s.id}" title="Mark ${escapeHtml(s.name)} as picked">
+        <span class="pl-who">${escapeHtml(s.name)}</span>
+        <span class="pl-when">${why}</span>
+        <span class="pl-act">Mark picked</span></button></li>`;
+    }).join('') || '<li class="pl-none">Everyone has been picked</li>';
+    const del = $('pl-delete');
+    del.disabled = lists.length < 2;
+    del.title = lists.length < 2 ? 'A period keeps at least one list' : 'Delete this list';
+    $('pl-reset').disabled = !picked.length;
   }
 
   // ---------- broadcast ----------
@@ -890,12 +1141,40 @@
     // over the cup in the CSS)
     const straw = $('boba-straw');
     if (straw) straw.addEventListener('click', startSpin);
-    // the jar's "Pour them back": everyone called goes back in the cup
-    document.addEventListener('teacherpal:wheel-reset', () => {
-      if (spin || !called.size) return;
-      called = new Set(); saveCalled();
-      rebuildPool();
-      broadcast();
+    // The jar's / basket's "Pour them back" asks first on a saved list (the
+    // skin cancels the pour on a no)...
+    document.addEventListener('teacherpal:wheel-reset-request', (e) => {
+      if (spin || (useLists() && !confirmReset())) e.preventDefault();
+    });
+    // ...then everyone called goes back in
+    document.addEventListener('teacherpal:wheel-reset', () => resetList({ ask: false }));
+
+    // ---- pick lists ----
+    $('pick-list-select').addEventListener('change', (e) => {
+      if (e.target.value === NEW_LIST) newList();
+      else switchList(e.target.value);
+    });
+    $('pick-list-reset').addEventListener('click', () => resetList());
+    const pickDialog = $('pick-list-dialog');
+    $('pick-list-view').addEventListener('click', () => {
+      if (spin || !useLists()) return;
+      pickDialog.showModal();
+      renderPickDialog();
+    });
+    pickDialog.addEventListener('click', (e) => {
+      const item = e.target.closest('.pl-item');
+      if (item) togglePicked(item.dataset.id);
+    });
+    $('pl-rename').addEventListener('click', renameList);
+    $('pl-delete').addEventListener('click', deleteList);
+    $('pl-reset').addEventListener('click', () => resetList());
+    // the wheel catches up on Done and on close (Esc), like Edit who's in
+    const afterPickEdit = () => { if (!spin) { rebuildPool(); broadcast(); } };
+    $('pl-done').addEventListener('click', () => { pickDialog.close(); afterPickEdit(); });
+    pickDialog.addEventListener('close', afterPickEdit);
+    // picks made on another device show up when you come back to this tab
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'visible' && !document.querySelector('dialog[open]')) reloadPicks();
     });
     // a finished round is held only while the jar is on screen: leaving
     // marwa refills it like any other round
@@ -975,7 +1254,7 @@
 
     // Space spins (not while typing or with a dialog open)
     document.addEventListener('keydown', (e) => {
-      if (e.key !== ' ' || isTyping(e.target)) return;
+      if (e.key !== ' ' || isTyping(e.target) || document.querySelector('dialog[open]')) return;
       e.preventDefault();
       startSpin();
     });

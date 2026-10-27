@@ -35,7 +35,7 @@ full-screen toggle. There is no sidebar; every page uses the full width.
 | Lesson Plans | `lessons.html` | Writing plans **by course**: a Day / Week / Month calendar (courses × Mon–Fri, no-school days blocked out; one plan per course per day, shared by its periods, with an out-of-the-way per-period split) with the full editor for the selected period's day beside it; files and links attached per plan (Supabase Storage), and one search over every plan and attachment |
 | Create Groups | `groups.html` | Random / formula groups, projector view in full screen |
 | Timer | `timer.html` | Classroom countdown / stopwatch: big digits, presets, ±1 min, mute, pop-out + Picture-in-Picture for the projector while another tab is active |
-| Name Wheel | `wheel.html` | Cold-calling: spin a wheel of the period's present students, big name in the middle, no-repeats mode, full screen window + mini window. In halloween the wheel is a cauldron (names float in the brew as bubbles; the winner's bubble rises and pops), in marwa a bubble tea cup (a boba pearl per student; the cup shakes, the pearls swirl, and the winner's pearl, its name on it, travels up the straw and comes to the front of the screen as a big disc with the name readable across the room), in thanksgiving a cornucopia (a piece of produce per student; the horn tips and shakes, the produce tumbles out and rolls over the table, the chosen piece rolls to the front and the name rises above it in a burst of leaves, and No repeats collects the called ones, named, in a basket with "Tip it back in") |
+| Name Wheel | `wheel.html` | Cold-calling: spin a wheel of the period's present students, big name in the middle, no-repeats mode, saved pick lists per period ("Board work · 12 of 28 picked", kept until reset), full screen window + mini window. In halloween the wheel is a cauldron (names float in the brew as bubbles; the winner's bubble rises and pops), in marwa a bubble tea cup (a boba pearl per student; the cup shakes, the pearls swirl, and the winner's pearl, its name on it, travels up the straw and comes to the front of the screen as a big disc with the name readable across the room), in thanksgiving a cornucopia (a piece of produce per student; the horn tips and shakes, the produce tumbles out and rolls over the table, the chosen piece rolls to the front and the name rises above it in a burst of leaves, and No repeats collects the called ones, named, in a basket with "Tip it back in") |
 | Noise Meter | `noise.html` | Room volume from the laptop mic: big green/amber/red meter, three zones with activity presets, "Too loud" hold + chime, pop-out for the projector. Mic only while you hold it on |
 | Seating | `seating.html` | Room builder + seat assignment |
 | Bathroom | `bathroom.html` | Bathroom tracker: tap a card to sign out (quick tap or timer); per-student pass checkboxes, red flag past the limit. One centred control island (period · mode · search · gear) over a scrolling student grid, with **Out now** (live timers + End timer) and **Log** (the day's trips + a day switcher; its History button opens the quarter review — counts, CSV, print) as two fixed-height panels underneath |
@@ -56,6 +56,7 @@ full-screen toggle. There is no sidebar; every page uses the full width.
 | `migration-themes.sql` | One-off migration that adds `profiles.theme text default 'jarvis'` and the `set_my_theme(text)` SECURITY DEFINER RPC (validated `^[a-z0-9_-]+$`, updates only the caller's own row) |
 | `migration-teaches-periods.sql` | One-off migration that adds `profiles.teaches_periods integer[]` (each entry 0-7) and the `set_my_teaches_periods(int[])` RPC. Seeds `khalid` to `{1,2,3,5,6}` and `marwa` to `{2,3,4,5,6}` |
 | `migration-roster-numbers.sql` | One-off migration that adds `students.roster_number integer` (1–999, nullable): a hand-set roster number for when Aeries numbers a student differently. Ends with a check query |
+| `migration-pick-lists.sql` | One-off migration for the Name Wheel's saved pick lists: `pick_lists` (named rotations per period) and `pick_list_picks` (one row per student picked on a list), each with the four owner policies; safe to re-run, ends with a check query |
 | `migration-display-name.sql` | One-off migration that adds `profiles.display_name text` (how the teacher is addressed — the top-bar USER chip) and seeds `khalid` → "Mr. Pal", `marwa` → "Ms. Mohammadi" |
 | `index.html`   | Hub launcher (`body.hub.launcher`): `.hub-sections` — four labelled sections (Daily, Teacher tools, Planning, System) each with its own `.hub-panels` row of `.hud-panel` links; loads only `shared.js`, `schedule.js`, `nav.js` (top bar **without** nav links — the panels are the nav) |
 | `attendance.html` | Attendance screen: `#attendance` in **full** mode — big chart + side column with counts, lists, Copy, Reset, date |
@@ -420,6 +421,29 @@ Indexes on `(period_id, date)`, `(student_id)`, and a partial unique index
 flag limit, max-out cap and passes-per-quarter allowance (default 4) are
 per-browser settings (`teacherpal.bathroom.settings`).
 
+### `pick_lists` — the Name Wheel's named rotations, several per period
+| column       | type        | notes |
+|--------------|-------------|-------|
+| `id`         | uuid        | PK |
+| `period_id`  | uuid        | FK → periods.id, `on delete cascade` |
+| `name`       | text        | "Board work", "Cold call"; 1–40 chars; **UNIQUE (period_id, lower(name))** |
+| `sort_order` | integer     | order in the List select |
+| `created_at` | timestamptz | |
+
+### `pick_list_picks` — one row per student picked on a list
+| column       | type        | notes |
+|--------------|-------------|-------|
+| `id`         | uuid        | PK |
+| `list_id`    | uuid        | FK → pick_lists.id, `on delete cascade` |
+| `student_id` | uuid        | FK → students.id, `on delete cascade`; **UNIQUE (list_id, student_id)** |
+| `picked_at`  | timestamptz | when they were called (or marked by hand) |
+| `manual`     | boolean     | marked by hand in Who's picked, not by the wheel |
+
+No row = still to go; **Reset deletes the list's rows**. One row per pick
+(not a jsonb map on the list) so two devices marking different students at
+once can't overwrite each other. Upsert is `POST
+/pick_list_picks?on_conflict=list_id,student_id`.
+
 ### `schedule_overrides` — dates that don't follow the weekday default
 | column        | type        | notes |
 |---------------|-------------|-------|
@@ -493,6 +517,7 @@ sends it):
 - Courses: `getCourses()`, `createCourse(name, sortOrder)`, `renameCourse(id, name)`, `deleteCourse(id)` (periods unassigned, its plans cascade), `setPeriodCourse(periodId, courseId|null)`, `countCoursePlans(courseId)`.
 - Lesson plans take a **target** — `{ courseId }` (the course's plan) or `{ periodId }` (a period's own) — through `planWhere()` / `planOwner()`: `getLessonPlan(target, date)` → row or `null`; `getLessonPlansRange(from, to)` (every row, both kinds); `getRecentLessonPlans(target, limit)` (Copy from day); `getAllLessonPlans()` (search; paged by `sbAll()` past the 1000-row cap); `saveLessonPlan(target, date, plan)` (upsert on `course_id,date` or `period_id,date`); `deleteLessonPlan(target, date)`; `EMPTY_PLAN()`. Everything selects `*`, so the page still works per period before `migration-courses.sql`.
 - Lesson attachments (bucket `LESSON_BUCKET` = `'lesson-files'`, `LESSON_FILE_MAX` 50 MB): `getLessonAttachments(target, date)`, `getLessonAttachmentsRange(from, to)` (calendar counts), `getAllLessonAttachments()` (search); `uploadLessonFile(target, date, file, { onProgress, sortOrder })` (XHR so it can report progress; uploads the object, then the row, and removes the object again if the row fails); `addLessonLink(target, date, { url, name, sortOrder })`; `copyLessonAttachments(rows, target, date)` (new rows, same objects); `deleteLessonAttachment(row)`; `lessonFileUrl(row, { download })` → a signed URL (`download: true` saves it under its original name). Every Storage call goes through `storageCall()`, which refreshes the token once on a 401 / "jwt" error exactly like `sb()`.
+- Pick lists (Name Wheel): `getPickLists(periodId)`, `createPickList(periodId, name, sortOrder)`, `renamePickList(id, name)`, `deletePickList(id)` (its picks cascade); `getPickListPicks(listId)` → `[{ student_id, picked_at, manual }]` oldest first, `addPickListPick(listId, studentId, { manual, at })` (upsert: picking again moves the date), `removePickListPick(listId, studentId)`, `clearPickListPicks(listId)` (Reset)
 - `getBathroomLog(periodId, date)`, `getBathroomHistory(periodId)` (all dates, newest first, ≤2000), `getBathroomQuarter(quarter, from, to)` (every period: trips dated in `[from, to]`, either end `null` = open, plus that quarter's manual tallies; paged), `bathroomSignOut(periodId, studentId, date)` → row, `bathroomSignIn(id)` → row, `deleteBathroomTrip(id)`, `setManualTally(periodId, studentId, quarter, count)` (read-then-write because the uniqueness is a partial index; count 0 deletes)
 - `getScheduleOverrides()` → rows ordered by date; `saveScheduleOverride({ date, schedule, finals_pair, note })` (upsert on `date,owner_id`; `finals_pair` is nulled unless `schedule === 'finals'`); `deleteScheduleOverride(id)`
 - `getFormulaRules(periodId, scope)` → `{ rules, useFormula }` for **that scope only**; `saveFormulaRules(periodId, scope, rules, useFormula)` (upsert on `period_id,scope`). `scope` must be `'seating'` or `'grouping'` (`assertScope` throws otherwise). No helper reads or writes both scopes in one operation.
@@ -796,8 +821,8 @@ the structure, and every other theme is a colour swap of it. A theme is
   token (`--halloween-*`):
     - **Page** (`body` background, top layer first): a cobweb in each corner
       (top `clamp(11rem, 20vw, 19rem)`, bottom smaller; bone at 8.5%), the
-      `--halloween-vignette` edge shadow, then `--body-pattern` — a 180px tile
-      of three tiny bone bats at 5%, like marwa's hearts.
+      `--halloween-vignette` edge shadow, then `--body-pattern` — a 560px tile
+      of bone bats at varied sizes (part 2 below).
     - **Drifting bats**: `html::before` / `::after`, two purple flocks with a
       faint pumpkin rim just under the top bar, `position: fixed; z-index:
       -1` (under every panel — they show in the gaps, mostly on the hub),
@@ -812,8 +837,24 @@ the structure, and every other theme is a colour swap of it. A theme is
     - **Empty states** (`.list-empty`, `.chart-empty`, `.empty-state`,
       `.lesson-empty`): a grinning jack-o'-lantern (`--halloween-jack`, 4rem)
       with an orange `drop-shadow` glow.
-    - **Section headings** (`.hub-section-title`, `.card-head h2`): a small
-      lilac bat with pumpkin eyes before the text.
+    - **Section headings**: a small lilac bat with pumpkin eyes before
+      `.card-head h2`, `.gp-title` and `.br-panel-head h3`; a glowing
+      jack-o'-lantern before `.hub-section-title`.
+    - **Part 2** (the "Halloween extras, part 2" block, after the rules
+      above; tokens `--halloween-grave / -ghost / -fog`):
+      - `--body-pattern` is a 560px tile of ten bats at varied sizes and
+        angles over the whole page; the bigger ones are fainter (3.5–7%).
+      - The page background adds a graveyard silhouette along the bottom
+        (`--halloween-grave`: two dead trees at the ends, stones and
+        crosses, near-black with a faint purple rim), under the corner webs.
+      - `body::after` is a purple fog along the bottom (fixed, 32vh, z -1),
+        a 200vw strip whose pattern repeats every 100vw, sliding one screen
+        in 140s (`halloween-fog`) so it loops seamlessly.
+      - The corner webs also cover `.gp-panel`, `.br-panel` and the hub's
+        `.hud-panel` (`position: relative` + `isolation` added for them).
+      - Empty lists (`.list-empty`, attendance's `li.none`, Bathroom's
+        `.br-none`) show a little ghost with a bat; the jack-o'-lantern
+        stays on the big empty states.
   **Timer**: the dial is a carved jack-o'-lantern (see the Timer section).
   24-hour clock, jarvis wheel.
 - **`thanksgiving`** — a **colour swap of jarvis** (tokens like halloween,
@@ -1776,14 +1817,49 @@ All styling lives in `style.css`; pages carry almost no inline styling.
   `attendance` table, falling back to `readAbsentCache`) minus
   `readSitOutCache` — the same two exclusions Create Groups uses. AUTO
   follows the bell via `suggestedPeriod()`, exactly like Attendance.
-  **No repeats** (default on) drops each pick into `called`
-  (`teacherpal.wheel.called.<periodId>`, date-keyed so it clears overnight);
-  when the pool empties it refills automatically — unless the active skin
-  sets `HOLDS_ROUND` (the bubble tea's jar): then the finished round is held
-  (0 left, the cup disabled) until the jar is poured back. A theme change
-  re-runs `rebuildPool`, so leaving marwa refills it as usual.
+  **Pick lists** (`pick_lists` + `pick_list_picks`, see the schema): each
+  period has named rotations ("Board work", "Cold call", "Read aloud"), each
+  with its own picked / still-to-go state that **lasts until that list is
+  reset**: across days, sessions and devices. A period with no lists gets
+  "Cold call" on first load. **The open list's picks are `called`**, so
+  everything below that reads `called` works unchanged. The plumbing:
+    - All changes go through `callAdd()` / `callDelete()` / `callClear()`,
+      which write the list (one row per pick, upserted; writes queued in
+      order) or, without the migration, the old per-day localStorage set.
+    - Every pick is recorded on the list (No repeats only decides whether
+      picked students stay off the wheel); picking someone again moves their
+      date to now. Absent and sitting-out students are never in the pool, so
+      they're skipped without being marked.
+    - **A list never refills on its own.** When everyone here has been
+      picked, the bar says **Round complete** (plus "N not here still to
+      go") and Reset turns primary. Reset asks first. So do the jar's "Pour
+      them back" and the basket's "Tip it back in": the skins dispatch a
+      cancelable `teacherpal:wheel-reset-request` before pouring and stop if
+      wheel.js cancels it, then `teacherpal:wheel-reset` as before.
+    - **The bar** (`#pick-list-bar`, a `<section>` between the period row
+      and the switches, so marwa's `:first-of-type` row rules still find the
+      period row): the List select (its last option is "+ New list…"; the
+      open list is remembered per period in `teacherpal.wheel.list.<periodId>`,
+      this browser), **Who's picked**, **Reset**, and one line, "Board work ·
+      12 of 28 picked" (28 = the whole roster).
+    - **Who's picked** (`#pick-list-dialog`): Picked, numbered in pick order
+      with the date and time ("· by hand" for manual marks), beside Still to
+      go (absent / sitting out labelled). Tap a name to move it across; that
+      is how to mark someone you called on without the picker. Rename,
+      Delete list (not the last one) and Reset list live in its footer. The
+      wheel catches up on Done / close, like Edit who's in.
+    - Coming back to the tab re-reads the open list's picks
+      (`visibilitychange`), so picks from another device show up.
+    - **Edit who's in** still works. "All on" no longer clears picks on a
+      saved list (only Reset does); turning a "Picked" chip back on unpicks
+      that student, like Put back.
+    - **Without `migration-pick-lists.sql`** the bar hides, a status line
+      says to run it, and No repeats is the old per-day `called`
+      (`teacherpal.wheel.called.<periodId>`, date-keyed): the pool refills
+      itself when it empties, unless the skin sets `HOLDS_ROUND` (the bubble
+      tea's jar holds the round until it's poured back).
   **Taking students off** (`removed`, `teacherpal.wheel.removed.<periodId>`,
-  date-keyed and this-browser-only exactly like `called`). **The page carries
+  date-keyed and this-browser-only, separate from the lists). **The page carries
   no roster lists** — there are exactly two ways in:
     - **The Edit wheel modal.** One button in the control row,
       `#wheel-edit`, whose label carries the live count ("Edit wheel 28 on");
