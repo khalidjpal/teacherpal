@@ -11,8 +11,9 @@ Dark dashboard look with a subtle pink accent (see design-ref.png).
 - **Supabase** (Postgres + PostgREST) as the backend, called directly over the
   REST API with `fetch`. No `@supabase/supabase-js` client.
 - **Vercel** static hosting. Deploys the repo root as-is; no `vercel.json` needed.
-- **Supabase Auth (email/password), no public sign-up.** Accounts are created
-  in the Supabase dashboard; every request goes as an authenticated user with
+- **Supabase Auth (email/password).** Accounts are created in the Supabase
+  dashboard, or by self sign-up on `login.html` while an admin has it open
+  (Admin page switch, stored in the database); every request goes as an authenticated user with
   a Bearer access token. The anon key is still shipped (harmless — RLS blocks
   it) so future student-facing pages (if any) can hit their own
   narrow-policy tables without a login. See the Auth section below.
@@ -35,7 +36,7 @@ full-screen toggle. There is no sidebar; every page uses the full width.
 | Lesson Plans | `lessons.html` | Writing plans **by course**: a Day / Week / Month calendar (courses × Mon–Fri, no-school days blocked out; one plan per course per day, shared by its periods, with an out-of-the-way per-period split) with the full editor for the selected period's day beside it; files and links attached per plan (Supabase Storage), and one search over every plan and attachment |
 | Create Groups | `groups.html` | Random / formula groups, projector view in full screen |
 | Timer | `timer.html` | Classroom countdown / stopwatch: big digits, presets, ±1 min, mute, pop-out + Picture-in-Picture for the projector while another tab is active |
-| Name Wheel | `wheel.html` | Cold-calling: spin a wheel of the period's present students, big name in the middle, no-repeats mode, saved pick lists per period ("Board work · 12 of 28 picked", kept until reset), full screen window + mini window. In halloween the wheel is a cauldron (names float in the brew as bubbles; the winner's bubble rises and pops), in marwa a bubble tea cup (a boba pearl per student; the cup shakes, the pearls swirl, and the winner's pearl, its name on it, travels up the straw and comes to the front of the screen as a big disc with the name readable across the room), in thanksgiving a cornucopia (a piece of produce per student; the horn tips and shakes, the produce tumbles out and rolls over the table, the chosen piece rolls to the front and the name rises above it in a burst of leaves, and No repeats collects the called ones, named, in a basket with "Tip it back in") |
+| Name Wheel | `wheel.html` | Cold-calling: spin a wheel of the period's present students, big name in the middle, no-repeats mode, saved pick lists per period ("Board work · 12 of 28 picked", kept until reset), full screen window + mini window. In halloween the wheel is a cauldron (names float in the brew as bubbles; the winner's bubble rises and pops), in pink a bubble tea cup (a boba pearl per student; the cup shakes, the pearls swirl, and the winner's pearl, its name on it, travels up the straw and comes to the front of the screen as a big disc with the name readable across the room), in thanksgiving a cornucopia (a piece of produce per student; the horn tips and shakes, the produce tumbles out and rolls over the table, the chosen piece rolls to the front and the name rises above it in a burst of leaves, and No repeats collects the called ones, named, in a basket with "Tip it back in") |
 | Noise Meter | `noise.html` | Room volume from the laptop mic: big green/amber/red meter, three zones with activity presets, "Too loud" hold + chime, pop-out for the projector. Mic only while you hold it on |
 | Seating | `seating.html` | Room builder + seat assignment |
 | Bathroom | `bathroom.html` | Bathroom tracker: tap a card to sign out (quick tap or timer); per-student pass checkboxes, red flag past the limit. One centred control island (period · mode · search · gear) over a scrolling student grid, with **Out now** (live timers + End timer) and **Log** (the day's trips + a day switcher; its History button opens the quarter review — counts, CSV, print) as two fixed-height panels underneath |
@@ -46,14 +47,17 @@ full-screen toggle. There is no sidebar; every page uses the full width.
 
 | File           | Purpose |
 |----------------|---------|
-| `login.html`   | Sign-in page (`body.hub.no-auth`): HUD-styled email/password form; loads only `shared.js` and calls `signIn(email, password)`. Redirects back to `?from=…` on success, else `index.html` |
-| `admin.html`   | Admin-only read-only user list. Users are created and passwords set in the Supabase dashboard. Guarded client-side (`isAdmin()` → redirect). Loads `shared.js`, `schedule.js`, `nav.js` |
+| `login.html`   | Sign-in page (`body.hub.no-auth`, `<html data-theme="default" data-theme-lock>`: always the default theme, see Themes). Two columns over 860px — on the left the TeacherPal name, one line on what it is and four features with icons; on the right the card — one column under it (the feature list hides). Card panels: **Sign in** (username or email, password with **Forgot password?** beside its label, errors inline under the field they belong to, a form-level alert only for network / rate limits, a spinner + "Signing in…" on the button, then a full-width **Create an account** button under a rule while `signupOpen()`, else "ask your school's TeacherPal admin"); **Forgot password** (`requestPasswordReset`); **Choose a new password** (after the reset link, `updatePassword`); **Create an account** (display name, username with a live availability check, email, password + confirm); **Check your email** (sign-up, with Send it again; or the reset link). Empty message slots take no room (`:empty { display: none }`). Never mentions Supabase. Loads only `shared.js`. On load it first runs `completeAuthRedirect()` (email links land here). After sign-in: `setup.html` while `needsSetup()`, else `?from=…`, else `index.html` |
+| `setup.html`   | First-run setup wizard after a self sign-up: Periods (which bell periods you teach → `setMyTeachesPeriods`) → Classes (a name per period; creates "Period N - <class>" rows and one course per distinct class name) → Students (paste per period → `addStudents`; Back + Next never adds twice) → Look (theme). Finish or Skip setup → `markSetupDone()` → hub. Styles in the "Setup wizard" block at the end of `style.css`. Not in the nav |
+| `admin.html`   | Admin-only: the **Sign-up** switch (`role="switch"`, `adminSetSignupOpen`) and the user list — every account, newest first: username, display name, email, created, last sign-in, ADMIN / UNCONFIRMED tags. Passwords are reset in the Supabase dashboard. Guarded client-side (`isAdmin()` → redirect). Loads `shared.js`, `schedule.js`, `nav.js` |
+| `migration-self-signup.sql` | One-off migration for self sign-up: `app_settings` (one row, `signup_open`, starts closed; RLS on, no policies) + `signup_status()` (anon) / `admin_set_signup_open(bool)`; a BEFORE INSERT trigger on `auth.users` refusing self sign-ups while closed; `handle_new_user()` reading username / display_name from the sign-up metadata; `profiles.setup_done` + `set_my_setup_done()`; `username_available()` / `email_for_username()` (anon) replacing the anon-readable `profiles public read` policy with owner-only reads; `admin_list_users()` over every auth user. Lists the dashboard settings it needs; ends with a check |
 | `migration-auth.sql` | One-off migration that adds `owner_id` to every table, backfills existing rows to Khalid's uuid, drops the "TEMP anon full access" policies and creates per-owner select/insert/update/delete policies. Run in the Supabase SQL editor before deploying the auth code |
 | `migration-usernames.sql` | Historical: added the `profiles` table (user_id, username, email). Username-based sign-in is retired; the column is now nullable and only used as an optional display name |
 | `migration-admin.sql` | Historical: added `profiles.is_admin` and the admin RPCs. The write RPCs (`admin_create_user`, `admin_reset_password`) are dropped by `migration-simplify-auth.sql`; `admin_list_users` stays, and `profiles.is_admin` stays |
 | `migration-simplify-auth.sql` | Drops the admin write RPCs, adds `on_auth_user_created` + `on_auth_user_email_change` triggers so every dashboard-created user gets a profiles row automatically, makes `profiles.username` nullable, and backfills missing profiles rows |
 | `migration-rekey-owner.sql` | One-off migration for when the auth user was deleted and recreated: repoints every `owner_id` from the old UID to the new one and rebuilds the `profiles.khalid` row |
-| `migration-themes.sql` | One-off migration that adds `profiles.theme text default 'jarvis'` and the `set_my_theme(text)` SECURITY DEFINER RPC (validated `^[a-z0-9_-]+$`, updates only the caller's own row) |
+| `migration-themes.sql` | Historical, never run on the live project: replaced by `migration-theme-rename.sql`. Don't run it |
+| `migration-theme-rename.sql` | **The** theme migration (supersedes `migration-themes.sql`, which was never run on the live project): adds `profiles.theme` (existing rows NULL = not chosen on the server yet, new rows `'default'`), renames old ids (jarvis → default, marwa → pink, earthy → default) if any exist, adds the `profiles_theme_format` check and creates `set_my_theme(text)`. Safe to re-run from scratch; ends with a count per theme |
 | `migration-teaches-periods.sql` | One-off migration that adds `profiles.teaches_periods integer[]` (each entry 0-7) and the `set_my_teaches_periods(int[])` RPC. Seeds `khalid` to `{1,2,3,5,6}` and `marwa` to `{2,3,4,5,6}` |
 | `migration-roster-numbers.sql` | One-off migration that adds `students.roster_number integer` (1–999, nullable): a hand-set roster number for when Aeries numbers a student differently. Ends with a check query |
 | `migration-pick-lists.sql` | One-off migration for the Name Wheel's saved pick lists: `pick_lists` (named rotations per period) and `pick_list_picks` (one row per student picked on a list), each with the four owner policies; safe to re-run, ends with a check query |
@@ -67,13 +71,13 @@ full-screen toggle. There is no sidebar; every page uses the full width.
 | `bathroom.js`  | `initBathroom()` — the bathroom tracker (tiles, sign out/in, live elapsed, flag + cap settings in localStorage, log, history). |
 | `timer.html`   | Timer screen: the `.timer-stage` (mode toggle, label, big display + ring, presets, custom min/sec, start/reset/±1, mute, "Full screen window" (the pop-out), "Mini window" (PiP), full screen) — loads `timer.js`. |
 | `timer.js`     | Countdown + stopwatch logic, plus `buildDial()` / `paintDial()` for the themed dial. **End-timestamp model**: state is `{ mode, running, paused, label, muted, targetMs, endsAt, remainingAtPause, startedAt, elapsedAtPause, zeroed }` in `localStorage['teacherpal.timer.state']`; every window computes the display from `Date.now()` against `endsAt`/`startedAt`, so tab-throttling doesn't drift. `BroadcastChannel('teacherpal-timer')` syncs main ↔ pop-out ↔ PiP. Web Audio API beep on zero (respects mute). `documentPictureInPicture.requestWindow()` on Chrome for an always-on-top floating display. Space toggles start/pause. |
-| `noise.html`   | Noise Meter screen: the `.noise-stage` in three groups — `.noise-head` (activity presets + the `#status` line, inside the card), the `.noise-meter` (reading + bar + zone word; the bunny in marwa, the ghost in halloween), `.noise-foot` (one `.noise-foot-row` of Start/Stop, chime, "Full screen window" · the two zone sliders side by side · full screen, then a one-line privacy note with a `?`) — plus `#noise-privacy-dialog` (the full mic note). Loads `noise.js`. |
+| `noise.html`   | Noise Meter screen: the `.noise-stage` in three groups — `.noise-head` (activity presets + the `#status` line, inside the card), the `.noise-meter` (reading + bar + zone word; the bunny in pink, the ghost in halloween), `.noise-foot` (one `.noise-foot-row` of Start/Stop, chime, "Full screen window" · the two zone sliders side by side · full screen, then a one-line privacy note with a `?`) — plus `#noise-privacy-dialog` (the full mic note). Loads `noise.js`. |
 | `noise.js`     | Mic → `AnalyserNode` → RMS → a 35–95 relative "dB" reading, 500ms rolling average, three zones, "Too loud" after 3s in the red, optional chime. Polls on `setInterval` (**not** rAF — rAF freezes in a background window and the pop-out would stall). `BroadcastChannel('teacherpal-noise')` feeds the pop-out. Opens the mic only on Start; stops every track on Stop and on `pagehide`. Nothing is recorded or sent anywhere. |
 | `wheel.html`   | Name Wheel screen: the wheel on the left; on the right the result panel and the controls (period, AUTO, **Edit wheel**, First names / No repeats / tick mute / "Full screen window" / full screen), "Mini window" (PiP, Chrome only), plus the `#wheel-roster-dialog` toggle-chip modal — loads `cauldron.js`, `boba.js`, `cornucopia.js`, then `wheel.js`. Words that differ per skin come in `.for-wheel` / `.for-brew` / `.for-boba` / `.for-horn` sets ("Edit wheel" / "Edit who's in", "Tick on" / "Sound on", …) and CSS shows the one for the theme. |
 | `wheel.js`     | The wheel: draws the slices as SVG into `#wheel-rotor` (the only thing that spins), runs the spin on rAF with an ease-out, ticks as each slice passes the pointer, and syncs the pop-out over `BroadcastChannel('teacherpal-wheel')`. **Winner is drawn first** (`crypto.getRandomValues`), then the landing rotation is computed — the animation can't bias it. |
 | `wheel-popout.html` | Read-only projector wheel (`body.wheel-popout`): same dial (or, in halloween, the cauldron) filling the window, fed by broadcast, no controls. The mini window is this same page in an iframe. |
 | `cauldron.js` | The Name Wheel's halloween skin, `window.Cauldron` (`isOn`, `build`, `sync`, `run`, `finish`, `setWinner`, `setDisabled`, `BOIL_MS`, `SETTLE_MS`). Draws the cauldron into `.wheel-wrap`, floats each name as an HTML bubble (rAF physics), and animates a pick from the spin descriptor `wheel.js` hands it: boil → rise → hover → pop. Owns its sounds (bubbling that builds, a pop). Never picks anything. |
-| `boba.js` | The Name Wheel's marwa skin, `window.Boba` — the same shape as `Cauldron` (`isOn`, `build`, `sync`, `run`, `finish`, `setWinner`, `setDisabled`, `setPicked`, `busy`, `HOLDS_ROUND`, `DURATION_MS`, `SETTLE_MS`). A bubble tea cup in `.wheel-wrap`: warm tan milk tea with a cream swirl, a domed lid, a narrow see-through pink straw, **the whole cup as the Spin button** (`#boba-straw`, a hit area over the cup), one near-black pearl per student with their first name on it in small cream type (rAF physics in box units: gravity, a swirl, soft collisions, the tapered walls), condensation, and "N left" in small flat text under the cup. A pick (~4s, the `T` timeline at its top) shakes the cup, swirls the pearls up, lights one up, draws it up the straw in sips, then the **spotlight**: the pearl grows into a big disc in front of the dimmed page with the name on it (click / Space / Enter / Esc closes it); with No repeats on it then arcs over into the **jar** on the right, a second cup that fills as the class is called and is poured back to start a new round. Owns its sounds (shake, slosh, slurp, pop). Never picks anything. |
+| `boba.js` | The Name Wheel's pink skin, `window.Boba` — the same shape as `Cauldron` (`isOn`, `build`, `sync`, `run`, `finish`, `setWinner`, `setDisabled`, `setPicked`, `busy`, `HOLDS_ROUND`, `DURATION_MS`, `SETTLE_MS`). A bubble tea cup in `.wheel-wrap`: warm tan milk tea with a cream swirl, a domed lid, a narrow see-through pink straw, **the whole cup as the Spin button** (`#boba-straw`, a hit area over the cup), one near-black pearl per student with their first name on it in small cream type (rAF physics in box units: gravity, a swirl, soft collisions, the tapered walls), condensation, and "N left" in small flat text under the cup. A pick (~4s, the `T` timeline at its top) shakes the cup, swirls the pearls up, lights one up, draws it up the straw in sips, then the **spotlight**: the pearl grows into a big disc in front of the dimmed page with the name on it (click / Space / Enter / Esc closes it); with No repeats on it then arcs over into the **jar** on the right, a second cup that fills as the class is called and is poured back to start a new round. Owns its sounds (shake, slosh, slurp, pop). Never picks anything. |
 | `cornucopia.js` | The Name Wheel's thanksgiving skin, `window.Cornucopia` — the same shape as `Boba` (`isOn`, `build`, `sync`, `run`, `finish`, `setWinner`, `setDisabled`, `setPicked`, `busy`, `HOLDS_ROUND`, `DURATION_MS`, `SETTLE_MS`). A woven horn on a wooden table in `.wheel-wrap` (`#horn`, the whole scene is the Spin button): one piece of produce per student (pumpkin, apple, pear, gourd, grapes, corn, wheat; type and colour from a hash, no names), in its mouth and spilling out. A pick tips the horn, the produce tumbles out and rolls (JS physics: gravity, bounces, friction, collisions by weight), the chosen piece rolls to the front and the name rises over it with a burst of leaves. With No repeats on, called pieces collect in the basket (names on them) until "Tip it back in". Owns its sounds (a wooden rumble, rolling and knocks, a chime). Never picks anything. |
 | `noise-popout.html` | Read-only projector pop-out (`body.noise-popout`): reading + bar + zone word, fed over BroadcastChannel. Never opens a mic of its own; says so when the main window isn't answering. |
 | `timer-popout.html` | Minimal read-only pop-out window (`body.timer-popout`): label + display + the same themed dial filling the window, no controls; listens for state via BroadcastChannel. |
@@ -117,13 +121,17 @@ TeacherPal is multi-user. Every teacher has their own periods, students, room,
 seating, attendance, lessons, bathroom log and schedule overrides — nothing is
 shared across accounts.
 
-- **Plain Supabase Auth: email + password.** Accounts are created and
-  passwords set entirely in the Supabase dashboard → Authentication →
-  Users. There is no in-app create-user or reset-password flow. If a
-  teacher forgets their password, the admin resets it from the dashboard
-  (or from an SQL editor via Supabase's Auth Admin API); Supabase's
-  own email-recovery flow also works if you leave Site URL / Redirect
-  URLs configured (see below), because we don't intercept it any more.
+- **Plain Supabase Auth: email + password.** Accounts come from the
+  Supabase dashboard → Authentication → Users, or from **self sign-up**
+  (below). **Forgot password?** on `login.html` is Supabase's recovery
+  email: `requestPasswordReset(usernameOrEmail)` POSTs `/auth/v1/recover`
+  (a username is resolved to its email first; the page says the same thing
+  whether or not the account exists). The link lands on
+  `login.html#…&type=recovery`; `completeAuthRedirect()` returns
+  `{ recovery: true }`, the page shows "Choose a new password" and
+  `updatePassword(pw)` PUTs `/auth/v1/user` (same-password and
+  expired-link errors are explained). It needs the same Redirect URLs as
+  sign-up. An admin can still reset a password from the dashboard.
   `login.html` posts email + password to
   `/auth/v1/token?grant_type=password`; on success the session is stored
   in `localStorage['teacherpal.session']` = `{ access_token,
@@ -131,6 +139,54 @@ shared across accounts.
   is_admin, theme,
   teaches_periods } }`. `hydrateProfileIntoSession()` runs right after the
   token exchange and fills in the profile fields.
+- **Self sign-up** (`migration-self-signup.sql`). The admin opens or closes
+  it on `admin.html`; the state is `app_settings.signup_open` (one row,
+  starts closed), read by anyone through `signup_status()` and written only
+  through `admin_set_signup_open()`. Closed = the login page hides the
+  link **and** a BEFORE INSERT trigger on `auth.users`
+  (`gate_new_auth_user`) refuses any self sign-up (unconfirmed and not
+  invited), so a direct `/auth/v1/signup` call fails too. Dashboard users
+  still go through when created with **Auto Confirm User** ticked, or
+  invited. The flow:
+    - `signUp({ email, password, username, displayName })` posts
+      `/auth/v1/signup?redirect_to=<app>/login.html` with username and
+      display name as user metadata. `handle_new_user()` makes the
+      profiles row from them (is_admin false, theme `default`,
+      setup_done false) and re-validates the username, so no browser
+      without a session ever writes profiles.
+    - **Usernames**: 3–30 of letters, digits, `.`, `_`, `-`
+      (`USERNAME_RE` / `username_is_valid()`), unique case-insensitively
+      (`profiles_username_lower_uidx`). The form checks
+      `username_available()` as you type and again on submit.
+    - Friendly errors, each pointed at its field: username taken, email
+      already registered (with confirmation on, Supabase answers a known
+      address with a user whose `identities` is empty — that is how it is
+      detected), password shorter than `PASSWORD_MIN` (8), passwords do
+      not match; plus sign-up closed, bad address and rate limits. A bare
+      "Database error saving new user" (our triggers) is re-diagnosed by
+      re-checking `signup_status()` and the username.
+    - **Email confirmation stays on.** The page then says "Check your
+      email" (Send it again → `resendSignupEmail()`). The link lands on
+      `login.html#access_token=…&type=signup`; `completeAuthRedirect()`
+      turns that into a session (GET `/auth/v1/user`), hydrates the
+      profile and clears the tokens from the address bar. A stale link
+      (`#error_description=…`) shows a friendly line. If the link lands on
+      any other page (the Site URL), the `shared.js` bootstrap forwards
+      the hash to `login.html`. Signing in unconfirmed says so and offers
+      to resend.
+    - **First sign-in goes to `setup.html`** while `profiles.setup_done`
+      is false (`needsSetup()`); finishing or skipping calls
+      `markSetupDone()` (`set_my_setup_done` RPC). The migration marks
+      every existing account done.
+    - Dashboard settings it relies on: Email provider with sign-ups allowed
+      and **Confirm email** on; the app's `login.html` URLs (Vercel and
+      `http://127.0.0.1:8080/login.html`) in Authentication → URL
+      Configuration → Redirect URLs.
+- **Profiles are owner-only.** RLS policy `profiles owner read`
+  (`user_id = auth.uid()`); nothing anon reads the table. Username sign-in
+  goes through `email_for_username()` (SECURITY DEFINER, one email per
+  exact username). `lookupEmailByUsername()` falls back to the old table
+  read before the migration.
 - **The stored session is only a cache of the profile.**
   `hydrateProfileIntoSession()` therefore also runs **once on every page
   load** (fire-and-forget, from the bootstrap at the bottom of
@@ -145,8 +201,9 @@ shared across accounts.
   listeners).
 - **Automatic profiles row per auth user.** `migration-simplify-auth.sql`
   installs a trigger `on_auth_user_created` on `auth.users` that inserts a
-  matching `profiles` row (defaults: `is_admin=false`, `theme='jarvis'`,
-  `teaches_periods={0..7}`) whenever the dashboard creates a user. A
+  matching `profiles` row (defaults: `is_admin=false`, `theme='default'`,
+  `teaches_periods={0..7}`) whenever a user is created (dashboard or
+  sign-up; `migration-self-signup.sql` added the sign-up metadata). A
   companion trigger `on_auth_user_email_change` keeps `profiles.email` in
   sync when the dashboard email is edited. `profiles.username` is
   nullable — set it manually if you want a display name, otherwise the
@@ -163,9 +220,14 @@ shared across accounts.
   `isAdmin()`, `currentUser()` → `{ id, email, username, display_name,
   is_admin, theme, teaches_periods }`, `hydrateProfileIntoSession()`,
   `displayName()` → `display_name` → `username` → email local part (`''`
-  with no session); the app only ever reads it, names are set in SQL.
-  Read-only admin RPC: `adminListUsers()` →
-  `[{ user_id, email, username, is_admin, created_at, last_sign_in_at }]`.
+  with no session); set at sign-up or in SQL, never edited in the app.
+  Sign-up: `signupOpen()`, `usernameAvailable(u)`, `signUp({...})`,
+  `resendSignupEmail(email)`, `completeAuthRedirect()`, `needsSetup()`,
+  `markSetupDone()`, `PASSWORD_MIN`, `USERNAME_RE`.
+  Admin RPCs: `adminListUsers()` →
+  `[{ user_id, email, username, display_name, is_admin, confirmed,
+  created_at, last_sign_in_at }]` (every auth user, newest first) and
+  `adminSetSignupOpen(bool)`.
   Theme: `THEMES` (registry), `applyTheme(id)`, `currentTheme()`,
   `setMyTheme(id)` (applies locally + POSTs `set_my_theme` RPC to persist
   on the profile).
@@ -192,14 +254,14 @@ shared across accounts.
   Set the flag manually for admins in the SQL editor:
   `update public.profiles set is_admin = true where email = '…';`
   `nav.js` filters entries marked `admin: true` out of the top nav for
-  non-admins. `admin.html` is a read-only user list; user creation and
-  password reset happen in the Supabase dashboard.
+  non-admins. `admin.html` holds the sign-up switch and the user list;
+  password resets happen in the Supabase dashboard.
 - **Display name.** `profiles.display_name text` (nullable) — how the
   teacher is addressed: "Mr. Pal", "Ms. Mohammadi". Attached to
   `session.user.display_name`; `displayName()` falls back to `username`,
-  then the email's local part. Set it in the SQL editor
+  then the email's local part. Set at self sign-up, or in the SQL editor
   (`migration-display-name.sql` seeds the two accounts); there is no
-  in-app editor and no RPC — the client only reads it. Shown in the top-bar
+  in-app editor afterwards and no RPC. Shown in the top-bar
   USER chip; a change lands on the next page load via the profile refresh
   above, no sign-out needed.
 - **Teaches-periods.** `profiles.teaches_periods integer[]` (each 0-7,
@@ -492,6 +554,14 @@ once then retries; a failed refresh clears the session and redirects to
 Auth:
 - `signIn(email, password)` → stores session; `signOut()` → clears storage,
   POSTs `/auth/v1/logout`, redirects to login.
+- `signUp()`, `resendSignupEmail()`, `completeAuthRedirect()`,
+  `signupOpen()`, `usernameAvailable()`, `needsSetup()`, `markSetupDone()`,
+  `adminSetSignupOpen()` — see Self sign-up in the Auth section.
+  `requestPasswordReset()`, `updatePassword()` — Forgot password, same
+  section. `signIn()` errors carry `.code` (`bad_credentials`,
+  `email_not_confirmed`, `rate_limited`, `failed`) and `.field`
+  (`'id'` / `'password'` / null) so the form shows them under the right
+  input.
 - `refreshSession()` → uses the stored refresh token; returns the new
   session or `null` on failure.
 - `hasSession()`, `currentUser()` → `{ id, email }` or `null`,
@@ -616,7 +686,7 @@ last-used period in `localStorage`), `getLastPeriodId()` / `setLastPeriodId()`,
 
 ## Themes — per-user visual styles
 
-TeacherPal ships five themes. **All five share one layout**: jarvis is
+TeacherPal ships four themes. **All four share one layout**: default is
 the structure, and every other theme is a colour swap of it. A theme is
 (almost) nothing but a block of colour tokens.
 
@@ -624,21 +694,21 @@ the structure, and every other theme is a colour swap of it. A theme is
 
 - **Structure is shared, never per theme.** Spacing, font sizes,
   transition and touch tokens sit in the shared `:root { … }` block. Fonts,
-  radii, tracks and weights sit in the jarvis block and are *inherited*.
-  No other theme redefines them, so a layout change to jarvis lands
+  radii, tracks and weights sit in the default block and are *inherited*.
+  No other theme redefines them, so a layout change to default lands
   everywhere.
-- **Colour tokens are per theme, and complete.** jarvis defines its
-  colours in two places: the `:root, :root[data-theme="jarvis"]` block at
+- **Colour tokens are per theme, and complete.** default defines its
+  colours in two places: the `:root, :root[data-theme="default"]` block at
   the top of `style.css`, plus the HUD / attendance / wheel / noise tokens
   in the plain `:root { --hud: … }` block in the Hub section. **Every other
   theme's `:root[data-theme="<id>"]` block redefines every colour variable
-  from both**, so nothing falls back to a jarvis value. That means `--bg-*`,
+  from both**, so nothing falls back to a default value. That means `--bg-*`,
   `--card*`, `--border*`, `--text*`, `--accent*`, `--lavender*`,
   `--group-*`, `--danger`/`--ok`, gradients, shadows, `--panel-bg`/
   `--field-bg`/`--topbar-bg`/`--on-accent`, the `--surface-tint-*`,
   `--canvas-dot`, `--hud-*`, `--att-*`, `--wheel-*` and `--noise-*`.
   The **room and accent tokens** default to the surfaces above (set once in
-  the jarvis block, which marwa inherits through `:root`), so a theme sets
+  the default block, which pink inherits through `:root`), so a theme sets
   them only to break away:
     - `--seat-bg` / `--seat-line` (a taken seat; = `--card-3` /
       `--surface-tint-strong`) and `--seat-empty-bg` / `--seat-empty-line`
@@ -652,19 +722,19 @@ the structure, and every other theme is a colour swap of it. A theme is
       `--text-muted`).
     - `--accent-ink` (every `color:` that used `--accent` / `--hud` — links,
       icons, period numbers, today marks; = `--accent`). A theme whose accent
-      is too dark for text points it at a lighter tint (earthy). Only the
+      is too dark for text points it at a lighter tint (halloween and thanksgiving do). Only the
       active tab icon keeps `--accent` itself.
-  **Depth tokens** (set once in jarvis, off there and in marwa, which
+  **Depth tokens** (set once in default, off there and in pink, which
   inherits them): `--panel-shadow` (under every `.hud-box`; `none`),
   `--hover-lift` (`0px`) and `--hover-glow` (`none`) — on hover, buttons,
   `.wk-cell`, `.lp-att` and `.mo-day` take `translate: 0 var(--hover-lift)`
   and `box-shadow: var(--hover-glow)` from one `:where(…):hover` rule.
   `translate` is its own property, so it never fights a component's
   `transform`; `:where()` keeps the rule at zero specificity so any
-  component's own hover / pressed shadow still wins. earthy turns all three on.
+  component's own hover / pressed shadow still wins. halloween and thanksgiving turn all three on.
   `--body-pattern` is `none` unless the theme has a texture. Optional:
-  `--group-c1…c5`, five named group-card colours (earthy uses them). When you add a
-  colour token to jarvis, add it to **every** theme block in the same change.
+  `--group-c1…c5`, five named group-card colours (halloween and thanksgiving use them). When you add a
+  colour token to default, add it to **every** theme block in the same change.
 - **WCAG AA for every text/background pair.** `--text`, `--text-2`,
   `--text-muted`, `--accent`, `--lavender`, `--danger`, `--ok` and
   `--att-tardy` are all used as text. Each must reach ≥ 4.5:1 on `--bg-0`,
@@ -672,131 +742,23 @@ the structure, and every other theme is a colour swap of it. A theme is
   `--accent`, and `--wheel-ink` on every `--wheel-r*` and `--wheel-won`.
   Student names (seats, group cards, wheel, attendance, full screen) are
   `--text` / `--wheel-ink`, so they stay high contrast automatically.
-- **Extras are opt-in by name.** Only marwa, halloween, thanksgiving and earthy (its wood "materials") have any (halloween's, thanksgiving's and earthy's are listed under them below); marwa's are selectors written
-  `:root[data-theme="marwa"] …` (mascots, the Timer/Wheel skins, the
+- **Extras are opt-in by name.** Only pink, halloween and thanksgiving have any (halloween's and thanksgiving's are listed under them below); pink's are selectors written
+  `:root[data-theme="pink"] …` (mascots, the Timer/Wheel skins, the
   12-hour clock in `nav.js`). A theme without extras behaves exactly like
-  jarvis: a 24-hour clock, no mascots (the `--marwa-mascot-*` vars are
-  undefined, so `.marwa-mascot` stays hidden), and the jarvis Timer dial
-  and wheel. The one spot that names jarvis is the Timer rule hiding
-  `.dial-arc` (`:root[data-theme="jarvis"], :root[data-theme="earthy"],
-  :root[data-theme="halloween"], :root[data-theme="thanksgiving"], :root:not([data-theme])`). Any new jarvis-like theme must join that
+  default: a 24-hour clock, no mascots (the `--pink-mascot-*` vars are
+  undefined, so `.pink-mascot` stays hidden), and the default Timer dial
+  and wheel. The one spot that names default is the Timer rule hiding
+  `.dial-arc` (`:root[data-theme="default"],
+  :root[data-theme="halloween"], :root[data-theme="thanksgiving"], :root:not([data-theme])`). Any new default-like theme must join that
   selector, or its dial shows both rings. `wheel.js`'s `wide` label gap
-  is "not marwa", so it needs nothing.
+  is "not pink", so it needs nothing.
 
-**The five themes:**
+**The four themes:**
 
-- **`jarvis`** — the original dark HUD (deep plum-navy, near-black cards,
+- **`default`** — the original dark HUD (deep plum-navy, near-black cards,
   subtle pink accent, Orbitron uppercase labels, corner ticks). Default for
   every account and every logged-out page. See the Design rules below.
-- **`earthy`** — a **colour swap of jarvis** that also switches on the
-  three depth tokens, plus one opt-in extra: **wood as a secondary
-  material** (below). **Dark forest green with muted, sparing accents.** The old
-  brown base read as a muddy film. A vivid-accent pass after it was too
-  bright. **Separation comes from the surfaces and borders, not from
-  colour.** Keep these cues when tuning it:
-  - **Layers**, each a clear step lighter than the last: page `#0D1A10` →
-    canvas `--bg-1` `#122418` → panels and cards `#1A3322` (`--panel-bg`
-    nearly solid) → raised `#24452E` (`--card-2`: inputs, chips, wells,
-    empty week cells) → hover `#284B32` (`--card-3`).
-  - **Borders that outline**: `--border` `#3D6B48` on every element,
-    `--border-strong` `#5E9A6C` on buttons, inputs and chips (4.1:1 on the
-    card). Panel edges (`--hud-line`) and chip outlines are that same
-    neutral green, **not** the accent. Only hover (`--border-hover`,
-    `--hud-line-strong`) turns sage.
-  - **Shadows**: `--shadow-card` / `--panel-shadow` are a tight dark contact
-    shadow plus a soft 26–32px one, with a faint inset top highlight.
-  - **States**:
-    - Hover is a sage border, `--card-3`, a 1px lift and a dark shadow with
-      a faint sage glow.
-    - The focus ring is sage at 0.75.
-    - Pressed / selected is `--gradient-accent` (sage, 0.55 → 0.16).
-  - **Accents only where they mean something**:
-    - **Muted sage `#7A9E48`** (`--accent`) is for primary buttons, the
-      active tab, selected items, focus rings and hover borders. It is too
-      dark for text (4.4:1 on the card).
-    - Accent-coloured text and icons (links, hub and tool icons, period
-      numbers, "today" marks) use **`--accent-ink` `#A6BD8C`**, a soft
-      low-saturation sage.
-    - **Terracotta `#C05F35`** is only the card's top glow line. As text it
-      is `#E0A582` (`--lavender`: DRAFT tags, duplicates, sitting out).
-    - **Wheat `#C9A43C`** is tardy only (`#D6B456` as text).
-    - The top-bar readouts are plain `--text-2` (`--figure-ink`).
-    - `--danger` is soft coral `#F5A098`.
-    - `--ok` is mint `#8CCB9F`.
-  - **Text**: `--text` `#D8E4CC` (10.3:1 on the card) → `--text-2`
-    `#BCCDB2` (8.1:1) → `--label-ink` `#A3B79B` (6.4:1) → `--text-muted`
-    `#8BA68D`. Muted is 5.2:1 on the card and 6.8:1 on the page, but **only
-    4.0:1 on raised and 3.7:1 on hover**, below AA there. This was chosen
-    on request. Raise it toward `#9DBC9F` if muted text on inputs or chips
-    is too faint.
-  - **Group cards cycle sage → terracotta → wheat → mint → birch** through
-    the optional `--group-c1…c5` tokens. `.group:nth-child(5n+k)` sets
-    `--g-pick: var(--group-ck)`, and `--g` uses it when defined.
-    jarvis/marwa leave them undefined, so `--g-pick` is invalid and they
-    keep the hue-shifted accent.
-  - **Wheel slices** use deep forest, terracotta, wheat, sage, pine, rust,
-    olive and moss. `wheel.js` visits r0 r4 r1 r5 r2 r6 r3 r7, so the
-    tokens are assigned in that order.
-  - Measured on bg / card / raised / hover:
-
-    | Pair | Ratio |
-    |---|---|
-    | text | 7.4–13.6:1 |
-    | text-2 | 5.8–10.7:1 |
-    | label | 4.6–8.4:1 |
-    | accent-ink | 4.8–8.8:1 |
-    | lavender | ≥ 4.61:1 |
-    | danger | ≥ 4.5:1 |
-    | ok | ≥ 5.2:1 |
-    | tardy | ≥ 4.9:1 |
-    | on-accent | 5.8:1 |
-    | group labels | ≥ 4.76:1 |
-    | names on group cards | ≥ 7.0:1 |
-    | wheel names | ≥ 4.9:1 |
-
-  - **Three layers on the seat canvases**: a floor `#091409` darker than
-    the page, then green seats `#2F5A3C` with `#6FA67C` edges (6.7:1 on the
-    floor). Names on seats are 6.0:1. Empty seats are `#17301F` with
-    `#4F8A5C` edges.
-  - **Wood: green room, wooden furniture.** Brown came back as a
-    *material* on top of the green ladder, never as the base. Tokens in the
-    earthy block:
-    - `--wood` `#423223`: caps, toolbars, table heads and the top bar
-      (`--topbar-bg`). It is a touch warmer than the requested `#3A2C1E`,
-      which had exactly the card's value; muted text on it is 4.6:1.
-    - `--wood-inset` `#241B12`: fields and tab-bar tracks, sunk darker
-      than the card.
-    - `--wood-btn` `#5A4430` (hover `#66472F`): buttons, a lighter plank.
-    - `--clay` `#5C4631`: dividers and rules.
-    - `--clay-line` `#7A5C40`: field and button outlines, lightened from
-      clay so the edge reads on green (2.2:1).
-    - `--clay-hover` = terracotta `#C05F35`: hover on any wood element.
-
-    Every brown was set **by value against the green it sits on**, not just
-    by hue. Two rule blocks in `style.css` apply them:
-    - **Part 1**, just before the PRESSED block: buttons (incl. ghost) and
-      the base fields. The theme sits in `:where(:root[data-theme="earthy"])`,
-      so each selector keeps the base rule's specificity. Any component that
-      restyles a control keeps its own look: week cells, seats, the
-      borderless note fields, chips. Primary buttons, pressed states and focus
-      (sage) still win.
-    - **Part 2**, at the end of the file:
-      - **caps** that run edge to edge across their panel, using negative
-        margins equal to its padding, with a clay rule under them:
-        `.lesson-head`, `.cal-bar`, `.br-panel-head`, `.names-head`,
-        `.card > .card-head`, `.gp-title`;
-      - **toolbars** `.seat-bar`, `.arr-bar`, `.br-bar`;
-      - **tab bars**: `.seg` is a sunk wood track with the sage pill on it;
-      - **table heads** `.bell-table th`, `.rv-table th`;
-      - the top bar's border, `hr`, and the few components that hard-code
-        a green fill (`.lp-box` / `.lp-notes`, the Seating mode toggle and
-        `.bar-cluster`).
-
-    The green page, canvas, cards, week cells, seats, chips and the sage
-    accent are untouched. A new panel header or toolbar needs its own line
-    in part 2. jarvis, marwa and halloween are unaffected.
-  - 24-hour clock, no mascots, no pattern.
-- **`halloween`** — a **colour swap of jarvis** (tokens like earthy, depth
+- **`halloween`** — a **colour swap of default** (tokens only, depth
   tokens on) plus two small opt-in extras. Purple-black ground `#120D1A` →
   canvas `--bg-1` `#1A1226` → cards `#241833` (wells `#1C1329`, raised
   `#2F2043`), borders `#4A3161` / strong `#7A55A0`. Text bone `#F5E6D3`
@@ -812,7 +774,7 @@ the structure, and every other theme is a colour swap of it. A theme is
   Groups cycle pumpkin / green / purple / candy corn / bone; wheel slices
   are deep pumpkin, purple and green with bone names (≥ 6.8:1); seats are
   purple `#3A2852` with lilac edges on a `#0E0A14` floor (names 10.7:1).
-  **Extras** (the halloween rules next to marwa's mascots, all scoped to
+  **Extras** (the halloween rules next to pink's mascots, all scoped to
   `:root[data-theme="halloween"]:not(:has(body.timer-popout, body.noise-popout,
   body.wheel-popout))` so the projector pop-outs and the timer PiP stay
   clean). **All decoration sits behind content**: body background layers, or
@@ -856,8 +818,8 @@ the structure, and every other theme is a colour swap of it. A theme is
         `.br-none`) show a little ghost with a bat; the jack-o'-lantern
         stays on the big empty states.
   **Timer**: the dial is a carved jack-o'-lantern (see the Timer section).
-  24-hour clock, jarvis wheel.
-- **`thanksgiving`** — a **colour swap of jarvis** (tokens like halloween,
+  24-hour clock, default wheel.
+- **`thanksgiving`** — a **colour swap of default** (tokens like halloween,
   depth tokens on) plus seasonal mascots. Page `#1F1511` → canvas `--bg-1`
   `#2A1D16` → cards `#38281E` → wells `--card-2` `#2E2018` (sunk) →
   raised / hover `--card-3` `#473325`; borders `#6B4A33`. Text cream
@@ -901,13 +863,13 @@ the structure, and every other theme is a colour swap of it. A theme is
       Name Wheel section).
   Tokens: `--tg-*` (pie), `--tk-*` (turkey), `--hn-*` (cornucopia). 24-hour
   clock.
-- **`marwa`** — a **pure colour swap of jarvis** (depth tokens off) with four tiny extras. Same
+- **`pink`** — a **pure colour swap of default** (depth tokens off) with four tiny extras. Same
   layout, spacing, radii, borders, fonts, weights, tracks, shadows,
   animations and components: only palette tokens differ (light cream-pink
   ground, white cards, deep-plum text, bubblegum-pink accent) with
   equivalent contrast. The intentional additions: **12-hour clock with
   AM/PM** in the topbar (`fmtWallClock({ hour12: true })` when
-  `currentTheme() === 'marwa'`); the **original mascot set** (bunny,
+  `currentTheme() === 'pink'`); the **original mascot set** (bunny,
   axolotl, cat, cloud, star) used on empty states, the login hero and a
   hub-corner flourish; and **stronger hub-card outlines** — `--hud-line`
   (0.24 alpha) is near-invisible on cream, so `.hub-section .hud-panel`
@@ -922,42 +884,63 @@ the structure, and every other theme is a colour swap of it. A theme is
   other one (the bunny IS the meter — see the Noise Meter section; halloween
   has its own there too, a ghost rising from a grave). Everywhere
   else: no HUD tick suppression, no sentence-case override, no separate
-  fonts, no rounded-card overrides — layout changes to jarvis carry into
-  marwa automatically.
+  fonts, no rounded-card overrides — layout changes to default carry into
+  pink automatically.
 - **`--body-pattern` / `--body-pattern-size`** — the per-theme page texture,
   wired in as the **first background layer** of `body` (and of `body.hub`,
-  which sets its own background). jarvis leaves it `none`; marwa sets an
+  which sets its own background). default leaves it `none`; pink sets an
   inline-SVG data URI of three small hearts per 96px tile, at different
   sizes and angles, in `#F3BFD4` at 32% — a shade off `--bg-0`, so it reads
   as texture up close and disappears from the back of the room. It is a
   *background layer*, so it is always behind cards and can never land on
-  text; cards are opaque in marwa, so the hearts only show in the gutters.
+  text; cards are opaque in pink, so the hearts only show in the gutters.
   The projector pop-outs (`body.timer-popout`, `body.noise-popout`) set
   `background-image: none` to stay flat. No image file — data URI only.
 
 Storage & flow:
 
-- **`profiles.theme text default 'jarvis'`**. Attached to
-  `session.user.theme` at sign-in (via `hydrateProfileIntoSession`) and
-  preserved through refreshes.
+- **`profiles.theme text default 'default'`** (one of `default`, `pink`,
+  `halloween`, `thanksgiving`; NULL = never chosen on the server). **The
+  profile is the source of truth**, so a theme follows the teacher across
+  devices; `localStorage['teacherpal.theme']` is only the cache the head
+  script reads to avoid a flash. `hydrateProfileIntoSession()` resolves it
+  with `profileTheme()` on every page load: a theme on the row wins (an
+  old id is renamed and written back); NULL adopts this browser's theme and
+  saves it (`saveThemeToProfile()`), so the move from browser-only themes
+  lost nobody's choice; no column / no row keeps the cached value. Writes go
+  through `set_my_theme` (`setMyTheme()`). The same rule keeps
+  `teaches_periods` when that column is missing, instead of resetting it.
 - **`shared.js`**: `THEMES` (the registry), `applyTheme(id)` (attribute +
   localStorage + `teacherpal:theme` event), `currentTheme()`,
   `setMyTheme(id)` (also calls `set_my_theme` RPC to persist server-side).
-- **Head script.** Every page has a tiny synchronous `<script>` in `<head>`
-  before the stylesheet link — it reads `localStorage['teacherpal.theme']`
-  and sets `data-theme` on `<html>` so the correct tokens apply *before*
-  the CSS parses. No flash of the wrong theme even on the login page.
+- **Old ids.** The themes were renamed (jarvis → `default`, marwa → `pink`)
+  and earthy was removed. `LEGACY_THEMES` in `shared.js` maps the old ids
+  (earthy → `default`) wherever a theme is read — `applyTheme`, `setMyTheme`,
+  the profile refresh — and each page's head script carries the same map,
+  so a stale localStorage value or an unmigrated profile row still lands
+  on the right theme.
+- **Head script.** Every page except the login page has a tiny synchronous
+  `<script>` in `<head>` before the stylesheet link — it reads
+  `localStorage['teacherpal.theme']` and sets `data-theme` on `<html>` so
+  the correct tokens apply *before* the CSS parses. No flash of the wrong
+  theme.
+- **The login page is always `default`.** `login.html` hard-codes
+  `<html data-theme="default" data-theme-lock>` and has no head script, so
+  a newcomer from a shared link sees the same page whatever this browser
+  last used (no seasonal themes there). `applyTheme()` still caches the
+  signed-in teacher's theme on a locked page, it just doesn't put it on
+  screen; the next page picks it up.
 - **Settings menu.** `nav.js` renders a small gear-icon `<details>` widget
   in the top bar. Inside: radio-style theme options from `THEMES`. Changing
-  the selection calls `setMyTheme` immediately. Available on every page,
-  including login (where the choice is only local until sign-in).
+  the selection calls `setMyTheme` immediately. Available on every page
+  that has the top bar (not login).
 
 To add a new theme:
 
 1. Add `{ id: 'my-theme', label: 'My Theme' }` to `THEMES` in `shared.js`.
-2. Copy the closest colour block in `style.css` — `:root[data-theme="earthy"]`
-   for a dark theme (its wood "materials" rules are separate and do not come along), `:root[data-theme="marwa"]` for a light one
-   (its extras live in separate `:root[data-theme="marwa"] …` rules and do
+2. Copy the closest colour block in `style.css` — `:root[data-theme="halloween"]`
+   for a dark theme (its decorations live in separate `:root[data-theme="halloween"] …` rules and do not come along), `:root[data-theme="pink"]` for a light one
+   (its extras live in separate `:root[data-theme="pink"] …` rules and do
    not come along) — and rename the selector. Swap colour values only:
    every colour variable listed above, none of the structural ones.
 3. Check every text/background pair for WCAG AA (see above). For a dark
@@ -971,24 +954,24 @@ The `set_my_theme(text)` RPC validates `^[a-z0-9_-]+$` and length ≤ 40 so
 any junk name is rejected at the server. Unknown ids on the client just
 fall back to the default (no matching `:root[data-theme=…]` block); harmless.
 
-### Marwa mascots
+### Pink mascots
 
-Marwa ships an original cast of 5 characters (nothing copied from Sanrio /
+Pink ships an original cast of 5 characters (nothing copied from Sanrio /
 Hello Kitty / Miffy / any existing IP — drawn from simple geometric
 primitives in the palette). All 48×48 viewBox, bold sticker style, each a
-CSS variable inside the marwa token block:
+CSS variable inside the pink token block:
 
 | id        | Character                              | Where it appears |
 |-----------|----------------------------------------|------------------|
 | `bunny`   | round bunny with a bow                 | `.chart-empty`, hub-launcher corner flourish |
 | `axolotl` | smiling axolotl with rose feather gills| `.empty-state`, login hero |
 | `cat`     | round cat with a bow                   | `.list-empty` |
-| `cloud`   | sleepy cloud, closed-arc eyes          | (available via `.marwa-mascot`) |
+| `cloud`   | sleepy cloud, closed-arc eyes          | (available via `.pink-mascot`) |
 | `star`    | 5-point star                           | `.lesson-empty` |
 
-Drop one anywhere with `<span class="marwa-mascot" data-mascot="bunny"></span>`
+Drop one anywhere with `<span class="pink-mascot" data-mascot="bunny"></span>`
 (defaults 3rem square; hidden in other themes). In any theme other than
-`marwa` the element collapses to `display:none`.
+`pink` the element collapses to `display:none`.
 
 ## Design rules — dark premium dashboard (pink)
 
@@ -997,15 +980,15 @@ for a subtle pink. Deep plum-navy ground with a soft radial glow, near-black
 cards with 24px corners, faint 1px borders with a pink glow line along the top
 edge, white medium-weight card titles with a square outlined ↗ button at the
 top-right, bordered pill chips, outlined percentage badges, slim progress
-bars, muted gray secondary text. This is the **jarvis theme**, the default.
-See the Themes section below for the per-user switcher and the `earthy` and `marwa` themes.
+bars, muted gray secondary text. This is the **default theme**.
+See the Themes section below for the per-user switcher and the `pink`, `halloween` and `thanksgiving` themes.
 All styling lives in `style.css`; pages carry almost no inline styling.
 
 - **Tokens first, per theme.** Every color, gradient, shadow, font, radius and
   typographic track is a CSS variable defined inside a
   `:root[data-theme="<id>"] { ... }` block. Structural tokens (spacing,
   font sizes, transition, touch, page-pad) live in the shared `:root {…}`
-  block. `:root, :root[data-theme="jarvis"]` share the same values, so an
+  block. `:root, :root[data-theme="default"]` share the same values, so an
   unstyled page (no `data-theme` attribute yet) still renders correctly.
   Never hard-code a hex color, radius or shadow anywhere else.
 - **Palette.** Ground `--bg-0 #151320` → `--bg-1 #1E1A2E` (radial glow on
@@ -1139,7 +1122,7 @@ All styling lives in `style.css`; pages carry almost no inline styling.
   dimmer; pink text only on badges/labels ≥ `--fs-xs` semibold.
 - **Icons are inline SVG** (24×24, `stroke="currentColor"`, width 2,
   `aria-hidden="true"`). No emoji, icon fonts or image URLs.
-- **Hub (`index.html`) is a HUD / command center** — the JARVIS-style
+- **Hub (`index.html`) is a HUD / command center** — the sci-fi HUD
   dashboard direction. It is the one page that is allowed to look "sci-fi":
   thin precise lines, small tracked uppercase labels, monospace data, corner
   brackets and a faint grid. Every other page keeps the calmer dashboard
@@ -1171,7 +1154,7 @@ All styling lives in `style.css`; pages carry almost no inline styling.
     **no sub-line, no live data, no counts, no Supabase** (the only requests on the
     page are nav.js's readouts, as on every page). Don't put dashboards
     back on the hub; a tool that needs a summary shows it on its own
-    screen. Marwa scopes a mascot per section (bunny / star / cloud /
+    screen. Pink scopes a mascot per section (bunny / star / cloud /
     cat) as an accent glyph before the section title.
     The hub's top bar has **no nav links** (`body.launcher` → `nav.js` skips
     them and adds `.topnav.no-links`, which also keeps the wordmark text
@@ -1528,19 +1511,19 @@ All styling lives in `style.css`; pages carry almost no inline styling.
   40-char label input, then the display — a `.timer-display-wrap` holding
   the digits, an optional overhead label, and **the themed dial** — one SVG
   (`.timer-dial`), built once per document by `buildDial()` and painted by
-  `paintDial(doc, now)` (page, pop-out and PiP all call the same pair). jarvis
-  and earthy draw the ring; marwa and halloween hide it and turn their
+  `paintDial(doc, now)` (page, pop-out and PiP all call the same pair). default
+  draws the ring; pink, halloween and thanksgiving hide it and turn their
   mascot into the dial:
-    - **jarvis — arc reactor.** 60 `.dial-segs` ticks around the rim, lit in
+    - **default — arc reactor.** 60 `.dial-segs` ticks around the rim, lit in
       accent with a glow and going dark one by one as time drains
       (`i >= round(remaining * 60)` → `.off`), over a faint `.dial-inner`
       ring and 36 `.dial-marks` degree markings (every 3rd longer). Mono
       digits with a glow; label above in tracked uppercase. The smooth arc
       is hidden.
-    - **marwa — the bunny IS the dial.** It is built like the halloween
+    - **pink — the bunny IS the dial.** It is built like the halloween
       pumpkin. There is no ring and no little mascot under it: the SVG dial
       and `.timer-mascot` are hidden, and three layers fill the wrap (all
-      `--marwa-bunny-*` inline-SVG tokens, in the existing mascots' palette:
+      `--pink-bunny-*` inline-SVG tokens, in the existing mascots' palette:
       fur `#FFB6C9`, inner ear `#FF89A9`, outline `#4A2C3D` at 2.4 units,
       bubblegum bow, blush `#FF6B9E`).
       - `::before` is the spent bunny, a pale outline (`-spent` /
@@ -1581,12 +1564,12 @@ All styling lives in `style.css`; pages carry almost no inline styling.
 
       Each also gets `+ 0.06em` in y: Comfortaa's ink centre sits that far
       above its line-box centre. The pop-out loads Comfortaa too. The label
-      is in **sentence case**, the one place marwa overrides
+      is in **sentence case**, the one place pink overrides
       `text-transform`.
 
       Sizes: the wrap is `min(50vh, 46vw, 31rem)` (it fits 1366×768 with the
       label line and setup row), 80vh in full screen and 94vh in the pop-out
-      (84vh with a label). The page keeps marwa's heart pattern; the pop-out
+      (84vh with a label). The page keeps pink's heart pattern; the pop-out
       stays flat like every projector view.
     - **halloween — the pumpkin IS the dial.** There is no ring: the SVG dial
       is hidden and three layers fill the wrap.
@@ -1679,15 +1662,15 @@ All styling lives in `style.css`; pages carry almost no inline styling.
       reading).
   **States** come from `data-state` on `.timer-display-wrap`: `warn` (final
   minute) pulses the ring in both themes; `alert` (zero) flashes the whole
-  dial via `.timer-flash` in jarvis and fires `.timer-burst` (hearts +
-  sparkles flying outward, `--marwa-burst-heart` / `-spark`) in marwa.
+  dial via `.timer-flash` in default and fires `.timer-burst` (hearts +
+  sparkles flying outward, `--pink-burst-heart` / `-spark`) in pink.
   `data-mode="stopwatch"` hides the progress but keeps the dial frame.
   **`state.zeroed`** holds the time's-up state after the auto-pause —
   without it the celebration vanished a frame after it appeared, and the
   display fell back to the full target instead of 0:00. Cleared by start /
   reset / preset / +1 min / mode change.
   **Nothing on the page moves when you press Start** (measured: identical
-  rects stopped / running / paused, at 1366×768 and 1080p, in jarvis and
+  rects stopped / running / paused, at 1366×768 and 1080p, in default and
   halloween):
   - Every row is present in every state. Controls that don't apply are
     *disabled*, never hidden. The setup row (preset chips 1/3/5/10/15 min +
@@ -1740,8 +1723,8 @@ All styling lives in `style.css`; pages carry almost no inline styling.
   and `.wheel-side` on the right holds the result over the controls.
   **`.wheel-result`** shows "Spin to pick a student" until the first spin,
   then the winner large and bold: `result-in` scales it up from 0.45 with a
-  spring overshoot as it fades in, plus a `.wheel-glow` flash (jarvis) or
-  `.wheel-sparks` hearts and stars flying outward (marwa). The name **stays
+  spring overshoot as it fades in, plus a `.wheel-glow` flash (default) or
+  `.wheel-sparks` hearts and stars flying outward (pink). The name **stays
   until the next spin**, when `result-out` shrinks it away — which is why
   `renderWinner()` leaves the text in place while `spin` is set instead of
   clearing it (clearing would leave nothing to animate). Under it sits the
@@ -1837,7 +1820,7 @@ All styling lives in `style.css`; pages carry almost no inline styling.
       cancelable `teacherpal:wheel-reset-request` before pouring and stop if
       wheel.js cancels it, then `teacherpal:wheel-reset` as before.
     - **The bar** (`#pick-list-bar`, a `<section>` between the period row
-      and the switches, so marwa's `:first-of-type` row rules still find the
+      and the switches, so pink's `:first-of-type` row rules still find the
       period row): the List select (its last option is "+ New list…"; the
       open list is remembered per period in `teacherpal.wheel.list.<periodId>`,
       this browser), **Who's picked**, **Reset**, and one line, "Board work ·
@@ -1896,7 +1879,7 @@ All styling lives in `style.css`; pages carry almost no inline styling.
   reads upside down. Font size is fitted **deterministically** from slice
   count *and* name length against the rim-to-hub gap — measuring with
   `getComputedTextLength()` is unreliable because the webfont usually hasn't
-  loaded yet, and marwa's wider Comfortaa would run under the hub.
+  loaded yet, and pink's wider Comfortaa would run under the hub.
   **It is drawn as a machine, not a flat circle.** One square SVG
   (`viewBox="0 0 100 100"`, no stand): a `.housing` ring around the rim with
   a thicker `.housing-foot` arc across the bottom, a `.wheel-axle` of four
@@ -1907,7 +1890,7 @@ All styling lives in `style.css`; pages carry almost no inline styling.
   with `aspect-ratio: 1/1` and `max-width: 100%`, so it takes the column's
   height and clamps to its width when that is tighter; `.wheel-stage`'s
   small padding is the only margin. At 1280×720 that lands it at ~96% of the
-  column height (a little less in marwa, which gives the mascot a row).
+  column height (a little less in pink, which gives the mascot a row).
   **Slices** take a graduated ramp: `rampIndex()` alternates between the
   dark half (`--wheel-r0…r3`) and the light half (`r4…r7`), so each slice is
   an obvious step from its neighbour while the wheel still reads as one
@@ -1920,21 +1903,21 @@ All styling lives in `style.css`; pages carry almost no inline styling.
   `pointer-flick` keyframe, added even when muted), so it reads as being
   knocked by each passing segment and slows with the wheel.
   **Two skins, all from tokens** (no hard-coded colours in either):
-    - **jarvis** — magenta ramp on a dark metal frame, mono uppercase names,
+    - **default** — magenta ramp on a dark metal frame, mono uppercase names,
       a static `#wheel-dial` instrument ring outside the rim (degree ticks
       every 10°, longer every 30°, four corner brackets; built by
       `buildDialRing()` *outside* the rotor so it never spins), a sharp
       accent chevron pointer, a dark hub with the winner in the display
       face. Spinning adds a motion glow to the rim; landing lights the
       winning slice with `--wheel-won` and pulses the ring once. The stage
-      is a `.hud-box` with corner ticks like the other jarvis pages.
-    - **marwa** — *(the page now shows the bubble tea cup instead, see
+      is a `.hud-box` with corner ticks like the other default pages.
+    - **pink** — *(the page now shows the bubble tea cup instead, see
       below; these wheel rules — pastels, heart pointer, bunny hub, the
       bunny beside it — stay for reference, hidden by the boba block)*
-      the prettiest version of the wheel (the "Name Wheel - marwa skin"
+      the prettiest version of the wheel (the "Name Wheel - pink skin"
       block in `style.css`). Before the cup it briefly showed a gachapon
       machine (`gacha.js`, removed).
-      - **Slices** cycle marwa's own five pastels — pink, lavender, mint,
+      - **Slices** cycle pink's own five pastels — pink, lavender, mint,
         peach, butter (`--wheel-p0…p4`). `drawWheel()` gives every slice
         both `r<ramp>` and `p<pastelIndex>` classes, so a live theme
         switch repaints without a redraw; a count that would put the last
@@ -1952,9 +1935,9 @@ All styling lives in `style.css`; pages carry almost no inline styling.
       - **Pointer**: a plump heart (`.pointer-heart` + `.pointer-heart-hi`
         gloss) sitting on the ring, tip clear of the names; the same
         per-slice `.flick` beats play `heart-tip` (−11° → 4° → 0, 200ms)
-        instead of the jarvis knock.
+        instead of the default knock.
       - **Hub**: the Spin button is a white disc with a 2px accent ring,
-        a white halo, and `.hub-face` (`--marwa-hub-face`, a bunny head)
+        a white halo, and `.hub-face` (`--pink-hub-face`, a bunny head)
         over a Comfortaa "Spin" (`.hub-label`). The face wiggles on hover
         and bobs while spinning.
       - **The bunny** (`#wheel-mascot`, `.wheel-mascot`, inside
@@ -2039,7 +2022,7 @@ All styling lives in `style.css`; pages carry almost no inline styling.
       wheel's spin.
   **Skins**: `wheel.js` keeps `skins()` =
   `[Cauldron, Boba, Cornucopia]`, `skinFor(doc)` = the one whose `isOn(doc)` is true
-  (halloween / marwa / thanksgiving), and `eachSkin()` to keep every skin's DOM in sync
+  (halloween / pink / thanksgiving), and `eachSkin()` to keep every skin's DOM in sync
   (each is built and synced always, and hidden by CSS outside its theme).
   `startSpin()` takes the active skin's `DURATION_MS` / `SETTLE_MS`;
   `runSpin()` / `finishSpin()` call its `run()` / `finish()`;
@@ -2050,7 +2033,7 @@ All styling lives in `style.css`; pages carry almost no inline styling.
   (`cornucopia.js`, the "Name Wheel — thanksgiving skin: a CORNUCOPIA"
   block in `style.css`). CSS hides the wheel SVG, the hub button and the
   mascot, and shows `.horn`, which **is** the Spin button (click, Space,
-  Enter). The layout is jarvis's two columns.
+  Enter). The layout is default's two columns.
     - **The scene** (one 400×400 SVG, `--hn-*` tokens): a dark back wall, a
       wooden table (planks, grain, a lit front edge, back edge y 248), and a
       woven horn lying on its side, tail curled up at the upper left, mouth
@@ -2110,13 +2093,13 @@ All styling lives in `style.css`; pages carry almost no inline styling.
     - The pop-out and mini window show the scene filling the view, with no
       basket. Under reduced motion the leaf burst and the name's rise stop
       and the tip is shorter; the roll itself runs (it is the pick).
-  **marwa skin — a bubble tea cup instead of the wheel** (`boba.js`, the
-  "Name Wheel — marwa skin: a BUBBLE TEA cup" block in `style.css`). CSS
+  **pink skin — a bubble tea cup instead of the wheel** (`boba.js`, the
+  "Name Wheel — pink skin: a BUBBLE TEA cup" block in `style.css`). CSS
   hides the wheel SVG, the hub button and the wheel's bunny, and shows
   `.boba`.
     - **The cup** (one 400×400 box, units in `boba.js`): a clear tapered
       cup (rim y 150, x 84–316; bottom y 386) of **warm tan milk tea** (#C89F7B; the
-      cup, lid, straw and face stay marwa pink, and the tan against pink
+      cup, lid, straw and face stay pink pink, and the tan against pink
       reads far better than pink on pink) under a cream foam line, a seeded scatter of condensation dots and drips. Shading
       is flat-cute, never glossy 3D: a three-stop tea (`#bt-tea-grad`:
       `--bt-tea` #D6B190 → `--bt-tea-mid` #C89F7B → `--bt-tea-deep`
@@ -2157,10 +2140,10 @@ All styling lives in `style.css`; pages carry almost no inline styling.
       blush and the right eye winks (`.bf-eye.r` swaps for the
       `.bf-wink` arc; keyboard focus winks too). Space still picks. There
       is no hint line ("Click the cup or press Space" exists in the HTML
-      and is hidden in marwa; hover says it). **No name badge on
+      and is hidden in pink; hover says it). **No name badge on
       the cup** (a white pill over the straw read as clip art): the name is
       on the pearl, then in the spotlight.
-    - **Layout** (marwa only; jarvis and halloween keep their two columns):
+    - **Layout** (pink only; default and halloween keep their two columns):
       **one row across the width, three columns** — the controls card ·
       the name over the cup · the jar. `.wheel-layout` is
       `minmax(--side-w, 1fr) auto minmax(--side-w, 1fr)` (`--side-w` =
@@ -2277,7 +2260,7 @@ All styling lives in `style.css`; pages carry almost no inline styling.
       ~28 and only shrinks for bigger classes, so the cup visibly empties
       as No repeats takes pearls out. "N left" counts pearls still in.
     - **The cup is the character** (an earlier pass put faces on the pearls;
-      the cup reads far better from the back of the room). In the marwa
+      the cup reads far better from the back of the room). In the pink
       mascot style (thick plum `--bt-ink` outlines, flat fills):
       `.bt-face` in the front layer, over the straw, centred at
       `FACE_C` (186, 230), a little left of the cup's middle so the
@@ -2346,7 +2329,7 @@ All styling lives in `style.css`; pages carry almost no inline styling.
       but parked far from the cup, and one parked below the page made
       `main.page` scroll after every pick: a 15px scrollbar that came and
       went as the cup bobbed and lifted on hover, shifting the whole page
-      7.5px. As a guard, marwa's `main.wheel-page` is `overflow: clip`
+      7.5px. As a guard, pink's `main.wheel-page` is `overflow: clip`
       above 900px (the three-column layout always fits there, so it never
       needs to scroll). Check for this with real scrollbars: the test
       harness's `--hide-scrollbars` hides it.
@@ -2357,7 +2340,7 @@ All styling lives in `style.css`; pages carry almost no inline styling.
       sitting-out students aren't in the cup, No repeats takes a picked
       pearl out until everyone's been called, and "Edit who's in" opens
       the same roster modal ("Who's in the cup"). Colours are `--bt-*`
-      tokens in the marwa block. Under reduced motion only the loops stop (see the cup above).
+      tokens in the pink block. Under reduced motion only the loops stop (see the cup above).
       Testing: rAF doesn't run under `--virtual-time-budget`, so drive
       Edge over the DevTools protocol in real time.
 - **Noise Meter** (`noise.html` + `noise-popout.html` + `noise.js`). One
@@ -2420,27 +2403,24 @@ All styling lives in `style.css`; pages carry almost no inline styling.
   so it glides instead of stepping (kept under reduced motion — it is the
   reading). `.noise-rider` (added by `buildMascot()`) rides the edge; the
   bar's height is `--bar-h`. Per theme:
-    - **jarvis**: an instrument. Tick marks (`::before`, short every 5%,
+    - **default**: an instrument. Tick marks (`::before`, short every 5%,
       long every 10%), a thin bright fill down the middle (`inset: 36% 0`),
       and a glowing cap line in the zone colour as the rider.
-    - **earthy**: a vine (an SVG stem-and-leaf tile over a sage → wheat →
-      terracotta gradient) in a sunk wood groove, with a leaf at the tip that
-      sways.
-    - **marwa**: lavender → pink → rose-red on a pale blush track with a
+    - **pink**: lavender → pink → rose-red on a pale blush track with a
       glossy top, and a heart at the tip that bobs. It replaced the old
       row of hearts.
     - **halloween**: a glowing potion / ember trail (witch green → candle →
       pumpkin) in a dark purple vial with an inner glow, and a dark bat at
       the tip that flaps. Once it's too loud the trail glows orange and
       flickers like flame (`nh-flame`, stepped brightness).
-  **marwa skin — the bunny IS the meter** (the "Noise Meter — marwa skin"
+  **pink skin — the bunny IS the meter** (the "Noise Meter — pink skin"
   block after the noise rules in `style.css`). `buildMascot()` in `noise.js`
   puts `.nm-stage` (one inline SVG, viewBox 0 0 200 200, built from
   `MASCOT_SVG`) at the top of every `.noise-meter`, page and pop-out alike
-  (and halloween's `.nh-stage`, below). Outside marwa it is `display: none`.
-  **The mascot layout is shared by marwa and halloween** (rules under
-  `:root:is([data-theme="marwa"], [data-theme="halloween"])`, at the top of
-  the marwa skin block): `.noise-scale` and `.noise-unit` hide; the reading
+  (and halloween's `.nh-stage`, below). Outside pink it is `display: none`.
+  **The mascot layout is shared by pink and halloween** (rules under
+  `:root:is([data-theme="pink"], [data-theme="halloween"])`, at the top of
+  the pink skin block): `.noise-scale` and `.noise-unit` hide; the reading
   is small and muted, shown as "~55" (the `~` is a `::before` while
   running); flex `order` stacks mascot (`.noise-mascot`) → level bar
   (`min(40rem, 92%)` wide) → zone word → reading. The card fills the page (`flex: 1` in
@@ -2448,7 +2428,7 @@ All styling lives in `style.css`; pages carry almost no inline styling.
   of head · meter · foot, the footer on a hairline; the meter takes the
   leftover height and `.noise-mascot` (`flex: 1 1 0` + `aspect-ratio: 1`)
   grows into it. Full screen drops head and foot (`.no-present`) and the
-  mascot takes their space too. Marwa's zone word is Comfortaa, a solid
+  mascot takes their space too. Pink's zone word is Comfortaa, a solid
   `--noise-loud` pill while `data-alert="1"`. **Poses are pure CSS off `data-mood`** on
   `.noise-meter`:
     - `off`: asleep, greyed.
@@ -2470,12 +2450,12 @@ All styling lives in `style.css`; pages carry almost no inline styling.
   has its own `<g>` so its animation never overrides its placement. The
   radial glows fade by `stop-opacity`, never to `transparent`: SVG gradients
   don't premultiply, so that goes grey. The presets are pill buttons (a
-  heart on the checked one). The colours are `--nm-*` tokens in the marwa
-  block, and marwa's `--noise-ok` is the accent. The pop-out isn't a flex
+  heart on the checked one). The colours are `--nm-*` tokens in the pink
+  block, and pink's `--noise-ok` is the accent. The pop-out isn't a flex
   layout, so there `.noise-mascot` is `flex: none` at `min(100vh − 11.5rem,
   92vw)`. The pop-out loads Comfortaa and Pirata One.
   **halloween skin — a ghost rising from a grave** (the "Noise Meter —
-  halloween skin" block right after marwa's). `GHOST_SVG` (viewBox 0 0 240
+  halloween skin" block right after pink's). `GHOST_SVG` (viewBox 0 0 240
   240) is a static scene — a weathered headstone with RIP and a crack, a
   crooked wooden cross, grass tufts, a rounded mound with the grave's dark
   mouth — and the ghost. **Its height IS the level**: `renderLevel()` sets
@@ -2487,7 +2467,7 @@ All styling lives in `style.css`; pages carry almost no inline styling.
   grave's mouth (`#nh-clip`, y < 207), and the front lip of the mound is
   drawn over it, so it really comes up out of the ground; its tattered tail
   strands fade into the hole (`#nh-g-wisp`). Its opacity climbs with
-  `--rise` (0.4 → 1). **Per mood** (`data-mood`, debounced like marwa's):
+  `--rise` (0.4 → 1). **Per mood** (`data-mood`, debounced like pink's):
     - `quiet`: eyes closed, a slow drift, pale blue-white.
     - `ok`: a friendly face with blush, a gentle hover, warm bone.
     - `loud`: arms thrown up (rotated 88°), a wailing mouth that pulses,
@@ -2511,7 +2491,7 @@ All styling lives in `style.css`; pages carry almost no inline styling.
   **thanksgiving skin — a turkey** (the "Noise Meter — thanksgiving skin"
   block). `TURKEY_SVG` (viewBox 0 0 200 200) in `noise.js`, built as
   `.nt-stage` beside the bunny and the ghost, uses the shared mascot layout
-  (thanksgiving joins every `:root:is([data-theme="marwa"],
+  (thanksgiving joins every `:root:is([data-theme="pink"],
   [data-theme="halloween"], …)` selector). Nine tail feathers, each turning
   about (100, 130) by `rotate(--o × --fan) scale(--flen)`, so the fan opens
   as one transition. **Per mood**:
@@ -2706,7 +2686,7 @@ All styling lives in `style.css`; pages carry almost no inline styling.
   uses it for the label, the top glow line, a border glow, a
   `--group-tint` background wash, the dot before each name and the faint
   `data-n` number watermark (`::after`). `--group-tint` / `--group-ink-dl`
-  are per-theme tokens (marwa darkens the ink for white cards). Each name is
+  are per-theme tokens (pink darkens the ink for white cards). Each name is
   one line (`.chip-text` span in a flex row beside the dot): `fitNames()`
   scales a too-wide name down to 75%, past that it ellipsises and the
   chip `title` has the full name. The Formula run summary goes only to the
@@ -3101,17 +3081,17 @@ All styling lives in `style.css`; pages carry almost no inline styling.
     - **Click a line or badge:** opens a `.fm-pop` popover to change the
       type, toggle Must/Try, or **Delete rule** (a red button with a trash
       icon, so deleting never needs the Del key).
-    - **Draw a rule:** drag the node's port (◇ in jarvis/earthy, ○ in
-      marwa), or Shift+drag the node, onto another student. A popover at
+    - **Draw a rule:** drag the node's port (◇ in default/halloween/thanksgiving, ○ in
+      pink), or Shift+drag the node, onto another student. A popover at
       the drop point asks which pair rule. It is created with
       `defaultHard` and selected so Must/Try is one click away.
     - **Drop a list name** on empty map to place the student there, or on
       a node to connect the two.
-  **Skins:** jarvis/earthy are a technical node graph (straight lines,
-  square nodes, diamond ports on a dot grid). marwa is paper-and-string:
+  **Skins:** default, halloween and thanksgiving are a technical node graph (straight lines,
+  square nodes, diamond ports on a dot grid). pink is paper-and-string:
   tilted paper notes with a pin, round ports, and lines that **sag like
   string**. The sag is `softSkin()` in `formula.js` (`currentTheme() ===
-  'marwa'`), and the rest is `:root[data-theme="marwa"] .fm-*` rules.
+  'pink'`), and the rest is `:root[data-theme="pink"] .fm-*` rules.
   Every colour is a token.
   New hard rules join at the bottom of the hard band, soft ones at the end.
   **Priority tab** is unchanged: every rule in one draggable list (HTML5

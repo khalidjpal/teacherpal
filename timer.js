@@ -99,8 +99,8 @@
   }
 
   // --------- dial construction ---------
-  // One SVG serves both themes: jarvis lights SEGMENTS (they go dark one by
-  // one as time runs out) over an instrument-style inner dial; marwa draws the
+  // One SVG serves both themes: default lights SEGMENTS (they go dark one by
+  // one as time runs out) over an instrument-style inner dial; pink draws the
   // smooth gradient arc instead. CSS decides which parts are visible, so this
   // builds everything once per document (page, pop-out and PiP each call it).
   const SEGMENTS = 60;        // one per second of a minute — reads as a clock
@@ -186,7 +186,7 @@
         marks.appendChild(l);
       }
     }
-    // marwa's zero celebration: a few hearts + sparkles that fly outward
+    // pink's zero celebration: a few hearts + sparkles that fly outward
     if (burst && !burst.childElementCount) {
       for (let i = 0; i < 8; i++) {
         const bit = doc.createElement('i');
@@ -435,7 +435,7 @@
       slices.forEach((el, i) => el.classList.toggle('gone', i >= lit));
     }
     const mood = st === 'alert' ? 'party' : (st === 'warn' ? 'excited' : (state.running ? 'calm' : 'idle'));
-    wrap.dataset.mood = mood;                // marwa's bunny: calm / excited / party
+    wrap.dataset.mood = mood;                // pink's bunny: calm / excited / party
     if (mascot) mascot.dataset.mood = mood;
   }
 
@@ -516,7 +516,7 @@
       pipWin.document.head.appendChild(link);
     });
     pipWin.document.documentElement.setAttribute('data-theme',
-      document.documentElement.getAttribute('data-theme') || 'jarvis');
+      document.documentElement.getAttribute('data-theme') || 'default');
     pipWin.document.body.className = 'timer-popout';
     pipWin.document.body.innerHTML = `
       <div class="timer-popout-inner">
@@ -539,7 +539,7 @@
           <span class="timer-flash" aria-hidden="true"></span>
           <span class="timer-burst" id="timer-burst" aria-hidden="true"></span>
         </div>
-        <span class="timer-mascot marwa-mascot" id="timer-mascot" data-mascot="bunny" data-mood="idle"></span>
+        <span class="timer-mascot pink-mascot" id="timer-mascot" data-mascot="bunny" data-mood="idle"></span>
       </div>`;
     buildDial(pipWin.document);
     pipWin.addEventListener('pagehide', () => {

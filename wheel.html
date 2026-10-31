@@ -8,7 +8,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Comfortaa:wght@400;500;600;700&family=Quicksand:wght@400;500;600;700&family=JetBrains+Mono&family=Nunito:wght@400;600;700&family=Orbitron:wght@500;600;700&family=Pirata+One&family=Rajdhani:wght@500;600;700&family=Share+Tech+Mono&display=swap" rel="stylesheet">
-  <script>(function(){try{var t=localStorage.getItem('teacherpal.theme')||'jarvis';document.documentElement.setAttribute('data-theme',t);}catch(e){document.documentElement.setAttribute('data-theme','jarvis');}})();</script>
+  <script>(function(){try{var t=localStorage.getItem('teacherpal.theme')||'default';t={jarvis:'default',marwa:'pink',earthy:'default'}[t]||t;document.documentElement.setAttribute('data-theme',t);}catch(e){document.documentElement.setAttribute('data-theme','default');}})();</script>
   <link rel="stylesheet" href="style.css">
 </head>
 <body class="hub">
@@ -26,8 +26,8 @@
 
         <div class="wheel-wrap">
           <!-- One SVG: housing ring, wheel face, axle hub and the pointer on
-               its bracket - no stand. Sharp chevron in jarvis, rounded drop
-               in marwa (CSS swaps them). -->
+               its bracket - no stand. Sharp chevron in default, rounded drop
+               in pink (CSS swaps them). -->
           <svg class="wheel-svg" viewBox="0 0 100 100" aria-hidden="true">
             <defs>
               <radialGradient id="wheel-face-grad" cx="36%" cy="30%" r="78%">
@@ -78,7 +78,7 @@
           </svg>
           <!-- the hub is the Spin button; the wheel turns around it -->
           <button type="button" id="wheel-spin" class="wheel-hub-btn"><span class="hub-face" aria-hidden="true"></span><span class="hub-label">Spin</span></button>
-          <!-- marwa only: the bunny beside the wheel (wheel.js builds it) -->
+          <!-- pink only: the bunny beside the wheel (wheel.js builds it) -->
           <div class="wheel-mascot" id="wheel-mascot" data-mood="idle" aria-hidden="true"></div>
           <p class="wheel-empty" id="wheel-empty" hidden><span class="for-wheel">Nobody on the wheel</span><span class="for-brew">Nobody in the brew</span><span class="for-boba">No pearls in the cup</span><span class="for-horn">Nothing left in the horn</span> — everyone is absent, sitting out, or already called.</p>
         </div>
@@ -116,7 +116,7 @@
 
           <!-- the period's saved pick lists: picks stay picked (across days and
                devices) until the list is reset. A <section>, not a div, so
-               marwa's :first-of-type row rules still find the period row. -->
+               pink's :first-of-type row rules still find the period row. -->
           <section class="pick-list-bar" id="pick-list-bar" hidden>
             <div class="wheel-control-row">
               <label class="bar-field">

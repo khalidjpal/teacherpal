@@ -8,7 +8,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Comfortaa:wght@400;500;600;700&family=Quicksand:wght@400;500;600;700&family=JetBrains+Mono&family=Nunito:wght@400;600;700&family=Orbitron:wght@500;600;700&family=Rajdhani:wght@500;600;700&family=Share+Tech+Mono&display=swap" rel="stylesheet">
-  <script>(function(){try{var t=localStorage.getItem('teacherpal.theme')||'jarvis';document.documentElement.setAttribute('data-theme',t);}catch(e){document.documentElement.setAttribute('data-theme','jarvis');}})();</script>
+  <script>(function(){try{var t=localStorage.getItem('teacherpal.theme')||'default';t={jarvis:'default',marwa:'pink',earthy:'default'}[t]||t;document.documentElement.setAttribute('data-theme',t);}catch(e){document.documentElement.setAttribute('data-theme','default');}})();</script>
   <link rel="stylesheet" href="style.css">
   <style>
     .admin-page {
@@ -102,6 +102,25 @@
     .user-table td.actions { text-align: right; white-space: nowrap; }
     .user-table td.actions button { min-height: 2rem; font-size: var(--fs-xs); padding: 0.3rem 0.7rem; }
 
+    .user-table .u-muted { color: var(--text-muted); }
+    .user-table .badge-pending {
+      display: inline-block;
+      padding: 0.1rem 0.5rem;
+      border-radius: var(--radius-pill);
+      border: 1px dashed var(--lavender);
+      color: var(--lavender);
+      font-family: var(--font-mono);
+      font-size: 0.7rem;
+      letter-spacing: 0.08em;
+    }
+    .table-scroll { overflow-x: auto; }
+
+    .signup-row { display: flex; align-items: center; gap: var(--space-4); flex-wrap: wrap; }
+    .signup-row .switch-btn { min-width: 9rem; }
+    .signup-state { font-family: var(--font-mono); font-size: var(--fs-sm); color: var(--text-2); }
+    .signup-state b { color: var(--ok); font-weight: inherit; }
+    .signup-state b.off { color: var(--text-muted); }
+
     .list-empty { color: var(--text-muted); font-style: italic; padding: var(--space-4) 0; }
     .list-note  { color: var(--text-muted); font-family: var(--font-mono); font-size: 0.78rem; margin: 0 0 var(--space-4); }
   </style>
@@ -112,8 +131,19 @@
 
     <main class="page admin-page" hidden id="admin-main">
       <section class="admin-card" style="grid-column: 1 / -1">
+        <h2>Sign-up</h2>
+        <p class="list-note">When this is on, anyone can create an account from the sign-in page (they confirm their email first). Turn it off and the link disappears and new sign-ups are refused.</p>
+        <div class="signup-row">
+          <button type="button" class="switch-btn" id="signup-toggle" role="switch" aria-checked="false" disabled>
+            <span class="when-off">Sign-up off</span><span class="when-on">Sign-up on</span>
+          </button>
+          <span class="signup-state" id="signup-state">Loading…</span>
+        </div>
+      </section>
+
+      <section class="admin-card" style="grid-column: 1 / -1">
         <h2>Users</h2>
-        <p class="list-note">Users are created and their passwords set in the Supabase dashboard (Authentication → Users). This page is read-only.</p>
+        <p class="list-note">Everyone with an account, newest first. Passwords are reset in the Supabase dashboard (Authentication → Users).</p>
         <div id="user-list"><p class="list-empty">Loading…</p></div>
       </section>
 
@@ -135,6 +165,32 @@
 
       loadUsers();
 
+      // ---------- self sign-up switch ----------
+      const toggle = document.getElementById('signup-toggle');
+      const stateEl = document.getElementById('signup-state');
+      function paintSignup(open) {
+        toggle.setAttribute('aria-checked', open ? 'true' : 'false');
+        stateEl.innerHTML = open
+          ? '<b>Open</b> · the sign-in page shows “Create an account”'
+          : '<b class="off">Closed</b> · only you can add accounts (Supabase dashboard)';
+      }
+      async function loadSignup() {
+        paintSignup(await signupOpen());
+        toggle.disabled = false;
+      }
+      toggle.addEventListener('click', async () => {
+        const want = toggle.getAttribute('aria-checked') !== 'true';
+        toggle.disabled = true;
+        try {
+          paintSignup(await adminSetSignupOpen(want));
+        } catch (err) {
+          stateEl.textContent = `Couldn't change it: ${humanErr(err)}. Has migration-self-signup.sql been run?`;
+        } finally {
+          toggle.disabled = false;
+        }
+      });
+      loadSignup();
+
       async function loadUsers() {
         try {
           const users = await adminListUsers();
@@ -146,27 +202,32 @@
 
       function renderUsers(users) {
         if (!users.length) { list.innerHTML = '<p class="list-empty">No users yet.</p>'; return; }
+        const when = (t, withYear) => t
+          ? new Date(t).toLocaleString(undefined, withYear
+              ? { year: 'numeric', month: 'short', day: 'numeric' }
+              : { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })
+          : '';
         const rows = users.map((u) => {
           const isMe = me && u.user_id === me.id;
-          const admin = u.is_admin ? ' <span class="badge-admin">ADMIN</span>' : '';
-          const display = u.username || u.email.split('@')[0];
-          const last = u.last_sign_in_at
-            ? new Date(u.last_sign_in_at).toLocaleString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })
-            : '—';
+          const tags = (u.is_admin ? ' <span class="badge-admin">ADMIN</span>' : '')
+            + (u.confirmed === false ? ' <span class="badge-pending" title="Has not opened the confirmation email yet">UNCONFIRMED</span>' : '')
+            + (isMe ? ' <span class="u-email">(you)</span>' : '');
+          const cell = (v) => v ? escapeHtml(v) : '<span class="u-muted">—</span>';
           return `
             <tr>
-              <td>
-                <div class="u-name">${escapeHtml(display)}${admin}${isMe ? ' <span class="u-email">(you)</span>' : ''}</div>
-                <div class="u-email">${escapeHtml(u.email)}</div>
-              </td>
-              <td class="u-when">${escapeHtml(last)}</td>
+              <td><span class="u-name">${cell(u.username)}</span>${tags}</td>
+              <td>${cell(u.display_name)}</td>
+              <td class="u-email">${cell(u.email)}</td>
+              <td class="u-when" title="${escapeHtml(u.created_at ? new Date(u.created_at).toLocaleString() : '')}">${cell(when(u.created_at, true))}</td>
+              <td class="u-when">${u.last_sign_in_at ? escapeHtml(when(u.last_sign_in_at)) : '<span class="u-muted">Never</span>'}</td>
             </tr>`;
         }).join('');
         list.innerHTML = `
-          <table class="user-table">
-            <thead><tr><th>User</th><th>Last sign-in</th></tr></thead>
+          <div class="table-scroll"><table class="user-table">
+            <thead><tr><th>Username</th><th>Display name</th><th>Email</th><th>Created</th><th>Last sign-in</th></tr></thead>
             <tbody>${rows}</tbody>
-          </table>`;
+          </table></div>
+          <p class="list-note" style="margin: var(--space-3) 0 0">${users.length} account${users.length === 1 ? '' : 's'}</p>`;
       }
 
       function humanErr(err) {

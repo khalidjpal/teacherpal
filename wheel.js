@@ -26,7 +26,7 @@
 //
 // Two themes swap the wheel for a SKIN: halloween a cauldron (cauldron.js -
 // names float in the brew as bubbles; a pick boils it, lifts the winner's
-// bubble and pops it), marwa a bubble tea cup (boba.js - a pearl per
+// bubble and pops it), pink a bubble tea cup (boba.js - a pearl per
 // student; a pick shakes the cup, swirls the pearls and draws one up the
 // straw). Everything above still holds - the winner is drawn first, here -
 // only the picture differs: runSpin() hands the spin descriptor to the
@@ -341,7 +341,7 @@
     if (n % 2 === 1 && i === n - 1 && step === 0) step = 2;
     return step;
   }
-  // marwa paints from its own five pastels (--wheel-p0 ... p4: pink, lavender,
+  // pink paints from its own five pastels (--wheel-p0 ... p4: pink, lavender,
   // mint, peach, butter) in order; every slice carries both classes so a live
   // theme switch repaints without a redraw. A count that leaves the last
   // slice on the first one's colour takes a colour clear of both neighbours.
@@ -383,7 +383,7 @@
         shape = doc.createElementNS(NS, 'path');
         shape.setAttribute('d', slicePath(a0, a1));
       }
-      // r0-r7 is the graduated ramp; p0-p4 is marwa's pastel cycle.
+      // r0-r7 is the graduated ramp; p0-p4 is pink's pastel cycle.
       shape.setAttribute('class', `slice r${rampIndex(i, n)} p${pastelIndex(i, n)}`);
       shape.setAttribute('data-id', item.id);
       rotor.appendChild(shape);
@@ -398,7 +398,7 @@
       text.setAttribute('y', '50');
       text.setAttribute('dominant-baseline', 'central');
       // Size by slice count AND name length: a long name in a wide face
-      // (marwa's Comfortaa) would otherwise run under the hub. Measuring here
+      // (pink's Comfortaa) would otherwise run under the hub. Measuring here
       // is unreliable - the webfont often hasn't loaded yet - so this is a
       // deterministic fit against the rim-to-hub gap.
       // Size against the rim-to-hub gap, and once that would take the name
@@ -410,9 +410,9 @@
       // names run from RIM_PAD inside the rim (clear of the pointer tip) to
       // just outside the hub
       const gap = isPopout ? R - 26 : R - 20;
-      const wide = (document.documentElement.getAttribute('data-theme') || 'jarvis') !== 'marwa'
-        ? 0.68        // jarvis: mono, uppercase - wider per character
-        : 0.62;       // marwa: Comfortaa
+      const wide = (document.documentElement.getAttribute('data-theme') || 'default') !== 'pink'
+        ? 0.68        // default: mono, uppercase - wider per character
+        : 0.62;       // pink: Comfortaa
       const MIN_SIZE = 2.6;
       let label = item.label;
       let size = Math.min(labelSize(n), gap / (wide * Math.max(1, label.length)));
@@ -435,7 +435,7 @@
       text.textContent = label;
       rotor.appendChild(text);
 
-      // Long names (and marwa's wider face) would run past the hub, so squeeze
+      // Long names (and pink's wider face) would run past the hub, so squeeze
       // anything that doesn't fit the rim-to-hub gap instead of letting it
       // collide with the centre.
       try {
@@ -447,7 +447,7 @@
       } catch { /* not laid out yet - leave it */ }
     });
 
-    // Thin glowing divider between slices (jarvis; hidden in marwa, which
+    // Thin glowing divider between slices (default; hidden in pink, which
     // separates its pastels with a plain white stroke instead).
     if (n > 1) {
       const divs = doc.createElementNS(NS, 'g');
@@ -465,7 +465,7 @@
 
   // The static instrument ring around the wheel: degree ticks every 10 with a
   // longer mark every 30, plus four corner brackets. Drawn once per document,
-  // outside the rotor so it never spins. jarvis only (CSS hides it in marwa).
+  // outside the rotor so it never spins. default only (CSS hides it in pink).
   function buildDialRing(doc) {
     const dial = doc.getElementById('wheel-dial');
     if (!dial || dial.childElementCount) return;
@@ -867,7 +867,7 @@
         s.classList.toggle('won', !!winnerId && s.getAttribute('data-id') === winnerId);
       });
     }
-    // marwa's mascot reacts to the landing (collapses in other themes)
+    // pink's mascot reacts to the landing (collapses in other themes)
     const mascot = $('wheel-mascot');
     if (mascot) mascot.dataset.mood = winnerId ? 'party' : (spin ? 'spin' : 'idle');
     // the skins show the name too (above the cauldron / out of the capsule)
@@ -1025,8 +1025,8 @@
     });
   }
 
-  // A few sparkle/glow bits for the result panel (marwa shows them as hearts
-  // and stars, jarvis as a single accent flash - see the CSS).
+  // A few sparkle/glow bits for the result panel (pink shows them as hearts
+  // and stars, default as a single accent flash - see the CSS).
   function buildSparks(doc) {
     const box = doc.getElementById('wheel-sparks');
     if (!box || box.childElementCount) return;
@@ -1038,10 +1038,10 @@
     }
   }
 
-  // marwa's bunny beside the wheel. One inline SVG so its parts can move:
+  // pink's bunny beside the wheel. One inline SVG so its parts can move:
   // the pose is pure CSS off data-mood on #wheel-mascot (idle: calm, ears
   // relaxed; spin: ears perk, eyes go wide; party: happy eyes, a bounce and a
-  // burst of hearts). Built in every theme, shown only in marwa.
+  // burst of hearts). Built in every theme, shown only in pink.
   const BUDDY_SVG = `<svg class="wb-svg" viewBox="0 0 80 96" aria-hidden="true">
     <ellipse class="wb-shadow" cx="40" cy="92" rx="21" ry="3.2"/>
     <g class="wb-hop"><g class="wb-breathe">
@@ -1137,7 +1137,7 @@
       horn.addEventListener('click', startSpin);
       horn.addEventListener('keydown', (e) => { if (e.key === 'Enter' && e.target === horn) { e.preventDefault(); startSpin(); } });
     }
-    // marwa: the whole bubble tea cup (its hit area is #boba-straw, sized
+    // pink: the whole bubble tea cup (its hit area is #boba-straw, sized
     // over the cup in the CSS)
     const straw = $('boba-straw');
     if (straw) straw.addEventListener('click', startSpin);
@@ -1177,7 +1177,7 @@
       if (document.visibilityState === 'visible' && !document.querySelector('dialog[open]')) reloadPicks();
     });
     // a finished round is held only while the jar is on screen: leaving
-    // marwa refills it like any other round
+    // pink refills it like any other round
     document.addEventListener('teacherpal:theme', () => { if (!spin) { rebuildPool(); broadcast(); } });
     $('wheel-norepeat').addEventListener('click', () => {
       noRepeats = !noRepeats;

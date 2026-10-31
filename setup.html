@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Set up — TeacherPal</title>
+  <meta name="color-scheme" content="dark">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Comfortaa:wght@400;500;600;700&family=Quicksand:wght@400;500;600;700&family=JetBrains+Mono&family=Nunito:wght@400;600;700&family=Orbitron:wght@500;600;700&family=Rajdhani:wght@500;600;700&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+  <script>(function(){try{var t=localStorage.getItem('teacherpal.theme')||'default';t={jarvis:'default',marwa:'pink',earthy:'default'}[t]||t;document.documentElement.setAttribute('data-theme',t);}catch(e){document.documentElement.setAttribute('data-theme','default');}})();</script>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body class="hub">
+  <div class="app">
+    <header class="topbar"></header>
+
+    <main class="page setup-page">
+      <section class="setup-card" aria-labelledby="sw-title">
+        <div class="sw-head">
+          <ol class="sw-steps" id="sw-steps" aria-label="Setup steps">
+            <li data-step="0">Periods</li>
+            <li data-step="1">Classes</li>
+            <li data-step="2">Students</li>
+            <li data-step="3">Look</li>
+          </ol>
+          <button type="button" class="ghost sw-skip" id="sw-skip">Skip setup</button>
+        </div>
+
+        <!-- 0: periods -->
+        <div class="sw-panel" data-panel="0">
+          <p class="sw-kicker" id="sw-hello">Welcome</p>
+          <h1 class="sw-title" id="sw-title">Which periods do you teach?</h1>
+          <p class="sw-lead">Pick every bell period you have a class in. The rest show as prep. You can change this later from the gear menu.</p>
+          <div class="sw-periods" id="sw-periods"></div>
+        </div>
+
+        <!-- 1: classes -->
+        <div class="sw-panel" data-panel="1" hidden>
+          <h1 class="sw-title">What do you teach in each?</h1>
+          <p class="sw-lead">Periods with the same class name share their lesson plans. Leave one blank if you'd rather not say.</p>
+          <div class="sw-rows" id="sw-classes"></div>
+        </div>
+
+        <!-- 2: students -->
+        <div class="sw-panel" data-panel="2" hidden>
+          <h1 class="sw-title">Add your students</h1>
+          <p class="sw-lead">Paste each class list, one name per line (First Last). Optional: you can add them later in Rosters.</p>
+          <div class="sw-rosters" id="sw-rosters"></div>
+        </div>
+
+        <!-- 3: theme -->
+        <div class="sw-panel" data-panel="3" hidden>
+          <h1 class="sw-title">Pick a look</h1>
+          <p class="sw-lead">It changes as you click. Switch any time from the gear menu.</p>
+          <div class="sw-themes" id="sw-themes" role="radiogroup" aria-label="Theme"></div>
+        </div>
+
+        <div class="sw-msg" id="sw-msg" role="status" aria-live="polite"></div>
+        <div class="sw-foot">
+          <button type="button" class="ghost" id="sw-back">Back</button>
+          <button type="button" class="primary" id="sw-next">Next</button>
+        </div>
+      </section>
+      <div id="status" class="status" hidden></div>
+    </main>
+  </div>
+
+  <script src="shared.js"></script>
+  <script src="schedule.js"></script>
+  <script src="nav.js"></script>
+  <script>
+    (function () {
+      if (!hasSession()) return;   // shared.js already sent us to login
+      const $ = (id) => document.getElementById(id);
+      const LAST = 3;
+      const ORD = (n) => n + ({ 1: 'st', 2: 'nd', 3: 'rd' }[n] || 'th');
+
+      let step = 0;
+      let periods = [];                 // the roster's periods (rows)
+      let chosen = new Set();           // bell numbers taught
+      const classOf = new Map();        // bell number → class name typed
+      const pasted = new Map();         // bell number → roster text typed
+      const imported = new Map();       // bell number → text already added (so Back + Next doesn't add twice)
+      let busy = false;
+
+      const name = displayName();
+      $('sw-hello').textContent = name ? `Welcome, ${name}` : 'Welcome';
+
+      init();
+
+      async function init() {
+        try { periods = await getPeriods(); } catch (err) { showError(err); periods = []; }
+        const t = currentTeachesPeriods();
+        // the untouched default is all eight: start blank instead
+        if (t && t.length && t.length < 8) t.forEach((n) => chosen.add(n));
+        for (const p of periods) {
+          const { n, course } = parsePeriodName(p.name);
+          if (n === null) continue;
+          if (!t || t.length === 8) chosen.add(n);
+          if (course && !classOf.has(n)) classOf.set(n, course);
+        }
+        render();
+      }
+
+      // ---------- steps ----------
+      function render() {
+        document.querySelectorAll('.sw-panel').forEach((el) => { el.hidden = Number(el.dataset.panel) !== step; });
+        document.querySelectorAll('#sw-steps li').forEach((li) => {
+          const i = Number(li.dataset.step);
+          li.classList.toggle('done', i < step);
+          if (i === step) li.setAttribute('aria-current', 'step'); else li.removeAttribute('aria-current');
+        });
+        $('sw-back').hidden = step === 0;
+        $('sw-next').textContent = step === LAST ? 'Finish' : 'Next';
+        msg('');
+        [renderPeriods, renderClasses, renderRosters, renderThemes][step]();
+      }
+
+      function renderPeriods() {
+        $('sw-periods').innerHTML = [0, 1, 2, 3, 4, 5, 6, 7].map((n) => `
+          <button type="button" class="sw-period" data-n="${n}" aria-pressed="${chosen.has(n)}">
+            <span class="sw-period-n">${n}</span><span class="sw-period-l">${n === 0 ? 'zero' : ORD(n)}</span>
+          </button>`).join('');
+      }
+      $('sw-periods').addEventListener('click', (e) => {
+        const b = e.target.closest('.sw-period');
+        if (!b) return;
+        const n = Number(b.dataset.n);
+        if (chosen.has(n)) chosen.delete(n); else chosen.add(n);
+        b.setAttribute('aria-pressed', chosen.has(n));
+        msg('');
+      });
+
+      const taught = () => [...chosen].sort((a, b) => a - b);
+
+      function renderClasses() {
+        $('sw-classes').innerHTML = taught().map((n) => `
+          <label class="sw-row">
+            <span class="sw-row-k">Period ${n}</span>
+            <input type="text" data-n="${n}" maxlength="60" placeholder="e.g. English 9" value="${escapeHtml(classOf.get(n) || '')}">
+          </label>`).join('');
+        const first = $('sw-classes').querySelector('input');
+        if (first) first.focus();
+      }
+      $('sw-classes').addEventListener('input', (e) => {
+        if (e.target.dataset.n) classOf.set(Number(e.target.dataset.n), e.target.value.trim());
+      });
+
+      function renderRosters() {
+        $('sw-rosters').innerHTML = taught().map((n) => {
+          const p = periodFor(n);
+          const label = classOf.get(n) ? `Period ${n} · ${classOf.get(n)}` : `Period ${n}`;
+          return `
+            <label class="sw-roster">
+              <span class="sw-row-k">${escapeHtml(label)} <span class="sw-count" data-count="${n}"></span></span>
+              <textarea data-n="${n}" rows="4" placeholder="One name per line">${escapeHtml(pasted.get(n) || '')}</textarea>
+            </label>`;
+        }).join('');
+        taught().forEach(updateCount);
+      }
+      $('sw-rosters').addEventListener('input', (e) => {
+        const n = Number(e.target.dataset.n);
+        if (!Number.isNaN(n)) { pasted.set(n, e.target.value); updateCount(n); }
+      });
+      const parseNames = (text) => String(text || '').split(/[\n,]/).map((s) => s.trim()).filter(Boolean);
+      function updateCount(n) {
+        const el = document.querySelector(`[data-count="${n}"]`);
+        const k = parseNames(pasted.get(n)).length;
+        if (el) el.textContent = k ? `${k} name${k === 1 ? '' : 's'}` : '';
+      }
+
+      function renderThemes() {
+        const cur = currentTheme();
+        $('sw-themes').innerHTML = THEMES.map((t) => `
+          <button type="button" class="sw-theme" role="radio" data-theme-id="${escapeHtml(t.id)}" aria-checked="${t.id === cur}">${escapeHtml(t.label)}
+          </button>`).join('');
+      }
+      $('sw-themes').addEventListener('click', (e) => {
+        const b = e.target.closest('.sw-theme');
+        if (!b) return;
+        setMyTheme(b.dataset.themeId);
+        renderThemes();
+      });
+
+      // ---------- saving each step ----------
+      function periodFor(n) {
+        return periods.find((p) => parsePeriodName(p.name).n === n) || null;
+      }
+
+      async function saveStep() {
+        if (step === 0) {
+          if (!chosen.size) { msg('Pick at least one period.'); return false; }
+          await setMyTeachesPeriods(taught());
+        }
+        if (step === 1) {
+          // a period row per taught bell number: "Period 3 - English 9"
+          for (const n of taught()) {
+            const course = classOf.get(n) || '';
+            const want = course ? `Period ${n} - ${course}` : `Period ${n}`;
+            const p = periodFor(n);
+            if (!p) periods.push(await createPeriod(want, n));
+            else if (course && parsePeriodName(p.name).course !== course) { await renamePeriod(p.id, want); p.name = want; }
+          }
+          await linkCourses();
+        }
+        if (step === 2) {
+          for (const n of taught()) {
+            const text = pasted.get(n) || '';
+            if (!text.trim() || imported.get(n) === text) continue;
+            const before = parseNames(imported.get(n));
+            const fresh = parseNames(text).filter((x) => !before.includes(x));
+            const p = periodFor(n);
+            if (p && fresh.length) {
+              const existing = await getStudents(p.id);
+              await addStudents(p.id, fresh, existing.length);
+            }
+            imported.set(n, text);
+          }
+        }
+        return true;
+      }
+
+      // Same class name → one course, so those periods share lesson plans.
+      // Skipped quietly before migration-courses.sql.
+      async function linkCourses() {
+        try {
+          const courses = await getCourses();
+          const byName = new Map(courses.map((c) => [c.name.toLowerCase(), c]));
+          for (const n of taught()) {
+            const course = classOf.get(n);
+            const p = periodFor(n);
+            if (!course || !p || p.course_id) continue;
+            let c = byName.get(course.toLowerCase());
+            if (!c) { c = await createCourse(course, byName.size); byName.set(course.toLowerCase(), c); }
+            await setPeriodCourse(p.id, c.id);
+            p.course_id = c.id;
+          }
+        } catch (err) { console.warn('courses skipped', err); }
+      }
+
+      async function finish() {
+        try { await markSetupDone(); } catch (err) { console.warn('setup flag', err); }
+        location.replace('index.html');
+      }
+
+      // ---------- buttons ----------
+      $('sw-next').addEventListener('click', async () => {
+        if (busy) return;
+        busy = true;
+        $('sw-next').disabled = $('sw-back').disabled = true;
+        try {
+          if (!(await saveStep())) return;
+          if (step === LAST) { await finish(); return; }
+          step++;
+          render();
+        } catch (err) {
+          msg(`Couldn't save that: ${(err && err.message) || err}`);
+        } finally {
+          busy = false;
+          $('sw-next').disabled = $('sw-back').disabled = false;
+        }
+      });
+      $('sw-back').addEventListener('click', () => { if (!busy && step > 0) { step--; render(); } });
+      $('sw-skip').addEventListener('click', () => {
+        if (confirm('Skip setup? You can set periods and rosters up any time from Rosters and the gear menu.')) finish();
+      });
+
+      function msg(text) { $('sw-msg').textContent = text || ''; }
+    })();
+  </script>
+</body>
+</html>

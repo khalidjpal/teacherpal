@@ -56,12 +56,16 @@ function renderTopNav() {
   const page = currentPage();
   const admin = typeof isAdmin === 'function' && isAdmin();
   const links = NAV_SECTIONS.map((section) => {
-    const items = section.items.filter((it) => !it.admin || admin);  // admin-only entries hide
-    if (!items.length) return '';
+    // Admin-only entries are always rendered, just hidden for non-admins, so
+    // the profile refresh can reveal them in place (the cached session may
+    // say is_admin false until shared.js re-reads the profile).
+    const items = section.items;
+    if (!items.some((it) => !it.admin || admin)) return '';
     const here = items.some((it) => it.href === page);               // highlight the section we're in
     const menu = items.map((it) => {
       const cur = it.href === page ? ' aria-current="page"' : '';
-      return `<a class="nav-item" role="menuitem" href="${it.href}"${cur}>${it.label}</a>`;
+      const adm = it.admin ? ` data-admin${admin ? '' : ' hidden'}` : '';
+      return `<a class="nav-item" role="menuitem" href="${it.href}"${cur}${adm}>${it.label}</a>`;
     }).join('');
     return `
       <div class="nav-group" data-section="${section.id}">
@@ -113,7 +117,7 @@ function wireNavMenus(header) {
   if (!groups.length) return;
   let openTimer = null, closeTimer = null;
 
-  const items = (g) => [...g.querySelectorAll('.nav-item')];
+  const items = (g) => [...g.querySelectorAll('.nav-item:not([hidden])')];
   const isOpen = (g) => g.dataset.open === '1';
 
   function open(g, { focusFirst = false } = {}) {
@@ -193,7 +197,7 @@ function wireNavMenus(header) {
 // lives on the profile).
 function renderSettingsMenu() {
   const themes = (typeof THEMES !== 'undefined' && Array.isArray(THEMES)) ? THEMES : [];
-  const current = (typeof currentTheme === 'function') ? currentTheme() : 'jarvis';
+  const current = (typeof currentTheme === 'function') ? currentTheme() : 'default';
   const themeItems = themes.map((t) => `
     <label class="hud-menu-item">
       <input type="radio" name="theme" value="${escapeHtml(t.id)}"${t.id === current ? ' checked' : ''}>
@@ -286,6 +290,8 @@ document.addEventListener('teacherpal:profile', () => {
     const email = (typeof currentUser === 'function' && currentUser() && currentUser().email) || '';
     if (chip) chip.title = `Signed in as ${name}${email && email !== name ? ' (' + email + ')' : ''}`;
   }
+  const admin = typeof isAdmin === 'function' && isAdmin();
+  document.querySelectorAll('.nav-item[data-admin]').forEach((a) => { a.hidden = !admin; });
 });
 
 // today's schedule, re-resolved only when the date rolls over
@@ -307,8 +313,8 @@ function navTick() {
   const d = new Date();
   const t = document.getElementById('hud-time'), dt = document.getElementById('hud-date'), now = document.getElementById('hud-now');
   if (!t) return;
-  // 12h in marwa, 24h in jarvis (the default).
-  const hour12 = (typeof currentTheme === 'function' && currentTheme() === 'marwa');
+  // 12h in pink, 24h in default (the default).
+  const hour12 = (typeof currentTheme === 'function' && currentTheme() === 'pink');
   t.textContent = fmtWallClock(d, { hour12, seconds: true });
   dt.textContent = d.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' }).toUpperCase();
   const sched = navSchedFor(d);

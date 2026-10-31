@@ -1,4 +1,4 @@
-// boba.js — the Name Wheel's marwa skin: a bubble tea cup.
+// boba.js — the Name Wheel's pink skin: a bubble tea cup.
 //
 // Like cauldron.js (halloween), this only draws and animates. wheel.js owns
 // the roster, the pool, No repeats and the pick itself (the winner is drawn
@@ -77,7 +77,7 @@
   if (spotChan) spotChan.addEventListener('message', (ev) => {
     if (ev.data && ev.data.type === 'boba-dismiss') views.forEach((v) => dismiss(v, false, false));
   });
-  const isOn = (doc) => doc.documentElement.getAttribute('data-theme') === 'marwa';
+  const isOn = (doc) => doc.documentElement.getAttribute('data-theme') === 'pink';
   const rnd = (a, b) => a + Math.random() * (b - a);
   const clamp01 = (x) => Math.max(0, Math.min(1, x));
   const lerp = (a, b, t) => a + (b - a) * t;

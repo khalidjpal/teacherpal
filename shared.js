@@ -19,8 +19,9 @@ const SUPABASE_URL = 'https://pnkgblhdagusaysvclka.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBua2dibGhkYWd1c2F5c3ZjbGthIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODk1OTA4OTgsImV4cCI6MjEwNTE2Njg5OH0.KqzPdCtU2kIl-i9qHGOOkotqlVlGS53jx5DcHydTmL4';
 
 // ---------------------------------------------------------------------------
-// Auth — Supabase email/password, no public sign-up (accounts created in the
-// Supabase dashboard). Session persists in localStorage and refreshes itself
+// Auth — Supabase email/password. Accounts come from the Supabase dashboard
+// or from self sign-up on login.html (only while an admin has it open, see
+// signUp() below). Session persists in localStorage and refreshes itself
 // silently. Pages without `body.no-auth` are redirected to login.html when
 // there is no session (or the refresh fails).
 // ---------------------------------------------------------------------------
@@ -83,6 +84,7 @@ function normalizeSession(raw) {
         teaches_periods: (prevUser && Array.isArray(prevUser.teaches_periods))
           ? prevUser.teaches_periods.slice()
           : null,
+        setup_done: prevUser ? prevUser.setup_done !== false : true,
       }
     : prevUser;
   return {
@@ -99,6 +101,14 @@ function normalizeSession(raw) {
 // to find the matching email. Password verification is Supabase's own; we
 // never touch hashes. If the username isn't found we throw the same generic
 // "Sign-in failed" so callers can't enumerate usernames.
+// Sign-in errors: .code, and .field ('id' | 'password' | null) so the form
+// can put the message under the right input.
+function signInError(message, code, field) {
+  const e = new Error(message);
+  e.code = code; e.field = field || null;
+  return e;
+}
+
 async function signIn(usernameOrEmail, password) {
   const raw = String(usernameOrEmail || '').trim();
   if (!raw || !password) throw new Error('Enter your username (or email) and password.');
@@ -106,7 +116,7 @@ async function signIn(usernameOrEmail, password) {
   let email = raw.toLowerCase();
   if (!raw.includes('@')) {
     email = await lookupEmailByUsername(raw);
-    if (!email) throw new Error('Sign-in failed.');
+    if (!email) throw signInError('That username or password isn\'t right.', 'bad_credentials', 'password');
   }
 
   const res = await fetch(`${SUPABASE_URL}/auth/v1/token?grant_type=password`, {
@@ -117,7 +127,16 @@ async function signIn(usernameOrEmail, password) {
   const data = await res.json().catch(() => ({}));
   if (!res.ok) {
     const msg = data.error_description || data.msg || data.message || 'Sign-in failed.';
-    throw new Error(msg);
+    if (/email not confirmed/i.test(msg) || data.error_code === 'email_not_confirmed') {
+      const e = signInError('Confirm your email first: open the link we sent you, then sign in.', 'email_not_confirmed', 'id');
+      e.email = email;
+      throw e;
+    }
+    if (/invalid login credentials/i.test(msg) || data.error_code === 'invalid_credentials') {
+      throw signInError('That username or password isn\'t right.', 'bad_credentials', 'password');
+    }
+    if (res.status === 429) throw signInError('Too many tries. Wait a minute, then try again.', 'rate_limited');
+    throw signInError(msg, 'failed');
   }
   saveSession(normalizeSession(data));
   await hydrateProfileIntoSession();
@@ -125,12 +144,18 @@ async function signIn(usernameOrEmail, password) {
   return _session;
 }
 
-// Anon-readable username → email lookup so people can log in with just
-// "khalid" instead of the full address. Returns null when the username
-// isn't in profiles (the caller reports a generic error either way).
+// Username → email lookup so people can log in with just "khalid" instead
+// of the full address: the email_for_username RPC (migration-self-signup.sql),
+// falling back to the old anon-readable profiles table before that
+// migration. Returns null when the username isn't found (the caller reports
+// a generic error either way).
 async function lookupEmailByUsername(username) {
   const u = String(username || '').trim();
   if (!u) return null;
+  try {
+    const email = await sb('rpc/email_for_username', { method: 'POST', body: { p_username: u } });
+    return email || null;
+  } catch { /* no RPC yet: the legacy lookup below */ }
   const url = new URL(`${SUPABASE_URL}/rest/v1/profiles`);
   url.searchParams.set('select', 'email');
   url.searchParams.set('username', `ilike.${u}`);
@@ -141,6 +166,39 @@ async function lookupEmailByUsername(username) {
   if (!res.ok) return null;
   const rows = await res.json().catch(() => []);
   return (rows[0] && rows[0].email) || null;
+}
+
+// The teacher's theme lives in profiles.theme, so it follows them from device
+// to device; localStorage only caches it for the no-flash head script.
+//   • a valid theme on the row  → that's the theme (an old id is renamed, and
+//                                 the renamed one written back)
+//   • NULL (never chosen on the server: every row from before
+//     migration-theme-rename.sql) → adopt this browser's choice and save it,
+//                                 so nobody loses the theme they picked
+//   • no column / no row        → the database can't say: keep what we have
+function profileTheme(p, cached) {
+  const local = (() => {
+    try { return normalizeTheme(localStorage.getItem(THEME_KEY)); } catch { return null; }
+  })();
+  if (!p || !('theme' in p)) {
+    const t = normalizeTheme(cached) || local;
+    return validTheme(t) ? t : DEFAULT_THEME;
+  }
+  if (p.theme == null) {
+    const t = validTheme(local) ? local : DEFAULT_THEME;
+    saveThemeToProfile(t);
+    return t;
+  }
+  const t = normalizeTheme(p.theme);
+  if (!validTheme(t)) return DEFAULT_THEME;
+  if (t !== p.theme) saveThemeToProfile(t);
+  return t;
+}
+
+// Fire-and-forget write of the theme to the signed-in teacher's profile.
+function saveThemeToProfile(theme) {
+  sb('rpc/set_my_theme', { method: 'POST', body: { p_theme: theme } })
+    .catch((err) => console.error('theme save', err));
 }
 
 // Fill session.user with username / display_name / is_admin / theme /
@@ -159,7 +217,7 @@ async function hydrateProfileIntoSession() {
     const rows = await sb('profiles', {
       params: {
         user_id: `eq.${_session.user.id}`,
-        select:  'username,display_name,email,is_admin,theme,teaches_periods',
+        select:  '*',   // own row only; * so a column a migration hasn't added yet can't fail the read
         limit:   '1',
       },
     });
@@ -170,10 +228,12 @@ async function hydrateProfileIntoSession() {
     _session.user.username        = p.username || null;
     _session.user.display_name    = p.display_name || null;
     _session.user.is_admin        = !!p.is_admin;
-    _session.user.theme           = p.theme || DEFAULT_THEME;
+    _session.user.theme           = profileTheme(p, _session.user.theme);
+    // No teaches_periods column (or no row) = nothing to learn: keep what we had.
     _session.user.teaches_periods = Array.isArray(p.teaches_periods)
       ? p.teaches_periods.slice()
-      : [0, 1, 2, 3, 4, 5, 6, 7];
+      : (Array.isArray(_session.user.teaches_periods) ? _session.user.teaches_periods : [0, 1, 2, 3, 4, 5, 6, 7]);
+    _session.user.setup_done      = p.setup_done !== false;   // missing column = an old account = done
 
     if (JSON.stringify(_session.user) === before) return;   // nothing moved
     saveSession(_session);
@@ -195,8 +255,8 @@ const isAdmin = () => !!(_session && _session.user && _session.user.is_admin);
 
 // How to address the signed-in teacher: profiles.display_name ("Mr. Pal"),
 // falling back to the username, then the local part of the email. Returns ''
-// when there's no session. Set display_name in the SQL editor — the app
-// never writes it.
+// when there's no session. Set at sign-up, or in the SQL editor — the app
+// never edits it afterwards.
 function displayName() {
   const u = _session && _session.user;
   if (!u) return '';
@@ -249,6 +309,211 @@ async function signOut() {
   redirectToLogin();
 }
 
+// ---------------------------------------------------------------------------
+// Self sign-up (login.html) and the first-run setup flag.
+//
+// Sign-up is Supabase's own /auth/v1/signup with email confirmation on. The
+// username and display name ride along as user metadata; the
+// handle_new_user() trigger (migration-self-signup.sql) turns them into the
+// profiles row (is_admin false, theme 'default', setup_done false), so no
+// profile write is needed from a browser that has no session yet. Whether
+// sign-up is open lives in app_settings (Admin page); while it's closed a
+// trigger on auth.users rejects self sign-ups server-side too.
+//
+// The confirmation email links back to login.html with the tokens in the
+// URL hash; completeAuthRedirect() turns that into a session.
+// ---------------------------------------------------------------------------
+
+const PASSWORD_MIN = 8;
+const USERNAME_RE = /^[A-Za-z0-9._-]{3,30}$/;
+
+// Is self sign-up open? false when it's closed, or before the migration.
+async function signupOpen() {
+  try { return (await sb('rpc/signup_status', { method: 'POST', body: {} })) === true; }
+  catch { return false; }
+}
+
+// true / false; throws when the check itself fails (network, no migration).
+async function usernameAvailable(username) {
+  return (await sb('rpc/username_available', { method: 'POST', body: { p_username: String(username || '').trim() } })) === true;
+}
+
+// Where the confirmation email sends people back to.
+function authRedirectUrl() {
+  const u = new URL(LOGIN_PAGE, location.href);
+  u.search = ''; u.hash = '';
+  return u.href;
+}
+
+// Errors carry .code (and .field, the form field to point at) so the page
+// can show them in the right place.
+function signupError(message, code, field) {
+  const e = new Error(message);
+  e.code = code; e.field = field || null;
+  return e;
+}
+
+// → { confirm: true } when an email went out (the usual case), or
+//   { confirm: false } when the project auto-confirms and we're signed in.
+async function signUp({ email, password, username, displayName }) {
+  const url = `${SUPABASE_URL}/auth/v1/signup?redirect_to=${encodeURIComponent(authRedirectUrl())}`;
+  const res = await fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', apikey: SUPABASE_ANON_KEY },
+    body: JSON.stringify({
+      email: String(email || '').trim().toLowerCase(),
+      password,
+      data: { username: String(username || '').trim(), display_name: String(displayName || '').trim() },
+    }),
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    const code = data.error_code || data.code || '';
+    const msg = String(data.msg || data.error_description || data.message || '');
+    if (code === 'user_already_exists' || code === 'email_exists' || /already registered/i.test(msg)) {
+      throw signupError('That email already has an account. Sign in instead.', 'email_taken', 'email');
+    }
+    if (code === 'weak_password' || /password/i.test(msg)) {
+      throw signupError(msg || `Use at least ${PASSWORD_MIN} characters for your password.`, 'weak_password', 'password');
+    }
+    if (code === 'signup_disabled' || /signups? not allowed/i.test(msg)) {
+      throw signupError('Sign-up is closed right now. Ask your admin for an account.', 'closed');
+    }
+    if (code === 'email_address_invalid' || /invalid.*email|email.*invalid/i.test(msg)) {
+      throw signupError('That doesn\'t look like a working email address.', 'bad_email', 'email');
+    }
+    if (res.status === 429 || /rate limit/i.test(msg)) {
+      throw signupError('Too many sign-up emails just now. Wait a few minutes and try again.', 'rate_limited');
+    }
+    if (/database error/i.test(msg)) {
+      // Our triggers said no: sign-up closed, or the username went in the meantime.
+      if (!(await signupOpen())) throw signupError('Sign-up is closed right now. Ask your admin for an account.', 'closed');
+      const free = await usernameAvailable(username).catch(() => true);
+      if (!free) throw signupError('That username was just taken. Try another.', 'username_taken', 'username');
+    }
+    throw signupError(msg || 'Sign-up failed. Try again.', 'failed');
+  }
+  if (data.access_token) {          // confirmation is off in this project
+    saveSession(normalizeSession(data));
+    await hydrateProfileIntoSession();
+    applyTheme((_session && _session.user && _session.user.theme) || DEFAULT_THEME);
+    return { confirm: false };
+  }
+  const user = data.user || data;
+  // With confirmation on, Supabase answers an already-registered address
+  // with a stand-in user that has no identities (it won't say so outright).
+  if (user && Array.isArray(user.identities) && user.identities.length === 0) {
+    throw signupError('That email already has an account. Sign in instead.', 'email_taken', 'email');
+  }
+  return { confirm: true };
+}
+
+async function resendSignupEmail(email) {
+  const res = await fetch(`${SUPABASE_URL}/auth/v1/resend?redirect_to=${encodeURIComponent(authRedirectUrl())}`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', apikey: SUPABASE_ANON_KEY },
+    body: JSON.stringify({ type: 'signup', email: String(email || '').trim().toLowerCase() }),
+  });
+  if (!res.ok) {
+    const data = await res.json().catch(() => ({}));
+    const msg = String(data.msg || data.error_description || data.message || '');
+    if (res.status === 429 || /rate limit|seconds/i.test(msg)) throw new Error('Wait a minute before sending another email.');
+    throw new Error(msg || 'Couldn\'t send the email. Try again.');
+  }
+}
+
+// Landing back from a confirmation email: login.html#access_token=…&type=signup
+// (or #error=…&error_description=… / ?error=… when the link is stale).
+// → null (nothing in the URL), { error }, or { signedIn: true }.
+// Clears the tokens out of the address bar either way.
+async function completeAuthRedirect() {
+  const hash = new URLSearchParams(location.hash.replace(/^#/, ''));
+  const query = new URLSearchParams(location.search);
+  const errText = hash.get('error_description') || query.get('error_description');
+  const token = hash.get('access_token');
+  if (!errText && !token) return null;
+  const clean = () => {
+    const q = new URLSearchParams(location.search);
+    ['error', 'error_code', 'error_description'].forEach((k) => q.delete(k));
+    const qs = q.toString();
+    history.replaceState(null, '', location.pathname + (qs ? `?${qs}` : ''));
+  };
+  if (errText) {
+    clean();
+    const code = hash.get('error_code') || query.get('error_code') || '';
+    return {
+      error: code === 'otp_expired' || /expired|invalid/i.test(errText)
+        ? 'That confirmation link has expired or was already used. Sign in below: if your email still needs confirming, you can send a new link from there.'
+        : errText.replace(/\+/g, ' '),
+    };
+  }
+  const type = hash.get('type') || '';
+  clean();
+  if (!['signup', 'magiclink', 'email', 'email_change', 'recovery'].includes(type)) {
+    return { error: 'That link isn\'t one TeacherPal can use. Sign in with your password.' };
+  }
+  const res = await fetch(`${SUPABASE_URL}/auth/v1/user`, {
+    headers: { apikey: SUPABASE_ANON_KEY, Authorization: `Bearer ${token}` },
+  });
+  if (!res.ok) return { error: 'That link didn\'t work. Sign in with your password.' };
+  const user = await res.json();
+  saveSession(normalizeSession({
+    access_token: token,
+    refresh_token: hash.get('refresh_token'),
+    expires_in: Number(hash.get('expires_in')) || 3600,
+    user,
+  }));
+  await hydrateProfileIntoSession();
+  applyTheme((_session && _session.user && _session.user.theme) || DEFAULT_THEME);
+  return { signedIn: true, recovery: type === 'recovery' };
+}
+
+// "Forgot password?": Supabase's reset email. Takes a username or an email.
+// Resolves the same way whether or not there is such an account, so the
+// page can't be used to find out who has one.
+async function requestPasswordReset(usernameOrEmail) {
+  const raw = String(usernameOrEmail || '').trim();
+  const email = raw.includes('@') ? raw.toLowerCase() : await lookupEmailByUsername(raw);
+  if (!email) return;
+  const res = await fetch(`${SUPABASE_URL}/auth/v1/recover?redirect_to=${encodeURIComponent(authRedirectUrl())}`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', apikey: SUPABASE_ANON_KEY },
+    body: JSON.stringify({ email }),
+  });
+  if (res.status === 429) throw new Error('Too many reset emails just now. Wait a few minutes and try again.');
+  if (res.status >= 500) throw new Error('Couldn\'t send the email right now. Try again in a moment.');
+}
+
+// The new password, from the reset link's session (login.html's reset panel).
+async function updatePassword(password) {
+  if (!_session) throw signupError('That reset link has expired. Ask for a new one.', 'no_session');
+  const res = await fetch(`${SUPABASE_URL}/auth/v1/user`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json', apikey: SUPABASE_ANON_KEY, Authorization: `Bearer ${_session.access_token}` },
+    body: JSON.stringify({ password }),
+  });
+  if (res.ok) return;
+  const data = await res.json().catch(() => ({}));
+  const code = data.error_code || data.code || '';
+  const msg = String(data.msg || data.error_description || data.message || '');
+  if (code === 'same_password' || /different from the old/i.test(msg)) {
+    throw signupError('That\'s your current password. Choose a new one.', 'same_password', 'password');
+  }
+  if (code === 'weak_password' || /password/i.test(msg)) throw signupError(msg, 'weak_password', 'password');
+  if (res.status === 401) throw signupError('That reset link has expired. Ask for a new one.', 'no_session');
+  throw signupError(msg || 'Couldn\'t save the new password. Try again.', 'failed');
+}
+
+// First-run setup (setup.html). New self-signed-up accounts start with
+// profiles.setup_done = false; finishing or skipping the wizard sets it.
+function needsSetup() {
+  return !!(_session && _session.user && _session.user.setup_done === false);
+}
+async function markSetupDone() {
+  if (_session && _session.user) { _session.user.setup_done = true; saveSession(_session); }
+  await sb('rpc/set_my_setup_done', { method: 'POST', body: { p_done: true } });
+}
+
 let _refreshInFlight = null;
 async function refreshSession() {
   if (!_session || !_session.refresh_token) return null;
@@ -284,7 +549,14 @@ function redirectToLogin() {
 // hit Supabase without a session. Also kicks off a silent refresh if the
 // token is close to expiring.
 _session = readStoredSession();
-if (isConfigured()) {
+// A confirmation email that came back to some other page (Supabase's Site
+// URL, say) carries its tokens or error in the hash: hand it to the login
+// page, which knows what to do with it.
+const AUTH_LANDING = /(?:^#|&)(?:access_token|error_description)=/.test(location.hash);
+if (AUTH_LANDING && !pageAllowsAnon()) {
+  if (document.documentElement) document.documentElement.style.visibility = 'hidden';
+  location.replace(LOGIN_PAGE + location.hash);
+} else if (isConfigured()) {
   if (!_session && !pageAllowsAnon()) {
     // Hide the page while we bounce to /login so the user doesn't see a flash.
     if (document.documentElement) document.documentElement.style.visibility = 'hidden';
@@ -365,6 +637,11 @@ async function sbFetch(table, { method = 'GET', params, body, prefer } = {}) {
 
 async function adminListUsers() {
   return sb('rpc/admin_list_users', { method: 'POST', body: {} });
+}
+
+// The self sign-up switch (app_settings.signup_open). Returns the new state.
+async function adminSetSignupOpen(open) {
+  return (await sb('rpc/admin_set_signup_open', { method: 'POST', body: { p_open: !!open } })) === true;
 }
 
 // ---------------------------------------------------------------------------
@@ -1258,28 +1535,40 @@ document.addEventListener('keydown', (e) => {
 // ---------------------------------------------------------------------------
 
 const THEME_KEY = 'teacherpal.theme';
-const DEFAULT_THEME = 'jarvis';
+const DEFAULT_THEME = 'default';
 const THEMES = [
-  { id: 'jarvis', label: 'Jarvis' },
-  { id: 'marwa',  label: 'Marwa'  },
-  { id: 'earthy', label: 'Earthy' },
+  { id: 'default', label: 'Default' },
+  { id: 'pink',    label: 'Pink'    },
   { id: 'halloween', label: 'Halloween' },
   { id: 'thanksgiving', label: 'Thanksgiving' },
 ];
+
+// Old theme ids, from before the rename (migration-theme-rename.sql moves
+// the profiles column over; this covers a stale localStorage / session cache
+// and a database that hasn't been migrated yet). The head script in every
+// page carries the same map.
+const LEGACY_THEMES = { jarvis: 'default', marwa: 'pink', earthy: 'default' };
+function normalizeTheme(id) { return (id && LEGACY_THEMES[id]) || id; }
 
 function validTheme(id) { return !!(id && THEMES.some((t) => t.id === id)); }
 function currentTheme() { return document.documentElement.getAttribute('data-theme') || DEFAULT_THEME; }
 
 // Apply and cache locally. Does not touch the server — call setMyTheme for that.
+// A page whose <html> carries data-theme-lock (login.html) keeps its own
+// theme on screen: the choice is still cached for the next page.
 function applyTheme(theme) {
+  theme = normalizeTheme(theme);
   const t = validTheme(theme) ? theme : DEFAULT_THEME;
-  document.documentElement.setAttribute('data-theme', t);
+  if (!document.documentElement.hasAttribute('data-theme-lock')) {
+    document.documentElement.setAttribute('data-theme', t);
+  }
   try { localStorage.setItem(THEME_KEY, t); } catch { /* ignore */ }
   document.dispatchEvent(new CustomEvent('teacherpal:theme', { detail: { theme: t } }));
 }
 
 // User-triggered theme change: apply immediately, save to server profile.
 async function setMyTheme(theme) {
+  theme = normalizeTheme(theme);
   const t = validTheme(theme) ? theme : DEFAULT_THEME;
   applyTheme(t);
   if (_session && _session.user) {

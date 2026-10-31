@@ -360,7 +360,7 @@ function createFormulaModal(opts) {
   const newId = () => Math.random().toString(36).slice(2, 9);
   const size = () => ({ W: map.clientWidth, H: map.clientHeight });
   const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
-  const softSkin = () => typeof currentTheme === 'function' && currentTheme() === 'marwa';   // paper + string
+  const softSkin = () => typeof currentTheme === 'function' && currentTheme() === 'pink';   // paper + string
   const f1 = (n) => n.toFixed(1);
 
   // ---- node positions: a view setting, this browser only ----
@@ -743,7 +743,7 @@ function createFormulaModal(opts) {
   }
 
   // One curve per rule; several rules on one pair fan out side by side.
-  // marwa hangs them like string (a sag); the graph skins draw them straight.
+  // pink hangs them like string (a sag); the graph skins draw them straight.
   function edgeGeom(r, k, n, W, H, soft) {
     const A = pos.get(r.a), B = pos.get(r.b);
     const [P0, P1] = r.a < r.b ? [{ x: A.x * W, y: A.y * H }, { x: B.x * W, y: B.y * H }] : [{ x: B.x * W, y: B.y * H }, { x: A.x * W, y: A.y * H }];

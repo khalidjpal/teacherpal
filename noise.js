@@ -32,7 +32,7 @@
   const LOUD_HOLD_MS = 3000;  // how long in the red before "Too loud" shows
   const CHIME_COOLDOWN_MS = 12000;
   const BROADCAST_MS = 100;
-  // The marwa mascot's mood follows the zone, but only once the zone has held
+  // The pink mascot's mood follows the zone, but only once the zone has held
   // for this long — a reading hovering on a boundary would otherwise make the
   // bunny twitch between poses. Display only: zones, the 3s "Too loud" hold
   // and the chime still use the raw zone.
@@ -270,8 +270,8 @@
     if (!isPopout) renderControls();
   }
 
-  // ---------- marwa: the bunny is the meter ----------
-  // Built into every .noise-meter (page and pop-out) but shown only in marwa;
+  // ---------- pink: the bunny is the meter ----------
+  // Built into every .noise-meter (page and pop-out) but shown only in pink;
   // the other themes show their own mascot or none. Every colour is
   // an --nm-* token, every pose is CSS off data-mood / data-alert, so a theme
   // switch from the gear menu needs no JS.

@@ -227,8 +227,8 @@ function fmt12(hhmm) {
 }
 
 // Wall clock for the top bar. Two formats picked per theme:
-//   • 24-hour: "22:14:37"  (jarvis, matches the HUD feel)
-//   • 12-hour: "10:14:37 PM"  (marwa; caller passes hour12=true)
+//   • 24-hour: "22:14:37"  (default, matches the HUD feel)
+//   • 12-hour: "10:14:37 PM"  (pink; caller passes hour12=true)
 // Seconds are optional so pages can render the same time compactly.
 function fmtWallClock(date, { hour12 = false, seconds = true } = {}) {
   const pad = (n) => String(n).padStart(2, '0');

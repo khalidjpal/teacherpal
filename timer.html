@@ -8,7 +8,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Comfortaa:wght@400;500;600;700&family=Quicksand:wght@400;500;600;700&family=JetBrains+Mono&family=Nunito:wght@400;600;700&family=Orbitron:wght@500;600;700&family=Rajdhani:wght@500;600;700&family=Share+Tech+Mono&family=Pirata+One&display=swap" rel="stylesheet">
-  <script>(function(){try{var t=localStorage.getItem('teacherpal.theme')||'jarvis';document.documentElement.setAttribute('data-theme',t);}catch(e){document.documentElement.setAttribute('data-theme','jarvis');}})();</script>
+  <script>(function(){try{var t=localStorage.getItem('teacherpal.theme')||'default';t={jarvis:'default',marwa:'pink',earthy:'default'}[t]||t;document.documentElement.setAttribute('data-theme',t);}catch(e){document.documentElement.setAttribute('data-theme','default');}})();</script>
   <link rel="stylesheet" href="style.css">
 </head>
 <body class="hub">
@@ -31,8 +31,8 @@
 
         <div class="timer-label" id="timer-label"></div>
 
-        <!-- One dial, two skins: jarvis lights the segment ring + instrument
-             marks, marwa the thick gradient arc. timer.js fills #timer-segs,
+        <!-- One dial, two skins: default lights the segment ring + instrument
+             marks, pink the thick gradient arc. timer.js fills #timer-segs,
              #timer-marks and #timer-burst (see buildDial). -->
         <div class="timer-display-wrap" id="timer-dial-wrap" data-state="" data-mode="countdown">
           <svg class="timer-dial" id="timer-dial" viewBox="0 0 100 100" aria-hidden="true">
@@ -53,8 +53,8 @@
           <span class="timer-burst" id="timer-burst" aria-hidden="true"></span>
         </div>
 
-        <!-- marwa only (the class collapses in every other theme) -->
-        <span class="timer-mascot marwa-mascot" id="timer-mascot" data-mascot="bunny" data-mood="idle"></span>
+        <!-- pink only (the class collapses in every other theme) -->
+        <span class="timer-mascot pink-mascot" id="timer-mascot" data-mascot="bunny" data-mood="idle"></span>
 
         <div class="timer-actions">
           <button type="button" id="timer-start" class="primary big">Start</button>
