@@ -14,91 +14,93 @@
        A teacher's own theme is still cached for the pages after it. -->
   <link rel="stylesheet" href="style.css">
   <style>
-    /* ---------- layout: intro beside the form on wide screens ---------- */
-    main.login-page {
-      display: grid;
-      place-items: center;
-      min-height: 100dvh;
-      width: 100%;
-      overflow-x: hidden;
-      padding: var(--space-6) var(--space-5);
+    /* ---------- layout: wordmark + headline over a centred card, the
+       features as small cards floating either side of it ----------
+       The app locks <body> to the viewport (overflow: hidden) for its
+       one-screen tools, so this page scrolls inside <main>. The stage is
+       centred with margin: auto, which (unlike place-items) never pushes
+       the top of a tall card out of reach. */
+    /* The first screen: heading + card, the features section below the fold. */
+    .login-hero-sec {
+      min-height: 100%;
+      display: flex;
+      padding: var(--nav-clear) var(--space-5) clamp(1rem, 3vh, 2rem);
     }
-    .login-shell {
-      width: min(62rem, 100%);
+    /* Headline + card, one group, centred in the space under the nav and
+       lifted a little above the middle (the padding under it), so it sits
+       where the eye expects rather than low on a tall window. */
+    .login-stage {
+      margin: auto;
+      width: min(27rem, 100%);
       display: grid;
-      grid-template-columns: minmax(0, 1fr) minmax(0, 27rem);
-      gap: clamp(2.5rem, 6vw, 5rem);
-      align-items: center;
+      justify-items: center;
+      gap: clamp(1.25rem, 3.5vh, 2rem);
+      padding-bottom: clamp(0rem, 7vh, 4rem);
     }
 
-    /* ---------- intro: name, one line, a few features ---------- */
-    .login-brand {
-      display: flex; align-items: center; gap: var(--space-3);
-      font-family: var(--font-display);
-      text-transform: uppercase;
-      letter-spacing: 0.32em;
-      font-size: 0.95rem;
-      color: var(--text);
-    }
-    .login-brand-mark {
-      width: 0.95rem; height: 0.95rem;
-      background: var(--accent);
-      transform: rotate(45deg);
-      box-shadow: 0 0 14px var(--accent-glow);
-    }
+    /* ---------- background: flat page colour, no glow ----------
+       No top wash, no ambient light pools: just --bg-0 and the hub grid
+       texture (body.hub::before) over it. Card and nav shadows unaffected. */
+    body.flat-bg { background: var(--bg-0); }
+    body.flat-bg .site-ambient { display: none; }
+
+    /* ---------- heading: one line over the card ---------- */
+    .login-head { display: grid; justify-items: center; gap: var(--space-3); text-align: center; }
     .login-tagline {
-      margin: var(--space-4) 0 0;
+      margin: 0;
       font-family: var(--font-body);
       font-weight: var(--fw-bold);
-      font-size: clamp(1.45rem, 1.1rem + 1.1vw, 2.1rem);
-      line-height: 1.15;
+      font-size: clamp(1.6rem, 1.1rem + 1.3vw, 2.4rem);
+      line-height: 1.1;
       color: var(--text);
-      max-width: 22ch;
     }
-    .login-sub { margin: var(--space-3) 0 0; color: var(--text-2); line-height: 1.5; max-width: 40ch; }
-    .login-features {
-      list-style: none;
-      margin: var(--space-6) 0 0;
-      padding: var(--space-5) 0 0;
-      border-top: 1px solid var(--border);
-      display: grid;
-      gap: var(--space-4);
-    }
-    .login-features li { display: grid; grid-template-columns: 2.4rem minmax(0, 1fr); gap: var(--space-3); align-items: start; }
-    .login-features .lf-icon {
-      width: 2.4rem; height: 2.4rem;
-      display: grid; place-items: center;
-      border: 1px solid var(--hud-line);
-      border-radius: var(--radius-sm);
-      color: var(--accent-ink);
-      background: var(--card-2);
-    }
-    .login-features svg { width: 1.2rem; height: 1.2rem; }
-    .login-features b { display: block; color: var(--text); font-weight: var(--fw-semibold); }
-    .login-features span { color: var(--text-muted); font-size: var(--fs-sm); }
-    @media (max-width: 860px) {
-      .login-shell { grid-template-columns: minmax(0, 27rem); justify-content: center; gap: var(--space-5); }
-      .login-features { display: none; }
-    }
-    @media (max-width: 860px) { .login-intro { text-align: center; } .login-brand { justify-content: center; } .login-tagline, .login-sub { margin-inline: auto; } }
 
-    /* ---------- the card ---------- */
-    .login-box {
+    .login-center { width: 100%; }
+
+    @media (max-width: 520px) {
+      .login-hero-sec { padding-inline: var(--space-3); }
+    }
+
+    /* ---------- the card: one surface, the panels swap inside it ---------- */
+    /* Depth from the theme's own tokens, no coloured halo: a surface a shade
+       lighter at the top, a lighter top edge, and three stacked shadows
+       (contact, near, far). All box-shadows, so the resize animation's
+       overflow clip never cuts them. */
+    .login-cards {
+      --card-light: color-mix(in srgb, var(--text) 9%, transparent);
       position: relative;
       width: 100%;
-      background: var(--card);
+      background: linear-gradient(180deg, color-mix(in srgb, var(--card-3) 80%, var(--card)), var(--card) 60%);
       border: 1px solid var(--border-strong);
+      border-top-color: color-mix(in srgb, var(--text) 16%, transparent);
       border-radius: var(--radius-lg);
-      padding: var(--space-6) clamp(1.5rem, 4vw, 2.5rem);
-      box-shadow: var(--shadow-card);
+      box-shadow:
+        inset 0 1px 0 var(--card-light),
+        0 1px 2px var(--shadow-text),
+        0 10px 24px -6px var(--shadow-text),
+        0 30px 60px -12px var(--shadow-text);
     }
-    .login-box::before {
+    .login-cards::before {
       content: "";
       position: absolute; inset: 0 var(--space-5) auto;
       height: 1px;
-      background: var(--gradient-glow-top);
+      background: linear-gradient(90deg, transparent, color-mix(in srgb, var(--text) 26%, transparent), transparent);
+    }
+    .login-cards:hover {
+      translate: 0 -2px;
+      box-shadow:
+        inset 0 1px 0 var(--card-light),
+        0 1px 2px var(--shadow-text),
+        0 14px 30px -6px var(--shadow-text),
+        0 40px 80px -12px var(--shadow-text);
+    }
+    .login-cards.resizing { overflow: clip; }
+    .login-box {
+      padding: var(--space-6) clamp(1.5rem, 4vw, 2.5rem);
     }
     .login-box[hidden] { display: none; }
+    /* the panel being replaced, fading out over the new one */
+    .login-box.leaving { position: absolute; inset: 0 0 auto; pointer-events: none; }
     .login-title {
       font-family: var(--font-display);
       font-weight: var(--fw-medium);
@@ -119,7 +121,7 @@
     .login-lead b { color: var(--text); overflow-wrap: anywhere; }
 
     .login-form { display: grid; gap: var(--space-4); }
-    .login-field { display: grid; gap: var(--space-2); }
+    .login-field { display: grid; gap: var(--space-2); align-content: start; }
     .login-label-row { display: flex; justify-content: space-between; align-items: baseline; gap: var(--space-3); }
     .login-field label {
       font-family: var(--font-body);
@@ -128,6 +130,7 @@
       letter-spacing: 0.1em;
       font-size: var(--fs-xs);
       color: var(--text-muted);
+      transform-origin: left center;
     }
     .login-field input {
       width: 100%;
@@ -135,10 +138,58 @@
       padding: 0.6rem 0.9rem;
       font-size: var(--fs-md);
     }
+    .login-field input:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 1px var(--accent);   /* a crisp ring, no glow */
+    }
+    .login-field:focus-within label { color: var(--accent-ink); transform: translateY(-1px); }
     .login-field input[aria-invalid="true"] { border-color: var(--danger); }
-    .login-field input[aria-invalid="true"]:focus { box-shadow: 0 0 0 0.18rem color-mix(in srgb, var(--danger) 35%, transparent); }
+    .login-field input[aria-invalid="true"]:focus { box-shadow: 0 0 0 1px var(--danger); }
     .login-row2 { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-3); }
     @media (max-width: 480px) { .login-row2 { grid-template-columns: 1fr; } }
+
+    /* Sign-up has the most fields: a shorter header and tighter rows, so
+       it fits a 768px-tall laptop without scrolling. */
+    #signup-form { padding-block: var(--space-5); }
+    #signup-form .login-hero { font-size: var(--fs-lg); margin-bottom: var(--space-4); }
+    #signup-form .login-form { gap: var(--space-3); }
+    #signup-form .login-field { gap: 0.3rem; }
+    #signup-form .login-field label { font-size: 0.78rem; }
+    #signup-form .login-field input { min-height: 2.5rem; padding-block: 0.45rem; }
+    #signup-form .login-back { margin-top: var(--space-3); }
+
+    /* show / hide password */
+    .pw-wrap { position: relative; }
+    .pw-wrap input { padding-right: 2.8rem; }
+    .pw-toggle {
+      position: absolute; top: 50%; right: 0.3rem;
+      translate: 0 -50%;
+      width: 2.2rem; min-height: 2.2rem; height: 2.2rem;
+      padding: 0;
+      border: 0; background: none;
+      color: var(--text-muted);
+      border-radius: var(--radius-sm);
+    }
+    .pw-toggle:hover, .pw-toggle:focus-visible { background: var(--card-3); color: var(--text); border: 0; translate: 0 -50%; box-shadow: none; }
+    .pw-toggle svg { width: 1.15rem; height: 1.15rem; }
+    .pw-toggle .when-on { display: none; }
+    .pw-toggle[aria-pressed="true"] { background: none; box-shadow: none; color: var(--accent-ink); }
+    .pw-toggle[aria-pressed="true"] .when-on { display: block; }
+    .pw-toggle[aria-pressed="true"] .when-off { display: none; }
+
+    /* password strength */
+    .pw-meter { display: grid; grid-template-columns: repeat(4, 1fr) auto; gap: 0.3rem; align-items: center; }
+    .pw-meter[hidden] { display: none; }
+    .pw-meter i { height: 0.28rem; border-radius: 999px; background: var(--card-3); }
+    .pw-meter b { min-width: 5.5rem; text-align: right; font-family: var(--font-mono); font-weight: 400; font-size: var(--fs-xs); color: var(--text-muted); margin-left: 0.3rem; }
+    .pw-meter[data-level="0"] i:nth-child(-n+1), .pw-meter[data-level="1"] i:nth-child(-n+1) { background: var(--danger); }
+    .pw-meter[data-level="0"] i:first-child { opacity: 0.5; }
+    .pw-meter[data-level="2"] i:nth-child(-n+2) { background: var(--att-tardy); }
+    .pw-meter[data-level="3"] i:nth-child(-n+3) { background: var(--ok); }
+    .pw-meter[data-level="4"] i { background: var(--ok); }
+    .pw-meter[data-level="0"] b, .pw-meter[data-level="1"] b { color: var(--danger); }
+    .pw-meter[data-level="2"] b { color: var(--att-tardy); }
+    .pw-meter[data-level="3"] b, .pw-meter[data-level="4"] b { color: var(--ok); }
 
     /* inline messages: take no room until they have something to say */
     .login-hint { font-size: var(--fs-xs); color: var(--text-muted); line-height: 1.35; }
@@ -159,7 +210,14 @@
     .login-alert.ok { color: var(--ok); background: color-mix(in srgb, var(--ok) 10%, transparent); border-color: color-mix(in srgb, var(--ok) 40%, transparent); }
 
     /* buttons */
-    .login-submit { width: 100%; min-height: 3rem; font-size: var(--fs-md); margin-top: var(--space-1); position: relative; }
+    /* No glow on this page: the app's primary button halo is switched off here. */
+    button.primary.login-submit, button.primary.login-submit:hover { box-shadow: none; }
+    .login-submit { width: 100%; min-height: 3rem; font-size: var(--fs-md); margin-top: var(--space-1); position: relative; overflow: hidden; }
+    #signup-form .login-submit { min-height: 2.8rem; }
+    .login-submit:active:not(:disabled) {
+      transform: scale(0.97);
+      box-shadow: inset 0 2px 10px rgba(0, 0, 0, 0.35);
+    }
     .login-submit[aria-busy="true"] { cursor: progress; opacity: 1; }
     .login-submit[aria-busy="true"]::before {
       content: "";
@@ -189,46 +247,78 @@
       gap: var(--space-3);
       text-align: center;
     }
+    .login-alt[hidden] { display: none; }
     .login-alt p { margin: 0; color: var(--text-2); font-size: var(--fs-sm); }
     .login-alt .neu-btn { width: 100%; min-height: 2.8rem; font-size: var(--fs-md); }
-    .login-back { margin-top: var(--space-4); text-align: center; color: var(--text-2); font-size: var(--fs-sm); }
+    .login-alt .neu-btn:active { transform: scale(0.97); }
+    .login-back { margin: var(--space-4) 0 0; text-align: center; color: var(--text-2); font-size: var(--fs-sm); }
 
     .login-actions { display: flex; gap: var(--space-3); flex-wrap: wrap; align-items: center; }
 
     /* Keep the floating full-screen widget out of the login flow. */
     body.no-auth .fs-float { display: none; }
+
+    /* ---------- motion: StatsPal's vocabulary, by hand ----------
+       StatsPal (React, no animation library) moves with plain CSS:
+         --sp-pop     its entrance curve, a slight overshoot (gpb-pop)
+         --sp-spring  its springy curve for menus and hovers
+         --sp-ease    its base 0.2s transition (Material standard)
+       Entrances are short (0.2–0.32s) and small (8–10px, scale 0.96),
+       lists stagger 35ms per item, cards lift 2px on hover, buttons lift
+       1px and press to 0.97. Only for people who haven't asked for less. */
+    :root {
+      --sp-pop: cubic-bezier(0.32, 0.72, 0.45, 1.05);
+      --sp-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+      --sp-ease: cubic-bezier(0.4, 0, 0.2, 1);
+      --sp-stagger: 35ms;
+    }
+    @media (prefers-reduced-motion: no-preference) {
+      /* heading: StatsPal's slideUp on its pop curve */
+      .login-head > * { animation: login-rise 300ms var(--sp-pop) backwards; }
+      .login-head > :nth-child(2) { animation-delay: calc(var(--sp-stagger) * 2); }
+
+      /* the card: StatsPal's login card / modal scale-in, then a hover lift */
+      .login-cards { animation: login-card-in 320ms var(--sp-pop) 60ms backwards; transition: translate 0.2s var(--sp-ease), box-shadow 0.2s var(--sp-ease); }
+
+      /* form rows: slideUp, staggered 35ms, starting as the card lands */
+      .login-box.enter .rise {
+        animation: login-rise 260ms var(--sp-pop) backwards;
+        animation-delay: calc(var(--i, 0) * var(--sp-stagger) + 140ms);
+      }
+      .login-box.enter.switched .rise { animation-delay: calc(var(--i, 0) * var(--sp-stagger) + 40ms); }
+
+      .login-field label { transition: color 0.2s var(--sp-ease), transform 0.2s var(--sp-spring); }
+      .login-field input { transition: border-color 0.2s var(--sp-ease), box-shadow 0.2s var(--sp-ease), background 0.2s var(--sp-ease); }
+      .pw-toggle { transition: color 0.15s var(--sp-ease), background 0.15s var(--sp-ease); }
+      .login-submit, .login-alt .neu-btn { transition: transform 0.2s var(--sp-spring), translate 0.2s var(--sp-ease), box-shadow 0.2s var(--sp-ease), border-color 0.2s var(--sp-ease), background 0.2s var(--sp-ease); }
+      .login-submit:hover:not(:disabled) { translate: 0 -1px; }
+      .login-alt .neu-btn:hover { translate: 0 -1px; }
+      .pw-meter i { transition: background 0.2s var(--sp-ease), box-shadow 0.2s var(--sp-ease); }
+
+      /* errors slide in: these are display:none while empty, so the
+         animation replays each time a message appears */
+      .login-err:not(:empty), .login-alert:not(:empty), .login-hint.bad, .login-hint.ok {
+        animation: login-msg 200ms var(--sp-pop) backwards;
+      }
+    }
+    @media (prefers-reduced-motion: reduce) { .login-cards:hover { translate: none; } }
+    @keyframes login-rise    { from { opacity: 0; transform: translateY(8px); } }
+    @keyframes login-item    { from { opacity: 0; transform: translateY(6px); } }
+    @keyframes login-card-in { from { opacity: 0; transform: scale(0.96) translateY(10px); } }
+    @keyframes login-msg     { from { opacity: 0; transform: translateY(-6px); } }
   </style>
 </head>
-<body class="hub no-auth">
-  <main class="page login-page">
+<body class="hub public no-auth flat-bg">
+  <main class="page public-page login-page">
     <div id="status" class="status" hidden></div>
 
-    <div class="login-shell">
-      <!-- What this is, for someone arriving from a shared link -->
-      <section class="login-intro" aria-label="About TeacherPal">
-        <div class="login-brand"><span class="login-brand-mark" aria-hidden="true"></span>TeacherPal</div>
-        <p class="login-tagline">Your classroom, on one screen.</p>
-        <p class="login-sub">Attendance, seating, groups, lesson plans and classroom tools for teachers, built to be read from the back of the room.</p>
-        <ul class="login-features">
-          <li>
-            <span class="lf-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="m8 12 3 3 5-6"/></svg></span>
-            <div><b>Attendance on your seating chart</b><span>Click a seat to mark absent or tardy, then copy the list.</span></div>
-          </li>
-          <li>
-            <span class="lf-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="9" cy="8" r="3"/><circle cx="17" cy="10" r="2.5"/><path d="M3 20a6 6 0 0 1 12 0M14 20a4 4 0 0 1 7 0"/></svg></span>
-            <div><b>Seating and groups</b><span>Build your room, then fill seats or make groups, with rules if you want them.</span></div>
-          </li>
-          <li>
-            <span class="lf-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M3 9h18M8 2v4M16 2v4"/></svg></span>
-            <div><b>Lesson plans by course</b><span>A week at a glance, with your files and links on each day.</span></div>
-          </li>
-          <li>
-            <span class="lf-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="13" r="8"/><path d="M12 9v4l2 2M9 2h6"/></svg></span>
-            <div><b>Tools for the projector</b><span>Timer, name wheel, noise meter and the bell schedule.</span></div>
-          </li>
-        </ul>
-      </section>
+    <section class="login-hero-sec" id="top">
+    <div class="login-stage">
+      <header class="login-head">
+        <p class="login-tagline">Your Classroom, Your Way.</p>
+      </header>
 
+      <div class="login-center">
       <div class="login-cards">
         <!-- Sign in -->
         <form class="login-box" id="login-form" novalidate>
@@ -303,15 +393,17 @@
           <p class="login-title">Create an account</p>
           <h1 class="login-hero">Set up your classroom.</h1>
           <div class="login-form">
-            <div class="login-field">
-              <label for="su-display">Display name</label>
-              <input type="text" id="su-display" autocomplete="name" maxlength="60" placeholder="Ms. Rivera" required>
-              <div class="login-hint" id="su-display-hint">How the app greets you.</div>
-            </div>
-            <div class="login-field">
-              <label for="su-username">Username</label>
-              <input type="text" id="su-username" autocomplete="username" spellcheck="false" autocapitalize="off" maxlength="30" required>
-              <div class="login-hint" id="su-username-hint" aria-live="polite">3–30 letters, numbers, dots, dashes or underscores.</div>
+            <div class="login-row2">
+              <div class="login-field">
+                <label for="su-display">Display name</label>
+                <input type="text" id="su-display" autocomplete="name" maxlength="60" placeholder="Ms. Rivera" required>
+                <div class="login-hint" id="su-display-hint">How the app greets you.</div>
+              </div>
+              <div class="login-field">
+                <label for="su-username">Username</label>
+                <input type="text" id="su-username" autocomplete="username" spellcheck="false" autocapitalize="off" maxlength="30" required>
+                <div class="login-hint" id="su-username-hint" aria-live="polite">Letters, numbers, . _ or -</div>
+              </div>
             </div>
             <div class="login-field">
               <label for="su-email">Email</label>
@@ -328,6 +420,7 @@
                 <input type="password" id="su-password2" autocomplete="new-password" required>
               </div>
             </div>
+            <div class="pw-meter" id="su-meter" data-level="0" hidden aria-live="polite"><i></i><i></i><i></i><i></i><b id="su-meter-label"></b></div>
             <div class="login-hint" id="su-password-hint" aria-live="polite"></div>
             <div class="login-alert" id="signup-alert" role="alert"></div>
             <button type="submit" class="primary login-submit" id="signup-submit">Create account</button>
@@ -348,10 +441,15 @@
           </div>
         </section>
       </div>
+
+      </div>
     </div>
+    </section>
+
   </main>
 
   <script src="shared.js"></script>
+  <script src="site.js"></script>
   <script>
     (function () {
       const $ = (id) => document.getElementById(id);
@@ -380,19 +478,89 @@
         if (hasSession()) { redirectAfterLogin(); return; }
         if (landed && landed.error) alertMsg('login-alert', landed.error);
         signupIsOpen = await signupOpen();
-        $('signup-door').hidden = !signupIsOpen;
-        $('signup-closed').hidden = signupIsOpen;
+        resize(() => {
+          $('signup-door').hidden = !signupIsOpen;
+          $('signup-closed').hidden = signupIsOpen;
+        });
         if (location.hash === '#signup' && signupIsOpen) show('signup');
         if (location.hash === '#forgot') show('forgot');
       }
 
       function show(which) {
-        for (const [k, el] of Object.entries(boxes)) el.hidden = k !== which;
+        const next = boxes[which];
+        const old = Object.values(boxes).find((b) => !b.hidden);
+        if (old === next) return;
+        resize(() => {
+          for (const [k, el] of Object.entries(boxes)) el.hidden = k !== which;
+        }, old);
+        enter(next, true);
         const keepHash = which === 'signup' || which === 'forgot';
         history.replaceState(null, '', location.pathname + location.search + (keepHash ? `#${which}` : ''));
         const f = $(firstField[which]);
-        if (f) f.focus();
+        if (f) f.focus({ preventScroll: true });
       }
+
+      // ---------- motion ----------
+      const calm = matchMedia('(prefers-reduced-motion: reduce)');
+      const cards = document.querySelector('.login-cards');
+      const EASE = 'cubic-bezier(.2, .8, .2, 1)';
+
+      // Run `change` (which alters what the card holds) and let the card
+      // grow or shrink to its new height instead of snapping. `leaving`, if
+      // given, is the panel being replaced: it stays on top, fading out.
+      function resize(change, leaving) {
+        if (calm.matches || !cards.offsetParent) { change(); return; }
+        const from = cards.getBoundingClientRect().height;
+        change();
+        const to = cards.getBoundingClientRect().height;
+        if (leaving && leaving.hidden) {
+          leaving.hidden = false;
+          leaving.inert = true;
+          leaving.classList.add('leaving');
+          leaving.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 170, easing: 'ease-out', fill: 'forwards' })
+            .finished.then(() => {
+              leaving.hidden = true;
+              leaving.inert = false;
+              leaving.classList.remove('leaving');
+              leaving.getAnimations().forEach((a) => a.cancel());
+            });
+        }
+        if (Math.abs(to - from) < 1) return;
+        cards.classList.add('resizing');
+        cards.animate([{ height: `${from}px` }, { height: `${to}px` }], { duration: 340, easing: EASE })
+          .finished.finally(() => cards.classList.remove('resizing'));
+      }
+
+      // The panel's rows rise in one after another, quickly.
+      function enter(box, switched) {
+        const rows = [...box.querySelectorAll(':scope > *, :scope > .login-form > *')]
+          .filter((el) => !el.matches('.login-form, input[hidden], .login-alert, .login-hint, .login-err, .pw-meter'));
+        rows.forEach((el, i) => { el.classList.add('rise'); el.style.setProperty('--i', i); });
+        box.classList.remove('enter', 'switched');
+        void box.offsetWidth;          // restart the animations
+        box.classList.add('enter');
+        box.classList.toggle('switched', !!switched);
+        clearTimeout(box._enterT);
+        box._enterT = setTimeout(() => box.classList.remove('enter'), 35 * rows.length + 700);
+      }
+      enter(boxes.signin);
+
+      const page = document.querySelector('main.login-page');
+
+      // ---------- the nav (site.js renders it) ----------
+      // On this page Sign in and Create account don't reload: they scroll
+      // back up, put the card in that mode and focus its first field.
+      document.addEventListener('click', (e) => {
+        const a = e.target.closest('[data-nav]');
+        if (!a) return;
+        e.preventDefault();
+        const behavior = calm.matches ? 'auto' : 'smooth';
+        const to = a.dataset.nav;
+        page.scrollTo({ top: 0, behavior });
+        if (to === 'signin') { show('signin'); $('login-id').focus({ preventScroll: true }); }
+        if (to === 'signup' && signupIsOpen) { show('signup'); $('su-display').focus({ preventScroll: true }); }
+      });
+
       document.addEventListener('click', (e) => {
         const b = e.target.closest('[data-to]');
         if (b) show(b.dataset.to);
@@ -556,21 +724,102 @@
         }
       }
 
-      function checkPasswords(final) {
+      // Passwords, as you type. mode: 'typing' says only what's useful
+      // mid-word (a mismatch once the confirm is as long as the password, or
+      // already differs), 'blur' adds "too short", 'final' is the submit.
+      let pwTouched = false;
+      function checkPasswords(mode) {
         const a = su.password.value, b = su.password2.value;
+        const final = mode === 'final';
         if (!a && !b && !final) { hint('password', ''); return true; }
         if (a.length < PASSWORD_MIN) {
-          if (final || a) hint('password', `Password too short: use at least ${PASSWORD_MIN} characters.`, 'bad');
+          if (final || (pwTouched && a)) hint('password', `Use at least ${PASSWORD_MIN} characters.`, 'bad');
+          else hint('password', '');
           return false;
         }
-        if ((b || final) && a !== b) { hint('password', 'The passwords don\'t match.', 'bad'); return false; }
-        hint('password', b ? 'Passwords match.' : '', b ? 'ok' : '');
+        const differs = b && b !== a && (b.length >= a.length || !a.startsWith(b));
+        if ((final && a !== b) || differs || (mode === 'blur' && b && a !== b)) {
+          hint('password', 'The passwords don\'t match.', 'bad');
+          return false;
+        }
+        hint('password', b === a ? 'Passwords match.' : '', b === a ? 'ok' : '');
         return true;
       }
-      su.password.addEventListener('input', () => checkPasswords(false));
-      su.password2.addEventListener('input', () => checkPasswords(false));
+
+      // Strength: length first, then variety; obvious patterns and the
+      // username itself count as weak.
+      function strength(pw) {
+        if (pw.length < PASSWORD_MIN) return { level: 0, label: `${pw.length} / ${PASSWORD_MIN}` };
+        const kinds = [/[a-z]/, /[A-Z]/, /\d/, /[^A-Za-z0-9]/].filter((r) => r.test(pw)).length;
+        let s = (pw.length >= 12) + (pw.length >= 16) + (kinds - 1);
+        const user = su.username.value.trim().toLowerCase();
+        if (/^(.)\1+$/.test(pw) || /password|teacher|qwerty|letmein|1234|abcd/i.test(pw)
+            || (user.length >= 3 && pw.toLowerCase().includes(user))) s = 0;
+        const level = s <= 0 ? 1 : s <= 2 ? 2 : s <= 4 ? 3 : 4;
+        return { level, label: ['', 'Weak', 'Fair', 'Good', 'Strong'][level] };
+      }
+      function paintStrength() {
+        const pw = su.password.value;
+        const m = $('su-meter');
+        if (!pw) { m.hidden = true; return; }
+        const { level, label } = strength(pw);
+        m.dataset.level = level;
+        $('su-meter-label').textContent = label;
+        m.setAttribute('aria-label', `Password strength: ${level ? label : 'too short'}`);
+        if (m.hidden) resize(() => { m.hidden = false; });
+      }
+
+      su.password.addEventListener('input', () => { paintStrength(); checkPasswords('typing'); });
+      su.password2.addEventListener('input', () => checkPasswords('typing'));
+      [su.password, su.password2].forEach((el) => el.addEventListener('blur', () => {
+        if (el.value) pwTouched = true;
+        checkPasswords('blur');
+      }));
+      su.username.addEventListener('input', paintStrength);
       su.display.addEventListener('input', () => hint('display'));
-      su.email.addEventListener('input', () => hint('email'));
+
+      // Email: judged once you leave the field, then live until it's right.
+      const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      let emailJudged = false;
+      function checkEmail() {
+        const v = su.email.value.trim();
+        if (!v) { hint('email'); return false; }
+        if (!EMAIL_RE.test(v)) { hint('email', 'That doesn\'t look like an email address yet.', 'bad'); return false; }
+        hint('email', 'Looks good.', 'ok');
+        return true;
+      }
+      su.email.addEventListener('blur', () => { if (su.email.value.trim()) { emailJudged = true; checkEmail(); } });
+      su.email.addEventListener('input', () => { if (emailJudged) checkEmail(); else hint('email'); });
+
+      // ---------- show / hide password ----------
+      const EYE = '<svg class="when-off" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg>'
+        + '<svg class="when-on" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9.9 4.2A10.6 10.6 0 0 1 12 4c6.5 0 10 8 10 8a17.6 17.6 0 0 1-2.2 3.2M6.6 6.6C3.6 8.6 2 12 2 12s3.5 8 10 8a10 10 0 0 0 5.4-1.6"/><path d="M14.1 14.1a3 3 0 0 1-4.2-4.2"/><path d="m2 2 20 20"/></svg>';
+      document.querySelectorAll('.login-field input[type="password"]').forEach((input) => {
+        const wrap = document.createElement('div');
+        wrap.className = 'pw-wrap';
+        input.replaceWith(wrap);
+        wrap.appendChild(input);
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'pw-toggle';
+        btn.setAttribute('aria-pressed', 'false');
+        btn.setAttribute('aria-label', 'Show password');
+        btn.setAttribute('aria-controls', input.id);
+        btn.innerHTML = EYE;
+        btn.addEventListener('mousedown', (e) => e.preventDefault());   // keep the caret in the field
+        btn.addEventListener('click', () => {
+          const on = input.type === 'password';
+          input.type = on ? 'text' : 'password';
+          btn.setAttribute('aria-pressed', String(on));
+          btn.setAttribute('aria-label', on ? 'Hide password' : 'Show password');
+        });
+        wrap.appendChild(btn);
+      });
+      // Never leave a password showing on the way out (or in the
+      // browser's back-forward cache).
+      window.addEventListener('pagehide', () => {
+        document.querySelectorAll('.pw-toggle[aria-pressed="true"]').forEach((b) => b.click());
+      });
 
       boxes.signup.addEventListener('submit', async (e) => {
         e.preventDefault();
@@ -582,7 +831,7 @@
         if (!display) { hint('display', 'Add the name the app should call you.', 'bad'); bad = bad || su.display; }
         if (!USERNAME_RE.test(username)) { hint('username', '3–30 letters, numbers, dots, dashes or underscores. No spaces.', 'bad'); bad = bad || su.username; }
         if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { hint('email', 'Enter a real email address, like name@school.org.', 'bad'); bad = bad || su.email; }
-        if (!checkPasswords(true)) bad = bad || su.password;
+        if (!checkPasswords('final')) bad = bad || su.password;
         if (bad) { bad.focus(); return; }
 
         const btn = $('signup-submit');

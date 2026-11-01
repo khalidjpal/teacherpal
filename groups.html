@@ -232,7 +232,7 @@
     // With "first names only", any first name shared by two present students
     // gets a last initial — and if the initials clash too (Brandon Cedillo /
     // Brandon Clifton), the prefix grows until it tells them apart.
-    function displayName(student) {
+    function studentLabel(student) {   // not "displayName": that is shared.js's account-name helper, which nav.js calls
       if (!firstNamesOnly) return student.name;
       const first = firstName(student.name);
       const twins = presentStudents().filter((s) => firstName(s.name).toLocaleLowerCase() === first.toLocaleLowerCase());
@@ -254,7 +254,7 @@
         el.dataset.id = student.id;
         chips.set(student.id, el);
       }
-      el.innerHTML = `<span class="chip-text">${escapeHtml(displayName(student))}</span>`;
+      el.innerHTML = `<span class="chip-text">${escapeHtml(studentLabel(student))}</span>`;
       el.title = sitOut.has(student.id)
         ? `${student.name} — sitting out. Click to put back in.`
         : `${student.name} — click to sit out of grouping`;
@@ -328,7 +328,7 @@
         catch (err) { showError(err); }
       }, 500);
     }
-    const nameOf = (id) => { const st = students.find((x) => x.id === id); return st ? displayName(st) : '?'; };
+    const nameOf = (id) => { const st = students.find((x) => x.id === id); return st ? studentLabel(st) : '?'; };
     const ruleText = (r) => ruleSentence(r, nameOf, RULE_SCOPE);
     const formula = createFormulaModal({
       scope: RULE_SCOPE,
@@ -338,7 +338,7 @@
       // the modal marks "out today · rules ignored" — true for both states,
       // and doShuffle drops their rules either way (rulesForPresent)
       absent: () => new Set([...absent, ...sitOut]),
-      displayName,
+      displayName: studentLabel,
       getRules: () => rules,
       setRules: (r) => { rules = r; saveRulesSoon(); },
       populateLabel: 'Create Groups',

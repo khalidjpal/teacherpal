@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="default" data-theme-lock>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>About — TeacherPal</title>
+  <meta name="description" content="TeacherPal puts attendance, seating, groups, bathroom passes and lesson plans in one place, all fed by one roster. Free, and private to each teacher.">
+  <meta name="color-scheme" content="dark">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;600;700&family=Rajdhani:wght@500;600;700&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+  <!-- A public page: always the default theme (data-theme-lock), no login.
+       site.js adds the floating nav, the footer and the storage notice. -->
+  <link rel="stylesheet" href="style.css">
+</head>
+<body class="hub public no-auth">
+  <main class="page public-page">
+    <section class="site-section first">
+      <header class="site-head">
+        <p class="site-kicker">About</p>
+        <h1 class="site-title">The classroom admin, in one place.</h1>
+        <p class="site-lede">TeacherPal is a free web app for teachers. It covers attendance, seating, groups, bathroom passes and lesson plans.</p>
+      </header>
+      <div class="prose" data-reveal>
+        <h2 class="site-h2">What it does</h2>
+        <p>Take attendance by clicking seats on your seating chart. Build your room and assign seats. Split the class into groups. Call on students with a name wheel. Log bathroom passes. Plan lessons by course on a weekly calendar. Put a timer or a noise meter on the projector.</p>
+        <p>It's built for two moments. <b>On the projector</b>, where everything has to be readable from the back row. And <b>between classes</b>, when you have a few minutes and every click counts: the right period is already open, because TeacherPal knows the bell schedule.</p>
+      </div>
+    </section>
+
+    <section class="site-section" aria-labelledby="roster-title">
+      <div class="prose">
+        <h2 class="site-h2" id="roster-title">One roster, every tool</h2>
+        <p>The idea underneath it: <b>enter your students once.</b> Every tool reads from the same roster, so adding a student puts them on the seating chart, in the groups, on the name wheel and in the pass tracker at the same time.</p>
+        <p>The tools share what happens during the day too. Mark a student absent and they're left out of today's groups and off the name wheel, with nothing else to update.</p>
+      </div>
+      <div class="roster-flow" aria-hidden="true">
+        <div class="rf-src depth-card"><span class="lf-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.9M16 3.1a4 4 0 0 1 0 7.8"/></svg></span><div><b>Your roster</b><span>entered once</span></div></div>
+        <ul class="rf-tools" role="list">
+          <li class="rf-tool depth-card"><span class="lf-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="m8 12 3 3 5-6"/></svg></span><b>Attendance</b></li>
+          <li class="rf-tool depth-card"><span class="lf-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="7" height="5" rx="1"/><rect x="14" y="3" width="7" height="5" rx="1"/><rect x="3" y="13" width="7" height="5" rx="1"/><rect x="14" y="13" width="7" height="5" rx="1"/><path d="M6.5 8v2M17.5 8v2M6.5 18v2M17.5 18v2"/></svg></span><b>Seating</b></li>
+          <li class="rf-tool depth-card"><span class="lf-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="9" cy="8" r="3"/><circle cx="17" cy="10" r="2.5"/><path d="M3 20a6 6 0 0 1 12 0M14 20a4 4 0 0 1 7 0"/></svg></span><b>Groups</b></li>
+          <li class="rf-tool depth-card"><span class="lf-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="2"/><path d="M12 3v7M12 14v7M3 12h7M14 12h7"/></svg></span><b>Name Wheel</b></li>
+          <li class="rf-tool depth-card"><span class="lf-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 21V4a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v17"/><path d="M3 21h18M14 12h.01"/></svg></span><b>Bathroom passes</b></li>
+        </ul>
+      </div>
+    </section>
+
+    <section class="site-section" aria-label="What it is like to use">
+      <div class="about-grid" data-reveal>
+        <div class="about-card depth-card"><span class="lf-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 12v9H4v-9M2 7h20v5H2zM12 21V7M12 7H7.5a2.5 2.5 0 0 1 0-5C11 2 12 7 12 7zM12 7h4.5a2.5 2.5 0 0 0 0-5C13 2 12 7 12 7z"/></svg></span><h3>Free</h3><p>No fees, no paid tier, no ads.</p></div>
+        <div class="about-card depth-card"><span class="lf-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg></span><h3>Private per teacher</h3><p>Each account sees only its own classes. The database enforces it, not just the app.</p></div>
+        <div class="about-card depth-card"><span class="lf-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="4" width="20" height="13" rx="2"/><path d="M8 21h8M12 17v4"/></svg></span><h3>Readable from the back</h3><p>Big type, high contrast, and a full screen mode on every tool.</p></div>
+        <div class="about-card depth-card"><span class="lf-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.8-3.8a6 6 0 0 1-7.9 7.9l-6.9 6.9a2.1 2.1 0 0 1-3-3l6.9-6.9a6 6 0 0 1 7.9-7.9z"/></svg></span><h3>Actively built</h3><p>Used in a classroom every school day, and improved from what comes up there.</p></div>
+      </div>
+      <p class="about-maker">Built by a working high school teacher.</p>
+    </section>
+
+    <section class="site-section">
+      <div class="site-end">
+        <p>Questions, ideas or a bug to report? Email <a href="mailto:khalidjpal@gmail.com">khalidjpal@gmail.com</a>.</p>
+        <a class="site-cta" href="login.html#signup" data-signup-cta hidden>Create account</a>
+        <a class="neu-btn" href="features.html">See the features</a>
+      </div>
+    </section>
+  </main>
+
+  <script src="shared.js"></script>
+  <script src="site.js"></script>
+</body>
+</html>

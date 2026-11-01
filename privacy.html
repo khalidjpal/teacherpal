@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="default" data-theme-lock>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Privacy Policy — TeacherPal</title>
+  <meta name="description" content="What TeacherPal stores, where it lives, who can see it, and how to have it deleted.">
+  <meta name="color-scheme" content="dark">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;600;700&family=Rajdhani:wght@500;600;700&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+  <!-- A public page: always the default theme (data-theme-lock), no login.
+       site.js adds the floating nav, the footer and the storage notice. -->
+  <link rel="stylesheet" href="style.css">
+</head>
+<body class="hub public no-auth">
+  <main class="page public-page">
+    <section class="site-section first">
+      <header class="site-head">
+        <p class="site-kicker">Legal</p>
+        <h1 class="site-title">Privacy Policy</h1>
+        <p class="legal-meta">Last updated: October 30, 2026</p>
+      </header>
+      <article class="legal">
+        <div class="legal-note depth-card"><b>A small tool run by one person.</b> TeacherPal is built and operated by Khalid Pal, an individual high school teacher, not by a company. This page is written plainly to describe what the service actually does. Questions: <a href="mailto:khalidjpal@gmail.com">khalidjpal@gmail.com</a>.</div>
+        <nav class="legal-toc depth-card" aria-label="On this page"><ol>
+          <li><a href="#summary">The short version</a></li>
+          <li><a href="#who">Who runs TeacherPal</a></li>
+          <li><a href="#collect">What is collected</a></li>
+          <li><a href="#where">Where it is stored</a></li>
+          <li><a href="#access">Who can see it</a></li>
+          <li><a href="#thirdparty">Other services your browser contacts</a></li>
+          <li><a href="#browser">Cookies and browser storage</a></li>
+          <li><a href="#district">Student data and your school</a></li>
+          <li><a href="#retention">How long data is kept</a></li>
+          <li><a href="#delete">Deleting your account and data</a></li>
+          <li><a href="#security">Security</a></li>
+          <li><a href="#changes">Changes to this policy</a></li>
+        </ol></nav>
+        <h2 id="summary">The short version</h2>
+        <ul>
+          <li>TeacherPal stores what you type into it: your account details and the class information you enter yourself.</li>
+          <li>It lives in a Supabase database hosted in the United States.</li>
+          <li>Only your account can see your data. The one exception is the operator, Khalid Pal, who has administrative access to the database.</li>
+          <li>Your data is never sold, rented or shared with third parties, and there are no ads, analytics or tracking.</li>
+          <li>You can ask for your account and all its data to be deleted at any time.</li>
+        </ul>
+        <h2 id="who">Who runs TeacherPal</h2>
+        <p>TeacherPal is run by Khalid Pal, an individual teacher, not a company. "We" and "the operator" on this page mean Khalid Pal. Contact: <a href="mailto:khalidjpal@gmail.com">khalidjpal@gmail.com</a>.</p>
+        <p>TeacherPal is for teachers. Students do not have accounts and never sign in.</p>
+        <h2 id="collect">What is collected</h2>
+        <h3>Your account</h3>
+        <ul>
+          <li><b>Username</b> and <b>display name</b> (how the app addresses you, such as "Mr. Pal").</li>
+          <li><b>Email address</b>, used to sign in, confirm your account and reset your password.</li>
+          <li><b>Password</b>, which is handled by Supabase's sign-in service and stored only as a secure hash. Nobody, including the operator, can read it.</li>
+          <li><b>Settings</b>: your theme, which bell periods you teach, and whether you've finished first-time setup.</li>
+          <li><b>Account records</b> that the sign-in service keeps automatically: when the account was created and when you last signed in.</li>
+        </ul>
+        <h3>Class information you enter</h3>
+        <p>TeacherPal only holds what you put into it yourself:</p>
+        <ul>
+          <li>Class periods, courses and <b>student names</b>, and any roster numbers you set.</li>
+          <li><b>Attendance</b>: who was marked absent or tardy, and when.</li>
+          <li><b>Seating</b>: your room layouts, who sits where, and any seating or grouping rules you write (for example, two students who shouldn't sit together).</li>
+          <li><b>Bathroom passes</b>: when a student signed out and back in, and pass counts per quarter.</li>
+          <li><b>Name Wheel lists</b>: which students have been picked on each list, and when.</li>
+          <li><b>Lesson plans</b>, including the files you upload and the links you add.</li>
+          <li>Your schedule changes, such as minimum days and days off.</li>
+        </ul>
+        <h3>What is not collected</h3>
+        <ul>
+          <li><b>The Noise Meter's audio.</b> The microphone is only on while you have the meter running. The sound is measured inside your browser and immediately discarded. Nothing is recorded, saved or sent anywhere.</li>
+          <li>No analytics, advertising identifiers or tracking of any kind.</li>
+        </ul>
+        <h2 id="where">Where it is stored</h2>
+        <p>Your account and class information are stored with <b>Supabase</b>, a hosted Postgres database service, in a data centre in the <b>United States</b>. Uploaded lesson files are kept in private Supabase storage and are only ever opened through links that expire after ten minutes.</p>
+        <p>The website itself is served by <b>Vercel</b>. All connections are encrypted (HTTPS).</p>
+        <h2 id="access">Who can see it</h2>
+        <ul>
+          <li><b>You.</b> Every row in the database belongs to the account that created it. The database enforces this with row-level security, so another teacher's account cannot read or change your data, and someone who isn't signed in can't read anything.</li>
+          <li><b>The operator.</b> Khalid Pal has administrative access to the database, as anyone running a service like this does. That access is used only to keep TeacherPal working, fix problems, and act on requests such as deleting an account. The admin page in the app shows the operator the list of accounts (username, display name, email, and when each was created and last signed in), but not their class data.</li>
+          <li><b>Service providers.</b> Supabase and Vercel host the service and process data only to provide it, under their own privacy and security terms. Like any web host, they keep short-lived technical logs (such as IP addresses and the time of a request) for security and reliability.</li>
+        </ul>
+        <p>Your data is <b>never sold, rented or shared</b> with any other third party, and it is never used for advertising.</p>
+        <h2 id="thirdparty">Other services your browser contacts</h2>
+        <ul>
+          <li><b>Google Fonts.</b> The pages load their typefaces from Google's font servers, which means your browser sends Google an ordinary request (including your IP address) for the font files. No account information or class data is sent.</li>
+          <li><b>YouTube.</b> If you preview a YouTube link attached to a lesson plan, the video loads from YouTube's privacy-enhanced (no-cookie) player. Nothing loads from YouTube unless you open such a preview.</li>
+        </ul>
+        <h2 id="browser">Cookies and browser storage</h2>
+        <p>TeacherPal does not use cookies for tracking or advertising, and it has no analytics. It keeps a few things in your browser's local storage because the app needs them to work:</p>
+        <ul>
+          <li><b>Your sign-in session</b>, so you stay signed in between pages.</li>
+          <li><b>Your theme</b>, so pages open in the right colours without a flash.</li>
+          <li><b>Tool settings and short-lived working data</b> (for example the timer's state, your last-used period, or today's absent list for grouping), which stay on that device.</li>
+          <li>Whether you've dismissed the notice about this storage.</li>
+        </ul>
+        <p>All of this is strictly necessary for the features you use. Signing out removes your session; clearing your browser's site data removes the rest.</p>
+        <h2 id="district">Student data and your school</h2>
+        <p>The student information in TeacherPal is information <b>you</b> choose to enter. You are responsible for making sure that using TeacherPal for it follows your school's and district's policies on student data, and any laws that apply to you (in the United States, for example, FERPA and your state's student privacy laws). If your district requires approval or a data agreement before using an online tool, please get that first.</p>
+        <p>To keep risk low, enter only what you need, such as student names rather than ID numbers, and avoid putting sensitive details in free-text fields like lesson notes.</p>
+        <h2 id="retention">How long data is kept</h2>
+        <p>Your data is kept for as long as your account exists, so that your rosters, charts and plans are there when you come back. You can delete periods, students, plans and other records yourself at any time; deleting a period also deletes its students and everything attached to them.</p>
+        <h2 id="delete">Deleting your account and data</h2>
+        <p>To delete your account and everything in it, email <a href="mailto:khalidjpal@gmail.com?subject=Delete%20my%20TeacherPal%20account">khalidjpal@gmail.com</a> from the address on your account (or tell us your username), with "Delete my account" in the subject. You'll get a reply once it's done, normally within a few days and no later than 30 days.</p>
+        <p>Deleting an account permanently removes the account and all the class information that belongs to it, including uploaded files. Copies may remain in the database host's routine backups until those expire, after which they are gone too.</p>
+        <p>You can also ask for a copy of your data, or for something to be corrected, at the same address.</p>
+        <h2 id="security">Security</h2>
+        <p>Passwords are hashed by Supabase's sign-in service, connections are encrypted, and the database only lets each account reach its own rows. No system is perfectly secure, though, and TeacherPal is run by one person. If something ever went wrong that affected your data, you would be told by email.</p>
+        <h2 id="changes">Changes to this policy</h2>
+        <p>If this policy changes, the "Last updated" date at the top will change too. Significant changes will be pointed out in the app or by email before they take effect.</p>
+      </article>
+    </section>
+  </main>
+
+  <script src="shared.js"></script>
+  <script src="site.js"></script>
+</body>
+</html>

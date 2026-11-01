@@ -8730,3 +8730,502 @@ main.setup-page { display: grid; justify-items: center; align-content: start; pa
 .sw-foot { display: flex; justify-content: space-between; gap: var(--space-3); border-top: 1px solid var(--border); padding-top: var(--space-4); }
 .sw-foot .primary { min-width: 9rem; margin-left: auto; }
 @media (max-width: 520px) { .setup-card { padding: var(--space-4); } .sw-row { grid-template-columns: 1fr; gap: var(--space-1); } }
+
+
+/* ==========================================================================
+   Public pages — login, features, about, terms, privacy (body.public)
+   Always the default theme (data-theme-lock). site.js renders the floating
+   nav, the footer and the storage notice into every one of them.
+   ========================================================================== */
+body.public {
+  /* StatsPal's motion vocabulary (see the login page notes in CLAUDE.md) */
+  --sp-pop: cubic-bezier(0.32, 0.72, 0.45, 1.05);
+  --sp-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --sp-ease: cubic-bezier(0.4, 0, 0.2, 1);
+  --sp-stagger: 35ms;
+  --nav-top: 0.85rem;
+  --nav-h: 3.3rem;
+  --nav-clear: calc(var(--nav-top) + var(--nav-h) + clamp(0.5rem, 2vh, 1.25rem));
+}
+/* The app locks <body> to the viewport for its one-screen tools, so these
+   pages scroll inside <main>. A plain block, not main.page's flex column. */
+main.public-page {
+  position: relative;
+  z-index: 1;
+  height: 100dvh;
+  width: 100%;
+  overflow-x: hidden;
+  overflow-y: auto;
+  display: block;
+  padding: 0;
+}
+body.no-auth .fs-float { display: none; }
+
+/* ambient background: two slow light pools, fixed, behind everything */
+.site-ambient {
+  position: fixed;
+  inset: -20%;
+  z-index: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(32% 28% at 30% 35%, var(--accent-soft), transparent 70%),
+    radial-gradient(30% 26% at 72% 62%, color-mix(in srgb, var(--lavender) 9%, transparent), transparent 70%);
+}
+
+/* ---------- the floating nav: a pill over the page, fixed while the page
+   scrolls under it. Translucent with a backdrop blur; the cards' depth
+   (light top edge, stacked shadows), no glow. ---------- */
+.site-nav, .site-auth {
+  position: fixed;
+  top: var(--nav-top);
+  z-index: 20;
+  height: var(--nav-h);
+  display: flex;
+  align-items: center;
+}
+/* Glass + the cards' depth (light top edge, stacked shadows), no glow:
+   the nav pill and the sign-in pill share it. */
+.site-nav, .site-auth {
+  background: linear-gradient(180deg,
+    color-mix(in srgb, var(--card-3) 72%, transparent),
+    color-mix(in srgb, var(--card) 64%, transparent));
+  -webkit-backdrop-filter: blur(14px) saturate(130%);
+  backdrop-filter: blur(14px) saturate(130%);
+  border: 1px solid var(--border-strong);
+  border-top-color: color-mix(in srgb, var(--text) 15%, transparent);
+}
+.site-nav, .site-auth {
+  box-shadow:
+    inset 0 1px 0 color-mix(in srgb, var(--text) 7%, transparent),
+    0 1px 2px var(--shadow-text),
+    0 10px 24px -8px var(--shadow-text),
+    0 24px 48px -18px var(--shadow-text);
+}
+/* --sbw = the scrolling <main>'s scrollbar width (site.js): both bars
+   are laid out in the window minus it, so nothing sits on the scrollbar. */
+.site-nav {
+  left: 0; right: var(--sbw, 0px);
+  margin-inline: auto;
+  width: fit-content;
+  max-width: calc(100% - var(--sbw, 0px) - 1.5rem);
+  gap: clamp(1rem, 3vw, 2.5rem);
+  padding: 0.35rem 0.4rem 0.35rem 1.15rem;
+  border-radius: 999px;
+}
+.sn-items { display: flex; align-items: center; gap: 0.2rem; }
+.sn-brand {
+  display: flex; align-items: center; gap: var(--space-3);
+  font-family: var(--font-display);
+  text-transform: uppercase;
+  letter-spacing: 0.32em;
+  font-size: 0.86rem;
+  color: var(--text);
+  text-decoration: none;
+  white-space: nowrap;
+}
+.sn-brand:hover { color: var(--text); }
+.site-mark {
+  width: 0.95rem; height: 0.95rem;
+  flex: none;
+  background: var(--accent);
+  transform: rotate(45deg);
+}
+.sn-link[hidden] { display: none; }
+.sn-link {
+  display: inline-flex; align-items: center;
+  min-height: 2.4rem;
+  padding: 0.4rem 0.95rem;
+  border-radius: 999px;
+  color: var(--text-muted);
+  font-weight: var(--fw-semibold);
+  text-decoration: none;
+  white-space: nowrap;
+}
+.sn-link:hover, .sn-link:focus-visible { color: var(--text); background: color-mix(in srgb, var(--text) 6%, transparent); }
+/* the page you're on: a soft filled pill and full-brightness text */
+.sn-link[aria-current="page"] {
+  color: var(--text);
+  background: color-mix(in srgb, var(--text) 11%, transparent);
+  box-shadow: inset 0 1px 0 color-mix(in srgb, var(--text) 9%, transparent);
+}
+
+/* the sign-in pair: its own pill, pinned top right, holding ordinary
+   nav links (the same shape, size and treatment as the content links) */
+.site-auth {
+  right: calc(var(--sbw, 0px) + var(--space-4));
+  gap: 0;
+  padding: 0.35rem 0.3rem;
+  border-radius: 999px;
+}
+.site-auth .sn-link { padding-inline: 0.75rem; }
+/* the end-of-page Create account button (features, about) */
+.site-cta {
+  display: inline-flex; align-items: center; justify-content: center;
+  min-height: 2.4rem;
+  padding: 0.4rem 1.15rem;
+  border-radius: 999px;
+  border: 1px solid var(--accent);
+  background: var(--accent);
+  color: var(--on-accent);
+  font-weight: var(--fw-bold);
+  text-decoration: none;
+  white-space: nowrap;
+  box-shadow: inset 0 1px 0 color-mix(in srgb, var(--text) 30%, transparent);
+}
+.site-cta:hover, .site-cta:focus-visible { background: var(--accent-deep); border-color: var(--accent-deep); color: var(--on-accent); }
+.site-cta:active { transform: scale(0.97); }
+
+/* Not enough room for the nav centred beside the pair: pin it left. */
+@media (max-width: 1160px) {
+  .site-nav { left: var(--space-4); right: auto; margin-inline: 0; max-width: none; }
+}
+/* Narrower: the content links leave the bar (the footer has them), and
+   the pair becomes one button: Create account, or Sign in while sign-up
+   is closed. */
+@media (max-width: 740px) {
+  .sn-items { display: none; }
+  .site-nav { padding-right: 1.15rem; }
+}
+@media (max-width: 560px) {
+  .site-nav { left: 0.6rem; padding-left: 0.9rem; padding-right: 0.9rem; }
+  .site-auth { right: 0.6rem; }
+  .sn-brand { letter-spacing: 0.2em; font-size: 0.78rem; }
+  .site-auth { padding-inline: 0.3rem; }
+  .site-auth .sn-link { padding-inline: 0.6rem; }
+}
+/* Small phones: tighter still, so the full "Create account" label fits. */
+@media (max-width: 400px) {
+  .site-nav { padding-inline: 0.75rem; }
+  .site-auth { padding-inline: 0.2rem; }
+  .sn-brand { gap: 0.55rem; letter-spacing: 0.12em; font-size: 0.74rem; }
+  .site-auth .sn-link { padding-inline: 0.5rem; }
+}
+/* The narrowest phones: the wordmark becomes just its mark (still the link home). */
+@media (max-width: 350px) {
+  .sn-brand { font-size: 0; gap: 0; }
+  .sn-brand .site-mark { width: 0.85rem; height: 0.85rem; }
+  .site-nav { padding-inline: 0.95rem; }
+}
+
+/* ---------- depth: the same recipe as the login card, a step quieter ---------- */
+.depth-card {
+  background: linear-gradient(180deg, color-mix(in srgb, var(--card-3) 65%, var(--card)), var(--card) 70%);
+  border: 1px solid var(--border);
+  border-top-color: color-mix(in srgb, var(--text) 11%, transparent);
+  border-radius: var(--radius-md);
+  box-shadow:
+    inset 0 1px 0 color-mix(in srgb, var(--text) 6%, transparent),
+    0 1px 2px var(--shadow-text),
+    0 8px 18px -8px var(--shadow-text),
+    0 18px 36px -16px var(--shadow-text);
+}
+.lf-icon {
+  width: 2.2rem; height: 2.2rem;
+  flex: none;
+  display: grid; place-items: center;
+  border: 1px solid var(--hud-line);
+  border-radius: var(--radius-sm);
+  color: var(--accent-ink);
+  background: var(--card-2);
+}
+.lf-icon svg { width: 1.1rem; height: 1.1rem; }
+
+/* ---------- content pages: features, about, terms, privacy ---------- */
+/* One content width for every public page and the footer: 1280px of
+   content (px, not rem: the fluid root font would shrink it to ~1000px on
+   a 1440 laptop), with side padding that grows with the window. */
+body.public { --site-max: 1280px; --site-pad: clamp(1.25rem, 4vw, 3.5rem); }
+.site-section {
+  position: relative;
+  max-width: calc(var(--site-max) + 2 * var(--site-pad));
+  margin: 0 auto;
+  padding: clamp(3rem, 9vh, 6rem) var(--site-pad);
+}
+.site-section.first { padding-top: calc(var(--nav-clear) + clamp(1.5rem, 6vh, 4rem)); }
+.site-head { text-align: center; max-width: 56rem; margin: 0 auto clamp(2.5rem, 7vh, 4.5rem); }
+.site-kicker {
+  margin: 0 0 var(--space-3);
+  font-family: var(--font-display);
+  text-transform: uppercase;
+  letter-spacing: var(--track-label);
+  font-size: 0.7rem;
+  color: var(--accent-ink);
+}
+.site-title { text-wrap: balance; margin: 0; font-size: clamp(1.7rem, 1.2rem + 1.5vw, 2.6rem); font-weight: var(--fw-bold); line-height: 1.12; }
+.site-lede { margin: var(--space-4) 0 0; color: var(--text-2); font-size: var(--fs-md); line-height: 1.55; }
+.site-h2 { margin: 0 0 var(--space-4); font-size: clamp(1.3rem, 1.1rem + 0.7vw, 1.75rem); font-weight: var(--fw-bold); line-height: 1.2; }
+
+
+/* features: screenshot rows, alternating sides */
+.ft-rows { display: grid; gap: clamp(4rem, 12vh, 8rem); }
+.ft-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1.55fr) minmax(0, 1fr);
+  gap: clamp(2rem, 5vw, 5rem);
+  align-items: center;
+}
+.ft-row:nth-child(even) { grid-template-columns: minmax(0, 1fr) minmax(0, 1.55fr); }
+.ft-row:nth-child(even) .ft-shot { order: 2; }
+.ft-shot {
+  margin: 0;
+  padding: 0.45rem;
+  border-radius: var(--radius-lg);
+}
+.ft-shot img {
+  display: block;
+  width: 100%;
+  height: auto;
+  aspect-ratio: 1366 / 768;
+  border-radius: calc(var(--radius-lg) - 0.45rem);
+  border: 1px solid var(--border);
+  background: var(--card-2);
+}
+.ft-copy .lf-icon { margin-bottom: var(--space-4); }
+.ft-copy h3 { margin: 0 0 var(--space-3); font-size: clamp(1.3rem, 1.1rem + 0.6vw, 1.7rem); font-weight: var(--fw-bold); line-height: 1.2; }
+.ft-copy p { margin: 0 0 var(--space-3); color: var(--text-2); line-height: 1.6; }
+.ft-copy ul { margin: 0; padding-left: 1.1rem; color: var(--text-2); line-height: 1.6; }
+.ft-copy li::marker { color: var(--accent-ink); }
+@media (max-width: 900px) {
+  .ft-row, .ft-row:nth-child(even) { grid-template-columns: minmax(0, 1fr); }
+  .ft-row:nth-child(even) .ft-shot { order: 0; }
+}
+.lm-grid {
+  list-style: none; margin: 0; padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr));
+  gap: var(--space-4);
+}
+.lm-card {
+  display: grid;
+  grid-template-columns: 2.6rem minmax(0, 1fr);
+  gap: var(--space-4);
+  align-items: start;
+  padding: var(--space-5);
+}
+.lm-card .lf-icon { width: 2.6rem; height: 2.6rem; }
+.lm-card .lf-icon svg { width: 1.25rem; height: 1.25rem; }
+.lm-card h3 { margin: 0.1rem 0 0.3rem; font-size: var(--fs-md); font-weight: var(--fw-bold); color: var(--text); }
+.lm-card p { margin: 0; color: var(--text-2); font-size: var(--fs-sm); line-height: 1.45; }
+.site-end {
+  display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: var(--space-3);
+  text-align: center;
+}
+.site-end p { width: 100%; margin: 0 0 var(--space-2); color: var(--text-2); font-size: var(--fs-md); }
+.site-end .site-cta, .site-end .neu-btn { width: auto; min-height: 2.8rem; padding-inline: 1.5rem; border-radius: 999px; text-decoration: none; }
+
+/* about */
+.about-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: var(--space-4); }
+@media (max-width: 1000px) { .about-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 520px) { .about-grid { grid-template-columns: minmax(0, 1fr); } }
+.about-card { padding: var(--space-5); }
+.about-card h3 { margin: var(--space-3) 0 var(--space-2); font-size: var(--fs-md); font-weight: var(--fw-bold); }
+.about-card p { margin: 0; color: var(--text-2); line-height: 1.55; }
+.prose { max-width: 44rem; margin: 0 auto; color: var(--text-2); font-size: var(--fs-md); line-height: 1.65; }
+.prose p { margin: 0 0 var(--space-4); }
+.prose b, .prose strong { color: var(--text); }
+
+.prose .site-h2 { margin-top: clamp(1.75rem, 4vh, 2.5rem); }
+.prose .site-h2:first-child { margin-top: 0; }
+.about-maker { margin: var(--space-5) 0 0; text-align: center; color: var(--text-muted); font-size: var(--fs-sm); }
+/* About: one roster feeding the tools: a source card, a rail, the tools */
+.roster-flow {
+  max-width: 64rem;
+  margin: clamp(1.75rem, 4vh, 2.5rem) auto 0;
+  display: grid;
+  justify-items: center;
+}
+.rf-src { display: flex; align-items: center; gap: var(--space-3); padding: var(--space-3) var(--space-5) var(--space-3) var(--space-3); }
+.rf-src b { display: block; color: var(--text); }
+.rf-src span:not(.lf-icon) { display: block; color: var(--text-muted); font-size: var(--fs-xs); }
+.rf-tools {
+  --rail: 1.2rem;
+  position: relative;
+  list-style: none; margin: 0; padding: calc(var(--rail) * 2) 0 0;
+  width: 100%;
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: var(--space-3);
+}
+/* the rail: down from the roster, across, and down into each tool */
+.rf-tools::after {
+  content: "";
+  position: absolute;
+  top: 0; left: 50%;
+  height: var(--rail);
+  border-left: 1px solid var(--hud-line);
+}
+.rf-tools::before {
+  content: "";
+  position: absolute;
+  top: var(--rail); left: 10%; right: 10%;
+  border-top: 1px solid var(--hud-line);
+}
+.rf-tool {
+  position: relative;
+  display: grid; justify-items: center; gap: var(--space-2);
+  padding: var(--space-4) var(--space-2);
+  text-align: center;
+}
+.rf-tool::before {
+  content: "";
+  position: absolute;
+  bottom: 100%; left: 50%;
+  height: var(--rail);
+  border-left: 1px solid var(--hud-line);
+}
+.rf-tool b { color: var(--text); font-size: var(--fs-sm); font-weight: var(--fw-semibold); }
+@media (max-width: 640px) {
+  .rf-tools { grid-template-columns: repeat(2, minmax(0, 1fr)); padding-top: var(--space-4); }
+  .rf-tools::before, .rf-tools::after, .rf-tool::before { display: none; }
+}
+
+/* legal pages: a readable column */
+.legal { max-width: 46rem; margin: 0 auto; color: var(--text-2); font-size: var(--fs-md); line-height: 1.65; }
+.legal h2 { margin: clamp(2rem, 5vh, 2.75rem) 0 var(--space-3); color: var(--text); font-size: var(--fs-lg); font-weight: var(--fw-bold); line-height: 1.25; }
+.legal h3 { margin: var(--space-5) 0 var(--space-2); color: var(--text); font-size: var(--fs-md); font-weight: var(--fw-bold); }
+.legal p { margin: 0 0 var(--space-3); }
+.legal ul { margin: 0 0 var(--space-3); padding-left: 1.2rem; }
+.legal li { margin-bottom: 0.35rem; }
+.legal li::marker { color: var(--accent-ink); }
+.legal b, .legal strong { color: var(--text); }
+.legal a { color: var(--accent-ink); text-underline-offset: 0.2em; }
+.legal-meta {
+  font-family: var(--font-mono);
+  font-size: var(--fs-xs);
+  color: var(--text-muted);
+  text-align: center;
+  margin: var(--space-4) 0 0;
+}
+.legal-note {
+  margin: 0 0 var(--space-5);
+  padding: var(--space-4) var(--space-5);
+  color: var(--text-2);
+}
+.legal-note b { color: var(--text); }
+.legal-toc { margin: 0 0 var(--space-5); padding: var(--space-4) var(--space-5); }
+.legal-toc ol { margin: 0; padding-left: 1.2rem; columns: 2 14rem; column-gap: var(--space-6); }
+.legal-toc a { color: var(--text-2); text-decoration: none; }
+.legal-toc a:hover { color: var(--text); text-decoration: underline; }
+.legal [id] { scroll-margin-top: calc(var(--nav-clear) + 0.5rem); }
+
+/* ---------- wide screens: two columns for running text ----------
+   About: each heading on the left, its paragraphs on the right (grid
+   auto-placement keeps every heading level with its first paragraph).
+   Legal: the contents list as a sticky sidebar, the text beside it. */
+@media (min-width: 1000px) {
+  .prose {
+    max-width: none;
+    display: grid;
+    grid-template-columns: minmax(12rem, 1fr) minmax(0, 2.4fr);
+    column-gap: clamp(2.5rem, 6vw, 6rem);
+  }
+  .prose > * { grid-column: 2; max-width: 50rem; }
+  .prose > .site-h2 { grid-column: 1; margin-top: 0; padding-top: 0.15em; }
+  .prose > p + .site-h2 { margin-top: clamp(2.5rem, 6vh, 4rem); }
+  .prose > .site-h2 + p { margin-top: 0; }
+  .prose > p:has(+ .site-h2) { margin-bottom: 0; }
+  .prose > .site-h2 ~ .site-h2 + p { margin-top: clamp(2.5rem, 6vh, 4rem); }
+
+  .legal {
+    max-width: none;
+    display: grid;
+    grid-template-columns: minmax(14rem, 1fr) minmax(0, 2.6fr);
+    column-gap: clamp(2.5rem, 6vw, 6rem);
+    align-items: start;
+  }
+  .legal > * { grid-column: 2; max-width: 52rem; }
+  .legal > .legal-toc {
+    grid-column: 1; grid-row: 1 / span 200;
+    position: sticky; top: calc(var(--nav-clear) + var(--space-3));
+    margin: 0;
+  }
+  .legal-toc ol { columns: auto; }
+  .legal-toc li { margin-bottom: 0.4rem; }
+  .legal > .legal-note { margin-bottom: var(--space-5); }
+  .legal > .legal-note + h2, .legal > .legal-toc + h2 { margin-top: 0; }
+}
+
+/* ---------- footer ---------- */
+/* Full width (edge to edge, a hairline and a faint tint set it apart),
+   its content in a centred column. main.public-page is a flex column, so
+   margin-top: auto pins it to the bottom of a short page. */
+main.public-page { display: flex; flex-direction: column; }
+main.public-page > * { flex-shrink: 0; width: 100%; }   /* keeps max-width + margin: auto sections at full width, as in block flow */
+.site-foot {
+  position: relative;
+  margin-top: auto;
+  width: 100%;
+  border-top: 1px solid var(--border);
+  background: var(--card);
+  color: var(--text-muted);
+  font-size: var(--fs-sm);
+}
+.sf-inner {
+  max-width: calc(var(--site-max) + 2 * var(--site-pad));
+  margin: 0 auto;
+  padding: var(--space-5) var(--site-pad);
+  display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--space-3) var(--space-5);
+}
+.sf-brand { display: flex; align-items: center; gap: var(--space-3); }
+.sf-brand .site-mark { width: 0.7rem; height: 0.7rem; }
+.sf-links { display: flex; flex-wrap: wrap; gap: var(--space-2) var(--space-5); }
+.sf-links a { color: var(--text-2); text-decoration: none; }
+.sf-links a:hover, .sf-links a:focus-visible { color: var(--text); text-decoration: underline; text-underline-offset: 0.2em; }
+.sf-links a[aria-current="page"] { color: var(--text); }
+@media (max-width: 520px) { .sf-inner { flex-direction: column; align-items: flex-start; } }
+
+/* ---------- storage notice: a small bar, not a gate ---------- */
+.site-notice {
+  position: fixed;
+  left: var(--space-4); bottom: var(--space-4);
+  z-index: 30;
+  width: min(23rem, calc(100% - 2 * var(--space-4)));
+  display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  font-size: var(--fs-xs);
+  color: var(--text-2);
+  line-height: 1.45;
+  background: linear-gradient(180deg,
+    color-mix(in srgb, var(--card-3) 90%, transparent),
+    color-mix(in srgb, var(--card) 88%, transparent));
+  -webkit-backdrop-filter: blur(12px);
+  backdrop-filter: blur(12px);
+}
+.site-notice p { margin: 0; flex: 1 1 100%; }
+.site-notice a { color: var(--accent-ink); white-space: nowrap; }
+.site-notice button { width: auto; min-height: 2.1rem; border-radius: 999px; padding-inline: 1.2rem; }
+
+/* ---------- motion (only for people who haven't asked for less) ---------- */
+@media (prefers-reduced-motion: no-preference) {
+  main.public-page { scroll-behavior: smooth; }
+  body.public::before { animation: site-grid 90s linear infinite; }
+  .site-ambient { animation: site-drift 38s ease-in-out infinite alternate; }
+  .site-nav { animation: site-nav-in 480ms var(--sp-pop) backwards; }
+  .site-auth { animation: site-nav-in 480ms var(--sp-pop) 70ms backwards; }
+  .sa-signup:not([hidden]) { animation: site-fade 240ms var(--sp-ease) backwards; }
+  .sn-link, .site-cta { transition: background 0.2s var(--sp-ease), color 0.2s var(--sp-ease), transform 0.2s var(--sp-spring); }
+  .site-notice { animation: site-notice-in 380ms var(--sp-pop) 900ms backwards; }
+  .site-notice.leaving { animation: site-notice-out 200ms var(--sp-ease) forwards; }
+  /* page heading: StatsPal's slideUp */
+  .site-head > * { animation: site-rise 300ms var(--sp-pop) backwards; }
+  .site-head > :nth-child(2) { animation-delay: calc(var(--sp-stagger) * 2); }
+  .site-head > :nth-child(3) { animation-delay: calc(var(--sp-stagger) * 4); }
+  /* [data-reveal] blocks: their children rise in, 35ms apart, the first
+     time the block scrolls into view (site.js adds .reveal, then .in) */
+  .reveal:not(.in) > * { opacity: 0; }
+  .reveal.in > * { animation: site-item 420ms var(--sp-spring) backwards; animation-delay: calc(var(--i, 0) * var(--sp-stagger) * 2); }
+}
+@keyframes site-rise { from { opacity: 0; transform: translateY(8px); } }
+@keyframes site-item { from { opacity: 0; transform: translateY(10px); } }
+@keyframes site-fade { from { opacity: 0; } }
+@keyframes site-nav-in { from { opacity: 0; transform: translateY(calc(-100% - 1.5rem)); } }
+@keyframes site-notice-in { from { opacity: 0; transform: translateY(1rem); } }
+@keyframes site-notice-out { to { opacity: 0; transform: translateY(1rem); } }
+@keyframes site-drift {
+  from { transform: translate3d(-4%, -3%, 0) rotate(0deg); }
+  to   { transform: translate3d(5%, 4%, 0) rotate(8deg); }
+}
+@keyframes site-grid {
+  from { background-position: 0 0, 0 0, 0 0; }
+  to   { background-position: 0 0, 0 480px, 480px 0; }
+}
