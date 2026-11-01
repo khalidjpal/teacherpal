@@ -386,6 +386,7 @@
             <div class="login-err" id="reset-err" role="alert"></div>
             <button type="submit" class="primary login-submit" id="reset-submit">Save and sign in</button>
           </div>
+          <p class="login-back"><button type="button" class="login-link" id="reset-cancel">Cancel and go to sign in</button></p>
         </form>
 
         <!-- Sign up -->
@@ -469,22 +470,46 @@
       async function boot() {
         // Back from an email link? Finish that first.
         const landed = await completeAuthRedirect().catch(() => ({ error: 'That link didn\'t work. Sign in with your password.' }));
-        if (landed && landed.recovery) {
+        // A reset link (just now, or one opened earlier whose new password
+        // was never saved): the reset form is the only way on.
+        if (isRecoverySession()) {
           $('reset-username').value = (currentUser() && currentUser().email) || '';
           show('reset');
           return;
         }
         if (landed && landed.signedIn) { redirectAfterLogin(); return; }
-        if (hasSession()) { redirectAfterLogin(); return; }
-        if (landed && landed.error) alertMsg('login-alert', landed.error);
+        // A stale link has already signed this browser out (completeAuthRedirect).
+        if (landed && landed.expired && landed.recovery) {
+          await loadSignupDoor();
+          $('forgot-id').value = '';
+          show('forgot');
+          alertMsg('forgot-alert', landed.error);
+          return;
+        }
+        if (landed && landed.error) {
+          alertMsg('login-alert', landed.error);
+          if (landed.expired) $('login-alert').insertAdjacentHTML('beforeend', ' <button type="button" class="login-link" data-to="forgot">Request a new reset link</button>');
+        } else if (hasSession()) { redirectAfterLogin(); return; }
+        await loadSignupDoor();
+        if (location.hash === '#signup' && signupIsOpen) show('signup');
+        if (location.hash === '#forgot') show('forgot');
+      }
+
+      async function loadSignupDoor() {
         signupIsOpen = await signupOpen();
         resize(() => {
           $('signup-door').hidden = !signupIsOpen;
           $('signup-closed').hidden = signupIsOpen;
         });
-        if (location.hash === '#signup' && signupIsOpen) show('signup');
-        if (location.hash === '#forgot') show('forgot');
       }
+
+      // Leaving the reset form without a new password ends the reset link's
+      // session: it must not linger as a way in.
+      $('reset-cancel').addEventListener('click', async () => {
+        await discardSession();
+        await loadSignupDoor();
+        show('signin');
+      });
 
       function show(which) {
         const next = boxes[which];
@@ -676,6 +701,15 @@
           return;
         } catch (x) {
           $('reset-err').textContent = x.message;
+          if (x.code === 'signed_out') {
+            // Saved, but other sessions couldn't be ended one by one, so every
+            // session was: sign in again with the new password.
+            busy(btn, false);
+            await loadSignupDoor();
+            show('signin');
+            alertMsg('login-alert', x.message, 'ok');
+            return;
+          }
           if (x.code === 'no_session') {
             $('reset-err').innerHTML = `${escapeHtml(x.message)} <button type="button" class="login-link" data-to="forgot">Send a new link</button>`;
           }

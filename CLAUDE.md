@@ -136,6 +136,22 @@ shared across accounts.
   `updatePassword(pw)` PUTs `/auth/v1/user` (same-password and
   expired-link errors are explained). It needs the same Redirect URLs as
   sign-up. An admin can still reset a password from the dashboard.
+  **A reset link's session is gated** (`session.recovery: true`,
+  `isRecoverySession()`): it replaces whatever session the browser had
+  (another user's is logged out first), `authHeaders()` sends the anon key
+  instead of it, `hydrateProfileIntoSession()` skips it, and the bootstrap
+  sends every page but `login.html` back to the reset form (open tabs too,
+  via a `storage` listener). "Cancel and go to sign in" discards it. Only
+  after `updatePassword()` succeeds does it become a normal session — after
+  `/auth/v1/logout?scope=others` revokes every other session of that user
+  (if that fails: `scope=global`, and the page asks to sign in again).
+  **Any stale or used link** (`#error_description=…`, or a token
+  `/auth/v1/user` rejects) signs this browser out (`discardSession()`) and
+  shows "This link has expired or was already used. Request a new one." —
+  on the Forgot password form when a reset was asked for or completed in
+  this browser in the last 24h (`teacherpal.resetRequestedAt`; Supabase's
+  error redirect doesn't say what kind of link it was), else on the sign-in
+  form with a "Request a new reset link" button.
   `login.html` posts email + password to
   `/auth/v1/token?grant_type=password`; on success the session is stored
   in `localStorage['teacherpal.session']` = `{ access_token,

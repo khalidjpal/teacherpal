@@ -70,7 +70,10 @@ function hasSession() { return !!_session; }
 // Turn Supabase's token response into our stored shape. Preserves the
 // username we attached at sign-in (it doesn't come back from the token
 // endpoint) across refreshes.
-function normalizeSession(raw) {
+// `recovery` marks the session a password-reset link created: it only opens
+// the reset form until a new password is saved (see isRecoverySession()).
+// Kept across refreshes unless the caller says otherwise.
+function normalizeSession(raw, recovery = !!(_session && _session.recovery)) {
   const expiresInMs = (raw.expires_in || 3600) * 1000;
   const prevUser = _session ? _session.user : null;
   const user = raw.user
@@ -92,8 +95,15 @@ function normalizeSession(raw) {
     refresh_token: raw.refresh_token,
     expires_at: Date.now() + expiresInMs,
     user,
+    ...(recovery ? { recovery: true } : {}),
   };
 }
+
+// A reset link's session, before the new password is saved. It is good for
+// exactly one thing — updatePassword() — so authHeaders() never sends it to
+// the REST API, and the bootstrap sends every page but the login page back
+// to the reset form.
+function isRecoverySession() { return !!(_session && _session.recovery); }
 
 // Plain Supabase Auth: email + password underneath. The login form accepts
 // either an email OR a username — if the input contains "@" we treat it as
@@ -138,7 +148,7 @@ async function signIn(usernameOrEmail, password) {
     if (res.status === 429) throw signInError('Too many tries. Wait a minute, then try again.', 'rate_limited');
     throw signInError(msg, 'failed');
   }
-  saveSession(normalizeSession(data));
+  saveSession(normalizeSession(data, false));
   await hydrateProfileIntoSession();
   applyTheme((_session && _session.user && _session.user.theme) || DEFAULT_THEME);
   return _session;
@@ -212,7 +222,7 @@ function saveThemeToProfile(theme) {
 //                                 teaches map so NOW / PREP stays right)
 // and re-applies the theme if it was changed elsewhere.
 async function hydrateProfileIntoSession() {
-  if (!_session || !_session.user) return;
+  if (!_session || !_session.user || _session.recovery) return;
   try {
     const rows = await sb('profiles', {
       params: {
@@ -295,18 +305,22 @@ async function setMyTeachesPeriods(periods) {
 }
 
 async function signOut() {
+  await discardSession();
+  redirectToLogin();
+}
+
+// Forget the stored session here and end it on the server (best effort: the
+// local copy is gone either way). No redirect — login.html uses this too.
+async function discardSession() {
   const s = _session;
   saveSession(null);
-  if (s) {
-    // Best effort — the local session is already cleared.
-    try {
-      await fetch(`${SUPABASE_URL}/auth/v1/logout`, {
-        method: 'POST',
-        headers: { apikey: SUPABASE_ANON_KEY, Authorization: `Bearer ${s.access_token}` },
-      });
-    } catch { /* ignore */ }
-  }
-  redirectToLogin();
+  if (!s) return;
+  try {
+    await fetch(`${SUPABASE_URL}/auth/v1/logout`, {
+      method: 'POST',
+      headers: { apikey: SUPABASE_ANON_KEY, Authorization: `Bearer ${s.access_token}` },
+    });
+  } catch { /* ignore */ }
 }
 
 // ---------------------------------------------------------------------------
@@ -394,7 +408,7 @@ async function signUp({ email, password, username, displayName }) {
     throw signupError(msg || 'Sign-up failed. Try again.', 'failed');
   }
   if (data.access_token) {          // confirmation is off in this project
-    saveSession(normalizeSession(data));
+    saveSession(normalizeSession(data, false));
     await hydrateProfileIntoSession();
     applyTheme((_session && _session.user && _session.user.theme) || DEFAULT_THEME);
     return { confirm: false };
@@ -422,10 +436,20 @@ async function resendSignupEmail(email) {
   }
 }
 
-// Landing back from a confirmation email: login.html#access_token=…&type=signup
+// Landing back from an email link: login.html#access_token=…&type=signup|recovery
 // (or #error=…&error_description=… / ?error=… when the link is stale).
-// → null (nothing in the URL), { error }, or { signedIn: true }.
+// → null (nothing in the URL), { error, expired?, recovery? }, or
+//   { signedIn: true, recovery }.
 // Clears the tokens out of the address bar either way.
+//
+// Any link replaces whatever session this browser had: a stale link signs
+// the current user out (so a used reset link can never open the app), and
+// a good one for someone else signs the current user out first. A reset
+// link's session is stored with `recovery: true` and opens nothing but the
+// reset form.
+const RESET_REQUESTED_KEY = 'teacherpal.resetRequestedAt';
+const RESET_LINK_MS = 24 * 3600_000;   // only to word the expired message
+
 async function completeAuthRedirect() {
   const hash = new URLSearchParams(location.hash.replace(/^#/, ''));
   const query = new URLSearchParams(location.search);
@@ -440,32 +464,56 @@ async function completeAuthRedirect() {
   };
   if (errText) {
     clean();
+    await discardSession();
     const code = hash.get('error_code') || query.get('error_code') || '';
+    const expired = code === 'otp_expired' || /expired|invalid/i.test(errText);
+    // Supabase's error redirect doesn't say what kind of link it was. A reset
+    // asked for from this browser lately means it was (most likely) a reset.
+    let recovery = false;
+    try { recovery = Date.now() - Number(localStorage.getItem(RESET_REQUESTED_KEY) || 0) < RESET_LINK_MS; } catch { /* ignore */ }
+    if (!expired) return { error: errText.replace(/\+/g, ' ') };
     return {
-      error: code === 'otp_expired' || /expired|invalid/i.test(errText)
-        ? 'That confirmation link has expired or was already used. Sign in below: if your email still needs confirming, you can send a new link from there.'
-        : errText.replace(/\+/g, ' '),
+      expired: true,
+      recovery,
+      error: recovery
+        ? 'This link has expired or was already used. Request a new one.'
+        : 'This link has expired or was already used. Resetting your password? Request a new link. Confirming a new account? Sign in below and we\'ll offer to send a new one.',
     };
   }
   const type = hash.get('type') || '';
   clean();
   if (!['signup', 'magiclink', 'email', 'email_change', 'recovery'].includes(type)) {
+    await discardSession();
     return { error: 'That link isn\'t one TeacherPal can use. Sign in with your password.' };
   }
   const res = await fetch(`${SUPABASE_URL}/auth/v1/user`, {
     headers: { apikey: SUPABASE_ANON_KEY, Authorization: `Bearer ${token}` },
   });
-  if (!res.ok) return { error: 'That link didn\'t work. Sign in with your password.' };
+  if (!res.ok) {
+    await discardSession();
+    return { expired: true, recovery: type === 'recovery', error: 'This link has expired or was already used. Request a new one.' };
+  }
   const user = await res.json();
+  const recovery = type === 'recovery';
+  // Signed in as someone else here? End that session before taking this one.
+  // A reset link always replaces the stored session, even for the same user:
+  // the old one would otherwise keep the app open while the reset is pending
+  // (and updatePassword() revokes it on the server afterwards anyway).
+  if (_session && (recovery || !_session.user || _session.user.id !== user.id)) await discardSession();
   saveSession(normalizeSession({
     access_token: token,
     refresh_token: hash.get('refresh_token'),
     expires_in: Number(hash.get('expires_in')) || 3600,
     user,
-  }));
+  }, recovery));
+  if (recovery) {
+    // Remember it, so clicking this (now used) link again is worded as a reset.
+    try { localStorage.setItem(RESET_REQUESTED_KEY, String(Date.now())); } catch { /* ignore */ }
+    return { signedIn: true, recovery: true };
+  }
   await hydrateProfileIntoSession();
   applyTheme((_session && _session.user && _session.user.theme) || DEFAULT_THEME);
-  return { signedIn: true, recovery: type === 'recovery' };
+  return { signedIn: true, recovery: false };
 }
 
 // "Forgot password?": Supabase's reset email. Takes a username or an email.
@@ -482,17 +530,30 @@ async function requestPasswordReset(usernameOrEmail) {
   });
   if (res.status === 429) throw new Error('Too many reset emails just now. Wait a few minutes and try again.');
   if (res.status >= 500) throw new Error('Couldn\'t send the email right now. Try again in a moment.');
+  try { localStorage.setItem(RESET_REQUESTED_KEY, String(Date.now())); } catch { /* ignore */ }
 }
 
 // The new password, from the reset link's session (login.html's reset panel).
+// On success: every other session of this user is signed out on the server
+// (other browsers, and anything signed in before the reset), and this one
+// stops being a recovery session, so the app opens.
 async function updatePassword(password) {
-  if (!_session) throw signupError('That reset link has expired. Ask for a new one.', 'no_session');
+  if (!_session || !_session.recovery) throw signupError('This link has expired. Request a new one.', 'no_session');
+  if (_session.expires_at && Date.now() > _session.expires_at - 60_000) await refreshSession().catch(() => null);
+  if (!_session) throw signupError('This link has expired. Request a new one.', 'no_session');
   const res = await fetch(`${SUPABASE_URL}/auth/v1/user`, {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json', apikey: SUPABASE_ANON_KEY, Authorization: `Bearer ${_session.access_token}` },
     body: JSON.stringify({ password }),
   });
-  if (res.ok) return;
+  if (res.ok) {
+    await signOutOtherSessions();
+    delete _session.recovery;
+    saveSession(_session);
+    await hydrateProfileIntoSession();
+    applyTheme((_session && _session.user && _session.user.theme) || DEFAULT_THEME);
+    return;
+  }
   const data = await res.json().catch(() => ({}));
   const code = data.error_code || data.code || '';
   const msg = String(data.msg || data.error_description || data.message || '');
@@ -500,8 +561,27 @@ async function updatePassword(password) {
     throw signupError('That\'s your current password. Choose a new one.', 'same_password', 'password');
   }
   if (code === 'weak_password' || /password/i.test(msg)) throw signupError(msg, 'weak_password', 'password');
-  if (res.status === 401) throw signupError('That reset link has expired. Ask for a new one.', 'no_session');
+  if (res.status === 401) {
+    saveSession(null);
+    throw signupError('This link has expired. Request a new one.', 'no_session');
+  }
   throw signupError(msg || 'Couldn\'t save the new password. Try again.', 'failed');
+}
+
+// After a password change: revoke every other session of this user
+// (`scope=others` keeps the current one). Their refresh tokens die at once;
+// an access token already handed out stays valid until it expires (≤ 1h),
+// which is how Supabase JWTs work. If that call fails, fall back to signing
+// out everywhere, this browser included, rather than leave the others open.
+async function signOutOtherSessions() {
+  const call = (scope) => fetch(`${SUPABASE_URL}/auth/v1/logout?scope=${scope}`, {
+    method: 'POST',
+    headers: { apikey: SUPABASE_ANON_KEY, Authorization: `Bearer ${_session.access_token}` },
+  }).then((r) => r.ok).catch(() => false);
+  if (await call('others') || await call('others')) return;
+  await call('global');
+  saveSession(null);
+  throw signupError('Your new password is saved. Sign in with it.', 'signed_out');
 }
 
 // First-run setup (setup.html). New self-signed-up accounts start with
@@ -557,7 +637,9 @@ if (AUTH_LANDING && !pageAllowsAnon()) {
   if (document.documentElement) document.documentElement.style.visibility = 'hidden';
   location.replace(LOGIN_PAGE + location.hash);
 } else if (isConfigured()) {
-  if (!_session && !pageAllowsAnon()) {
+  // No session, or a reset link's session whose new password isn't saved yet
+  // (login.html shows the reset form for that one).
+  if ((!_session || _session.recovery) && !pageAllowsAnon()) {
     // Hide the page while we bounce to /login so the user doesn't see a flash.
     if (document.documentElement) document.documentElement.style.visibility = 'hidden';
     redirectToLogin();
@@ -567,6 +649,20 @@ if (AUTH_LANDING && !pageAllowsAnon()) {
   }
 }
 
+// Another tab opened a reset link (or signed in as someone else): this tab's
+// copy of the session is no longer the one in storage. Send it to the login
+// page, which shows the reset form or comes straight back.
+window.addEventListener('storage', (e) => {
+  if (e.key !== SESSION_KEY || pageAllowsAnon()) return;
+  const s = readStoredSession();
+  if (!s || !_session) return;   // a sign-out: the next request notices
+  if (s.recovery || (s.user && _session.user && s.user.id !== _session.user.id)) {
+    _session = s;
+    if (document.documentElement) document.documentElement.style.visibility = 'hidden';
+    redirectToLogin();
+  }
+});
+
 // ---------------------------------------------------------------------------
 // Low-level REST client
 // ---------------------------------------------------------------------------
@@ -574,8 +670,10 @@ if (AUTH_LANDING && !pageAllowsAnon()) {
 // The bearer is the user's access token when signed in, otherwise the anon
 // key (so unauthenticated pages, if any, can still hit their own narrow-
 // policy tables).
+// A reset link's session (isRecoverySession) counts as signed out here, so
+// it can't read or write any teacher data before the new password is saved.
 function authHeaders() {
-  const bearer = (_session && _session.access_token) || SUPABASE_ANON_KEY;
+  const bearer = (_session && !_session.recovery && _session.access_token) || SUPABASE_ANON_KEY;
   return { apikey: SUPABASE_ANON_KEY, Authorization: `Bearer ${bearer}` };
 }
 
