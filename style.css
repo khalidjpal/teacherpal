@@ -879,45 +879,79 @@
   --tg-digit:      #2B1609;
   --tg-digit-halo: rgba(255, 244, 226, 0.92);
 
-  /* the Name Wheel cornucopia (cornucopia.js; thanksgiving only). The name
-     plate is cream on near-opaque cocoa (>= 13:1); basket names are cream
-     on a dark halo */
-  --hn-orange: #D2691E;  --hn-orange-d: #94440F;  --hn-orange-h: #F4A462;
-  --hn-cran:   #9B2335;  --hn-cran-d:   #64121F;  --hn-cran-h:   #D4606F;
-  --hn-amber:  #E2A23C;  --hn-amber-d:  #A06A16;  --hn-amber-h:  #F8D489;
-  --hn-green:  #5A7A2E;  --hn-green-d:  #36491A;  --hn-green-h:  #8DAE58;
-  --hn-grape:  #5E2B5A;  --hn-grape-d:  #3A1737;  --hn-grape-h:  #A56A9E;
-  --hn-stem:   #5A3A1E;
-  --hn-leafy:  #5F7F2E;
-  --hn-line:   rgba(30, 14, 6, 0.75);
-  --hn-shine:  rgba(255, 246, 228, 0.55);
-  --hn-wicker:    #B68449;
-  --hn-wicker-d:  #74491F;
-  --hn-wicker-hi: #E6C186;
-  --hn-weave-a:   rgba(60, 32, 12, 0.32);
-  --hn-weave-b:   rgba(255, 226, 170, 0.16);
-  --hn-mouth:     #1C110A;
-  --hn-mouth-2:   #4A2D17;
-  --hn-wall-1: #3B2A1E;
-  --hn-wall-2: #221711;
-  --hn-wood:   #75492B;
-  --hn-wood-2: #4C2F1B;
-  --hn-wood-edge:  #A0714A;
-  --hn-plank:  rgba(22, 10, 4, 0.5);
-  --hn-grain:  rgba(255, 220, 170, 0.1);
-  --hn-shadow: rgba(10, 5, 2, 0.6);
-  --hn-basket:   #A6763F;
-  --hn-basket-d: #6A4520;
-  --hn-basket-in: #2A1A10;
-  --hn-ink:    #FFF4E2;
-  --hn-ink-halo: rgba(24, 10, 4, 0.92);
-  --hn-plate:  rgba(31, 21, 17, 0.9);
-  --hn-plate-line: #E8A33D;
-  --hn-glow:   #F2B04E;
-  --hn-leaf-0: #C0392B;
-  --hn-leaf-1: #D2691E;
-  --hn-leaf-2: #E8A33D;
-  --hn-leaf-3: #8A2335;
+  /* the Name Wheel farmyard (farmyard.js; thanksgiving only). The name
+     plate is cream on near-opaque cocoa (>= 13:1); the names on the
+     turkeys are cream on a dark halo; the oven's count is cream on cocoa */
+  --fy-sky-1: #3A2230;  --fy-sky-2: #8E4A2E;  --fy-sky-3: #E39A55;
+  --fy-sun: #F6C56E;
+  --fy-hill: #5C3E2A;
+  --fy-trunk: #3B2618;
+  --fy-crown-0: #C0392B;  --fy-crown-1: #D2691E;  --fy-crown-2: #E8A33D;
+  --fy-barn: #9B2F24;  --fy-barn-roof: #4E1D16;  --fy-barn-dark: #6E1E17;  --fy-barn-trim: #F1E2C8;
+  --fy-boards: rgba(40, 10, 6, 0.35);
+  --fy-silo: #A99A86;  --fy-silo-top: #6E6255;  --fy-silo-ring: rgba(40, 30, 20, 0.35);
+  --fy-hay: #D9A441;  --fy-hay-d: #A8792A;  --fy-hay-hi: #F0CB6E;
+  --fy-fence: #7A5333;  --fy-fence-d: #5C3D24;
+  --fy-ground-1: #7C5A30;  --fy-ground-2: #4E3820;
+  --fy-grass: #7E8F34;
+  --fy-feed: #F2C14E;
+  --fy-shadow: rgba(15, 8, 3, 0.45);
+  --fy-line: rgba(30, 14, 6, 0.8);
+  /* turkeys: three plumages */
+  --fy-t0-body: #6B4024;  --fy-t0-chest: #8A5530;  --fy-t0-wing: #4E2D18;  --fy-t0-f0: #8A4A22;  --fy-t0-f1: #C26A2A;  --fy-t0-f2: #5E3418;
+  --fy-t1-body: #7A3A1E;  --fy-t1-chest: #9C5230;  --fy-t1-wing: #57260F;  --fy-t1-f0: #B4512A;  --fy-t1-f1: #D88A3A;  --fy-t1-f2: #6A2C14;
+  --fy-t2-body: #4A3226;  --fy-t2-chest: #6A4A36;  --fy-t2-wing: #33221A;  --fy-t2-f0: #6E4A30;  --fy-t2-f1: #B07A3E;  --fy-t2-f2: #3E2A1E;
+  --fy-tip: #F1DDB8;
+  --fy-head: #E9B9A0;
+  --fy-wattle: #D1343C;
+  --fy-beak: #F0A63A;
+  --fy-beak-in: #5A1A14;
+  --fy-leg: #E59A3A;
+  --fy-eye: #FFF7EA;
+  --fy-pupil: #1C110A;
+  --fy-bang: #F2B04E;
+  /* the farmer */
+  --fy-skin: #F0C29A;
+  --fy-blush: rgba(220, 90, 70, 0.45);
+  --fy-nose: #E6957A;
+  --fy-stache: #7A4E30;
+  --fy-shirt: #B5452B;
+  --fy-shirt-back: #8E3420;
+  --fy-check: rgba(255, 230, 200, 0.3);
+  --fy-denim: #3E5E8C;
+  --fy-denim-d: #2F4A70;
+  --fy-button: #E8C25A;
+  --fy-boot: #3B2618;
+  --fy-hat: #E2B04A;
+  --fy-hat-band: #9B2335;
+  --fy-bubble: #FFF4E2;
+  --fy-bubble-ink: #2B1609;
+  /* the reveal */
+  --fy-ink:    #FFF4E2;
+  --fy-ink-halo: rgba(24, 10, 4, 0.92);
+  --fy-plate:  rgba(31, 21, 17, 0.9);
+  --fy-plate-line: #E8A33D;
+  --fy-glow:   #F2B04E;
+  --fy-burst-0: #C0392B;
+  --fy-burst-1: #D2691E;
+  --fy-burst-2: #E8A33D;
+  --fy-burst-3: #8A5530;
+  --fy-hill-2: #4A3122;
+  --fy-sunglow: #F2A24E;
+  --fy-cloud: #F2B486;  --fy-cloud-u: #B9674A;
+  --fy-flyer: #2A1510;
+  --fy-barn-in: #2A0F0B;
+  --fy-vane: #24150E;
+  --fy-pumpkin: #D2691E;  --fy-pumpkin-rib: #A04B12;  --fy-stem: #5E6B2C;
+  --fy-warm: #FFB45E;
+  --fy-dusk: #140904;
+  /* the oven the round collects in: cream enamel, a steel panel, a warm
+     glow behind tinted glass, the spit; the count plate is cream on cocoa */
+  --fy-oven: #EADCC2;  --fy-oven-d: #C7AE88;  --fy-oven-steel: #9EA6A8;  --fy-oven-knob: #9B2335;
+  --fy-oven-in: #1E0E07;  --fy-oven-glass: rgba(255, 190, 120, 0.12);  --fy-oven-glare: rgba(255, 246, 230, 0.32);
+  --fy-oven-fire: #FF8A2A;  --fy-oven-hot: #FFD27A;  --fy-oven-dial: #FFFDF6;
+  --fy-spit: #C9CED6;  --fy-spit-d: #7A828A;
+  --fy-steam: rgba(255, 246, 232, 0.8);
 
   /* extras — the drifting leaves */
   --tg-fall: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><path d='M50 4 57 22 66 16 64 36 80 26 76 38 92 40 80 52 86 58 64 62 66 72 52 66 52 92 48 92 48 66 34 72 36 62 14 58 20 52 8 40 24 38 20 26 36 36 34 16 43 22Z' fill='%23D2691E' fill-opacity='0.22'/><path d='M50 66V20M50 50 76 36M50 50 24 36M50 58 70 58M50 58 30 58' stroke='%231F1511' stroke-opacity='0.25' stroke-width='1.6' fill='none'/></svg>");
@@ -7430,142 +7464,533 @@ body.wheel-popout .cauldron { cursor: default; }
 }
 
 /* ---------------------------------------------------------------------------
-   Name Wheel — thanksgiving skin: a CORNUCOPIA instead of the wheel
-   (cornucopia.js). A woven horn on its side on a wooden table, produce in
-   its mouth and spilling out, one piece per student (no names). A pick tips
-   and shakes the horn (.horn[data-state="tipping"]), the produce tumbles out
-   and rolls over the table, the chosen piece lights up (.chosen) and rolls
-   to the front, and the name rises above it in a burst of leaves. With No
-   repeats on, called pieces collect in the basket on the right (names on
-   them) until "Tip it back in". The whole scene is the button.
+   Name Wheel — thanksgiving skin: a FARMER CHOOSING A TURKEY instead of the
+   wheel (farmyard.js). A farmyard at sunset (barn, silo, hay bales, a
+   fence), one plump turkey per student milling about, pecking
+   and flapping, and the farmer on the right in a big thinking pose. A pick:
+   he walks the flock (data-pose walk / lean / nope), the turkeys near him
+   duck (.scared), one sneaks off (.sneak), the ones he inspects sweat it out
+   (.inspected) and hop with relief (.relief); at the winner he points, it
+   freezes mid-gobble (.caught); he hoists it (.held) and lobs it (.tossed)
+   into the big oven at the right of the yard (.fy-oven), where it lands on a
+   hook of the rotisserie spit (.fy-spitbird), clang, ding, and its name rises
+   over the oven. With No repeats on the picked ones stay on the spit, ring
+   by ring, the count on the door, until "Let them out"; the full oven
+   celebrates (.party).
+   Each turkey wears its first name, small, in cream. The scene is as wide as
+   its box (farmyard.js layout()) and on the page it fills the width, the
+   controls in one row under it. Clouds, birds, trees, falling leaves,
+   grass, the barn door and the weathervane all move on their own beats.
+   The whole scene is the button. Every part inside the actors that moves uses transform-box: fill-box, so it
+   turns about its own box whatever the group around it is doing.
    --------------------------------------------------------------------------- */
-.horn, .for-horn { display: none; }
-:root[data-theme="thanksgiving"] .horn { display: block; }
-:root[data-theme="thanksgiving"] .for-horn { display: inline; }
+.farm, .for-farm { display: none; }
+:root[data-theme="thanksgiving"] .farm { display: block; }
+:root[data-theme="thanksgiving"] .for-farm { display: inline; }
 :root[data-theme="thanksgiving"] .for-wheel,
 :root[data-theme="thanksgiving"] .wheel-wrap > .wheel-svg,
 :root[data-theme="thanksgiving"] #wheel-spin,
 :root[data-theme="thanksgiving"] .wheel-hub-text,
 :root[data-theme="thanksgiving"] .wheel-mascot { display: none; }
 
-.horn {
+.farm {
   position: absolute; inset: 0;
-  container-type: inline-size;
   overflow: hidden;
   cursor: pointer;
   border-radius: var(--radius-lg);
   border: 1px solid var(--border);
-  background: radial-gradient(ellipse 80% 70% at 45% 40%, var(--hn-wall-1), var(--hn-wall-2));
+  background: var(--fy-ground-2);
   -webkit-tap-highlight-color: transparent;
 }
-.horn[aria-disabled="true"] { cursor: default; }
-body.wheel-popout .horn { cursor: default; border: 0; }
-.horn:focus-visible { outline: 2px solid var(--accent); outline-offset: 4px; }
-.hn-svg { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; }
+.farm[aria-disabled="true"] { cursor: default; }
+body.wheel-popout .farm { cursor: default; border: 0; }
+.farm:focus-visible { outline: 2px solid var(--accent); outline-offset: 4px; }
+.fy-svg { position: absolute; inset: 0; width: 100%; height: 100%; }
+.farm .o { stroke: var(--fy-line); stroke-width: 1.4; stroke-linejoin: round; }
 
-/* the table */
-.hn-table { fill: url(#hn-g-table); }
-#hn-g-table stop:first-child { stop-color: var(--hn-wood); }
-#hn-g-table stop:last-child { stop-color: var(--hn-wood-2); }
-.hn-table-planks { fill: none; stroke: var(--hn-plank); stroke-width: 1.6; }
-.hn-table-grain { fill: none; stroke: var(--hn-grain); stroke-width: 1.4; stroke-linecap: round; }
-.hn-table-edge { fill: none; stroke: var(--hn-wood-edge); stroke-width: 2.4; }
-.hn-horn-shadow { fill: var(--hn-shadow); filter: url(#hn-blur); }
-.hn-shadow { fill: var(--hn-shadow); }
+/* the yard */
+.fy-sky { fill: url(#fy-g-sky); }
+#fy-g-sky stop:nth-child(1) { stop-color: var(--fy-sky-1); }
+#fy-g-sky stop:nth-child(2) { stop-color: var(--fy-sky-2); }
+#fy-g-sky stop:nth-child(3) { stop-color: var(--fy-sky-3); }
+.fy-sun { fill: url(#fy-g-sun); }
+#fy-g-sun stop:nth-child(1) { stop-color: var(--fy-sun); }
+#fy-g-sun stop:nth-child(2) { stop-color: var(--fy-sun); stop-opacity: 0.55; }
+#fy-g-sun stop:nth-child(3) { stop-color: var(--fy-sun); stop-opacity: 0; }
+.fy-hill-far { fill: var(--fy-hill); }
+.fy-hill-near { fill: var(--fy-hill-2); }
+.fy-sunglow { fill: var(--fy-sunglow); opacity: 0.2; filter: blur(28px); }
+.fy-trunk { fill: none; stroke: var(--fy-trunk); stroke-width: 4; stroke-linecap: round; }
+.fy-crown.c0 { fill: var(--fy-crown-0); }
+.fy-crown.c1 { fill: var(--fy-crown-1); }
+.fy-crown.c2 { fill: var(--fy-crown-2); }
+.fy-barn-wall { fill: var(--fy-barn); }
+.fy-barn-boards { fill: none; stroke: var(--fy-boards); stroke-width: 1.6; }
+.fy-barn-roof { fill: var(--fy-barn-roof); }
+.fy-barn-trim, .fy-barn-x { fill: none; stroke: var(--fy-barn-trim); stroke-width: 2.6; stroke-linejoin: round; }
+.fy-barn-loft, .fy-barn-door { fill: var(--fy-barn-dark); }
+.fy-hay-loft { fill: var(--fy-hay); }
+.fy-silo { fill: var(--fy-silo); }
+.fy-silo-top { fill: var(--fy-silo-top); }
+.fy-silo-ring { fill: none; stroke: var(--fy-silo-ring); stroke-width: 1.6; }
+.fy-bale, .fy-roll { fill: var(--fy-hay); }
+.fy-bale-line, .fy-roll-sp { fill: none; stroke: var(--fy-hay-d); stroke-width: 1.6; stroke-linecap: round; }
+.fy-rail { fill: none; stroke: var(--fy-fence); stroke-width: 4; }
+.fy-post { fill: none; stroke: var(--fy-fence-d); stroke-width: 5; stroke-linecap: round; }
+.fy-ground { fill: url(#fy-g-ground); }
+#fy-g-ground stop:first-child { stop-color: var(--fy-ground-1); }
+#fy-g-ground stop:last-child { stop-color: var(--fy-ground-2); }
+.fy-straw-bits { fill: none; stroke: var(--fy-hay-hi); stroke-width: 1.4; stroke-linecap: round; opacity: 0.55; }
+.fy-grass { fill: none; stroke: var(--fy-grass); stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
+.fy-feed circle { r: 1.6px; fill: var(--fy-feed); opacity: 0.8; }
+/* long shadows from the low sun (farmyard.js placeShade) */
+.fy-shade-c { fill: var(--fy-shadow); }
+.fy-shade-l { fill: url(#fy-g-shade); }
+#fy-g-shade stop:first-child { stop-color: var(--fy-shadow); stop-opacity: 0.85; }
+#fy-g-shade stop:last-child { stop-color: var(--fy-shadow); stop-opacity: 0; }
+/* warm low light over everything, and a little dusk at the front */
+.fy-warm { fill: url(#fy-g-glow); mix-blend-mode: soft-light; pointer-events: none; }
+#fy-g-glow stop:nth-child(1) { stop-color: var(--fy-warm); stop-opacity: 0.6; }
+#fy-g-glow stop:nth-child(2) { stop-color: var(--fy-warm); stop-opacity: 0.28; }
+#fy-g-glow stop:nth-child(3) { stop-color: var(--fy-warm); stop-opacity: 0; }
+.fy-dusk { fill: url(#fy-g-dusk); pointer-events: none; }
+#fy-g-dusk stop:nth-child(1) { stop-color: var(--fy-dusk); stop-opacity: 0; }
+#fy-g-dusk stop:nth-child(2) { stop-color: var(--fy-dusk); stop-opacity: 0.3; }
 
-/* the horn: wicker body, woven texture, ring bands, a dark mouth */
-.hn-horn { transform-box: view-box; transform-origin: 196px 274px; }
-.hn-horn-body { fill: var(--hn-wicker); }
-.hn-horn-weave { fill: url(#hn-weave); }
-.hn-weave-a { stroke: var(--hn-weave-a); stroke-width: 1.8; fill: none; }
-.hn-weave-b { stroke: var(--hn-weave-b); stroke-width: 1.4; fill: none; }
-.hn-horn-shade { fill: none; stroke: var(--hn-wicker-d); stroke-width: 18; stroke-linecap: round; opacity: 0.45; }
-.hn-horn-hi { fill: none; stroke: var(--hn-wicker-hi); stroke-width: 6; stroke-linecap: round; opacity: 0.5; }
-.hn-horn-bands { fill: none; stroke: var(--hn-wicker-d); stroke-width: 3; stroke-linecap: round; opacity: 0.85; }
-.hn-horn-edge { fill: none; stroke: var(--hn-line); stroke-width: 2.6; stroke-linejoin: round; }
-.hn-mouth-in { fill: url(#hn-g-mouth); }
-#hn-g-mouth stop:first-child { stop-color: var(--hn-mouth); }
-#hn-g-mouth stop:last-child { stop-color: var(--hn-mouth-2); }
-.hn-mouth-rim { fill: none; stroke: var(--hn-wicker-d); stroke-width: 9; }
-.hn-mouth-braid { fill: none; stroke: var(--hn-wicker-hi); stroke-width: 3.4; stroke-dasharray: 5 4; stroke-linecap: round; }
-
-/* tip and shake: the tail lifts, the mouth dips, a rattle, then it settles */
-.horn[data-state="tipping"] .hn-horn { animation: hn-tip 1500ms cubic-bezier(.3, .1, .3, 1) both; }
-@keyframes hn-tip {
-  0%   { transform: rotate(0); }
-  16%  { transform: rotate(12deg); }
-  24%  { transform: rotate(9deg) translate(2px, 0); }
-  32%  { transform: rotate(13deg) translate(-2px, 1px); }
-  40%  { transform: rotate(9.5deg) translate(2px, 0); }
-  48%  { transform: rotate(12.5deg) translate(-1px, 1px); }
-  56%  { transform: rotate(10deg); }
-  100% { transform: rotate(0); }
+/* the scenery, moving on its own: each item's beat is an inline var */
+.fy-cloud-b { fill: var(--fy-cloud); opacity: 0.78; }
+.fy-cloud-u { fill: var(--fy-cloud-u); opacity: 0.6; }
+.fy-cloud { animation: fy-drift var(--cl, 200s) linear var(--cd, 0s) infinite; }
+@keyframes fy-drift { from { translate: -560px 0; } to { translate: 1560px 0; } }
+.fy-flyer {
+  fill: none; stroke: var(--fy-flyer); stroke-width: 1.3; stroke-linecap: round; stroke-linejoin: round;
+  transform-box: fill-box; transform-origin: 50% 100%;
+  animation: fy-wingbeat 300ms ease-in-out var(--fd, 0ms) infinite alternate;
 }
+@keyframes fy-wingbeat { from { scale: 1 1; } to { scale: 1 -0.6; } }
+/* most of each loop the flock is off-screen: birds cross only now and then */
+.fy-flock-move { animation: fy-flock 46s linear -14s infinite; }
+.fy-flock.b .fy-flock-move { animation-duration: 67s; animation-delay: -51s; }
+@keyframes fy-flock { 0% { translate: -560px 0; } 42%, 100% { translate: 1560px -28px; } }
+.fy-tree { transform-box: fill-box; transform-origin: 50% 100%; animation: fy-sway var(--tt, 6s) ease-in-out var(--td, 0s) infinite alternate; }
+@keyframes fy-sway { from { rotate: -1.3deg; } to { rotate: 1.5deg; } }
+.fy-leaf { transform-box: fill-box; transform-origin: 50% 50%; opacity: 0; animation: fy-fall var(--lt, 10s) linear var(--ld, 0s) infinite; }
+.fy-leaf.c0 { fill: var(--fy-crown-0); }
+.fy-leaf.c1 { fill: var(--fy-crown-1); }
+.fy-leaf.c2 { fill: var(--fy-crown-2); }
+@keyframes fy-fall {
+  0% { opacity: 0; translate: 0 0; rotate: 0deg; }
+  4% { opacity: 1; }
+  16% { translate: calc(var(--lx) * 0.45) 15px; rotate: 110deg; }
+  32% { translate: calc(var(--lx) * 0.15) 33px; rotate: 230deg; }
+  48% { translate: calc(var(--lx) * 0.8) 52px; rotate: 360deg; }
+  56% { opacity: 1; }
+  62%, 100% { opacity: 0; translate: var(--lx) 68px; rotate: 450deg; }
+}
+.fy-tuft {
+  fill: none; stroke: var(--fy-grass); stroke-width: 1.4; stroke-linecap: round; stroke-linejoin: round;
+  transform-box: fill-box; transform-origin: 50% 100%;
+  animation: fy-blow var(--gs, 3s) ease-in-out var(--gd, 0s) infinite alternate;
+}
+@keyframes fy-blow { from { rotate: -5deg; } to { rotate: 11deg; } }
+.fy-barn-in { fill: var(--fy-barn-in); }
+.fy-barn-hay { fill: var(--fy-hay-d); }
+/* the barn doors swing open a little and shut again */
+.fy-door { transform-box: fill-box; animation: fy-door 12s ease-in-out infinite; }
+.fy-door.l { transform-origin: 0% 50%; }
+.fy-door.r { transform-origin: 100% 50%; animation-delay: -0.3s; }
+@keyframes fy-door { 0%, 38%, 100% { scale: 1 1; } 50%, 66% { scale: 0.74 1; } 58% { scale: 0.8 1; } }
+.fy-vane-pole { fill: none; stroke: var(--fy-vane); stroke-width: 1.6; stroke-linecap: round; }
+.fy-vane-arrow { fill: var(--fy-vane); stroke: var(--fy-vane); stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
+.fy-vane-cock { fill: var(--fy-vane); }
+/* the weathervane turns in the wind (a squash in x reads as turning) */
+.fy-vane { transform-box: fill-box; transform-origin: 50% 50%; animation: fy-vane 15s ease-in-out infinite; }
+@keyframes fy-vane { 0%, 100% { scale: 1 1; } 22% { scale: 0.45 1; } 40% { scale: -0.7 1; } 55% { scale: -0.9 1; } 75% { scale: 0.3 1; } }
+.fy-pumpkin { fill: var(--fy-pumpkin); }
+.fy-pumpkin-rib { fill: none; stroke: var(--fy-pumpkin-rib); stroke-width: 1.2; stroke-linecap: round; }
+.fy-pumpkin-stem { fill: none; stroke: var(--fy-stem); stroke-width: 2.2; stroke-linecap: round; }
 
-/* produce (drawn at radius 10; --m / --d / --h set per piece) */
-:is(.hn-piece, .hn-mini) .f-m { fill: var(--m); }
-:is(.hn-piece, .hn-mini) .f-d { fill: var(--d); }
-:is(.hn-piece, .hn-mini) .f-h { fill: var(--h); }
-:is(.hn-piece, .hn-mini) .f-st { fill: var(--hn-stem); }
-:is(.hn-piece, .hn-mini) .f-lf { fill: var(--hn-leafy); }
-:is(.hn-piece, .hn-mini) .f-band { fill: var(--hn-cran); }
-:is(.hn-piece, .hn-mini) .o { stroke: var(--hn-line); stroke-width: 1.05; stroke-linejoin: round; }
-:is(.hn-piece, .hn-mini) .o.thin { stroke-width: 0.6; }
-:is(.hn-piece, .hn-mini) .ln-d { fill: none; stroke: var(--d); stroke-width: 1.1; stroke-linecap: round; }
-:is(.hn-piece, .hn-mini) .ln-s { fill: none; stroke: var(--h); stroke-width: 0.9; stroke-linecap: round; opacity: 0.8; }
-:is(.hn-piece, .hn-mini) .st { fill: none; stroke: var(--hn-stem); stroke-width: 1.6; stroke-linecap: round; }
-:is(.hn-piece, .hn-mini) .ln-stalk { fill: none; stroke: var(--hn-amber-d); stroke-width: 1.1; stroke-linecap: round; }
-.hn-piece .f-sh { fill: var(--hn-shine); }
-.hn-piece { transition: opacity 400ms ease; }
-.hn-piece.born { animation: hn-born 450ms ease-out; }
-@keyframes hn-born { from { opacity: 0; } }
-.hn-piece.leaving { opacity: 0; }
-.hn-piece.chosen > .hn-roll { filter: url(#hn-glowf); }
-.hn-glow-c { flood-color: var(--hn-glow); }
-
-/* the basket (page only, with No repeats on) */
-.hn-basket { display: none; transform-box: view-box; transform-origin: 300px 392px; transition: transform 380ms cubic-bezier(.3, .1, .3, 1.3); }
-.horn.has-basket .hn-basket { display: inline; }
-.hn-basket[data-state="pouring"] { transform: rotate(-24deg) translate(-6px, -10px); }
-.hn-basket-handle { fill: none; stroke: var(--hn-basket-d); stroke-width: 6; stroke-linecap: round; }
-.hn-basket-in { fill: var(--hn-basket-in); }
-.hn-basket-body { fill: var(--hn-basket); stroke: var(--hn-line); stroke-width: 2.4; stroke-linejoin: round; }
-.hn-basket-weave { fill: url(#hn-weave); pointer-events: none; }
-.hn-basket-bands { fill: none; stroke: var(--hn-basket-d); stroke-width: 3; }
-.hn-basket-rim { fill: none; stroke: var(--hn-basket-d); stroke-width: 6; stroke-linecap: round; }
-.hn-mini-name {
+/* a turkey (--peck / --flap and their delays are set per bird) */
+.fy-turkey :is(.fy-bird, .fy-tail, .fy-torso, .fy-head, .fy-wing, .fy-wattle, .fy-eye, .fy-pupil, .fy-leg, .fy-bang, .fy-puff path) { transform-box: fill-box; }
+.fy-turkey.p0 { --tb: var(--fy-t0-body); --tc: var(--fy-t0-chest); --tw: var(--fy-t0-wing); --f0: var(--fy-t0-f0); --f1: var(--fy-t0-f1); --f2: var(--fy-t0-f2); }
+.fy-turkey.p1 { --tb: var(--fy-t1-body); --tc: var(--fy-t1-chest); --tw: var(--fy-t1-wing); --f0: var(--fy-t1-f0); --f1: var(--fy-t1-f1); --f2: var(--fy-t1-f2); }
+.fy-turkey.p2 { --tb: var(--fy-t2-body); --tc: var(--fy-t2-chest); --tw: var(--fy-t2-wing); --f0: var(--fy-t2-f0); --f1: var(--fy-t2-f1); --f2: var(--fy-t2-f2); }
+.farm .fy-turkey .o { stroke-width: 0.9; }
+.fy-fe.c0 { fill: var(--f0); }
+.fy-fe.c1 { fill: var(--f1); }
+.fy-fe.c2 { fill: var(--f2); }
+.fy-fe-tip { fill: var(--fy-tip); }
+.fy-body { fill: var(--tb); }
+.fy-chest { fill: var(--tc); }
+.fy-scallop { fill: none; stroke: var(--tw); stroke-width: 0.8; stroke-linecap: round; opacity: 0.7; }
+.fy-wing { fill: var(--tw); transform-origin: 8% 6%; }
+.fy-wing-line { fill: none; stroke: var(--tc); stroke-width: 0.7; stroke-linecap: round; opacity: 0.8; }
+.fy-neck { fill: none; stroke: var(--fy-head); stroke-width: 4.6; stroke-linecap: round; }
+.fy-turkey .fy-skin { fill: var(--fy-head); }
+.fy-wattle { fill: var(--fy-wattle); transform-origin: 70% 0%; }
+.fy-snood { fill: none; stroke: var(--fy-wattle); stroke-width: 1.8; stroke-linecap: round; }
+.fy-beak path, .fy-beak.shut { fill: var(--fy-beak); }
+.fy-beak .fy-beak-in { fill: var(--fy-beak-in); }
+.fy-beak.open { display: none; }
+.fy-eye { transform-origin: 50% 50%; transition: scale 160ms ease; }
+.fy-eye-w { fill: var(--fy-eye); }
+.fy-pupil { fill: var(--fy-pupil); transform-origin: 50% 50%; transition: scale 160ms ease; }
+.fy-brow { fill: none; stroke: var(--fy-pupil); stroke-width: 0.9; stroke-linecap: round; opacity: 0; transition: opacity 160ms ease, translate 160ms ease; }
+.fy-shut { fill: none; stroke: var(--fy-pupil); stroke-width: 0.9; stroke-linecap: round; display: none; }
+.fy-puff, .fy-bang { display: none; }
+.fy-bang {
+  font: 700 13px/1 var(--font-body);
   text-anchor: middle;
+  fill: var(--fy-bang);
+  stroke: var(--fy-line); stroke-width: 1.4px; paint-order: stroke;
+}
+/* the student's first name on the body, small, cream on a dark halo
+   (farmyard.js counter-flips it so it never reads backwards) */
+.fy-tag {
   font-family: var(--font-body); font-weight: 700;
-  fill: var(--hn-ink);
-  stroke: var(--hn-ink-halo); stroke-width: 1.6px; stroke-linejoin: round;
+  text-anchor: middle; dominant-baseline: central;
+  fill: var(--fy-ink);
+  stroke: var(--fy-ink-halo); stroke-width: 1.1px; stroke-linejoin: round;
   paint-order: stroke;
 }
+.fy-bird { transform-origin: 50% 100%; transition: scale 140ms ease; }
+.fy-torso { transform-origin: 50% 100%; }
+.fy-tail { transform-origin: 50% 100%; transition: scale 160ms ease; }
+.fy-head { transform-origin: 90% 95%; }
+.fy-leg { fill: none; stroke: var(--fy-leg); stroke-width: 1.5; stroke-linecap: round; stroke-linejoin: round; transform-origin: 50% 0%; }
 
-/* counts and the pour button */
-.hn-left, .hn-picked {
-  position: absolute;
+/* idle: pecking, a bob, now and then a flap, a ruffle of the feathers, and
+   craning up to look about (each bird on its own beats; turning round to
+   look the other way is farmyard.js) */
+.fy-turkey .fy-head { animation: fy-peck var(--peck, 3s) ease-in-out var(--peck-d, 0s) infinite, fy-crane var(--look, 7s) ease-in-out var(--look-d, 0s) infinite; }
+.fy-turkey .fy-pupil { animation: fy-glance var(--look, 7s) ease-in-out var(--look-d, 0s) infinite; }
+.fy-turkey .fy-wing { animation: fy-flap var(--flap, 9s) linear var(--flap-d, 0s) infinite; }
+.fy-turkey .fy-torso { animation: fy-bob 1.8s ease-in-out var(--bob-d, 0s) infinite, fy-fluff var(--ruf, 11s) ease-in-out var(--ruf-d, 0s) infinite; }
+.fy-turkey .fy-tail { animation: fy-ruffle var(--ruf, 11s) ease-in-out var(--ruf-d, 0s) infinite; }
+@keyframes fy-crane { 0%, 66%, 100% { translate: 0 0; } 72%, 88% { translate: 0.8px -1.8px; } }
+@keyframes fy-glance { 0%, 68%, 100% { translate: 0 0; } 74% { translate: -0.8px -0.3px; } 81% { translate: 0.8px -0.2px; } 88% { translate: 0 0; } }
+@keyframes fy-fluff { 0%, 86%, 100% { scale: 1; } 89% { scale: 1.07 0.96; } 92% { scale: 0.97 1.04; } 95% { scale: 1.04 0.98; } 98% { scale: 1; } }
+@keyframes fy-ruffle { 0%, 86%, 100% { scale: 1; rotate: 0deg; } 89% { scale: 1.14 0.94; rotate: 5deg; } 92% { scale: 0.95 1.06; rotate: -5deg; } 95% { scale: 1.08 0.98; rotate: 3deg; } 98% { scale: 1; rotate: 0deg; } }
+@keyframes fy-peck {
+  0%, 62%, 100% { rotate: 0deg; }
+  68% { rotate: -42deg; }
+  72% { rotate: -30deg; }
+  76% { rotate: -44deg; }
+  84% { rotate: 0deg; }
+}
+@keyframes fy-flap {
+  0%, 86%, 100% { rotate: 0deg; }
+  88% { rotate: -40deg; } 90% { rotate: 4deg; }
+  92% { rotate: -40deg; } 94% { rotate: 0deg; }
+}
+@keyframes fy-bob { 0%, 100% { translate: 0 0; } 50% { translate: 0 -0.6px; } }
+.fy-turkey.walking .fy-leg.l { animation: fy-step 300ms ease-in-out infinite; }
+.fy-turkey.walking .fy-leg.r { animation: fy-step 300ms ease-in-out -150ms infinite; }
+@keyframes fy-step { 0%, 100% { rotate: -18deg; } 50% { rotate: 18deg; } }
+
+/* he's close: duck, eyes wide, a shiver */
+.fy-turkey:is(.scared, .inspected) .fy-bird { scale: 1.07 0.84; }
+.fy-turkey:is(.scared, .inspected) .fy-head { animation: none; rotate: 18deg; translate: 2px 3px; }
+.fy-turkey:is(.scared, .inspected, .sneak) .fy-eye { scale: 1.4; }
+.fy-turkey:is(.scared, .inspected) .fy-pupil { scale: 0.7; }
+.fy-turkey:is(.scared, .inspected) .fy-brow { opacity: 1; translate: 0 -1px; }
+.fy-turkey.scared .fy-torso { animation: fy-shiver 120ms linear infinite; }
+.fy-turkey.inspected .fy-torso { animation: fy-shiver 90ms linear infinite; }
+@keyframes fy-shiver { 0%, 100% { translate: -0.5px 0; } 50% { translate: 0.5px 0; } }
+.fy-turkey.scared .fy-leg { animation: fy-step 220ms ease-in-out infinite; }
+/* he moved on: a hop of relief, eyes closed happy */
+.fy-turkey.relief .fy-bird { animation: fy-hop 520ms cubic-bezier(.3, .6, .4, 1) 1; }
+.fy-turkey.relief .fy-eye { display: none; }
+.fy-turkey.relief .fy-shut { display: inline; }
+@keyframes fy-hop {
+  0%, 100% { translate: 0 0; scale: 1; }
+  25% { scale: 1.08 0.9; }
+  50% { translate: 0 -9px; scale: 0.95 1.06; }
+  80% { translate: 0 0; scale: 1.06 0.94; }
+}
+/* the one trying to sneak off: tiptoe, head low, very casual */
+.fy-turkey.sneak .fy-bird { scale: 0.94 1.08; rotate: -6deg; }
+.fy-turkey.sneak .fy-head { animation: none; rotate: -14deg; }
+.fy-turkey.sneak .fy-leg.l { animation: fy-step 200ms ease-in-out infinite; }
+.fy-turkey.sneak .fy-leg.r { animation: fy-step 200ms ease-in-out -100ms infinite; }
+.fy-turkey.sneak.still .fy-leg { animation: none; }
+/* picked: frozen mid-gobble, puffed up, eyes huge */
+.fy-turkey.caught * { animation: none; }
+.fy-turkey.caught .fy-bird { scale: 1.1; filter: url(#fy-glowf); }
+.fy-turkey.caught .fy-tail { scale: 1.2; }
+.fy-turkey.caught .fy-head { rotate: 10deg; }
+.fy-turkey.caught .fy-beak.shut { display: none; }
+.fy-turkey.caught .fy-beak.open { display: inline; }
+.fy-turkey.caught .fy-eye { scale: 1.75; }
+.fy-turkey.caught .fy-pupil { scale: 0.5; }
+.fy-turkey.caught .fy-brow { opacity: 1; translate: 0 -2px; }
+.fy-turkey.caught .fy-wattle { rotate: 28deg; }
+.fy-turkey.caught .fy-wing { rotate: -30deg; }
+.fy-turkey.caught .fy-bang { display: inline; animation: fy-bang 360ms cubic-bezier(.2, 1.6, .4, 1) both; transform-origin: 50% 100%; }
+.fy-turkey.caught .fy-puff { display: inline; }
+.fy-turkey.caught .fy-puff path { animation: fy-puff 1400ms ease-out both; }
+.fy-turkey.caught .fy-puff g:nth-child(2) path { animation-delay: 80ms; }
+.fy-turkey.caught .fy-puff g:nth-child(3) path { animation-delay: 160ms; }
+@keyframes fy-bang { from { scale: 0; } }
+@keyframes fy-puff {
+  0% { opacity: 0; translate: 0 0; }
+  15% { opacity: 1; }
+  100% { opacity: 0; translate: 10px 28px; rotate: 50deg; }
+}
+/* lifted: feet paddling the air */
+.fy-turkey.held .fy-leg.l { animation: fy-kick 260ms ease-in-out infinite; }
+.fy-turkey.held .fy-leg.r { animation: fy-kick 260ms ease-in-out -130ms infinite; }
+@keyframes fy-kick { 0%, 100% { rotate: -26deg; } 50% { rotate: 22deg; } }
+.fy-turkey.flying .fy-wing { animation: fy-flutter 140ms linear infinite; }
+@keyframes fy-flutter { 0%, 100% { rotate: 0deg; } 50% { rotate: -50deg; } }
+.fy-turkey { transition: opacity 400ms ease; }
+.fy-turkey.born { animation: fy-born 450ms ease-out; }
+@keyframes fy-born { from { opacity: 0; } }
+.fy-turkey.leaving { opacity: 0; }
+.fy-glow-c { flood-color: var(--fy-glow); }
+
+/* the farmer: one arm set per pose */
+.fy-farmer :is(.ff-body, .ff-upper, .ff-head, .ff-leg, .ff-a, .ff-brow, .ff-alarm text) { transform-box: fill-box; }
+.farm .fy-farmer .o { stroke-width: 1.3; }
+.ff-a { display: none; }
+.fy-farmer[data-pose="think"] .ff-a-think,
+.fy-farmer[data-pose="walk"] .ff-a-walk,
+.fy-farmer[data-pose="lean"] .ff-a-lean,
+.fy-farmer[data-pose="nope"] .ff-a-nope,
+.fy-farmer[data-pose="point"] .ff-a-point,
+.fy-farmer:is([data-pose="lift"], [data-pose="cheer"]) .ff-a-lift,
+.fy-farmer[data-pose="toss"] .ff-a-toss { display: inline; }
+.ff-sleeve { fill: none; stroke: var(--fy-shirt); stroke-width: 7.4; stroke-linecap: round; stroke-linejoin: round; }
+.ff-a.ff-back .ff-sleeve { stroke: var(--fy-shirt-back); }
+.ff-hand, .fy-farmer .ff-skin { fill: var(--fy-skin); }
+.ff-finger { fill: none; stroke: var(--fy-skin); stroke-width: 2.6; stroke-linecap: round; }
+.ff-shirt { fill: var(--fy-shirt); }
+.ff-check { fill: none; stroke: var(--fy-check); stroke-width: 1.4; }
+.ff-denim, .ff-bib { fill: var(--fy-denim); }
+.ff-strap { fill: none; stroke: var(--fy-denim-d); stroke-width: 3.4; stroke-linecap: round; }
+.ff-button { fill: var(--fy-button); }
+.ff-pocket { fill: none; stroke: var(--fy-denim-d); stroke-width: 1.2; }
+.ff-boot { fill: var(--fy-boot); }
+.ff-hair, .ff-stache { fill: var(--fy-stache); }
+.ff-blush { fill: var(--fy-blush); }
+.ff-nose { fill: var(--fy-nose); }
+.ff-mouth { display: none; }
+.ff-mouth path { fill: none; stroke: var(--fy-pupil); stroke-width: 1.3; stroke-linecap: round; }
+.ff-mouth .ff-grin { fill: var(--fy-beak-in); stroke-linejoin: round; }
+.fy-farmer[data-pose="walk"] .ff-m-smile,
+.fy-farmer:is([data-pose="think"], [data-pose="lean"], [data-pose="nope"]) .ff-m-hmm,
+.fy-farmer:is([data-pose="point"], [data-pose="lift"], [data-pose="toss"], [data-pose="cheer"]) .ff-m-grin { display: inline; }
+.ff-eye { fill: var(--fy-pupil); }
+.ff-brow { fill: none; stroke: var(--fy-stache); stroke-width: 1.8; stroke-linecap: round; transition: translate 160ms ease; }
+.fy-farmer:is([data-pose="think"], [data-pose="point"], [data-pose="lift"]) .ff-brow { translate: 0 -2px; }
+.fy-farmer[data-pose="lean"] .ff-brow { rotate: 10deg; }
+.ff-hat-crown, .ff-hat-brim { fill: var(--fy-hat); }
+.ff-hat-band { fill: var(--fy-hat-band); }
+.ff-straw { fill: none; stroke: var(--fy-hay-d); stroke-width: 1; stroke-linecap: round; }
+.ff-bubble { display: none; }
+.ff-bubble :is(circle, ellipse) { fill: var(--fy-bubble); stroke: var(--fy-line); stroke-width: 1.2; }
+.ff-bubble-q { font: 700 15px/1 var(--font-body); text-anchor: middle; fill: var(--fy-bubble-ink); }
+.fy-farmer:is([data-pose="think"], [data-pose="lean"]) .ff-bubble { display: inline; }
+.ff-alarm { display: none; }
+.ff-alarm text { font: 700 18px/1 var(--font-body); text-anchor: middle; fill: var(--fy-bang); stroke: var(--fy-line); stroke-width: 1.6px; paint-order: stroke; }
+.fy-farmer[data-pose="point"] .ff-alarm { display: inline; }
+
+/* pivots: the hips for the lean, the neck for the head, shoulders and hips for the swings */
+.ff-upper { transform-origin: 50% 100%; transition: rotate 180ms ease; }
+.ff-head { transform-origin: 55% 80%; transition: rotate 200ms ease; }
+.ff-leg { transform-origin: 50% 0%; }
+.ff-a { transform-origin: 85% 0%; }
+.ff-a.ff-back { transform-origin: 15% 0%; }
+.fy-farmer[data-pose="think"] .ff-head { rotate: 9deg; }
+.fy-farmer[data-pose="think"] .ff-body { animation: ff-sway 2.6s ease-in-out infinite; transform-origin: 50% 100%; }
+.fy-farmer[data-pose="think"] .ff-tap { animation: ff-tap 900ms ease-in-out infinite; }
+.fy-farmer[data-pose="think"] .ff-bubble { animation: ff-float 2.2s ease-in-out infinite; }
+@keyframes ff-sway { 0%, 100% { rotate: -2deg; } 50% { rotate: 2deg; } }
+@keyframes ff-tap { 0%, 60%, 100% { rotate: 0deg; } 70% { rotate: 7deg; } 80% { rotate: 0deg; } 90% { rotate: 7deg; } }
+@keyframes ff-float { 0%, 100% { translate: 0 0; } 50% { translate: 0 -2.5px; } }
+.fy-farmer[data-pose="walk"] .ff-leg-f { animation: ff-stride 380ms ease-in-out infinite; }
+.fy-farmer[data-pose="walk"] .ff-leg-b { animation: ff-stride 380ms ease-in-out -190ms infinite; }
+.fy-farmer[data-pose="walk"] .ff-swing-f { animation: ff-stride 380ms ease-in-out -190ms infinite; }
+.fy-farmer[data-pose="walk"] .ff-swing-b { animation: ff-stride 380ms ease-in-out infinite; }
+.fy-farmer[data-pose="walk"] .ff-upper { animation: ff-bounce 190ms ease-in-out infinite alternate; rotate: -4deg; }
+@keyframes ff-stride { 0%, 100% { rotate: -24deg; } 50% { rotate: 24deg; } }
+.fy-farmer[data-pose="walk"][data-pace="run"] :is(.ff-leg-f, .ff-swing-b) { animation-duration: 250ms; }
+.fy-farmer[data-pose="walk"][data-pace="run"] :is(.ff-leg-b, .ff-swing-f) { animation-duration: 250ms; animation-delay: -125ms; }
+.fy-farmer[data-pose="walk"][data-pace="run"] .ff-upper { rotate: -10deg; animation-duration: 125ms; }
+@keyframes ff-bounce { from { translate: 0 0; } to { translate: 0 -2.4px; } }
+.fy-farmer[data-pose="lean"] .ff-upper { rotate: -17deg; }
+.fy-farmer[data-pose="lean"] .ff-head { rotate: -6deg; }
+.fy-farmer[data-pose="nope"] .ff-upper { rotate: -6deg; }
+.fy-farmer[data-pose="nope"] .ff-head { animation: ff-shake 150ms ease-in-out infinite alternate; }
+.fy-farmer[data-pose="nope"] .ff-wag { animation: ff-wag 150ms ease-in-out infinite alternate; }
+@keyframes ff-shake { from { rotate: -13deg; } to { rotate: 13deg; } }
+@keyframes ff-wag { from { rotate: -10deg; } to { rotate: 12deg; } }
+.fy-farmer[data-pose="point"] .ff-upper { rotate: -6deg; }
+.fy-farmer[data-pose="point"] .ff-alarm text { animation: fy-bang 360ms cubic-bezier(.2, 1.6, .4, 1) both; transform-origin: 50% 100%; }
+.fy-farmer[data-pose="lift"] .ff-upper { animation: ff-hoist 700ms cubic-bezier(.2, 1.5, .4, 1) both; }
+@keyframes ff-hoist { 0% { translate: 0 4px; } 100% { translate: 0 0; } }
+/* the throw: a heave forward; then, once it's on the spit, a little cheer */
+.fy-farmer[data-pose="toss"] .ff-upper { rotate: -14deg; animation: ff-heave 300ms cubic-bezier(.2, 1.5, .4, 1) both; }
+@keyframes ff-heave { 0% { rotate: 10deg; } 100% { rotate: -14deg; } }
+.fy-farmer[data-pose="cheer"] .ff-head { rotate: 6deg; }
+.fy-farmer[data-pose="cheer"] .ff-upper { animation: ff-cheer 520ms ease-in-out infinite alternate; }
+@keyframes ff-cheer { from { translate: 0 0; } to { translate: 0 -3px; } }
+
+/* ---- the oven (farmyard.js places it; these are its looks) ----
+   It stands at the right of the yard. The door is hinged at the bottom:
+   data-door="open" drops it (a spring), "shut" slams it (fast). Classes:
+   whirl (the spit spun round for a throw), clang, ding, puff (steam as the
+   door opens), counting (No repeats on: the plate on the door), full (the
+   last hook is taken), party (just filled). */
+.fy-oven :is(.fy-oven-body, .fy-oven-shake, .fy-oven-door, .fy-oven-hand, .fy-oven-bell, .fy-oven-ding, .fy-oven-puff circle, .fy-oven-plate) { transform-box: fill-box; }
+.farm .fy-oven .o { stroke-width: 2; }
+.fy-oven-box { fill: var(--fy-oven); }
+.fy-oven-top { fill: var(--fy-oven-steel); }
+.fy-oven-back, .fy-oven-drawer { fill: var(--fy-oven-d); }
+.fy-oven-foot { fill: var(--fy-oven-steel); }
+.fy-oven-pull { fill: none; stroke: var(--fy-oven-steel); stroke-width: 3.4; stroke-linecap: round; }
+.fy-oven-knob { fill: var(--fy-oven-knob); }
+.fy-oven-lamp { fill: var(--fy-oven-fire); filter: drop-shadow(0 0 3px var(--fy-oven-fire)); }
+.fy-oven-dial { fill: var(--fy-oven-dial); }
+.fy-oven-hand { fill: none; stroke: var(--fy-pupil); stroke-width: 1.8; stroke-linecap: round; transform-origin: 50% 100%; }
+.fy-oven-bell-b, .fy-oven-bell-k { fill: var(--fy-hat); }
+.fy-oven-bell { transform-origin: 50% 100%; }
+.fy-oven-cav { fill: var(--fy-oven-in); }
+.fy-oven-in { fill: var(--fy-oven-in); }
+/* the warm glow inside: steady, brighter while the spit whirls and once full */
+.fy-oven-glow { fill: url(#fy-g-ovenin); opacity: 0.8; animation: fy-flicker 1.6s ease-in-out infinite alternate; transition: opacity 300ms ease; }
+.fy-oven.whirl .fy-oven-glow, .fy-oven.full .fy-oven-glow { opacity: 1; }
+#fy-g-ovenin stop:nth-child(1) { stop-color: var(--fy-oven-hot); stop-opacity: 0.85; }
+#fy-g-ovenin stop:nth-child(2) { stop-color: var(--fy-oven-fire); stop-opacity: 0.55; }
+#fy-g-ovenin stop:nth-child(3) { stop-color: var(--fy-oven-fire); stop-opacity: 0.08; }
+@keyframes fy-flicker { 0% { opacity: 0.86; } 40% { opacity: 0.72; } 70% { opacity: 0.9; } 100% { opacity: 0.8; } }
+.fy-oven-rail { fill: none; stroke: var(--fy-spit-d); stroke-width: 1.4; opacity: 0.5; }
+.fy-oven-coil { fill: none; stroke: var(--fy-oven-fire); stroke-width: 2.6; stroke-linecap: round; filter: drop-shadow(0 0 3px var(--fy-oven-fire)); }
+/* the spit: hoops, spokes and empty hooks behind, the rod in the middle */
+.fy-hoops { fill: none; stroke: var(--fy-spit-d); stroke-width: 1.2; opacity: 0.75; }
+.fy-spokes { fill: none; stroke: var(--fy-spit); stroke-width: 1; opacity: 0.55; }
+.fy-hooks { fill: none; stroke: var(--fy-spit); stroke-width: 1.4; stroke-linecap: round; }
+.fy-rod { fill: none; stroke: var(--fy-spit); stroke-width: 3; stroke-linecap: round; }
+.fy-rod-cap { fill: var(--fy-spit); }
+/* the turkeys riding it: still, eyes shut and content; the one just landed
+   (.won) glows, eyes open, beak open, and hops on its hook */
+.farm .fy-spitbird * { animation: none; }
+.fy-spitbird .fy-tag, .fy-spitbird .fy-eye, .fy-spitbird .fy-beak.open { display: none; }
+.fy-spitbird .fy-shut { display: inline; }
+.fy-spitbird .fy-leg.l { rotate: 14deg; }
+.fy-spitbird .fy-leg.r { rotate: -10deg; }
+.fy-spitbird.won .fy-eye, .fy-spitbird.won .fy-beak.open { display: inline; }
+.fy-spitbird.won :is(.fy-shut, .fy-beak.shut) { display: none; }
+.farm .fy-spitbird.won .fy-bird { animation: fy-hop 520ms cubic-bezier(.3, .6, .4, 1) 2; }
+.fy-spit-name {
+  font-family: var(--font-body); font-weight: 700;
+  text-anchor: middle; dominant-baseline: central;
+  fill: var(--fy-ink);
+  stroke: var(--fy-ink-halo); stroke-width: 2.4px; stroke-linejoin: round;
+  paint-order: stroke;
+}
+/* the door: tinted glass with a glare, a handle along the top, the count */
+.fy-oven-door { transform-origin: 50% 100%; transition: scale 120ms cubic-bezier(.6, 0, 1, .6); }
+.fy-oven-door-p { fill: var(--fy-oven); }
+.fy-oven-glass { fill: var(--fy-oven-glass); }
+.fy-oven-shine { fill: none; stroke: var(--fy-oven-glare); stroke-width: 3; stroke-linecap: round; }
+.fy-oven-handle { fill: var(--fy-oven-steel); }
+.fy-oven-plate { display: none; }
+.fy-oven.counting .fy-oven-plate { display: inline; }
+.fy-oven-plate rect { fill: var(--fy-plate); stroke: var(--fy-plate-line); }
+.fy-oven-count { font: 11px/1 var(--font-mono); font-variant-numeric: tabular-nums; text-anchor: middle; dominant-baseline: central; fill: var(--fy-ink); }
+.fy-oven.full .fy-oven-plate rect { fill: var(--fy-plate-line); }
+.fy-oven.full .fy-oven-count { fill: var(--fy-plate); }
+.fy-oven.party .fy-oven-plate { animation: fy-plate 460ms ease-in-out 5; transform-origin: 50% 50%; }
+@keyframes fy-plate { 50% { scale: 1.25; } }
+.fy-oven-light { fill: url(#fy-g-oven); opacity: 0.55; transition: opacity 240ms ease; }
+#fy-g-oven stop:nth-child(1) { stop-color: var(--fy-oven-fire); stop-opacity: 0.55; }
+#fy-g-oven stop:nth-child(2) { stop-color: var(--fy-oven-fire); stop-opacity: 0; }
+.fy-oven:is([data-door="open"], .full, .whirl) .fy-oven-light { opacity: 1; }
+.fy-oven[data-door="open"] .fy-oven-door { scale: 1 -0.2; transition: scale 380ms cubic-bezier(.2, 1.6, .4, 1); }
+.fy-oven.whirl .fy-oven-hand { animation: fy-spin 480ms linear infinite; }
+
+/* the door slams: a jolt and clang marks */
+.fy-oven-body { transform-origin: 50% 100%; }
+.fy-oven.clang .fy-oven-body { animation: fy-jolt 320ms cubic-bezier(.2, 1.6, .4, 1); }
+@keyframes fy-jolt { 0% { scale: 1.05 0.94; } 45% { scale: 0.98 1.03; } 100% { scale: 1; } }
+.fy-oven-clang { display: none; fill: none; stroke: var(--fy-bang); stroke-width: 3.4; stroke-linecap: round; }
+.fy-oven.clang .fy-oven-clang { display: inline; animation: fy-pop-fade 340ms ease-out both; }
+@keyframes fy-pop-fade { 0% { opacity: 0; } 20% { opacity: 1; } 100% { opacity: 0; } }
+.fy-oven-shake { transform-origin: 50% 100%; }
+@keyframes fy-spin { to { rotate: 360deg; } }
+/* DING! */
+.fy-oven-ding {
+  display: none;
+  font: 700 18px/1 var(--font-body); text-anchor: middle;
+  fill: var(--fy-bang); stroke: var(--fy-line); stroke-width: 3px; paint-order: stroke;
+  transform-origin: 50% 100%;
+}
+.fy-oven.ding .fy-oven-ding { display: inline; animation: fy-ding 420ms cubic-bezier(.2, 1.6, .4, 1) both; }
+.fy-oven:is(.ding, .party) .fy-oven-bell { animation: fy-ring 420ms ease-in-out 1; }
+.fy-oven.party .fy-oven-bell { animation-iteration-count: 6; }
+@keyframes fy-ding { 0% { scale: 0; opacity: 1; } 25% { scale: 1.15; } 40% { scale: 1; } 75% { opacity: 1; translate: 0 -3px; } 100% { opacity: 0; translate: 0 -8px; } }
+@keyframes fy-ring { 0%, 100% { rotate: 0deg; } 20% { rotate: -18deg; } 45% { rotate: 14deg; } 70% { rotate: -8deg; } }
+/* the door opens: a puff of warm steam */
+.fy-oven-puff { display: none; }
+.fy-oven-puff circle { fill: var(--fy-steam); opacity: 0; transform-origin: 50% 50%; }
+.fy-oven.puff .fy-oven-puff { display: inline; }
+.fy-oven.puff .fy-oven-puff circle { animation: fy-steam 700ms ease-out both; }
+.fy-oven.puff .fy-oven-puff circle:nth-child(2) { animation-delay: 60ms; }
+.fy-oven.puff .fy-oven-puff circle:nth-child(3) { animation-delay: 120ms; }
+@keyframes fy-steam { 0% { opacity: 0.85; scale: 0.4; translate: 0 0; } 100% { opacity: 0; scale: 1.5; translate: 0 -30px; } }
+/* the last hook filled: the oven hops for joy, rattling, its bell ringing */
+.fy-oven.party .fy-oven-body { animation: fy-oven-hop 560ms cubic-bezier(.3, .6, .4, 1) 4; }
+@keyframes fy-oven-hop {
+  0%, 100% { translate: 0 0; scale: 1; }
+  20% { scale: 1.04 0.95; }
+  50% { translate: 0 -12px; scale: 0.98 1.03; }
+  80% { translate: 0 0; scale: 1.03 0.97; }
+}
+
+/* the turkey's part: tossed (a gleeful tumble, legs flailing, "wheee"),
+   then out of sight on the spit (.baked); later, out of the oven door
+   (.tumbling) back to its spot, and .waiting its turn to come out */
+.fy-turkey.tossed .fy-bird { transform-origin: 50% 55%; animation: fy-tumble 580ms cubic-bezier(.35, .1, .55, .95) 1; }
+@keyframes fy-tumble { from { rotate: 0deg; } to { rotate: -360deg; } }
+.fy-turkey.tumbling .fy-bird { transform-origin: 50% 55%; animation: fy-tumble 700ms ease-out 1; }
+.fy-turkey:is(.tossed, .tumbling) .fy-leg.l { animation: fy-kick 110ms ease-in-out infinite; }
+.fy-turkey:is(.tossed, .tumbling) .fy-leg.r { animation: fy-kick 110ms ease-in-out -55ms infinite; }
+.fy-turkey:is(.tossed, .tumbling) .fy-wing { animation: fy-flutter 120ms linear infinite; }
+.fy-turkey.tossed .fy-eye { display: none; }
+.fy-turkey.tossed .fy-shut { display: inline; }
+.fy-turkey:is(.tossed, .tumbling) .fy-beak.shut { display: none; }
+.fy-turkey:is(.tossed, .tumbling) .fy-beak.open { display: inline; }
+.fy-turkey.tossed .fy-tail { scale: 1.15; }
+.fy-turkey:is(.baked, .waiting) { transition: none; opacity: 0; }
+
+/* counts and the "Let them out" button */
+.fy-left {
+  position: absolute; left: 2.2%; top: 3.5%;
   font: 0.86rem/1.2 var(--font-mono);
-  color: var(--text-2);
+  color: var(--fy-ink);
+  text-shadow: 0 1px 2px var(--fy-ink-halo);
   pointer-events: none;
   white-space: nowrap;
 }
-.hn-left { left: 4%; top: 4%; }
-.hn-picked { left: 86%; top: 35%; translate: -50% 0; }
-.hn-pour {
-  position: absolute; left: 86%; top: 40%; translate: -50% 0;
-  min-height: 0; padding: 0.3rem 0.7rem;
-  font-size: var(--fs-sm);
+/* "Let them out": under the count, top left (page only, with anyone on the spit) */
+.fy-pour {
+  position: absolute; left: 2.2%; top: calc(3.5% + 1.7rem);
+  min-height: 0; padding: 0.25rem 0.8rem;
+  font-size: var(--fs-xs);
   white-space: nowrap;
+  z-index: 2;
 }
-.hn-pour[hidden] { display: none; }
+.fy-pour[hidden] { display: none; }
 
-/* the name over the chosen piece, and the leaves bursting round it */
-.hn-name {
+/* the name over the oven, and leaves bursting round it (and out of the
+   oven when it's full) */
+.fy-name {
   position: absolute;
   translate: -50% 0;
   width: max-content;
   max-width: 94%;
-  font: 700 var(--fs, 10cqi)/1.1 var(--font-body);
+  font: 700 var(--fs, 40px)/1.1 var(--font-body);
   letter-spacing: 0.01em;
   text-align: center;
   overflow-wrap: normal;
@@ -7573,35 +7998,80 @@ body.wheel-popout .horn { cursor: default; border: 0; }
   opacity: 0;
   z-index: 3;
 }
-.hn-name span {
+.fy-name span {
   display: inline-block;
   padding: 0.12em 0.5em 0.16em;
   border-radius: 0.4em;
-  color: var(--hn-ink);
-  background: var(--hn-plate);
-  border: 2px solid var(--hn-plate-line);
-  box-shadow: 0 0 0.4em color-mix(in srgb, var(--hn-glow) 35%, transparent);
+  color: var(--fy-ink);
+  background: var(--fy-plate);
+  border: 2px solid var(--fy-plate-line);
+  box-shadow: 0 0 0.4em color-mix(in srgb, var(--fy-glow) 35%, transparent);
 }
-.hn-name.go { animation: hn-rise 700ms cubic-bezier(.2, 1.4, .4, 1) forwards; }
-@keyframes hn-rise {
+.fy-name.go { animation: fy-rise 700ms cubic-bezier(.2, 1.4, .4, 1) forwards; }
+@keyframes fy-rise {
   from { opacity: 0; transform: translateY(40%) scale(0.6); }
   to   { opacity: 1; transform: none; }
 }
-.hn-burst { position: absolute; width: 0; height: 0; pointer-events: none; z-index: 2; }
-.hn-burst i { position: absolute; left: 0; top: 0; width: 6cqi; height: 6cqi; margin: -3cqi; opacity: 0; }
-.hn-burst i svg { width: 100%; height: 100%; fill: var(--c); filter: drop-shadow(0 1px 1px rgba(0, 0, 0, 0.5)); }
-.hn-burst.go i { animation: hn-leaf 1600ms cubic-bezier(.2, .7, .4, 1) var(--d) forwards; }
-@keyframes hn-leaf {
+.fy-burst { position: absolute; width: 0; height: 0; pointer-events: none; z-index: 2; }
+.fy-burst i { position: absolute; left: 0; top: 0; width: calc(var(--u, 1px) * 24); height: calc(var(--u, 1px) * 24); margin: calc(var(--u, 1px) * -12); opacity: 0; }
+.fy-burst i svg { width: 100%; height: 100%; fill: var(--c); filter: drop-shadow(0 1px 1px rgba(0, 0, 0, 0.5)); }
+.fy-burst.go i { animation: fy-leaf 1600ms cubic-bezier(.2, .7, .4, 1) var(--d) forwards; }
+@keyframes fy-leaf {
   0%   { opacity: 0; transform: translate(0, 0) rotate(0) scale(0.4); }
   12%  { opacity: 1; }
   45%  { opacity: 1; transform: translate(var(--dx), var(--dy)) rotate(calc(var(--r) * 0.5)) scale(1); }
   100% { opacity: 0; transform: translate(var(--dx), calc(var(--dy) + var(--fall))) rotate(var(--r)) scale(0.9); }
 }
 
+/* The page in thanksgiving: no result panel (the name is over the scene;
+   it stays for screen readers, visually hidden), the farmyard fills the
+   width, and the controls are one centred row under it. */
+:root[data-theme="thanksgiving"] .wheel-page .wheel-layout {
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-rows: minmax(0, 1fr) auto;
+  gap: var(--space-2);
+  align-items: stretch;
+}
+:root[data-theme="thanksgiving"] .wheel-page .wheel-side { height: auto; display: block; }
+:root[data-theme="thanksgiving"] .wheel-page .wheel-result {
+  position: absolute; width: 1px; height: 1px; min-height: 0;
+  padding: 0; border: 0; overflow: hidden; clip-path: inset(50%); white-space: nowrap;
+}
+:root[data-theme="thanksgiving"] .wheel-page .wheel-result-actions { display: none; }
+:root[data-theme="thanksgiving"] .wheel-page .wheel-hint { display: none; }
+:root[data-theme="thanksgiving"] .wheel-page .wheel-controls {
+  flex-direction: row; flex-wrap: wrap;
+  justify-content: center; align-items: center;
+  gap: 0.4rem 0.8rem;
+}
+:root[data-theme="thanksgiving"] .wheel-page .wheel-control-row { width: auto; }
+:root[data-theme="thanksgiving"] .wheel-page .pick-list-bar:not([hidden]) { width: auto; display: flex; flex-direction: row; align-items: center; gap: 0.5rem; }
+:root[data-theme="thanksgiving"] .wheel-page .wheel-control-row .lbl { display: none; }   /* the selects say what they are */
+:root[data-theme="thanksgiving"] .wheel-page .wheel-control-row { gap: 0.35rem; }
+:root[data-theme="thanksgiving"] .wheel-page .wheel-control-row :is(button, select) { padding-left: 0.6rem; padding-right: 0.6rem; }
+:root[data-theme="thanksgiving"] .wheel-page .wheel-control-row select { padding-right: 1.7rem; }
+:root[data-theme="thanksgiving"] .wheel-page .pick-list-line { margin: 0; max-width: 13rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }   /* one row: "Round complete · …" is cut, the whole line is its title */
+:root[data-theme="thanksgiving"] .wheel-page .wheel-stage { height: 100%; padding: 0; }
+:root[data-theme="thanksgiving"] .wheel-page .wheel-stage > .tick { display: none; }
+:root[data-theme="thanksgiving"] .wheel-wrap { width: 100%; height: 100%; max-width: none; aspect-ratio: auto; }
+:root[data-theme="thanksgiving"] body.present .wheel-wrap { width: 100%; height: 100%; }
+:root[data-theme="thanksgiving"] body.wheel-popout { place-items: stretch; }
+:root[data-theme="thanksgiving"] body.wheel-popout .wheel-stage { width: 100vw; height: 100vh; height: 100dvh; padding: 0; }
+:root[data-theme="thanksgiving"] body.wheel-popout .wheel-wrap { width: 100%; height: 100%; max-width: none; }
+@media (max-width: 900px) {
+  :root[data-theme="thanksgiving"] .wheel-page .wheel-layout { grid-template-rows: auto auto; align-content: start; }
+  :root[data-theme="thanksgiving"] .wheel-page .wheel-stage { height: auto; }
+  :root[data-theme="thanksgiving"] .wheel-page .wheel-wrap { height: auto; aspect-ratio: 4 / 3; }
+}
+
+/* Reduced motion: the idle loops (pecking, bobbing, swaying, striding), the
+   scenery (clouds, birds, trees, leaves, grass, door, vane) and the bursts
+   stop; the walk itself is the pick, so it still runs (JS), and
+   the poses still change. */
 @media (prefers-reduced-motion: reduce) {
-  .horn[data-state="tipping"] .hn-horn { animation-duration: 600ms !important; }
-  .hn-burst.go i { animation: none !important; }
-  .hn-name.go { animation: none !important; opacity: 1; }
+  .farm * { animation: none !important; }
+  .fy-birds { display: none; }   /* a flock parked in the sky would just look odd */
+  .fy-name.go { opacity: 1; }
 }
 
 /* ---------------------------------------------------------------------------

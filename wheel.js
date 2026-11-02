@@ -91,13 +91,13 @@
   const $ = (id) => document.getElementById(id);
   // The skins (each is a no-op outside its own theme), and the one that is
   // showing in a given document, if any.
-  const skins = () => [window.Cauldron, window.Boba, window.Cornucopia].filter(Boolean);
+  const skins = () => [window.Cauldron, window.Boba, window.Farmyard].filter(Boolean);
   const skinFor = (doc = document) => skins().find((k) => k.isOn(doc)) || null;
   const eachSkin = (fn) => skins().forEach(fn);
   // the words follow the skin
   const onIt = () => (window.Cauldron && window.Cauldron === skinFor() ? 'in the brew'
     : window.Boba && window.Boba === skinFor() ? 'in the cup'
-    : window.Cornucopia && window.Cornucopia === skinFor() ? 'in the horn' : 'on the wheel');
+    : window.Farmyard && window.Farmyard === skinFor() ? 'in the yard' : 'on the wheel');
   const reduceMotion = () => window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
   // ---------- names (same rule as Create Groups) ----------
@@ -966,6 +966,7 @@
     $('pick-list-line').innerHTML = done
       ? `<b>Round complete</b> · everyone here has been picked${away ? ` (${away} not here still to go)` : ''}`
       : `${escapeHtml(list ? list.name : '')} · <b>${n}</b> of ${roster.length} picked`;
+    $('pick-list-line').title = $('pick-list-line').textContent;   // the whole line, where a layout cuts it short
     const reset = $('pick-list-reset');
     reset.classList.toggle('primary', done);
     reset.disabled = !n;
@@ -1128,20 +1129,20 @@
       cauldron.addEventListener('click', startSpin);
       cauldron.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); startSpin(); } });
     }
-    // thanksgiving: the whole cornucopia scene is the button
-    const horn = $('horn');
-    if (horn) {
-      horn.setAttribute('role', 'button');
-      horn.setAttribute('tabindex', '0');
-      horn.setAttribute('aria-label', 'Tip the cornucopia to pick a student');
-      horn.addEventListener('click', startSpin);
-      horn.addEventListener('keydown', (e) => { if (e.key === 'Enter' && e.target === horn) { e.preventDefault(); startSpin(); } });
+    // thanksgiving: the whole farmyard is the button
+    const farm = $('farm');
+    if (farm) {
+      farm.setAttribute('role', 'button');
+      farm.setAttribute('tabindex', '0');
+      farm.setAttribute('aria-label', 'Send the farmer to pick a student');
+      farm.addEventListener('click', startSpin);
+      farm.addEventListener('keydown', (e) => { if (e.key === 'Enter' && e.target === farm) { e.preventDefault(); startSpin(); } });
     }
     // pink: the whole bubble tea cup (its hit area is #boba-straw, sized
     // over the cup in the CSS)
     const straw = $('boba-straw');
     if (straw) straw.addEventListener('click', startSpin);
-    // The jar's / basket's "Pour them back" asks first on a saved list (the
+    // The jar's "Pour them back" and the oven's "Let them out" ask first on a saved list (the
     // skin cancels the pour on a no)...
     document.addEventListener('teacherpal:wheel-reset-request', (e) => {
       if (spin || (useLists() && !confirmReset())) e.preventDefault();
