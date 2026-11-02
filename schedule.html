@@ -24,7 +24,7 @@
       <section class="card" aria-label="Schedule overrides">
         <div class="card-head"><h2>Schedule overrides</h2></div>
         <p class="today-line" id="today-line">Today: <strong>—</strong></p>
-        <p class="bell-hint">Weekday default: Monday = Early Release, Tuesday–Friday = Tues–Fri schedule. An override for a date always wins.</p>
+        <p class="bell-hint" id="weekday-hint">Weekday default: Monday = Early Release, Tuesday–Friday = Tues–Fri schedule. An override for a date always wins.</p>
 
         <form class="ov-form" id="ov-form">
           <label><span class="lbl">Date</span><input type="date" id="ov-date" class="neu-inset" required></label>
@@ -57,6 +57,7 @@
           <thead><tr><th>Block</th><th>Time</th><th>Class</th></tr></thead>
           <tbody id="bell-body"></tbody>
         </table>
+        <p class="bell-hint" id="bell-source"></p>
         <p class="bell-hint">Class names come from the roster: a period called "5th Period - ERWC" is bell period 5. Periods without a class are shown as prep.</p>
       </section>
     </div>
@@ -72,10 +73,16 @@
     let teaches = new Map();
 
     // every schedule the reference table can show: the six + the three finals pairs
-    const BELL_CHOICES = [
+    // (a teacher with their own bell times has just their regular day)
+    const MINE = !!customBells();
+    const BELL_CHOICES = MINE ? [['regular']] : [
       ['early_release'], ['regular'], ['minimum'], ['double_second'], ['homecoming'],
       ['finals', '1-2'], ['finals', '3-4'], ['finals', '5-6'],
     ];
+    if (MINE) $('weekday-hint').textContent = 'Every weekday follows your regular bell times. Mark days off with a No School override; an override for a date always wins.';
+    $('bell-source').innerHTML = MINE
+      ? 'These are the bell times you entered. <a href="setup.html#bells">Change bell times</a>'
+      : 'These are West High (TUSD) bell times. Different school? <a href="setup.html#bells">Enter your own bell times</a>';
 
     const fmtDate = (ymd) => {
       const [y, m, d] = ymd.split('-').map(Number);
@@ -123,7 +130,7 @@
 
     // ---------- form ----------
     const schedSel = $('ov-schedule');
-    schedSel.innerHTML = SCHEDULE_OPTIONS.map((o) => `<option value="${o.key}">${escapeHtml(o.name)}</option>`).join('');
+    schedSel.innerHTML = scheduleOptions().map((o) => `<option value="${o.key}">${escapeHtml(o.name)}</option>`).join('');
     const syncPair = () => { $('ov-pair-wrap').hidden = schedSel.value !== 'finals'; };
     schedSel.addEventListener('change', syncPair);
     syncPair();
@@ -156,7 +163,7 @@
       const live = resolveSchedule(now, overrides).key === k && (k !== 'finals' || resolveSchedule(now, overrides).finalsPair === pair);
       const t = now.getHours() * 3600 + now.getMinutes() * 60 + now.getSeconds();
       const toS = (hhmm) => { const [h, m] = hhmm.split(':').map(Number); return h * 3600 + m * 60; };
-      $('bell-tag').textContent = k === 'early_release' ? 'Monday default' : k === 'regular' ? 'Tue–Fri default' : 'By override only';
+      $('bell-tag').textContent = MINE ? 'Every weekday' : k === 'early_release' ? 'Monday default' : k === 'regular' ? 'Tue–Fri default' : 'By override only';
       $('bell-body').innerHTML = sched.segments.map((s) => {
         const isLive = live && t >= toS(s.start) && t < toS(s.end);
         if (s.kind === 'break') {
@@ -178,7 +185,7 @@
         // open the reference on today's schedule
         const today = resolveSchedule(new Date(), overrides);
         const idx = BELL_CHOICES.findIndex(([k, pair]) => k === today.key && (k !== 'finals' || pair === today.finalsPair));
-        bellPick.value = String(idx >= 0 ? idx : 1);
+        bellPick.value = String(idx >= 0 ? idx : MINE ? 0 : 1);
         renderList(); renderToday(); renderBell();
         setInterval(() => { renderToday(); renderBell(); }, 1000);
       } catch (err) {

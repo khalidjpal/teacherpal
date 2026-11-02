@@ -20,6 +20,13 @@
     <main class="page hud-page launcher-page">
       <div id="status" class="status"></div>
 
+      <!-- Shown while setup.html isn't finished (from the cached profile:
+           no request of its own). -->
+      <div class="setup-banner" id="setup-banner" hidden>
+        <div><b>Finish setting up TeacherPal</b><span id="setup-banner-sub">Pick up where you left off.</span></div>
+        <a class="neu-btn primary" href="setup.html">Finish setting up</a>
+      </div>
+
       <nav class="hub-sections" aria-label="Tools">
         <section class="hub-section" data-section="daily">
           <h2 class="hub-section-title">Daily</h2>
@@ -101,5 +108,22 @@
   <script src="shared.js"></script>
   <script src="schedule.js"></script>
   <script src="nav.js"></script>
+  <script>
+    (function () {
+      const STEP_LABEL = { you: 'Your name', name: 'Your name', look: 'Look', periods: 'Periods', courses: 'Courses', bells: 'Bell schedule', times: 'Bell times', students: 'Students', room: 'Room', done: 'Done' };
+      function paint() {
+        const el = document.getElementById('setup-banner');
+        el.hidden = !needsSetup();
+        if (el.hidden) return;
+        const p = setupProgress();
+        const sub = !currentBellSchedule() && (p.steps || {}).bells !== 'done'
+          ? 'Your bell times aren’t set yet, so the clock is using West High (TUSD) times.'
+          : p.step && STEP_LABEL[p.step] ? `Pick up where you left off: ${STEP_LABEL[p.step]}.` : 'It takes about five minutes.';
+        document.getElementById('setup-banner-sub').textContent = sub;
+      }
+      paint();
+      document.addEventListener('teacherpal:profile', paint);
+    })();
+  </script>
 </body>
 </html>

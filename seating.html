@@ -8,7 +8,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Comfortaa:wght@400;500;600;700&family=Quicksand:wght@400;500;600;700&family=JetBrains+Mono&family=Nunito:wght@400;600;700&family=Orbitron:wght@500;600;700&family=Rajdhani:wght@500;600;700&family=Share+Tech+Mono&display=swap" rel="stylesheet">
-  <script>(function(){try{var t=localStorage.getItem('teacherpal.theme')||'default';t={jarvis:'default',marwa:'pink',earthy:'default'}[t]||t;document.documentElement.setAttribute('data-theme',t);}catch(e){document.documentElement.setAttribute('data-theme','default');}})();</script>
+  <script>(function(){try{var t=localStorage.getItem('teacherpal.theme')||'default';t={jarvis:'default',marwa:'pink',earthy:'default'}[t]||t;document.documentElement.setAttribute('data-theme',t);}catch(e){document.documentElement.setAttribute('data-theme','default');}try{if(/[?&]embed=setup\b/.test(location.search)&&parent!==window)document.documentElement.setAttribute('data-theme',parent.document.documentElement.getAttribute('data-theme')||'default');}catch(e){}})();</script>
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -125,6 +125,26 @@
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6h18"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
             Remove
           </button>
+        </div>
+
+        <!-- Quick build (only inside the setup wizard): a whole room from three answers -->
+        <div class="quick-build" id="quick-build" hidden>
+          <div class="qb-head">
+            <span class="qb-title">Quick build</span>
+            <button type="button" class="qb-toggle" id="qb-toggle" aria-expanded="true">Hide</button>
+          </div>
+          <div class="qb-body" id="qb-body">
+            <label class="qb-row"><span>How many desks?</span><input type="number" id="qb-desks" min="1" max="80"></label>
+            <div class="qb-row"><span>Desks are</span>
+              <div class="seg qb-seg" role="radiogroup" aria-label="Desks are">
+                <label><input type="radio" name="qb-type" value="single" checked><span>Singles</span></label>
+                <label><input type="radio" name="qb-type" value="pair"><span>Pairs</span></label>
+                <label><input type="radio" name="qb-type" value="group4"><span>Groups of 4</span></label>
+              </div>
+            </div>
+            <label class="qb-row"><span>How many rows?</span><input type="number" id="qb-rows" min="1" max="15"></label>
+            <button type="button" class="primary" id="qb-build">Build the room</button>
+          </div>
         </div>
 
         <!-- starter layouts: an empty room, or Change layout -->
@@ -253,6 +273,43 @@
     let useFormula = false;                    // Randomize follows the formula (per period)
     let absentToday = new Set();               // from Create Groups' "Edit Roster" (today only)
     let periodsCache = [];
+
+    // =====================================================================
+    // Embedded in the setup wizard (setup.html's Room step loads
+    // seating.html?embed=setup in an iframe). It is this same page; the only
+    // differences: no top bar, arrangement cards or full screen, the Quick
+    // build panel instead of the starter picker on an empty room, and in the
+    // wizard's preview the data comes from its in-memory store (nothing saved).
+    // =====================================================================
+    const EMBED = /[?&]embed=setup\b/.test(location.search) && window.parent !== window;
+    if (EMBED) {
+      document.body.classList.add('embed');
+      // never the big-screen layout in here (it is remembered app-wide)
+      document.addEventListener('teacherpal:present', (e) => {
+        if (!e.detail.on) return;
+        e.stopImmediatePropagation();
+        setPresentMode(false, { remember: false });
+      });
+      window.addEventListener('keydown', (e) => {
+        if (e.key.toLowerCase() === 'f' && !e.ctrlKey && !e.metaKey && !e.altKey && !isTyping(e.target)) e.stopImmediatePropagation();
+      }, true);
+      let pv = null;
+      try { pv = window.parent.__setupPreviewApi || null; } catch { /* another origin */ }
+      if (pv) {
+        window.getPeriods = () => pv.getPeriods();
+        window.getStudents = (pid) => pv.getStudents(pid);
+        window.getSeatingArrangements = (pid) => pv.getArrangements(pid);
+        window.createSeatingArrangement = (pid, o) => pv.createArrangement(pid, o);
+        window.updateSeatingArrangement = (id, f) => pv.updateArrangement(id, f);
+        window.deleteSeatingArrangement = async () => {};
+        window.setActiveSeatingArrangement = async () => {};
+        window.getFormulaRules = async () => ({ rules: [], useFormula: false });
+        window.saveFormulaRules = async () => {};
+        window.getRoomLayout = async () => null;
+        window.currentTeachesPeriods = () => pv.teaches();
+        window.setLastPeriodId = () => {};
+      }
+    }
 
     const $ = (id) => document.getElementById(id);
     const viewport = $('viewport'), room = $('room'), ghost = $('ghost'), marquee = $('marquee');
@@ -1324,7 +1381,6 @@
     // arrangement is what Attendance shows for the period; drafts affect
     // nothing, so a draft can be a completely different room.
     // =====================================================================
-    const BLANK_FRONT = { x: 20, y: 3, w: FRONT.w, h: FRONT.h, rotation: 0 };
     const blankRoom = () => ({ version: 2, grid: G, front: { ...BLANK_FRONT }, pieces: [] });
     const deskLayout = (lay) => clone({ version: lay.version || 2, grid: lay.grid || G, front: lay.front, pieces: lay.pieces || [] });
     const currentArr = () => arrangements.find((a) => a.id === currentArrId) || null;
@@ -1356,20 +1412,6 @@
       return { seated: seatOf.size, total: students.length, rules: plan.length, met: plan.filter((r) => !missed.has(r.id)).length };
     }
     const statsOf = (a) => (a.id === currentArrId ? arrStats(layout, assignments) : arrStats(desksOf(a), a.assignments));
-
-    // A small drawing of a room: each desk's footprint (and the Front bar),
-    // scaled to fit maxW × maxH rem keeping its shape. Arrangement cards and
-    // the starter layouts both use it.
-    function layoutPic(lay, maxW, maxH, cls = '') {
-      const pieces = (lay.pieces || []).filter((p) => TYPES[p.type]);
-      const boxes = [{ ...bbox({ id: 'front', ...(lay.front || BLANK_FRONT) }), front: true }, ...pieces.map((p) => ({ ...bbox(p), teacher: p.type === 'teacher' }))];
-      const minX = Math.min(...boxes.map((b) => b.x)), minY = Math.min(...boxes.map((b) => b.y));
-      const w = Math.max(1, Math.max(...boxes.map((b) => b.x + b.w)) - minX);
-      const h = Math.max(1, Math.max(...boxes.map((b) => b.y + b.h)) - minY, pieces.length ? 0 : w * 0.6);   // an empty room still looks like a room
-      const sc = Math.min(maxW / w, maxH / h);
-      return `<span class="room-pic ${cls}" style="width:${(w * sc).toFixed(2)}rem;height:${(h * sc).toFixed(2)}rem">${boxes.map((b) =>
-        `<i class="${b.front ? 'f' : b.teacher ? 't' : ''}" style="left:${((b.x - minX) / w) * 100}%;top:${((b.y - minY) / h) * 100}%;width:${(b.w / w) * 100}%;height:${(b.h / h) * 100}%"></i>`).join('')}</span>`;
-    }
 
     // ---- the arrangement cards ----
     function updateArrBar() {
@@ -1685,55 +1727,12 @@
     // Positions are whole grid units; every layout sits under a centred
     // Front of room bar with the teacher's desk to its right.
     // =====================================================================
-    const STARTERS = [
-      { id: 'rows',     label: 'Rows',        note: 'Single desks in rows' },
-      { id: 'pairs',    label: 'Pairs',       note: 'Desks side by side in twos' },
-      { id: 'groups',   label: 'Groups of 4', note: 'Four desks pushed together' },
-      { id: 'ushape',   label: 'U-shape',     note: 'Desks around three sides' },
-      { id: 'stations', label: 'Stations',    note: 'Big tables of six' },
-    ];
     const seatTarget = () => Math.max(students.length, 12);   // each period has its own room now
 
-    function buildStarter(id, n) {
-      const pieces = [];
-      // place by the desk's footprint on screen (rot 90 = standing on its side)
-      const add = (type, vx, vy, rot = 0) => {
-        const t = TYPES[type], side = rot % 180 !== 0;
-        const vw = side ? t.h : t.w, vh = side ? t.w : t.h;
-        pieces.push({ id: uid(), type, x: vx + vw / 2 - t.w / 2, y: vy + vh / 2 - t.h / 2, rotation: rot });
-      };
-      const top = 4;                                   // clear of the front bar and teacher's desk
-      let width;
-      if (id === 'rows') {
-        const cols = 6, rows = Math.ceil(n / cols);
-        for (let r = 0; r < rows; r++) for (let c = 0; c < cols; c++) add('single', c * 4, top + r * 4);
-        width = cols * 4 - 1;
-      } else if (id === 'pairs') {
-        const cols = 3, rows = Math.ceil(n / (cols * 2));
-        for (let r = 0; r < rows; r++) for (let c = 0; c < cols; c++) add('pair', c * 8, top + r * 4);
-        width = cols * 8 - 2;
-      } else if (id === 'groups') {
-        const count = Math.ceil(n / 4), cols = Math.min(3, count);
-        for (let i = 0; i < count; i++) add('group4', (i % cols) * 9, top + Math.floor(i / cols) * 7);
-        width = cols * 9 - 3;
-      } else if (id === 'stations') {
-        const count = Math.ceil(n / 6), cols = Math.min(3, count);
-        for (let i = 0; i < count; i++) add('group6', (i % cols) * 12, top + Math.floor(i / cols) * 8);
-        width = cols * 12 - 3;
-      } else {                                         // U-shape: back row + two sides, facing in
-        const back = Math.min(10, Math.max(4, Math.ceil(n / 3)));
-        const side = Math.max(2, Math.ceil((n - back) / 2));
-        width = back * 3 + 6;
-        for (let i = 0; i < side; i++) { add('single', 0, top + i * 3, 90); add('single', width - 2, top + i * 3, 270); }
-        for (let i = 0; i < back; i++) add('single', 3 + i * 3, top + side * 3 + 1, 180);
-      }
-      const fx = Math.round(width / 2 - FRONT.w / 2);
-      pieces.push({ id: uid(), type: 'teacher', x: Math.max(fx + FRONT.w + 1, width - 4), y: 0, rotation: 0 });
-      return { front: { x: fx, y: 0, w: FRONT.w, h: FRONT.h, rotation: 0 }, pieces };
-    }
-
     function renderStarter() {
-      const show = !!currentPeriodId && !isPresent() && (starterForced || layout.pieces.length === 0);
+      const show = !!currentPeriodId && !isPresent() && (starterForced || (!EMBED && layout.pieces.length === 0));
+      $('quick-build').hidden = !EMBED || !currentPeriodId || mode !== 'arrange' || starterForced;
+      if (EMBED) qbDefaults();
       $('starter').hidden = !show;
       if (!show) return;
       const n = seatTarget();
@@ -1756,10 +1755,12 @@
 
     function applyStarter(id) {
       const s = STARTERS.find((x) => x.id === id);
-      if (!s) return;
+      if (s) applySpec(buildStarter(id, seatTarget()), s.label);
+    }
+    // a whole room at once (a starter, or Quick build): one commit, so Undo restores the old one
+    function applySpec(spec, label) {
       cancelRotate();
       base = snapshot();
-      const spec = buildStarter(id, seatTarget());
       layout.front = { ...layout.front, ...spec.front };
       layout.pieces = spec.pieces;
       assignments = {};
@@ -1768,7 +1769,7 @@
       starterForced = false;
       commit();
       const seats = seatIds().length;
-      setStatus(`${s.label}: ${seats} seats. Drag desks to move them, or click one to turn, copy or remove it.`, 'ok');
+      setStatus(`${label}: ${seats} seats. Drag desks to move them, or click one to turn, copy or remove it.`, 'ok');
       requestAnimationFrame(fitToScreen);              // after the status line has taken its height
     }
     $('starter').addEventListener('pointerdown', (e) => e.stopPropagation());   // not a canvas drag
@@ -1778,6 +1779,42 @@
       if (b) applyStarter(b.dataset.starter);
     });
     $('starter-cancel').addEventListener('click', () => { starterForced = false; render(); });
+
+    // Quick build (setup wizard only): desks · singles / pairs / groups of
+    // four · rows → buildRoom() (room.js). The room is then edited as usual.
+    let qbTouched = false;
+    const qbType = () => document.querySelector('input[name="qb-type"]:checked').value;
+    function qbDefaults() {
+      if (qbTouched) return;
+      $('qb-desks').value = seatTarget();
+      $('qb-rows').value = suggestRows(qbType(), seatTarget());
+    }
+    const qbDesks = () => clamp(Number($('qb-desks').value) || 1, 1, 80);
+    $('quick-build').addEventListener('pointerdown', (e) => e.stopPropagation());
+    $('quick-build').addEventListener('wheel', (e) => e.stopPropagation());
+    $('quick-build').addEventListener('input', (e) => {
+      qbTouched = true;
+      if (e.target.id !== 'qb-rows') $('qb-rows').value = suggestRows(qbType(), qbDesks());
+    });
+    $('qb-toggle').addEventListener('click', () => {
+      const open = $('qb-body').hidden;
+      $('qb-body').hidden = !open;
+      $('qb-toggle').setAttribute('aria-expanded', String(open));
+      $('qb-toggle').textContent = open ? 'Hide' : 'Show';
+    });
+    $('qb-build').addEventListener('click', () => {
+      if (!currentPeriodId) return;
+      const type = qbType(), desks = qbDesks();
+      const rows = clamp(Number($('qb-rows').value) || suggestRows(type, desks), 1, 15);
+      applySpec(buildRoom({ type, desks, rows }), `${plural(desks, 'desk')}`);
+    });
+    // the iframe settles its size after boot: keep an empty room framed until desks arrive
+    if (EMBED) new ResizeObserver(() => { if (!layout.pieces.length) fitToScreen(); }).observe(viewport);
+    // what the wizard reads on Next
+    if (EMBED) window.seatingEmbed = {
+      flush: () => flushArrSave(),
+      current: () => ({ periodId: currentPeriodId, layout: deskLayout(layout), assignments: clone(assignments) }),
+    };
 
     // Change layout: warn that seats go, then open the picker over the room
     $('btn-change-layout').addEventListener('click', async () => {

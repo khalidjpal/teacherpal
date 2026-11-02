@@ -1367,7 +1367,8 @@ button:active, .neu-btn:active, .tab:active, summary:active, .seg label:active s
   min-height: 1.5rem;
   margin: 0 0 var(--space-4);
 }
-.hud-page > .status:empty, .groups-page > .status:empty, .seating-page > .status:empty { display: none; }
+.hud-page > .status:empty, .groups-page > .status:empty, .seating-page > .status:empty,
+.schedule-page > .status:empty, .roster-page > .status:empty { display: none; }
 .status {
   border-radius: var(--radius-sm);
   font-size: var(--fs-sm);
@@ -2027,7 +2028,7 @@ body.present.show-nav .topnav .nav-links { display: flex; }
 .roster-panel {
   position: sticky;
   top: 0;
-  align-self: start;
+  align-self: stretch;
   max-height: 100%;
   overflow-y: auto;
   display: flex;
@@ -2215,7 +2216,7 @@ body.editing .student .name { cursor: text; }
   display: grid;
   grid-template-columns: minmax(20rem, 30rem) 1fr;
   gap: var(--space-5);
-  align-items: start;
+  align-items: stretch;
 }
 .schedule-layout > .card { display: flex; flex-direction: column; gap: var(--space-4); max-height: 100%; overflow-y: auto; }
 .today-line { display: flex; flex-wrap: wrap; align-items: baseline; gap: var(--space-2); margin: 0; font-size: var(--fs-sm); color: var(--text-muted); }
@@ -2449,7 +2450,9 @@ dialog.groups-settings-dialog .gs-note { margin: 0 0 var(--space-4); color: var(
 /* before the first Create the stage is a big empty board — say what fills it */
 .results:empty {
   display: grid;
+  grid-template-columns: 1fr;
   place-content: center;
+  place-items: center;
   border: 1px dashed var(--border-strong);
   border-radius: var(--radius-lg);
 }
@@ -4005,7 +4008,7 @@ body.present .att-tile { font-size: 1.35rem; }
    itself never scrolls. Tight vertical rhythm throughout: the grid is the
    point of the page. */
 .bathroom-page {
-  --br-panels-h: clamp(10rem, 27vh, 15rem);   /* the Out now / Log row */
+  --br-panels-h: clamp(10rem, 30vh, 24rem);   /* the Out now / Log row */
   padding: var(--space-2) var(--page-pad) var(--space-3);
   display: flex; flex-direction: column; gap: var(--space-3);
   overflow: hidden;
@@ -4587,6 +4590,14 @@ dialog.br-settings-dialog .br-settings-grid { display: grid; gap: var(--space-3)
   margin-block: auto;   /* keeps the group vertically centred when the viewport is tall enough */
 }
 .hub-section { display: flex; flex-direction: column; gap: var(--space-3); }
+/* on a laptop or bigger the four rows share the whole height, so the panels
+   grow with the screen instead of leaving a band of empty page below */
+@media (min-width: 900px) and (min-height: 560px) {
+  .hub-sections { flex: 1 1 auto; margin-block: 0; }
+  .hub-section { flex: 1 1 0; min-height: 0; }
+  .hub-section .hub-panels { flex: 1 1 auto; grid-auto-rows: minmax(0, 1fr); }
+  .hub-section .hub-panels .hud-panel { min-height: 0; }
+}
 .hub-section-title {
   margin: 0 0 0.25rem 0.25rem;
   font-family: var(--font-display);
@@ -4989,15 +5000,21 @@ dialog.br-settings-dialog .br-settings-grid { display: grid; gap: var(--space-3)
    pop-out window and full-screen mode.
    ============================================================================ */
 .timer-page {
-  display: grid; place-items: center;
-  padding: var(--space-3) var(--space-4);
+  padding: var(--space-3) var(--page-pad);
   min-height: 0;
 }
 
+/* The stage fills main.page (a flex column); the dial is sized from the
+   viewport height minus everything else on the stage (~27rem: mode row,
+   label line, buttons, setup row, extras, padding), so it grows with the
+   screen and the stage still never scrolls. */
 .timer-stage {
-  width: min(52rem, 96vw);
-  max-height: calc(100dvh - 5.5rem);
+  --dial: min(calc(100dvh - 27rem), 46vw, 56rem);
+  flex: 1 1 auto;
+  align-self: center;
+  width: min(80rem, 100%);
   display: grid;
+  align-content: center;
   gap: var(--space-3);
   padding: var(--space-4) var(--space-5);
   justify-items: center;
@@ -5042,7 +5059,8 @@ dialog.br-settings-dialog .br-settings-grid { display: grid; gap: var(--space-3)
 
 .timer-display-wrap {
   position: relative;
-  width: min(46vh, 44vw, 28rem);
+  width: max(14rem, var(--dial, 28rem));
+  container-type: inline-size;
   aspect-ratio: 1 / 1;
   display: grid; place-items: center;
 }
@@ -5104,7 +5122,7 @@ dialog.br-settings-dialog .br-settings-grid { display: grid; gap: var(--space-3)
 
 .timer-display {
   position: relative; z-index: 1;
-  font: var(--fw-regular) clamp(2.4rem, 11vh, 5.5rem)/1 var(--font-mono);
+  font: var(--fw-regular) clamp(2.4rem, 19cqi, 13rem)/1 var(--font-mono);
   font-variant-numeric: tabular-nums;
   color: var(--text);
   letter-spacing: 0.02em;
@@ -5269,7 +5287,7 @@ body.present .dial-arc, body.timer-popout .dial-arc { stroke-width: 6; }
    --------------------------------------------------------------------------- */
 :root[data-theme="pink"] .timer-dial { display: none; }
 :root[data-theme="pink"] .timer-mascot { display: none; }              /* the bunny is the dial now */
-:root[data-theme="pink"] .timer-display-wrap { container-type: inline-size; isolation: isolate; width: min(50vh, 46vw, 31rem); }
+:root[data-theme="pink"] .timer-display-wrap { container-type: inline-size; isolation: isolate; width: max(14rem, var(--dial, 31rem)); }
 :root[data-theme="pink"] body.present .timer-display-wrap { width: min(80vh, 90vw); }
 :root[data-theme="pink"] body.timer-popout .timer-display-wrap { width: min(94vh, 96vw); }
 :root[data-theme="pink"] body.timer-popout .timer-label:not(.empty) ~ .timer-display-wrap { width: min(84vh, 96vw); }
@@ -5393,7 +5411,7 @@ body.present .dial-arc, body.timer-popout .dial-arc { stroke-width: 6; }
    the face flares, then only the face glows on a dark pumpkin. A component
    skin, so it shows in the pop-out and PiP too.
    --------------------------------------------------------------------------- */
-:root[data-theme="halloween"] .timer-display-wrap { container-type: inline-size; isolation: isolate; width: min(48vh, 46vw, 31rem); }   /* 48vh: the whole stage fits 1366×768 with the label line and setup row always present */
+:root[data-theme="halloween"] .timer-display-wrap { container-type: inline-size; isolation: isolate; width: max(14rem, var(--dial, 31rem)); }
 :root[data-theme="halloween"] body.present .timer-display-wrap { width: min(80vh, 90vw); }
 :root[data-theme="halloween"] body.timer-popout .timer-display-wrap { width: min(94vh, 96vw); }
 /* with a label above it, leave the label its line */
@@ -5500,7 +5518,7 @@ body.present .dial-arc, body.timer-popout .dial-arc { stroke-width: 6; }
 :root[data-theme="thanksgiving"] .timer-dial { display: none; }
 :root[data-theme="thanksgiving"] .timer-flash,
 :root[data-theme="thanksgiving"] .timer-burst { display: none; }
-:root[data-theme="thanksgiving"] .timer-display-wrap { container-type: inline-size; isolation: isolate; width: min(48vh, 46vw, 31rem); }
+:root[data-theme="thanksgiving"] .timer-display-wrap { container-type: inline-size; isolation: isolate; width: max(14rem, var(--dial, 31rem)); }
 :root[data-theme="thanksgiving"] body.present .timer-display-wrap { width: min(80vh, 90vw); }
 :root[data-theme="thanksgiving"] body.timer-popout .timer-display-wrap { width: min(94vh, 96vw); }
 :root[data-theme="thanksgiving"] body.timer-popout .timer-label:not(.empty) ~ .timer-display-wrap { width: min(84vh, 96vw); }
@@ -5611,14 +5629,17 @@ body.present .dial-arc, body.timer-popout .dial-arc { stroke-width: 6; }
    rules. Colours are the --noise-* tokens (defined per theme).
    ============================================================================ */
 .noise-page {
-  display: grid; place-items: center;
-  padding: var(--space-3) var(--space-4);
+  padding: var(--space-3) var(--page-pad);
   min-height: 0;
 }
+/* the card fills the page (main.page is a flex column): head on top, the
+   meter in the middle taking the spare height, the footer at the bottom */
 .noise-stage {
-  width: min(56rem, 96vw);
-  max-height: calc(100dvh - 5.5rem);
+  flex: 1 1 auto;
+  align-self: center;
+  width: min(80rem, 100%);
   display: grid;
+  grid-template-rows: auto 1fr auto;
   gap: var(--space-4);
   padding: var(--space-4) var(--space-5);
   justify-items: center;
@@ -5626,10 +5647,10 @@ body.present .dial-arc, body.timer-popout .dial-arc { stroke-width: 6; }
 }
 .noise-preset-seg { grid-template-columns: repeat(3, auto); }
 
-.noise-meter { width: 100%; display: grid; gap: var(--space-2); justify-items: center; }
+.noise-meter { width: 100%; display: grid; gap: var(--space-3); justify-items: center; align-content: center; }
 .noise-read { display: flex; align-items: baseline; gap: 0.4rem; }
 .noise-db {
-  font: var(--fw-regular) clamp(3rem, 13vh, 6rem)/1 var(--font-mono);
+  font: var(--fw-regular) clamp(3rem, 22vh, 14rem)/1 var(--font-mono);
   font-variant-numeric: tabular-nums;
   color: var(--text);
   letter-spacing: 0.02em;
@@ -5652,7 +5673,7 @@ body.present .dial-arc, body.timer-popout .dial-arc { stroke-width: 6; }
    clip-path, so its colour shifts through the zones exactly as it crosses
    each marker. Look per theme comes from the --noise-bar-* tokens. */
 .noise-bar {
-  --bar-h: clamp(1.5rem, 4vh, 2.4rem);
+  --bar-h: clamp(1.5rem, 6vh, 4rem);
   --bar-ease: 260ms linear;
   position: relative;
   width: 100%;
@@ -8648,20 +8669,35 @@ body.present .wk-text { font-size: var(--fs-md); }
 }
 
 /* ==========================================================================
-   Setup wizard (setup.html) — the first-run steps after a self sign-up:
-   periods taught → class names → rosters → theme. One centred card.
+   Setup wizard (setup.html) — "Getting started". One decision per screen:
+   a heading (the one place the display face is used), the control, one
+   short help line. Everything else is the body face in sentence case, no
+   tracking: calm and readable for someone who isn't technical. The card is
+   ~1160px wide (px on purpose, like --site-max: the fluid root font would
+   make a rem width drift). Preview mode adds the bar. The hub's "Finish
+   setting up" banner is at the end of this block.
    ========================================================================== */
-main.setup-page { display: grid; justify-items: center; align-content: start; padding: var(--space-6) var(--page-pad); }
+main.setup-page {
+  display: flex; flex-direction: column; align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-4) var(--page-pad);
+  overflow-y: auto;
+}
+/* the card takes the whole page under the top bar (and the preview bar):
+   head · the screen (all the spare height) · message · footer */
 .setup-card {
   position: relative;
-  width: min(44rem, 100%);
+  flex: 1 0 auto;
+  width: min(1600px, 100%);
   display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto auto;
   gap: var(--space-4);
   background: var(--card);
   border: 1px solid var(--border);
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-card);
-  padding: var(--space-5) var(--space-6) var(--space-5);
+  padding: clamp(1.25rem, 3.2vh, 2.5rem) clamp(1.25rem, 4vw, 3.5rem);
+  font-family: var(--font-body);
 }
 .setup-card::before {
   content: "";
@@ -8669,67 +8705,263 @@ main.setup-page { display: grid; justify-items: center; align-content: start; pa
   height: 1px;
   background: var(--gradient-glow-top);
 }
-.sw-head { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); }
-.sw-steps { display: flex; gap: var(--space-2); list-style: none; margin: 0; padding: 0; counter-reset: sw; flex-wrap: wrap; }
-.sw-steps li {
-  counter-increment: sw;
-  display: inline-flex; align-items: center; gap: 0.4rem;
-  font-family: var(--font-display);
-  font-size: 0.62rem;
-  letter-spacing: var(--track-label);
-  text-transform: uppercase;
-  color: var(--text-muted);
-  padding: 0.3rem 0.6rem;
-  border: 1px solid var(--border);
-  border-radius: var(--radius-pill);
-}
-.sw-steps li::before { content: counter(sw); font-family: var(--font-mono); }
-.sw-steps li.done { color: var(--text-2); border-color: var(--border-strong); }
-.sw-steps li[aria-current="step"] { color: var(--text); border-color: var(--accent); background: var(--gradient-accent); }
-.sw-skip { font-size: var(--fs-xs); }
+.setup-card :is(button, input, select, textarea, label, summary, p, li, span, b) { letter-spacing: 0.01em; text-transform: none; }
 
-.sw-panel { display: grid; gap: var(--space-3); }
+/* preview bar: across the top, impossible to miss */
+.sw-preview-bar {
+  position: sticky; top: 0; z-index: 5;
+  width: min(1600px, 100%);
+  display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); flex-wrap: wrap;
+  padding: var(--space-2) var(--space-4);
+  border: 1px solid var(--lavender);
+  border-radius: var(--radius-md);
+  background: color-mix(in srgb, var(--lavender) 16%, var(--card));
+  color: var(--text);
+  box-shadow: var(--shadow-card);
+}
+.sw-preview-bar[hidden] { display: none; }
+.sw-preview-bar b { color: var(--lavender); }
+.sw-preview-bar a { text-decoration: none; }
+
+/* progress: where you are, then a row of small dots (each a button) */
+.sw-head { display: flex; align-items: center; justify-content: space-between; gap: var(--space-4); flex-wrap: wrap; }
+.sw-where { display: flex; align-items: baseline; gap: var(--space-3); color: var(--text-2); font-size: var(--fs-sm); }
+#sw-where { color: var(--text); font-weight: var(--fw-semibold); }
+#sw-count { color: var(--text-muted); }
+.sw-dots { display: flex; gap: 0.4rem; list-style: none; margin: 0; padding: 0; }
+.sw-dots button {
+  width: 0.7rem; height: 0.7rem; min-height: 0; padding: 0;
+  border-radius: 50%;
+  border: 1px solid var(--border-strong);
+  background: var(--card-2);
+}
+.sw-dots button.done { background: var(--text-muted); border-color: var(--text-muted); }
+.sw-dots button[aria-current="step"] { width: 1.6rem; border-radius: 999px; background: var(--accent); border-color: var(--accent); }
+.sw-dots button:hover { border-color: var(--accent); translate: none; box-shadow: none; }
+
+/* a screen */
+.sw-panel {
+  display: flex; flex-direction: column; justify-content: center; align-items: stretch;
+  gap: var(--space-5);
+  min-height: 0;
+  padding-bottom: 4vh;                 /* sit a little above the middle */
+}
+.sw-panel > * { flex: none; }
+.sw-panel > :is(.sw-link, .sw-more, .sw-big-input) { align-self: flex-start; }
+/* the two screens whose work area is the point take every pixel */
+.sw-panel:is([data-key="students"], [data-key="room"]:has(.sw-seating)) { justify-content: flex-start; padding-bottom: 0; gap: var(--space-3); }
+#sw-roster, #sw-room-body:has(.sw-seating) { flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; gap: var(--space-3); }
 .sw-panel[hidden] { display: none; }
-.sw-kicker {
+.sw-title {
   margin: 0;
+  max-width: 40ch;
   font-family: var(--font-display);
-  font-size: 0.7rem;
-  letter-spacing: var(--track-display);
-  text-transform: uppercase;
+  font-size: clamp(1.3rem, 0.8rem + 1.2vw, 2.2rem);
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  text-transform: none;
+  line-height: 1.3;
+  color: var(--text);
+}
+.sw-help, .sw-note { margin: 0; color: var(--text-muted); font-size: var(--fs-md); line-height: 1.5; }
+.sw-title + .sw-help { margin-top: calc(var(--space-3) * -1); }
+.sw-note { font-size: var(--fs-sm); }
+.sw-note:empty, .sw-help:empty { display: none; }
+.sw-empty { margin: 0; padding: var(--space-4); border: 1px dashed var(--border-strong); border-radius: var(--radius-md); color: var(--text-2); }
+
+/* text links that are buttons */
+.setup-card .sw-link {
+  justify-self: start;
+  width: auto; min-height: 0; padding: 0.15rem 0;
+  border: 0; background: none; box-shadow: none;
   color: var(--accent-ink);
+  font-size: var(--fs-sm); font-weight: var(--fw-semibold);
+  text-decoration: underline; text-underline-offset: 0.2em;
+  text-decoration-color: color-mix(in srgb, var(--accent-ink) 40%, transparent);
 }
-.sw-title { margin: 0; font-family: var(--font-body); font-weight: var(--fw-bold); font-size: var(--fs-xl); line-height: 1.15; color: var(--text); }
-.sw-lead { margin: 0; color: var(--text-2); line-height: 1.5; }
+.setup-card .sw-link:hover, .setup-card .sw-link:focus-visible { background: none; text-decoration-color: currentColor; translate: none; box-shadow: none; }
 
-.sw-periods { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: var(--space-3); }
-@media (max-width: 520px) { .sw-periods { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
-.sw-period { flex-direction: column; min-height: 4.6rem; gap: 0.1rem; }
-.sw-period-n { font-family: var(--font-mono); font-size: var(--fs-xl); line-height: 1; }
-.sw-period-l { font-size: var(--fs-xs); text-transform: uppercase; letter-spacing: 0.1em; color: var(--text-muted); }
+/* one big field */
+.sw-big-input { width: min(36rem, 100%); min-height: 3.8rem; font-size: var(--fs-xl); padding: 0 var(--space-4); }
+.sw-big-input.num { width: 7.5rem; text-align: center; font-family: var(--font-body); }
 
-.sw-rows, .sw-rosters { display: grid; gap: var(--space-3); }
-.sw-rosters { grid-template-columns: repeat(auto-fill, minmax(17rem, 1fr)); max-height: 52vh; overflow-y: auto; padding-right: var(--space-1); }
-.sw-row { display: grid; grid-template-columns: 6.5rem minmax(0, 1fr); align-items: center; gap: var(--space-3); }
-.sw-row input { width: 100%; min-height: 2.5rem; font-size: var(--fs-md); }
-.sw-roster { display: grid; gap: var(--space-2); }
-.sw-roster textarea { width: 100%; resize: vertical; min-height: 6rem; font-size: var(--fs-md); }
-.sw-row-k {
-  font-weight: var(--fw-semibold);
-  text-transform: uppercase;
-  letter-spacing: 0.1em;
-  font-size: var(--fs-xs);
-  color: var(--label-ink);
+/* choice cards (theme, bells, desk kinds, ready-made rooms) */
+.sw-cards { display: grid; gap: var(--space-3); }
+.sw-cards.two { grid-template-columns: repeat(2, minmax(0, 1fr)); max-width: 52rem; }
+.sw-cards.three { grid-template-columns: repeat(3, minmax(0, 1fr)); max-width: 66rem; }
+.sw-cards.four { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+.sw-cards.five { grid-template-columns: repeat(5, minmax(0, 1fr)); }
+.sw-card {
+  display: grid; gap: 0.25rem; justify-items: start; align-content: center; text-align: left;
+  min-height: 7rem; padding: var(--space-5);
+  border-radius: var(--radius-md);
 }
-.sw-count { font-family: var(--font-mono); text-transform: none; letter-spacing: 0; color: var(--accent-ink); margin-left: 0.4rem; }
+.sw-card b { font-size: var(--fs-xl); font-weight: var(--fw-semibold); color: var(--text); }
+.sw-card span { font-size: var(--fs-sm); font-weight: var(--fw-regular); color: var(--text-muted); }
+.sw-card.pic { justify-items: center; text-align: center; gap: var(--space-3); padding: var(--space-4) var(--space-3); }
+.sw-card.pic b { font-size: var(--fs-lg); }
+.sw-card.pic .sw-pic { width: 100%; height: auto; max-height: 9rem; }
+.sw-card[aria-checked="true"] { background: var(--gradient-accent), var(--card-2); border-color: var(--accent); box-shadow: var(--shadow-pressed); }
+.sw-card[aria-checked="true"] span { color: var(--text-2); }
+@media (max-width: 760px) { .sw-cards.two, .sw-cards.three, .sw-cards.four, .sw-cards.five { grid-template-columns: 1fr 1fr; } }
 
-.sw-themes { display: grid; grid-template-columns: repeat(auto-fill, minmax(10rem, 1fr)); gap: var(--space-3); }
-.sw-theme { min-height: 3.2rem; }
-.sw-theme[aria-checked="true"] { background: var(--gradient-accent); border-color: var(--accent); box-shadow: var(--shadow-pressed); color: var(--text); }
+/* periods */
+.sw-periods { display: grid; grid-template-columns: repeat(8, minmax(0, 1fr)); gap: var(--space-3); }
+@media (max-width: 760px) { .sw-periods { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
+.sw-period { flex-direction: column; min-height: clamp(5rem, 16vh, 9rem); gap: 0.15rem; border-radius: var(--radius-md); }
+.sw-period-n { font-size: var(--fs-2xl); font-weight: var(--fw-bold); line-height: 1; }
+.sw-period-l { font-size: var(--fs-xs); font-weight: var(--fw-regular); color: var(--text-muted); }
 
-.sw-msg { min-height: 1.3rem; font-family: var(--font-mono); font-size: var(--fs-xs); color: var(--danger); }
-.sw-foot { display: flex; justify-content: space-between; gap: var(--space-3); border-top: 1px solid var(--border); padding-top: var(--space-4); }
-.sw-foot .primary { min-width: 9rem; margin-left: auto; }
-@media (max-width: 520px) { .setup-card { padding: var(--space-4); } .sw-row { grid-template-columns: 1fr; gap: var(--space-1); } }
+/* courses: a name per period */
+.sw-courses { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 30rem), 1fr)); gap: var(--space-3) var(--space-6); }
+.sw-course-row { display: grid; grid-template-columns: 6rem minmax(0, 1fr); align-items: center; gap: var(--space-3); color: var(--text-2); font-weight: var(--fw-semibold); }
+.sw-course-row input { width: 100%; min-height: 3rem; font-size: var(--fs-lg); }
+
+/* bell times */
+.sw-times { display: grid; gap: 0.35rem; }
+.sw-time-row { display: grid; grid-template-columns: 6rem 9rem auto 9rem 2rem; align-items: center; gap: var(--space-3); justify-content: start; }
+.sw-time-l { color: var(--text-2); font-weight: var(--fw-semibold); }
+.sw-time-row input { min-height: 2.2rem; padding-block: 0; }
+.setup-card input[type="time"] {
+  font: inherit; font-size: var(--fs-sm); color: var(--text);
+  padding: 0 0.6rem;
+  border: 1px solid var(--border-strong); border-radius: var(--radius-sm);
+  background: var(--card-2);
+}
+.setup-card input[type="time"]::-webkit-calendar-picker-indicator { opacity: 0.55; cursor: pointer; }
+.sw-dash { color: var(--text-muted); font-size: var(--fs-sm); }
+.sw-add-row { display: flex; flex-wrap: wrap; gap: var(--space-1) var(--space-4); margin-top: calc(var(--space-3) * -1); }
+.sw-add-row:empty { display: none; }
+.sw-x {
+  width: 2rem; min-height: 2rem; padding: 0;
+  border-color: transparent; background: transparent;
+  color: var(--text-muted); font-size: 1.15rem; line-height: 1;
+}
+.sw-x:hover { color: var(--danger); border-color: var(--border); background: var(--card-2); }
+@media (max-width: 640px) { .sw-time-row { grid-template-columns: 1fr 1fr 2rem; } .sw-time-l { grid-column: 1 / -1; } .sw-dash { display: none; } }
+
+/* "fill them in for me", "my list is messy": quiet disclosures */
+.sw-more { justify-self: start; max-width: 100%; }
+.sw-more summary { cursor: pointer; width: max-content; color: var(--accent-ink); font-size: var(--fs-sm); font-weight: var(--fw-semibold); }
+.sw-more[open] { display: grid; gap: var(--space-3); padding: var(--space-3) var(--space-4); border: 1px solid var(--border); border-radius: var(--radius-md); background: var(--card-2); }
+.sw-quick-row { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2) var(--space-4); font-size: var(--fs-sm); color: var(--text-2); }
+.sw-quick-row label { display: inline-flex; align-items: center; gap: var(--space-2); }
+.sw-quick-row input[type="number"] { width: 4.2rem; }
+.sw-more .neu-btn { width: auto; justify-self: start; }
+
+/* students: the paste box beside the editable list */
+.sw-roster { flex: 1 1 auto; min-height: 16rem; contain: size; display: grid; grid-template-rows: minmax(0, 1fr); grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: var(--space-4) var(--space-5); }
+@media (max-width: 760px) { .sw-roster { contain: none; grid-template-columns: 1fr; grid-template-rows: none; grid-auto-rows: 20rem; } }
+/* the two columns read as input → output: a labelled, bordered paste box on
+   the left, a plain result list (no box of its own) on the right */
+.sw-col { display: grid; grid-template-rows: auto minmax(0, 1fr); gap: var(--space-2); min-height: 0; }
+.sw-col-head { display: flex; align-items: baseline; gap: var(--space-3); min-height: 1.6rem; color: var(--text); font-weight: var(--fw-semibold); font-size: var(--fs-md); }
+.sw-roster textarea {
+  width: 100%; height: 100%; min-height: 0; resize: none; cursor: text;
+  padding: var(--space-3) var(--space-4);
+  border: 2px solid var(--border-strong); border-radius: var(--radius-md);
+  background: var(--field-bg, var(--card-2)); color: var(--text);
+  font-family: var(--font-body); font-size: var(--fs-md); line-height: 1.5;
+  transition: border-color var(--transition, 0.15s), box-shadow var(--transition, 0.15s);
+}
+.sw-roster textarea:hover { border-color: var(--border-hover); }
+.sw-roster textarea:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+.sw-roster textarea::placeholder { color: var(--text-muted); opacity: 1; }
+.sw-list {
+  display: flex; flex-direction: column; gap: var(--space-2);
+  min-height: 0; overflow-y: auto;
+  padding: var(--space-2) 0 0;
+  border-top: 1px solid var(--border-strong);
+}
+.sw-list.empty { border-top-style: dashed; }
+.sw-list.empty #sw-list-add { display: none; }
+.sw-col-head #sw-flip { margin-left: auto; font-weight: var(--fw-regular); font-size: var(--fs-sm); }
+.sw-col-head #sw-flip[hidden] { display: none; }
+#sw-list-k { color: var(--accent-ink); font-size: var(--fs-sm); font-weight: var(--fw-semibold); }
+#sw-list-k:not(:empty)::before { content: "· "; color: var(--text-muted); }
+#sw-list { flex: none; margin: 0; padding: 0; list-style: none; columns: 2 15rem; column-gap: var(--space-5); counter-reset: sw-n; }
+#sw-list li { break-inside: avoid; }
+#sw-list li { display: grid; grid-template-columns: 1.8rem minmax(0, 1fr) auto 2rem; align-items: center; gap: var(--space-1); border-bottom: 1px solid var(--border); }
+#sw-list li:not(.none, .have-note)::before { counter-increment: sw-n; content: counter(sw-n); text-align: right; color: var(--text-muted); font-size: var(--fs-sm); }
+#sw-list input {
+  width: 100%; min-height: 2rem; padding: 0 var(--space-2);
+  border-color: transparent; background: transparent;
+  font-size: var(--fs-md); font-weight: var(--fw-semibold); color: var(--text);
+}
+#sw-list input:hover { border-color: var(--border); }
+#sw-list input:focus { border-color: var(--accent); background: var(--card); }
+#sw-list li.dup input { color: var(--text-muted); text-decoration: line-through; }
+.sw-dup { color: var(--lavender); font-size: var(--fs-xs); white-space: nowrap; }
+#sw-list .sw-x { visibility: hidden; }
+#sw-list li:hover .sw-x, #sw-list li:focus-within .sw-x { visibility: visible; }
+#sw-list li.none { display: grid; grid-template-columns: 1fr; place-items: center; min-height: 100%; padding: var(--space-5); border: 0; text-align: center; color: var(--text-muted); line-height: 1.6; }
+.sw-list.empty #sw-list { flex: 1; columns: auto; display: grid; }
+#sw-list li.have-note { display: block; column-span: all; padding: var(--space-1) var(--space-1) var(--space-3); border: 0; color: var(--text-2); font-size: var(--fs-sm); }
+#sw-list li.have { min-height: 2rem; color: var(--text-2); font-weight: var(--fw-semibold); }
+#sw-list li.have span { padding: 0 var(--space-2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sw-list .sw-link { align-self: flex-start; padding-left: var(--space-1); }
+/* the AI prompt, in view under the boxes */
+/* the AI fallback: one quiet element under the two columns, sized to its
+   text (no toggle, no scrollbar) so it never moves anything */
+.sw-ai { flex: none; display: grid; gap: var(--space-1); opacity: 0.85; }
+.sw-ai p { margin: 0; color: var(--text-muted); font-size: var(--fs-xs); }
+.sw-ai-box { display: flex; align-items: flex-end; gap: var(--space-3); padding: var(--space-2) var(--space-2) var(--space-2) var(--space-3); border: 1px solid var(--border); border-radius: var(--radius-sm); }
+.sw-ai-prompt { flex: 1; margin: 0; white-space: pre-wrap; color: var(--text-muted); font-family: var(--font-mono); font-size: var(--fs-xs); line-height: 1.5; user-select: all; }
+.sw-ai-box .neu-btn { flex: none; width: auto; min-height: 0; padding: 0.3rem 0.8rem; font-size: var(--fs-xs); }
+
+/* room: the real Seating page (seating.html?embed=setup) in an iframe
+   filling the step. contain: size so the screen sizes the card, not the page */
+.sw-seating {
+  flex: 1 1 auto; min-height: 20rem; contain: size;
+  width: 100%; border: 0; border-radius: var(--radius-md);
+  background: transparent; color-scheme: normal;
+}
+
+/* done */
+.sw-actions { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--space-4); }
+@media (max-width: 760px) { .sw-actions { grid-template-columns: 1fr; } }
+.sw-action {
+  display: grid; justify-items: start; align-content: center; gap: var(--space-3);
+  min-height: clamp(7rem, 20vh, 12rem);
+  padding: var(--space-5) var(--space-6);
+  border: 1px solid var(--border-strong); border-radius: var(--radius-md);
+  background: var(--card-2); color: var(--text);
+  text-decoration: none;
+}
+.sw-action svg { width: 2.4rem; height: 2.4rem; color: var(--accent-ink); }
+.sw-action b { font-size: var(--fs-lg); font-weight: var(--fw-semibold); }
+.sw-action:hover, .sw-action:focus-visible { border-color: var(--accent); background: var(--card-3); }
+.sw-todo { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--space-2); }
+.sw-todo:empty { display: none; }
+.sw-todo li { display: flex; align-items: baseline; flex-wrap: wrap; gap: var(--space-1) var(--space-3); color: var(--text-2); }
+.sw-todo li.warn { padding: var(--space-3) var(--space-4); border: 1px solid var(--att-tardy); border-radius: var(--radius-md); background: color-mix(in srgb, var(--att-tardy) 10%, var(--card-2)); color: var(--text); }
+
+/* message line + footer */
+.sw-msg { min-height: 1.4rem; line-height: 1.4rem; margin-bottom: calc(var(--space-3) * -1); font-size: var(--fs-sm); color: var(--danger); }
+.sw-msg.ok { color: var(--ok); }
+.sw-foot { display: flex; align-items: center; gap: var(--space-3); border-top: 1px solid var(--border); padding-top: var(--space-4); }
+.sw-foot .sw-skip { margin-left: auto; font-size: var(--fs-sm); font-weight: var(--fw-regular); }
+.sw-foot .sw-skip[hidden] + .primary { margin-left: auto; }
+.sw-foot .primary { min-width: 9.5rem; min-height: 2.9rem; font-size: var(--fs-md); }
+
+.sw-preview-bar .neu-btn, .setup-banner .neu-btn { width: auto; flex: none; }
+
+/* the hub's "Finish setting up" banner */
+.setup-banner {
+  position: relative; z-index: 1;
+  width: min(82rem, 100%);
+  margin: 0 auto var(--space-4);
+  display: flex; align-items: center; justify-content: space-between; gap: var(--space-4); flex-wrap: wrap;
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid var(--accent);
+  border-radius: var(--radius-md);
+  background: color-mix(in srgb, var(--accent) 10%, var(--card));
+}
+.setup-banner[hidden] { display: none; }
+.setup-banner div { display: grid; gap: 0.1rem; }
+.setup-banner b { color: var(--text); font-size: var(--fs-md); }
+.setup-banner span { color: var(--text-2); font-size: var(--fs-sm); }
+.setup-banner a, a.hud-menu-btn { text-decoration: none; }
 
 
 /* ==========================================================================
@@ -9229,3 +9461,57 @@ main.public-page > * { flex-shrink: 0; width: 100%; }   /* keeps max-width + mar
   from { background-position: 0 0, 0 0, 0 0; }
   to   { background-position: 0 0, 0 480px, 480px 0; }
 }
+
+/* ---------- Seating inside the setup wizard (seating.html?embed=setup) ----------
+   The same page; only the chrome the wizard replaces is hidden. */
+body.embed .topbar, body.embed .arr-bar, body.embed [data-fullscreen], body.embed .fs-float { display: none !important; }
+html:has(body.embed), body.embed { background: transparent !important; }
+html:has(body.embed)::before, html:has(body.embed)::after, body.embed::before, body.embed::after { content: none !important; }
+body.embed .app { grid-template-rows: minmax(0, 1fr); }
+body.embed main.page.seating-page { grid-row: 1; padding: 0; }
+
+/* Quick build: a small card in the canvas's top-right corner */
+.quick-build {
+  position: absolute; top: var(--space-3); right: var(--space-3); z-index: 4;
+  width: min(19rem, calc(100% - 2 * var(--space-3)));
+  display: flex; flex-direction: column; gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  background: var(--card); border: 1px solid var(--border-strong); border-radius: var(--radius-md);
+  box-shadow: var(--shadow-card); cursor: default; text-align: left;
+}
+.quick-build[hidden] { display: none; }
+.qb-head { display: flex; align-items: center; justify-content: space-between; gap: var(--space-2); }
+.qb-title { font-weight: var(--fw-semibold); color: var(--text); }
+.qb-toggle { min-height: 1.9rem; padding: 0 var(--space-3); font-size: var(--fs-xs); }
+.qb-body { display: flex; flex-direction: column; gap: var(--space-3); }
+.qb-body[hidden] { display: none; }
+.qb-row { display: flex; flex-direction: column; align-items: flex-start; gap: var(--space-1); font-size: var(--fs-sm); color: var(--text-2); }
+.qb-row .qb-seg { align-self: stretch; }
+.qb-row input { width: 6rem; }
+.qb-seg { display: flex; }
+.qb-seg label { flex: 1 1 0; }
+.qb-seg span { width: 100%; justify-content: center; white-space: nowrap; }
+
+/* Students: the period strip and the big period title */
+.sw-period-title { font-size: clamp(1.7rem, 1rem + 1.9vw, 3rem); line-height: 1.15; }
+.sw-pstrip { display: flex; align-items: center; gap: var(--space-4); min-width: 0; }
+.sw-pstrip[hidden] { display: none; }
+.sw-pstrip-k { flex: none; font-family: var(--font-mono); font-size: var(--fs-sm); color: var(--text-2); font-variant-numeric: tabular-nums; }
+.sw-pstrip ol { display: flex; gap: var(--space-2); margin: 0; padding: 2px; list-style: none; overflow-x: auto; min-width: 0; }
+.sw-pchip {
+  display: grid; justify-items: start; gap: 0.1rem; width: auto; min-width: 8rem; max-width: 16rem;
+  padding: var(--space-1) var(--space-3); text-align: left;
+  border: 1px dashed var(--border-strong); border-radius: var(--radius-md);
+  background: transparent; color: var(--text-muted); cursor: pointer;
+}
+.sw-pchip:hover { border-color: var(--border-hover); color: var(--text-2); }
+.sw-pchip > span { display: block; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sw-pchip-n { height: 1.35em; line-height: 1.35; font-weight: var(--fw-semibold); font-size: var(--fs-md); }
+.sw-pchip-n svg { display: inline-block; width: 0.9em; height: 0.9em; margin-right: 0.3rem; vertical-align: -0.08em; fill: none; stroke: var(--ok); stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; }
+.sw-pchip-c { font-weight: var(--fw-regular); }
+.sw-pchip-k { font-family: var(--font-mono); font-size: var(--fs-xs); }
+.sw-pchip.done { border-style: solid; border-color: var(--border-strong); background: var(--card-2); color: var(--text-2); }
+.sw-pchip.done .sw-pchip-k { color: var(--ok); }
+.sw-pchip[aria-current="step"] { border: 1px solid var(--accent); background: var(--gradient-accent); box-shadow: var(--shadow-pressed); color: var(--text); }
+.sw-pchip[aria-current="step"] .sw-pchip-k { color: var(--accent-ink); }
+@media (max-width: 760px) { .sw-pstrip { flex-wrap: wrap; gap: var(--space-2); } }

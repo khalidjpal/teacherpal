@@ -98,3 +98,107 @@ function roomBounds(layout) {
   if (layout.pieces.length === 0) { minX = layout.front.x - 12; maxX = layout.front.x + FRONT.w + 12; minY = layout.front.y - 4; maxY = layout.front.y + 24; }
   return { minX, minY, maxX, maxY };
 }
+
+// ---------------------------------------------------------------------------
+// Starter layouts — one click builds a whole room (the Seating page's
+// "Change layout" picker and the setup wizard's Room step). Positions are
+// whole grid units; every layout sits under a centred Front of room bar with
+// the teacher's desk to its right. buildStarter(id, n) → { front, pieces }
+// with at least n seats.
+// ---------------------------------------------------------------------------
+const BLANK_FRONT = { x: 20, y: 3, w: FRONT.w, h: FRONT.h, rotation: 0 };
+const roomPieceId = () => Math.random().toString(36).slice(2, 9);
+
+const STARTERS = [
+  { id: 'rows',     label: 'Rows',        note: 'Single desks in rows' },
+  { id: 'pairs',    label: 'Pairs',       note: 'Desks side by side in twos' },
+  { id: 'groups',   label: 'Groups of 4', note: 'Four desks pushed together' },
+  { id: 'ushape',   label: 'U-shape',     note: 'Desks around three sides' },
+  { id: 'stations', label: 'Stations',    note: 'Big tables of six' },
+];
+
+function buildStarter(id, n) {
+  const pieces = [];
+  // place by the desk's footprint on screen (rot 90 = standing on its side)
+  const add = (type, vx, vy, rot = 0) => {
+    const t = TYPES[type], side = rot % 180 !== 0;
+    const vw = side ? t.h : t.w, vh = side ? t.w : t.h;
+    pieces.push({ id: roomPieceId(), type, x: vx + vw / 2 - t.w / 2, y: vy + vh / 2 - t.h / 2, rotation: rot });
+  };
+  const top = 4;                                   // clear of the front bar and teacher's desk
+  let width;
+  if (id === 'rows') {
+    const cols = 6, rows = Math.ceil(n / cols);
+    for (let r = 0; r < rows; r++) for (let c = 0; c < cols; c++) add('single', c * 4, top + r * 4);
+    width = cols * 4 - 1;
+  } else if (id === 'pairs') {
+    const cols = 3, rows = Math.ceil(n / (cols * 2));
+    for (let r = 0; r < rows; r++) for (let c = 0; c < cols; c++) add('pair', c * 8, top + r * 4);
+    width = cols * 8 - 2;
+  } else if (id === 'groups') {
+    const count = Math.ceil(n / 4), cols = Math.min(3, count);
+    for (let i = 0; i < count; i++) add('group4', (i % cols) * 9, top + Math.floor(i / cols) * 7);
+    width = cols * 9 - 3;
+  } else if (id === 'stations') {
+    const count = Math.ceil(n / 6), cols = Math.min(3, count);
+    for (let i = 0; i < count; i++) add('group6', (i % cols) * 12, top + Math.floor(i / cols) * 8);
+    width = cols * 12 - 3;
+  } else {                                         // U-shape: back row + two sides, facing in
+    const back = Math.min(10, Math.max(4, Math.ceil(n / 3)));
+    const side = Math.max(2, Math.ceil((n - back) / 2));
+    width = back * 3 + 6;
+    for (let i = 0; i < side; i++) { add('single', 0, top + i * 3, 90); add('single', width - 2, top + i * 3, 270); }
+    for (let i = 0; i < back; i++) add('single', 3 + i * 3, top + side * 3 + 1, 180);
+  }
+  const fx = Math.round(width / 2 - FRONT.w / 2);
+  pieces.push({ id: roomPieceId(), type: 'teacher', x: Math.max(fx + FRONT.w + 1, width - 4), y: 0, rotation: 0 });
+  return { front: { x: fx, y: 0, w: FRONT.w, h: FRONT.h, rotation: 0 }, pieces };
+}
+
+// The setup wizard's guided room: `desks` student desks as singles, pairs or
+// groups of four, in about `rows` rows from front to back (a short last row
+// is centred), under the Front bar with the teacher's desk to its right.
+// → { front, pieces }. suggestRows() is the wizard's starting guess.
+const ROOM_SHAPES = {
+  single: { per: 1, dx: 4, dy: 4, across: 6 },
+  pair:   { per: 2, dx: 8, dy: 4, across: 3 },
+  group4: { per: 4, dx: 9, dy: 7, across: 3 },
+};
+const suggestRows = (type, desks) => {
+  const s = ROOM_SHAPES[type] || ROOM_SHAPES.single;
+  return Math.max(1, Math.ceil(Math.ceil(desks / s.per) / s.across));
+};
+function buildRoom({ type = 'single', desks = 30, rows = 5 } = {}) {
+  const s = ROOM_SHAPES[type] || ROOM_SHAPES.single, t = TYPES[type];
+  const count = Math.max(1, Math.ceil(desks / s.per));
+  const r = Math.max(1, Math.min(count, Math.round(rows) || 1));
+  const cols = Math.ceil(count / r);
+  const pieces = [];
+  for (let i = 0; i < count; i++) {
+    const row = Math.floor(i / cols), inRow = Math.min(cols, count - row * cols);
+    const off = Math.round(((cols - inRow) * s.dx) / 2);
+    pieces.push({ id: roomPieceId(), type, x: off + (i % cols) * s.dx, y: 4 + row * s.dy, rotation: 0 });
+  }
+  const width = (cols - 1) * s.dx + t.w;
+  const fx = Math.round(width / 2 - FRONT.w / 2);
+  pieces.push({ id: roomPieceId(), type: 'teacher', x: Math.max(fx + FRONT.w + 1, width - 4), y: 0, rotation: 0 });
+  return { front: { x: fx, y: 0, w: FRONT.w, h: FRONT.h, rotation: 0 }, pieces };
+}
+
+// Seat ids of a layout, in desk order: '<pieceId>:<index>' (the keys of an
+// arrangement's assignments).
+const layoutSeatIds = (lay) => (lay.pieces || []).filter((p) => TYPES[p.type]).flatMap((p) => TYPES[p.type].seats.map((_, i) => `${p.id}:${i}`));
+
+// A small drawing of a room: each desk's footprint (and the Front bar),
+// scaled to fit maxW × maxH rem keeping its shape. Arrangement cards and
+// the starter layouts both use it.
+function layoutPic(lay, maxW, maxH, cls = '') {
+  const pieces = (lay.pieces || []).filter((p) => TYPES[p.type]);
+  const boxes = [{ ...bbox({ id: 'front', ...(lay.front || BLANK_FRONT) }), front: true }, ...pieces.map((p) => ({ ...bbox(p), teacher: p.type === 'teacher' }))];
+  const minX = Math.min(...boxes.map((b) => b.x)), minY = Math.min(...boxes.map((b) => b.y));
+  const w = Math.max(1, Math.max(...boxes.map((b) => b.x + b.w)) - minX);
+  const h = Math.max(1, Math.max(...boxes.map((b) => b.y + b.h)) - minY, pieces.length ? 0 : w * 0.6);   // an empty room still looks like a room
+  const sc = Math.min(maxW / w, maxH / h);
+  return `<span class="room-pic ${cls}" style="width:${(w * sc).toFixed(2)}rem;height:${(h * sc).toFixed(2)}rem">${boxes.map((b) =>
+    `<i class="${b.front ? 'f' : b.teacher ? 't' : ''}" style="left:${((b.x - minX) / w) * 100}%;top:${((b.y - minY) / h) * 100}%;width:${(b.w / w) * 100}%;height:${(b.h / h) * 100}%"></i>`).join('')}</span>`;
+}

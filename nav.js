@@ -216,7 +216,8 @@ function renderSettingsMenu() {
     periodsBlock = `
       <div class="hud-menu-title">Periods I teach</div>
       <div class="hud-periods">${cells}</div>
-      <button type="button" class="hud-menu-item hud-menu-btn" id="hud-courses">Courses…<span>which periods share a lesson plan</span></button>`;
+      <button type="button" class="hud-menu-item hud-menu-btn" id="hud-courses">Courses…<span>which periods share a lesson plan</span></button>
+      <a class="hud-menu-item hud-menu-btn" href="setup.html">Getting started<span>the setup steps, any time</span></a>`;
   }
 
   return `

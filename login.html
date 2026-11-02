@@ -906,7 +906,7 @@
       // New accounts go to the setup wizard first; everyone else back to
       // where they were headed (?from=…), else the hub.
       function redirectAfterLogin() {
-        if (needsSetup()) { location.replace('setup.html'); return; }
+        if (shouldOpenSetup()) { location.replace('setup.html'); return; }
         const params = new URLSearchParams(location.search);
         const from = params.get('from');
         const safe = from && !/^(?:[a-z]+:|\/\/)/i.test(from) ? from : 'index.html';

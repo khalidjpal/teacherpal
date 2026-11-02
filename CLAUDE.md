@@ -52,8 +52,9 @@ full-screen toggle. There is no sidebar; every page uses the full width.
 | `features.html` | Public: six tools as screenshot rows (`img/features/*.webp`, 1366×768 @2x, **captured from the real pages with an invented class** — never real student data) + a small grid for the rest. Re-capture with a stubbed fetch + fake session if a screen changes |
 | `about.html`   | Public: about the product, not the person — opens with a plain statement of what it is and what it does (no problem statement), then readable from the back / quick between classes, **one roster feeds every tool** (a `.roster-flow` diagram: roster → Attendance, Seating, Groups, Name Wheel, Bathroom passes; absences flow through), four cards (Free · Private per teacher · Readable from the back · Actively built) and one line "Built by a working high school teacher." No biography |
 | `terms.html` / `privacy.html` | Public legal pages, plain-language drafts that describe what the app really does (account fields, owner-only RLS, operator access, Supabase US + Vercel, Google Fonts / YouTube-nocookie requests, localStorage only, deletion by email). Each carries **Last updated** and the "run by one teacher" note. **Keep them true**: a new table, third-party request, tracker or cookie means updating privacy.html (and its date) in the same change |
-| `setup.html`   | First-run setup wizard after a self sign-up: Periods (which bell periods you teach → `setMyTeachesPeriods`) → Classes (a name per period; creates "Period N - <class>" rows and one course per distinct class name) → Students (paste per period → `addStudents`; Back + Next never adds twice) → Look (theme). Finish or Skip setup → `markSetupDone()` → hub. Styles in the "Setup wizard" block at the end of `style.css`. Not in the nav |
-| `admin.html`   | Admin-only: the **Sign-up** switch (`role="switch"`, `adminSetSignupOpen`) and the user list — every account, newest first: username, display name, email, created, last sign-in, ADMIN / UNCONFIRMED tags. Passwords are reset in the Supabase dashboard. Guarded client-side (`isAdmin()` → redirect). Loads `shared.js`, `schedule.js`, `nav.js` |
+| `setup.html`   | **Getting started**, the guided setup (see "Setup wizard" under the Design rules). Opens after a self sign-up, from the hub's "Finish setting up" banner, from the gear menu's **Getting started** link, at `#<step>` (the Schedule page links `#bells`), and as the admin's sandbox at `?preview=1`. Loads `shared.js`, `schedule.js`, `room.js`, `nav.js`. Styles in the "Setup wizard" block of `style.css`. Not in the nav |
+| `migration-onboarding.sql` | One-off migration for the guided setup: `profiles.bell_schedule jsonb` (null = never answered, `{ source: 'west_high' }`, or `{ source: 'custom', school, segments }`) and `profiles.setup_progress jsonb` (`{ step, deferred, steps }`), with shape checks, plus `set_my_bell_schedule(jsonb)` (validates every segment), `set_my_setup_progress(jsonb)` and `set_my_display_name(text)`. Run after `migration-self-signup.sql`; safe to re-run; ends with a check |
+| `admin.html`   | Admin-only, laid out to fill the screen (`main.page.admin-page` grid: Sign-up and Onboarding as two equal cards on top, Users full width filling the rest and scrolling inside): the **Sign-up** switch (`role="switch"`, `adminSetSignupOpen`), **Preview onboarding** (`setup.html?preview=1`) and the user list — every account, newest first: username, display name, email, created, last sign-in, ADMIN / UNCONFIRMED tags. Passwords are reset in the Supabase dashboard. Guarded client-side (`isAdmin()` → redirect). Loads `shared.js`, `schedule.js`, `nav.js` |
 | `migration-self-signup.sql` | One-off migration for self sign-up: `app_settings` (one row, `signup_open`, starts closed; RLS on, no policies) + `signup_status()` (anon) / `admin_set_signup_open(bool)`; a BEFORE INSERT trigger on `auth.users` refusing self sign-ups while closed; `handle_new_user()` reading username / display_name from the sign-up metadata; `profiles.setup_done` + `set_my_setup_done()`; `username_available()` / `email_for_username()` (anon) replacing the anon-readable `profiles public read` policy with owner-only reads; `admin_list_users()` over every auth user. Lists the dashboard settings it needs; ends with a check |
 | `migration-auth.sql` | One-off migration that adds `owner_id` to every table, backfills existing rows to Khalid's uuid, drops the "TEMP anon full access" policies and creates per-owner select/insert/update/delete policies. Run in the Supabase SQL editor before deploying the auth code |
 | `migration-usernames.sql` | Historical: added the `profiles` table (user_id, username, email). Username-based sign-in is retired; the column is now nullable and only used as an optional display name |
@@ -90,14 +91,14 @@ full-screen toggle. There is no sidebar; every page uses the full width.
 | `migration-lesson-attachments.sql` | One-off migration: the `lesson_attachments` table + its four owner policies, the private Storage bucket `lesson-files` (50 MB/file) and its four `storage.objects` policies (own uid folder only); safe to re-run, ends with a check query |
 | `seed-bathroom-q1.sql` | Seed: Q1 used-pass tallies from the paper tracker — name-matches students per period, creates three missing students, upserts manual tallies, reports unmatched names in its last result set |
 | `attendance.js` | `initAttendance({ mode: 'full' \| 'compact' })` builds and runs the attendance view (chart or tiles, click-to-cycle, AUTO period, date, counts, lists, Copy, Reset, autosave). Data only via `shared.js`; bell data via `navReady`. |
-| `room.js`      | Seating-room geometry shared by the builder and the hub chart: `G`, `TYPES`, `FRONT`, `pieceTransform`, `bbox`, `labelStyle`, `roomBounds`, plus `fitSeatLabel(label, { base, min })` — the one seat-name fitter every page that draws seats calls. No DOM state, no Supabase. |
+| `room.js`      | Seating-room geometry shared by the builder and the hub chart: `G`, `TYPES`, `FRONT`, `pieceTransform`, `bbox`, `labelStyle`, `roomBounds`, plus `fitSeatLabel(label, { base, min })` — the one seat-name fitter every page that draws seats calls — and the starter layouts shared by Seating and the setup wizard: `STARTERS`, `buildStarter(id, n)`, `BLANK_FRONT`, `layoutSeatIds(layout)`, `layoutPic(layout, maxW, maxH, cls)` (an HTML string); and the Quick build room (Seating in the setup wizard), `buildRoom({ type: 'single' | 'pair' | 'group4', desks, rows })` + `suggestRows(type, desks)`. No DOM state, no Supabase. |
 | `shared.js`    | Supabase config + REST client + data helpers + small UI helpers. **The only file that talks to Supabase.** |
-| `schedule.js`  | West High bell schedules as data (`SCHEDULES`, `FINALS_PAIRS`, `SCHEDULE_OPTIONS`) + pure helpers: `resolveSchedule(date, overrides)`, `scheduleStatus(now, sched, teaches)`, `teachingMap(periods, teachesPeriods?)`, `parsePeriodName`, `dateKey`, `formatCountdown`, `fmt12`, `fmtWallClock(date, {hour12, seconds})`. No DOM, no Supabase. |
+| `schedule.js`  | West High bell schedules as data (`SCHEDULES`, `FINALS_PAIRS`, `SCHEDULE_OPTIONS`) + pure helpers: `resolveSchedule(date, overrides)`, `customBells()` / `scheduleOptions()` (a teacher's own bell times, see rule 12), `scheduleStatus(now, sched, teaches)`, `teachingMap(periods, teachesPeriods?)`, `parsePeriodName`, `dateKey`, `formatCountdown`, `fmt12`, `fmtWallClock(date, {hour12, seconds})`. No DOM, no Supabase. |
 | `formula.js`   | Shared Formula **algorithms and modal only** — never rule data (the modal's Rules tab is an SVG relationship map): type metadata per scope (`RULE_TYPES`, `SCOPE_TYPES`, `KEY_TYPES`), priorities (`sortByPriority`, `priorityWeight`, `planRules`), feasibility (`findImpossibleHard`, `confirmImpossible`), the `annealAssign()` solver, `groupWithFormula()`, `summarizeRun()`, `absentTodayFor()`, `createFormulaModal({ scope, … })`. No Supabase calls. |
 | `style.css`    | Shared styling for every page (dark pink dashboard theme; all tokens at the top) |
 | `roster.html`  | Two-panel roster: period panel (search, sort, add, import modal, edit mode, full screen) + name-card grid with undo-toast remove. Each card shows the student's roster number (`rosterNumbers()`). A hand-set number is in the accent colour, and a number two students share is lavender. In edit mode, click the number to set it by hand; leave it empty to go back to alphabetical. The Last name sort follows the roster numbers |
 | `groups.html`  | **Create Groups**: three identical panels across the top — **Group size** (mode toggle + number), **Roster** (period, one-line summary, Edit Roster → the roster modal) and **Options** (Formula, Follow-rules switch, gear, full screen) — then the centred Create Groups / Reshuffle button, then the group cards filling everything below. First names is the only field left in the `.groups-settings-dialog`. FLIP-animated: names fly out of the Roster panel on Create and between cards on Reshuffle |
-| `seating.html` | Freeform room builder: starter layouts or a desk rail on a zoomable dot-grid canvas (Arrange room), then drag or click names onto seats (Assign seats); several arrangements per period as thumbnail cards, each with its own desks + seats (one active), autosaved, full screen |
+| `seating.html` | Freeform room builder (also the setup wizard's Room step, as `seating.html?embed=setup`: see Setup wizard): starter layouts or a desk rail on a zoomable dot-grid canvas (Arrange room), then drag or click names onto seats (Assign seats); several arrangements per period as thumbnail cards, each with its own desks + seats (one active), autosaved, full screen |
 | `migration-room-builder.sql` | One-off migration for the room builder tables (run in the Supabase SQL editor) |
 | `migration-seating-arrangements.sql` | One-off migration: `seating_arrangements` table + RLS, the `set_active_seating_arrangement` RPC, and a backfill turning each `seat_assignments` row into an active "Current seating" arrangement |
 | `migration-arrangement-layouts.sql` | One-off migration: every arrangement owns its desk layout — active ones take the shared room they were shown on, layout-less rows the room, periods with none get an active "Seating chart"; safe to re-run (never overwrites a layout edited since); ends with a check query |
@@ -194,10 +195,13 @@ shared across accounts.
       any other page (the Site URL), the `shared.js` bootstrap forwards
       the hash to `login.html`. Signing in unconfirmed says so and offers
       to resend.
-    - **First sign-in goes to `setup.html`** while `profiles.setup_done`
-      is false (`needsSetup()`); finishing or skipping calls
-      `markSetupDone()` (`set_my_setup_done` RPC). The migration marks
-      every existing account done.
+    - **Sign-in goes to `setup.html`** while `profiles.setup_done` is
+      false and the teacher hasn't put it off (`shouldOpenSetup()` =
+      `needsSetup()` and not `setupProgress().deferred`). Reaching the
+      wizard's Done step **with the bell times answered** calls
+      `markSetupDone()`; "Skip setup, I'll do it later" only sets
+      `deferred`, so the hub shows "Finish setting up" until then. The
+      self-signup migration marked every existing account done.
     - Dashboard settings it relies on: Email provider with sign-ups allowed
       and **Confirm email** on; the app's `login.html` URLs (Vercel and
       `http://127.0.0.1:8080/login.html`) in Authentication → URL
@@ -240,7 +244,11 @@ shared across accounts.
   `isAdmin()`, `currentUser()` → `{ id, email, username, display_name,
   is_admin, theme, teaches_periods }`, `hydrateProfileIntoSession()`,
   `displayName()` → `display_name` → `username` → email local part (`''`
-  with no session); set at sign-up or in SQL, never edited in the app.
+  with no session); set at sign-up, in the setup wizard's You step
+  (`setMyDisplayName()`), or in SQL.
+  Setup: `needsSetup()`, `shouldOpenSetup()`, `setupProgress()`,
+  `saveSetupProgress(p)`, `markSetupDone()`, `currentBellSchedule()`,
+  `setMyBellSchedule(b)` (`migration-onboarding.sql`).
   Sign-up: `signupOpen()`, `usernameAvailable(u)`, `signUp({...})`,
   `resendSignupEmail(email)`, `completeAuthRedirect()`, `needsSetup()`,
   `markSetupDone()`, `PASSWORD_MIN`, `USERNAME_RE`.
@@ -280,8 +288,9 @@ shared across accounts.
   teacher is addressed: "Mr. Pal", "Ms. Mohammadi". Attached to
   `session.user.display_name`; `displayName()` falls back to `username`,
   then the email's local part. Set at self sign-up, or in the SQL editor
-  (`migration-display-name.sql` seeds the two accounts); there is no
-  in-app editor afterwards and no RPC. Shown in the top-bar
+  (`migration-display-name.sql` seeds the two accounts), or in the setup
+  wizard's You step (`setMyDisplayName()` → the `set_my_display_name` RPC,
+  `migration-onboarding.sql`). Shown in the top-bar
   USER chip; a change lands on the next page load via the profile refresh
   above, no sign-out needed.
 - **Teaches-periods.** `profiles.teaches_periods integer[]` (each 0-7,
@@ -676,6 +685,16 @@ last-used period in `localStorage`), `getLastPeriodId()` / `setLastPeriodId()`,
     `schedule_overrides` rows managed on `schedule.html`. Period ↔ class
     mapping comes from the roster period *names* (`parsePeriodName`), not from
     `sort_order`, so name periods "3rd Period - English 9" / "Period 3 …".
+    **A teacher at another school** answers "No" on the wizard's Bell times
+    step and enters their own regular day; it is stored on the profile
+    (`profiles.bell_schedule`, `source: 'custom'`) and `customBells()` reads
+    it from the session. Then **every weekday is that day**: `scheduleFor()`
+    returns it for any key but `no_school` (the West High special schedules
+    don't apply), `defaultScheduleKey()` never says early release, and
+    `scheduleOptions()` (the Schedule page's override menu) offers only No
+    School and Regular day. Pages never special-case it: they all go through
+    `resolveSchedule()` / `scheduleFor()`. Custom special schedules (minimum
+    days, finals) don't exist yet.
 13. **Attendance has one source of truth: the `attendance` table.** The
     localStorage key `teacherpal.absent.<periodId>` is only a same-browser
     cache of today's absentees (so Seating's Formula and Create Groups can
@@ -1164,7 +1183,10 @@ All styling lives in `style.css`; pages carry almost no inline styling.
     `max-width: 82rem`, centred, `gap` between sections
     `clamp(1.5rem, 3vw, 2.5rem)`. Cards inside a section have
     `flex: 1 1 15rem; max-width: 20rem; min-height: clamp(9.5rem, 20vh, 12.5rem)`
-    so 1..N cards flow naturally without an outer grid template. Sections
+    so 1..N cards flow naturally without an outer grid template. **From
+    900×560 up the hub fills the screen**: `.hub-sections` and each section
+    are `flex: 1` and the panel rows stretch, so the four rows share the
+    height (no empty band under System). Sections
     in order: **Daily** (Attendance, Bathroom), **Teacher tools**
     (Create Groups, Timer, Noise Meter, Name Wheel), **Planning** (Lesson Plans, Seating), **System**
     (Schedule, Rosters — both `.setup` dashed + quieter). Adding a tool
@@ -1390,6 +1412,148 @@ All styling lives in `style.css`; pages carry almost no inline styling.
   Keyboard: ← → a school day, ↑ ↓ a course (week / day). Periods are the
   ones in `teaches_periods`. Opens on the course of the bell's current period,
   today (or the next school day).
+- **Setup wizard** (`setup.html`, "Getting started"). **One decision per
+  screen**: a heading, the control, at most one short help line. The
+  heading is the only display-face text (Orbitron, sentence case, no wide
+  tracking); everything else is the body face in sentence case. No
+  explanatory paragraphs, no HUD labels. **The card fills the screen**:
+  `min(1600px, 100%)` wide and `flex: 1` down to the bottom of `main`;
+  short screens centre their panel vertically in it, while the Students
+  and room-canvas screens start at the top and stretch to fill it. Every
+  screen fits 1280×720 and 1366×768 even with the preview bar
+  (measured). Header: "<step> · Step n of N" on the left, a row of small
+  dots (buttons: any step, any time) on the right. Footer: Back · Skip ·
+  Next. Screens:
+    1. **Welcome**: one line, **Let's start**, and "I'll do it later" (sets
+       `setup_progress.deferred`, goes to the hub).
+    2. **Your name** (`name`): one big field.
+    3. **Look** (`look`): four theme cards that re-theme the page on click
+       (saved on Next, reverted on Skip).
+    4. **Periods**: 0–7 toggles; the rest are prep. Next saves
+       `teaches_periods` and creates a "Period N" row for each new one.
+    5. **Courses**: a name box per taught period with a `<datalist>` of the
+       names typed so far; **the same name = the same course** (shared
+       lesson plans). Next renames the rows "Period N - Course" and
+       finds-or-creates the courses (skipped before `migration-courses.sql`).
+    6. **Bell schedule** (`bells`, can't be skipped): "Does your school use
+       West High's bell schedule?" Yes / No. Yes saves `{ source:
+       'west_high' }`.
+    7. **Bell times** (`times`, only after No): start / end per period, from
+       the first taught period to the last (prep periods between included;
+       "+ Period N" / "+ Lunch" add others, × removes), a "Fill them in for
+       me" disclosure (first bell, length, passing, lunch). Validated: both
+       times, start < end, no overlaps. **Unanswered bells** = Done says
+       "Almost done", setup is **not** marked done, and the hub banner says
+       the clock is on West High times.
+    8. **Students**, **one period per screen**. Above it, a **period
+       strip** (`renderStrip()`, hidden with one period): "Period 2 of 5",
+       then a chip per taught period ("Period 1 · English 9" over "26
+       students" / "Now" / "To do"). The current chip has the pressed accent
+       fill; done chips (students added) are solid with a green ✓; the rest
+       are dashed and quiet. A chip jumps straight to that period
+       (`jumpToPeriod()`: the open period's found names are added first, as
+       Next does; Back does the same). The heading is the period itself,
+       large ("Period 2 · English 9", `.sw-period-title`), with one help
+       line under it ("Copy this period's roster from Aeries and paste it
+       below… Messy is fine."). The two columns take the rest of the card's
+       height, **always the same height and never resizing** (`contain:
+       size`; each scrolls inside; measured identical empty, pasted and on
+       the next period at 1366×768 and 1080p, including the footer message
+       line, whose `line-height` is pinned to its reserved 1.4rem). **They
+       read as input → output**:
+       - The left is headed **Paste here**. It's a bordered textarea with
+         a placeholder ("Paste your roster from Aeries — messy is fine"),
+         a hover border and an accent focus ring. It has focus whenever
+         the screen opens, so Ctrl+V just works.
+       - The right is headed **Students found**, with the new-name count
+         and the Flip link. It's a plain result list on a top rule, with
+         hairline rows and no box of its own, in up to two columns (CSS
+         `columns: 2 15rem`; the list scrolls, not the columns). When
+         empty it shows a quiet centred line ("Nothing yet. Names from the
+         box on the left show up here.") and no "+ Add a name"; a period
+         that already has students lists them read-only, with a note that
+         renames and removals happen on the Rosters page.
+       - Under both, full width, the `.sw-ai` fallback, which recedes: a
+         small muted line ("Still messy? Give this prompt to ChatGPT or
+         Claude…"), then the prompt always shown in a thin-bordered block of
+         small muted mono, with a small **Copy prompt** at its bottom right.
+         No toggle, no scrollbar: it is sized to its text.
+
+       The found list is **editable** (each name an input; × removes,
+       Enter adds a row under, Backspace on an empty row removes it, "+ Add
+       a name"); rows already on the roster or listed twice are struck
+       through and not added. Typing in the paste box re-reads it and
+       replaces the list. The cleanup is **silent**: nothing reports what was
+       stripped. "Names backwards? Flip them" sits in the list's header
+       (only with pasted text and more than one name). Under the paste box,
+       always visible, the `.sw-ai` block: "Still messy? Paste this into
+       ChatGPT or Claude along with your roster…" with the prompt and a Copy
+       button. Next adds the list and moves to the
+       next period ("6 students added to Period 1."); Skip says "Skip this
+       period". **The parser** (`parseRoster(text, { flip })`,
+       `window.__parseRoster`): tab, `;`, CSV (quotes) or 3+-space columns;
+       header rows (and their Last / First / Name columns); numbers,
+       bullets, IDs and non-name cells (grades, M/F) dropped; "Last, First
+       M." → "First Last"; two name columns without a header = last name
+       first; middle initials dropped; Jr / Sr / II–IV kept after the last
+       name; ALL CAPS / all lower case title-cased. **Aeries codes**: on a
+       line with lower-case letters, trailing 2–4-capital tokens ("SSA",
+       "IEP") and whole cells of them are removed (`stripped` is still returned,
+       but nothing shows it);
+       an ALL-CAPS line is left alone (a code can't be told from a short
+       surname there).
+    9. **Room** is **the real Seating page**, not a copy:
+       `seating.html?embed=setup` in an iframe (`.sw-seating`) filling the
+       step, under the heading and one guidance line ("Drag a desk from the
+       left to place it, click a desk to move or turn it, and in Assign
+       seats drag a name onto a seat"). Everything the teacher does there
+       (the desk rail, Not seated list, selection, drag, turn, copy,
+       remove, zoom, pan, undo, Fill seats, rules, `?`) is the Seating
+       tab's own code, and it autosaves the period's active arrangement
+       exactly as that tab does. **Embed mode** (`EMBED` in seating.html,
+       `body.embed`) changes only these things:
+       - The top bar, the arrangement cards and full screen are hidden, and
+         F and the remembered big-screen mode are ignored.
+       - An empty room shows the Front of room marker and the **Quick
+         build** card (top right of the canvas: how many desks ·
+         Singles / Pairs / Groups of 4 · how many rows → **Build the
+         room**). It replaces the starter picker. Quick build calls
+         `buildRoom()` through `applySpec()`, the starters' own path, so
+         it is one Undo step.
+       - The theme follows the wizard page.
+       - In the wizard's preview (`window.__setupPreviewApi`), the page's
+         data helpers point at the preview's in-memory store.
+
+       The wizard's **Next** calls `seatingEmbed.flush()` (the page's
+       `flushArrSave()`), then reads `seatingEmbed.current()`. A room with
+       no desks is refused. `shareRoom()` then:
+       - gives a copy of the room to every other taught period whose active
+         arrangement has no desks;
+       - seats at random any period nobody was seated in, including the
+         one built here.
+
+       The Done screen lists anyone who didn't get a desk.
+   10. **Done**: "You're all set." (or "Almost done."), three cards (Take
+       attendance, Make groups, Write today's lesson plan), and only what's
+       missing as one-line to-dos with a link back.
+  **Saving**: each step saves on Next; Back and the dots save an edited
+  step if it's valid, else keep the typing. `profiles.setup_progress`
+  holds the step reached and each step's done / skipped; anything typed
+  but unsaved (names, course names, bell times, pasted lists and edited
+  name lists) is a
+  per-user draft in `localStorage['teacherpal.setup.draft.<uid>']`,
+  cleared when setup finishes. A returning teacher resumes at their step
+  (`#<step>` overrides).
+  **The hub banner** (`#setup-banner`, `index.html`) shows while
+  `needsSetup()`, from the cached profile (no request of its own, so the
+  hub is still a launcher): "Pick up where you left off: <step>", or the
+  bell-times warning. **Preview** (`?preview=1`, admins only): a lavender
+  sticky bar "Preview mode — nothing is saved" with Exit to Admin; the
+  wizard runs against `previewApi()`, an in-memory store that starts like
+  a new account (no periods, default theme, all eight periods); the theme
+  is only set on `<html>` (no localStorage); the Done cards don't
+  navigate; and `sb` is wrapped to reject every non-GET, so not even the
+  gear menu can write while it's open.
 - **Bathroom Tracker** (`bathroom.html` + `bathroom.js`). **One screen, three
   bands**: the `.br-bar` control island → `.br-grid-wrap` of student cards →
   `.br-panels`, a two-up row of **Out now** and **Log**. Settings live in a
@@ -1400,7 +1564,7 @@ All styling lives in `style.css`; pages carry almost no inline styling.
   overflow-y: auto`, so a long roster scrolls *inside* the grid and the
   panels below are always on screen; the page itself never scrolls.
   `.br-panels` is `grid-template-columns: minmax(0,1fr) minmax(0,1.25fr)`
-  at a fixed `height: var(--br-panels-h)` (`clamp(10rem, 27vh, 15rem)`,
+  at a fixed `height: var(--br-panels-h)` (`clamp(10rem, 30vh, 24rem)`,
   declared on `.bathroom-page` so the undo toast can sit above it). Both
   `.br-panel`s are flex columns of a `.br-panel-head` + a scrolling
   `.br-panel-body`, **so neither panel ever changes size** — measured 194px
@@ -1527,7 +1691,13 @@ All styling lives in `style.css`; pages carry almost no inline styling.
     `.hud-panel.compact` variant; the hub doesn't use it.) Don't reuse the
     HUD look on tool pages.
 - **Timer** (`timer.html` + `timer.js`). One `.timer-stage` `.hud-box`
-  centred on the page: mode segmented control (Countdown / Stopwatch), a
+  filling the page (`flex: 1`, up to 80rem wide, content centred). **The
+  dial size is one token**, `--dial: min(calc(100dvh - 27rem), 46vw,
+  56rem)` on the stage: the viewport height minus everything else on the
+  stage, so the dial is as big as the screen allows and the stage still
+  fits 1280×720 (measured in all four themes). The wrap is an inline-size
+  container and default's digits are `clamp(2.4rem, 19cqi, 13rem)`, so
+  they grow with it. Inside: the mode segmented control (Countdown / Stopwatch), a
   40-char label input, then the display — a `.timer-display-wrap` holding
   the digits, an optional overhead label, and **the themed dial** — one SVG
   (`.timer-dial`), built once per document by `buildDial()` and painted by
@@ -1587,8 +1757,8 @@ All styling lives in `style.css`; pages carry almost no inline styling.
       is in **sentence case**, the one place pink overrides
       `text-transform`.
 
-      Sizes: the wrap is `min(50vh, 46vw, 31rem)` (it fits 1366×768 with the
-      label line and setup row), 80vh in full screen and 94vh in the pop-out
+      Sizes: the wrap is `max(14rem, var(--dial))` (see `--dial` under the
+      Timer's layout), 80vh in full screen and 94vh in the pop-out
       (84vh with a label). The page keeps pink's heart pattern; the pop-out
       stays flat like every projector view.
     - **halloween — the pumpkin IS the dial.** There is no ring: the SVG dial
@@ -1657,9 +1827,7 @@ All styling lives in `style.css`; pages carry almost no inline styling.
       steady glow, and the lit layer fades out so only the face is left. All
       of this stops under reduced motion.
 
-      It is bigger than the other dials: the wrap is
-      `min(48vh, 46vw, 31rem)` (the most that lets the whole stage fit
-      1366×768 with the label line and setup row always present), 80vh in
+      The wrap is `max(14rem, var(--dial))`, 80vh in
       full screen and 94vh in the pop-out.
       Unlike the page decorations, it is not excluded from the pop-out / PiP.
       The pop-out only gets state over `BroadcastChannel`; its `loadState()`
@@ -2364,7 +2532,10 @@ All styling lives in `style.css`; pages carry almost no inline styling.
       Testing: rAF doesn't run under `--virtual-time-budget`, so drive
       Edge over the DevTools protocol in real time.
 - **Noise Meter** (`noise.html` + `noise-popout.html` + `noise.js`). One
-  `.noise-stage` `.hud-box`: the `.seg` of activity presets (Silent work /
+  `.noise-stage` `.hud-box` that fills the page (`flex: 1`, up to 80rem
+  wide, rows `auto 1fr auto` with the meter centred in the middle one; the
+  reading is `clamp(3rem, 22vh, 14rem)`, the bar `clamp(1.5rem, 6vh,
+  4rem)` tall): the `.seg` of activity presets (Silent work /
   Partner talk / Group work — each moves both zone handles), then the
   `.noise-meter` (huge mono reading + `dB≈` unit, the level bar, the
   QUIET / OK / TOO LOUD scale under its bands, and the zone word), then
@@ -2856,7 +3027,7 @@ All styling lives in `style.css`; pages carry almost no inline styling.
   `placePieceTools()` from `render()`/`applyView()`, under the turn ring
   while turning, hidden mid-drag, in Assign and in full screen; its
   pointerdown stops propagation so it never counts as a canvas click.
-  **Starter layouts** (`STARTERS` + `buildStarter(id, n)`): Rows, Pairs,
+  **Starter layouts** (`STARTERS` + `buildStarter(id, n)`, in `room.js` since the setup wizard uses them too): Rows, Pairs,
   Groups of 4, U-shape, Stations, built for `seatTarget()` = this period's
   roster (min 12), in whole grid units under a centred Front bar with the
   teacher's desk to its right; their pictures use the same `layoutPic()`.

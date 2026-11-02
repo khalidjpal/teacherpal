@@ -88,6 +88,8 @@ function normalizeSession(raw, recovery = !!(_session && _session.recovery)) {
           ? prevUser.teaches_periods.slice()
           : null,
         setup_done: prevUser ? prevUser.setup_done !== false : true,
+        bell_schedule: prevUser && prevUser.bell_schedule || null,
+        setup_progress: prevUser && prevUser.setup_progress || null,
       }
     : prevUser;
   return {
@@ -244,6 +246,9 @@ async function hydrateProfileIntoSession() {
       ? p.teaches_periods.slice()
       : (Array.isArray(_session.user.teaches_periods) ? _session.user.teaches_periods : [0, 1, 2, 3, 4, 5, 6, 7]);
     _session.user.setup_done      = p.setup_done !== false;   // missing column = an old account = done
+    // No column yet (before migration-onboarding.sql) = keep what we have.
+    if ('bell_schedule' in p)  _session.user.bell_schedule  = p.bell_schedule || null;
+    if ('setup_progress' in p) _session.user.setup_progress = p.setup_progress || null;
 
     if (JSON.stringify(_session.user) === before) return;   // nothing moved
     saveSession(_session);
@@ -585,13 +590,48 @@ async function signOutOtherSessions() {
 }
 
 // First-run setup (setup.html). New self-signed-up accounts start with
-// profiles.setup_done = false; finishing or skipping the wizard sets it.
+// profiles.setup_done = false; reaching the end of the wizard with the bell
+// times answered sets it. Until then the hub shows "Finish setting up".
 function needsSetup() {
   return !!(_session && _session.user && _session.user.setup_done === false);
 }
 async function markSetupDone() {
   if (_session && _session.user) { _session.user.setup_done = true; saveSession(_session); }
   await sb('rpc/set_my_setup_done', { method: 'POST', body: { p_done: true } });
+}
+
+// Where the wizard got to (profiles.setup_progress, migration-onboarding.sql):
+// { step, deferred, steps: { <step>: 'done' | 'skipped' } }. `deferred` =
+// "Skip setup, I'll do it later": sign-in goes to the hub, not the wizard.
+function setupProgress() {
+  const p = _session && _session.user && _session.user.setup_progress;
+  return p && typeof p === 'object' ? p : { step: null, deferred: false, steps: {} };
+}
+// Sign-in opens the wizard only while it's unfinished and not put off.
+function shouldOpenSetup() { return needsSetup() && !setupProgress().deferred; }
+async function saveSetupProgress(progress) {
+  if (_session && _session.user) { _session.user.setup_progress = progress; saveSession(_session); }
+  await sb('rpc/set_my_setup_progress', { method: 'POST', body: { p_progress: progress } });
+}
+
+// The wizard's "You" step: how the app addresses the teacher.
+async function setMyDisplayName(name) {
+  const clean = String(name || '').trim().slice(0, 60);
+  await sb('rpc/set_my_display_name', { method: 'POST', body: { p_name: clean } });
+  if (_session && _session.user) {
+    _session.user.display_name = clean || null;
+    saveSession(_session);
+    document.dispatchEvent(new CustomEvent('teacherpal:profile', { detail: { user: _session.user } }));
+  }
+}
+
+// Whose bell times this teacher uses (see customBells() in schedule.js):
+// null = never answered, { source: 'west_high' }, or { source: 'custom',
+// school, segments }. Validated again by the set_my_bell_schedule RPC.
+function currentBellSchedule() { return (_session && _session.user && _session.user.bell_schedule) || null; }
+async function setMyBellSchedule(bells) {
+  await sb('rpc/set_my_bell_schedule', { method: 'POST', body: { p_bells: bells } });
+  if (_session && _session.user) { _session.user.bell_schedule = bells; saveSession(_session); }
 }
 
 let _refreshInFlight = null;

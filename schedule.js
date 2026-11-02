@@ -138,15 +138,49 @@ function dateKey(date) {
   return `${date.getFullYear()}-${p(date.getMonth() + 1)}-${p(date.getDate())}`;
 }
 
+// ---------------------------------------------------------------------------
+// A teacher at another school: their own regular day, entered in the setup
+// wizard and kept on their profile (profiles.bell_schedule = { source:
+// 'custom', school, segments }). It replaces West High's times on EVERY
+// school day — the West High special schedules (minimum day, finals, …)
+// don't apply to another school, so any override but No School resolves to
+// it too. Read from the signed-in session (shared.js), never fetched here.
+// ---------------------------------------------------------------------------
+function customBells() {
+  const u = typeof currentUser === 'function' ? currentUser() : null;
+  const b = u && u.bell_schedule;
+  return b && b.source === 'custom' && Array.isArray(b.segments) && b.segments.length ? b : null;
+}
+
+function customSchedule(b) {
+  const segments = b.segments
+    .map((x) => (x.kind === 'period' ? P(Number(x.n), x.start, x.end) : B(x.label || 'Break', x.start, x.end)))
+    .sort((x, y) => x.start.localeCompare(y.start));
+  return { key: 'regular', name: b.school ? `${b.school} · regular day` : 'Your regular day', short: 'REGULAR', segments, finalsPair: null };
+}
+
+// Choices offered by the override UI for the signed-in teacher.
+function scheduleOptions() {
+  if (!customBells()) return SCHEDULE_OPTIONS;
+  return [
+    { key: 'no_school', name: 'No School' },
+    { key: 'regular', name: 'Regular day (your bell times)' },
+  ];
+}
+
 // Weekday default: Monday = Early Release, Tue–Fri = regular, weekend = null.
+// With custom bell times every weekday is their regular day.
 function defaultScheduleKey(date) {
   const d = date.getDay();
   if (d === 0 || d === 6) return null;
+  if (customBells()) return 'regular';
   return d === 1 ? 'early_release' : 'regular';
 }
 
 // { key, name, short, segments, finalsPair } for a schedule key (+ pair for finals).
 function scheduleFor(key, finalsPair) {
+  const mine = key !== 'no_school' && customBells();
+  if (mine) return customSchedule(mine);
   const s = SCHEDULES[key];
   if (!s) throw new Error(`Unknown schedule: ${key}`);
   if (key === 'finals') {
