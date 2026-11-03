@@ -889,11 +889,23 @@
     const sel = $('pick-list-select');
     if (sel) sel.disabled = !!spin;
     const rep = $('wheel-norepeat');
-    if (rep) rep.setAttribute('aria-checked', String(noRepeats));
+    if (rep) {
+      rep.setAttribute('aria-checked', String(noRepeats));
+      rep.title = noRepeats
+        ? 'No repeats: on. Each name comes off until everyone has been called'
+        : 'No repeats: off. Anyone can come up again';
+    }
     const fn = $('wheel-firstnames');
-    if (fn) fn.setAttribute('aria-checked', String(firstNamesOnly));
+    if (fn) {
+      fn.setAttribute('aria-checked', String(firstNamesOnly));
+      fn.title = firstNamesOnly ? 'First names: on (shared with Create Groups)' : 'First names: off. Showing full names';
+    }
     const mute = $('wheel-mute');
-    if (mute) mute.setAttribute('aria-checked', String(muted));
+    if (mute) {
+      mute.setAttribute('aria-checked', String(muted));
+      const what = skinFor() ? 'Sound' : 'Tick';   // the plain wheel only ticks
+      mute.title = muted ? `${what} muted. Click to turn it on` : `${what} on. Click to mute`;
+    }
 
     // put-back / take-off sit under the name; only the relevant one shows
     const back = $('wheel-back');
@@ -1100,22 +1112,16 @@
     fillPeriodSelect($('period-select'), periods, getLastPeriodId());
     currentPeriodId = $('period-select').value || null;
 
-    // AUTO: open on (and then follow) the bell's current period
+    // open on (and then follow) the bell's current period
     autoPick(new Date(), nav.today ? nav.today.sched : null, { load: false });
     await loadPeriod();
 
     $('period-select').addEventListener('change', async () => {
       currentPeriodId = $('period-select').value || null;
       setLastPeriodId(currentPeriodId);
-      followBell = false;
-      $('btn-auto').setAttribute('aria-pressed', 'false');
+      followBell = false;   // picked by hand: stop following the bell until a reload
       winnerId = null;
       await loadPeriod();
-    });
-    $('btn-auto').addEventListener('click', () => {
-      followBell = !followBell;
-      $('btn-auto').setAttribute('aria-pressed', String(followBell));
-      if (followBell) autoPick(new Date(), null, { force: true });
     });
     document.addEventListener('teacherpal:tick', (e) => autoPick(e.detail.now, e.detail.sched));
 
@@ -1265,7 +1271,7 @@
     renderControls();
   }
 
-  // Follow the bell while AUTO is on, the same rule the Attendance screen uses.
+  // Follow the bell until a period is picked by hand, the same rule the Attendance screen uses.
   function autoPick(now, sched, { force = false, load = true } = {}) {
     if (spin) return;                  // don't swap the roster out mid-spin
     if ((!followBell && !force) || !byNumber.size) return;

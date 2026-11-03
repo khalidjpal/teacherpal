@@ -78,7 +78,7 @@ full-screen toggle. There is no sidebar; every page uses the full width.
 | `timer.js`     | Countdown + stopwatch logic, plus `buildDial()` / `paintDial()` for the themed dial. **End-timestamp model**: state is `{ mode, running, paused, label, muted, targetMs, endsAt, remainingAtPause, startedAt, elapsedAtPause, zeroed }` in `localStorage['teacherpal.timer.state']`; every window computes the display from `Date.now()` against `endsAt`/`startedAt`, so tab-throttling doesn't drift. `BroadcastChannel('teacherpal-timer')` syncs main ↔ pop-out ↔ PiP. Web Audio API beep on zero (respects mute). `documentPictureInPicture.requestWindow()` on Chrome for an always-on-top floating display. Space toggles start/pause. |
 | `noise.html`   | Noise Meter screen: the `.noise-stage` in three groups — `.noise-head` (activity presets + the `#status` line, inside the card), the `.noise-meter` (reading + bar + zone word; the bunny in pink, the ghost in halloween), `.noise-foot` (one `.noise-foot-row` of Start/Stop, chime, "Full screen window" · the two zone sliders side by side · full screen, then a one-line privacy note with a `?`) — plus `#noise-privacy-dialog` (the full mic note). Loads `noise.js`. |
 | `noise.js`     | Mic → `AnalyserNode` → RMS → a 35–95 relative "dB" reading, 500ms rolling average, three zones, "Too loud" after 3s in the red, optional chime. Polls on `setInterval` (**not** rAF — rAF freezes in a background window and the pop-out would stall). `BroadcastChannel('teacherpal-noise')` feeds the pop-out. Opens the mic only on Start; stops every track on Stop and on `pagehide`. Nothing is recorded or sent anywhere. |
-| `wheel.html`   | Name Wheel screen: the wheel on the left; on the right the result panel and the controls (period, AUTO, **Edit wheel**, First names / No repeats / tick mute / "Full screen window" / full screen), "Mini window" (PiP, Chrome only), plus the `#wheel-roster-dialog` toggle-chip modal — loads `cauldron.js`, `boba.js`, `farmyard.js`, then `wheel.js`. Words that differ per skin come in `.for-wheel` / `.for-brew` / `.for-boba` / `.for-farm` sets ("Edit wheel" / "Edit who's in", "Tick on" / "Sound on", …) and CSS shows the one for the theme. |
+| `wheel.html`   | Name Wheel screen: the wheel on the left; on the right the result panel and the controls (period, **Edit wheel**, the pick list, then an icon cluster: No repeats / sound / First names "Aa" · "Full screen window" / "Mini window" (PiP, Chrome only) / full screen), plus the `#wheel-roster-dialog` toggle-chip modal — loads `cauldron.js`, `boba.js`, `farmyard.js`, then `wheel.js`. Words that differ per skin come in `.for-wheel` / `.for-brew` / `.for-boba` / `.for-farm` sets ("Edit wheel" / "Edit who's in", the empty-wheel line, …) and CSS shows the one for the theme. |
 | `wheel.js`     | The wheel: draws the slices as SVG into `#wheel-rotor` (the only thing that spins), runs the spin on rAF with an ease-out, ticks as each slice passes the pointer, and syncs the pop-out over `BroadcastChannel('teacherpal-wheel')`. **Winner is drawn first** (`crypto.getRandomValues`), then the landing rotation is computed — the animation can't bias it. |
 | `wheel-popout.html` | Read-only projector wheel (`body.wheel-popout`): same dial (or, in halloween, the cauldron) filling the window, fed by broadcast, no controls. The mini window is this same page in an iframe. |
 | `cauldron.js` | The Name Wheel's halloween skin, `window.Cauldron` (`isOn`, `build`, `sync`, `run`, `finish`, `setWinner`, `setDisabled`, `BOIL_MS`, `SETTLE_MS`). Draws the cauldron into `.wheel-wrap`, floats each name as an HTML bubble (rAF physics), and animates a pick from the spin descriptor `wheel.js` hands it: boil → rise → hover → pop. Owns its sounds (bubbling that builds, a pop). Never picks anything. |
@@ -90,7 +90,7 @@ full-screen toggle. There is no sidebar; every page uses the full width.
 | `migration-courses.sql` | One-off migration (run **after** `migration-lesson-attachments.sql`): `courses` + its owner policies, `periods.course_id`, `course_id` on `lesson_plans` / `lesson_attachments` (exactly one of course/period), seeds khalid (English 9 = P1–3, ERWC 11 = P5–6) and marwa (English 12 = P2, English 9 = P3–4, ELD 12 = P5–6) by bell number, folds existing per-period plans into their course; safe to re-run, ends with a check query |
 | `migration-lesson-attachments.sql` | One-off migration: the `lesson_attachments` table + its four owner policies, the private Storage bucket `lesson-files` (50 MB/file) and its four `storage.objects` policies (own uid folder only); safe to re-run, ends with a check query |
 | `seed-bathroom-q1.sql` | Seed: Q1 used-pass tallies from the paper tracker — name-matches students per period, creates three missing students, upserts manual tallies, reports unmatched names in its last result set |
-| `attendance.js` | `initAttendance({ mode: 'full' \| 'compact' })` builds and runs the attendance view (chart or tiles, click-to-cycle, AUTO period, date, counts, lists, Copy, Reset, autosave). Data only via `shared.js`; bell data via `navReady`. |
+| `attendance.js` | `initAttendance({ mode: 'full' \| 'compact' })` builds and runs the attendance view (chart or tiles, click-to-cycle, period follows the bell, date, counts, lists, Copy, Reset, autosave). Data only via `shared.js`; bell data via `navReady`. |
 | `room.js`      | Seating-room geometry shared by the builder and the hub chart: `G`, `TYPES`, `FRONT`, `pieceTransform`, `bbox`, `labelStyle`, `roomBounds`, plus `fitSeatLabel(label, { base, min })` — the one seat-name fitter every page that draws seats calls — and the starter layouts shared by Seating and the setup wizard: `STARTERS`, `buildStarter(id, n)`, `BLANK_FRONT`, `layoutSeatIds(layout)`, `layoutPic(layout, maxW, maxH, cls)` (an HTML string); and the Quick build room (Seating in the setup wizard), `buildRoom({ type: 'single' | 'pair' | 'group4', desks, rows })` + `suggestRows(type, desks)`. No DOM state, no Supabase. |
 | `shared.js`    | Supabase config + REST client + data helpers + small UI helpers. **The only file that talks to Supabase.** |
 | `schedule.js`  | West High bell schedules as data (`SCHEDULES`, `FINALS_PAIRS`, `SCHEDULE_OPTIONS`) + pure helpers: `resolveSchedule(date, overrides)`, `customBells()` / `scheduleOptions()` (a teacher's own bell times, see rule 12), `scheduleStatus(now, sched, teaches)`, `teachingMap(periods, teachesPeriods?)`, `parsePeriodName`, `dateKey`, `formatCountdown`, `fmt12`, `fmtWallClock(date, {hour12, seconds})`. No DOM, no Supabase. |
@@ -1227,7 +1227,7 @@ All styling lives in `style.css`; pages carry almost no inline styling.
   - **HUD boxes** (`.hud-box`): the tool screens' sections are boxes with
     the panel's faint `--hud-line` border, translucent `--card` fill and
     the four `.tick` corner spans (tick rules target `.hud-panel, .hud-box`).
-    Small mono controls inside are `.hud-chip` (AUTO / TODAY; `aria-pressed`
+    Small mono controls inside are `.hud-chip` (TODAY, FIRST NAMES; `aria-pressed`
     = pink outline + glow) and `.dash-field` (mono `.hud-key` label +
     select / date input on the dark HUD fill).
   - **Lesson plan panel** (`lesson.js`, `.lesson-panel` hud-box, used on the
@@ -1919,8 +1919,16 @@ All styling lives in `style.css`; pages carry almost no inline styling.
   clearing it (clearing would leave nothing to animate). Under it sits the
   small `.wheel-result-sub`: the remaining count and the contextual
   put-back / take-off button. Controls follow below: the "press the hub or
-  Space" hint, period + AUTO + **Edit wheel**, then the toggles (No repeats,
-  tick mute, First names, "Full screen window", full screen).
+  Space" hint, period + **Edit wheel**, the pick-list bar, then **the icon
+  cluster** (`.wheel-icon-row`, one bordered group so the controls read as
+  text controls · icons): No repeats (a loop, slashed while on), sound (a
+  speaker with waves, or crossed when muted; no fill, the icon is the
+  state), First names ("Aa"), a hairline, then Full screen window, Mini
+  window and full screen. The two switches that are "on" get the accent
+  fill; every icon's `title` is its full label, and `renderControls()`
+  rewrites the switches' titles to say their state. No AUTO chip: the
+  period follows the bell until it is changed by hand (a reload follows
+  again).
   **The hub IS the Spin button** (`.wheel-hub-btn`, `#wheel-spin`): a small
   disc at the centre, 28% of the wrap = radius 14 in viewBox units, with
   hover (accent ring + glow + a nudge up in scale), pressed (scale down,
@@ -1987,8 +1995,8 @@ All styling lives in `style.css`; pages carry almost no inline styling.
   stopped.
   **Who's on it**: the period's roster minus today's absentees (the
   `attendance` table, falling back to `readAbsentCache`) minus
-  `readSitOutCache` — the same two exclusions Create Groups uses. AUTO
-  follows the bell via `suggestedPeriod()`, exactly like Attendance.
+  `readSitOutCache` — the same two exclusions Create Groups uses. The
+  period follows the bell via `suggestedPeriod()`, exactly like Attendance.
   **Pick lists** (`pick_lists` + `pick_list_picks`, see the schema): each
   period has named rotations ("Board work", "Cold call", "Read aloud"), each
   with its own picked / still-to-go state that **lasts until that list is
@@ -2499,10 +2507,9 @@ All styling lives in `style.css`; pages carry almost no inline styling.
       `:empty`), dead centre (a `1fr auto 1fr` grid), with Put back / Take
       off to its right.
       **Controls** are a vertical card (`--card`, the standard card recipe):
-      two `.wheel-control-row` grids on a hairline — [period select ·
-      AUTO] / [Edit who's in], then [No repeats · Sound] / [First names ·
-      full screen] / Full screen window / Mini window (`.win-btn` spans
-      both columns). The hint line is hidden (hovering the cup says it).
+      groups on a hairline — [period select] / [Edit who's in], the pick
+      list, then the icon cluster as one centred row. The hint line is
+      hidden (hovering the cup says it).
       **Under 900px** it's one column — name, cup (a `min(100%, 34rem)`
       square), jar, controls — with `flex: none` on the layout so it
       grows and `main.page` scrolls; that media query sits *after* the
@@ -2849,17 +2856,18 @@ All styling lives in `style.css`; pages carry almost no inline styling.
   `.attendance[data-mode="full"]` is a grid `minmax(0,1fr) clamp(19rem, 26vw,
   26rem)` — the `.att-chart` box on the left, `.att-side` (counts card with
   Copy / Reset / save state, then the lists box) on the right; the chart
-  header holds PERIOD, AUTO, DATE + TODAY, the seated note, FIRST NAMES and
+  header holds PERIOD, DATE + TODAY, the seated note, FIRST NAMES and
   EXPAND. (A 'compact' mode once fed the hub; only 'full' is used now.)
-  - **Period**: `#period-select` + an **AUTO** chip. While AUTO is pressed
-    (default) and the date is today, every clock tick calls
+  - **Period**: `#period-select`, **no AUTO chip** (removed on purpose, like
+    Bathroom's). It follows the bell (`followBell` starts true): while the
+    date is today, every clock tick calls
     `suggestedPeriod(now, sched, n => byNumber.has(n))` — the bell period
     happening now if a roster period maps to it (`parsePeriodName`), else the
     next taught period, else the last one — and switches the select when it
-    changes. Changing the select by hand turns AUTO off; clicking AUTO turns
-    it back on and jumps immediately. `#att-date` (defaults to today) views
-    or fixes any past day; a TODAY chip appears when it isn't today, and AUTO
-    never moves a past date.
+    changes. Changing the select by hand stops that for the session; a
+    reload follows again. `#att-date` (defaults to today) views
+    or fixes any past day; a TODAY chip appears when it isn't today, and the
+    bell never moves a past date.
   - **Chart** (`.hub-chart` > `.hub-room`): the period's active arrangement's own desks (`getActiveSeating()`, loaded per period) drawn with the
     same `.piece / .seat / .seat-label / .desk-block / .table-top /
     .piece.front` markup as the builder (geometry from `room.js`), scaled by

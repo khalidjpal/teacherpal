@@ -108,7 +108,6 @@
               <span class="lbl">Period</span>
               <select id="period-select"></select>
             </label>
-            <button type="button" class="hud-chip" id="btn-auto" aria-pressed="true" title="Follow the bell schedule">AUTO</button>
             <!-- the only way to manage who's on the wheel (plus the slice
                  shortcut); the count lives on the button itself -->
             <button type="button" id="wheel-edit" title="Choose who's in"><span class="for-wheel">Edit wheel</span><span class="for-brew">Edit who&rsquo;s in</span><span class="for-boba">Edit who&rsquo;s in</span><span class="for-farm">Edit who&rsquo;s in</span><span class="wheel-edit-n" id="wheel-edit-n">—</span></button>
@@ -129,15 +128,16 @@
             <p class="pick-list-line" id="pick-list-line" aria-live="polite"></p>
           </section>
 
-          <div class="wheel-control-row">
-            <button type="button" id="wheel-norepeat" role="switch" aria-checked="true" title="Take each name off the wheel until everyone has been called">No repeats</button>
-            <button type="button" id="wheel-mute" role="switch" aria-checked="false" title="Sound while picking">
-              <span class="when-off"><span class="for-wheel">Tick on</span><span class="for-brew">Sound on</span><span class="for-boba">Sound on</span><span class="for-farm">Sound on</span></span>
-              <span class="when-on"><span class="for-wheel">Tick muted</span><span class="for-brew">Sound muted</span><span class="for-boba">Sound muted</span><span class="for-farm">Sound muted</span></span>
-            </button>
-            <button type="button" id="wheel-firstnames" role="switch" aria-checked="true" title="Show first names only (shared with Create Groups)">First names</button>
-            <button type="button" id="wheel-popout-btn" class="win-btn" title="Opens a window you can make full screen on your projector"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/></svg><span>Full screen window</span></button>
-            <button type="button" id="wheel-pip" class="win-btn" title="A small window that floats above other apps" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="4" width="20" height="16" rx="2"/><rect x="12.5" y="11.5" width="7" height="5.5" rx="1" fill="currentColor"/></svg><span>Mini window</span></button>
+          <!-- the on/off switches and the windows, as one icon cluster; each
+               tooltip carries the full label (wheel.js keeps the switches'
+               titles saying their state) -->
+          <div class="wheel-control-row wheel-icon-row" role="group" aria-label="Wheel options">
+            <button type="button" class="icon-btn wheel-toggle" id="wheel-norepeat" role="switch" aria-checked="true" aria-label="No repeats" title="No repeats"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17 2l4 4-4 4"/><path d="M3 11v-1a4 4 0 0 1 4-4h14"/><path d="M7 22l-4-4 4-4"/><path d="M21 13v1a4 4 0 0 1-4 4H3"/><path class="ico-slash" d="M4 3l16 18"/></svg></button>
+            <button type="button" class="icon-btn wheel-toggle" id="wheel-mute" role="switch" aria-checked="false" aria-label="Mute" title="Sound on"><span class="when-off"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M11 5L6 9H2v6h4l5 4V5z"/><path d="M15.5 8.5a5 5 0 0 1 0 7"/><path d="M19 5a10 10 0 0 1 0 14"/></svg></span><span class="when-on"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M11 5L6 9H2v6h4l5 4V5z"/><path d="M22 9l-6 6M16 9l6 6"/></svg></span></button>
+            <button type="button" class="icon-btn wheel-toggle wheel-aa" id="wheel-firstnames" role="switch" aria-checked="true" aria-label="First names only" title="First names"><span aria-hidden="true">Aa</span></button>
+            <span class="wheel-icon-sep" aria-hidden="true"></span>
+            <button type="button" id="wheel-popout-btn" class="icon-btn" aria-label="Full screen window" title="Full screen window: opens a window you can make full screen on your projector"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/></svg></button>
+            <button type="button" id="wheel-pip" class="icon-btn" aria-label="Mini window" title="Mini window: a small window that floats above other apps" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="4" width="20" height="16" rx="2"/><rect x="12.5" y="11.5" width="7" height="5.5" rx="1" fill="currentColor"/></svg></button>
             <button type="button" class="icon-btn" data-fullscreen aria-pressed="false" title="Full screen (F)" aria-label="Toggle full screen"><span class="when-off"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 3H5a2 2 0 0 0-2 2v3M16 3h3a2 2 0 0 1 2 2v3M8 21H5a2 2 0 0 1-2-2v-3M16 21h3a2 2 0 0 0 2-2v-3"/></svg></span><span class="when-on"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 3v3a2 2 0 0 1-2 2H3M21 8h-3a2 2 0 0 1-2-2V3M3 16h3a2 2 0 0 1 2 2v3M16 21v-3a2 2 0 0 1 2-2h3"/></svg></span></button>
           </div>
 

@@ -22,7 +22,6 @@ function initAttendance({ mount = '#attendance', mode = 'full' } = {}) {
       ${TICKS}
       <div class="dash-head">
         <label class="dash-field"><span class="hud-key">PERIOD</span><select id="period-select" aria-label="Period"></select></label>
-        <button type="button" class="hud-chip" id="btn-follow" aria-pressed="true" title="Follow the bell schedule — the period happening now is selected automatically">AUTO</button>
         ${full ? `<label class="dash-field"><span class="hud-key">DATE</span><input type="date" id="att-date" aria-label="Attendance date"></label>
         <button type="button" class="hud-chip" id="btn-today" hidden>TODAY</button>` : ''}
         <span class="spacer"></span>
@@ -85,7 +84,7 @@ function initAttendance({ mount = '#attendance', mode = 'full' } = {}) {
   let marks = {};                  // studentId → { status: 'absent'|'tardy', at }
   let currentPeriodId = null;
   let viewDate = todayKey();       // the attendance day being shown (compact mode is always today)
-  let followBell = true;           // AUTO: the select tracks the bell schedule
+  let followBell = true;           // the select tracks the bell until a period is picked by hand
   let saveTimer = null, loadSeq = 0;
 
   const studentById = (id) => students.find((s) => s.id === id);
@@ -124,14 +123,14 @@ function initAttendance({ mount = '#attendance', mode = 'full' } = {}) {
 
   // ---------- period selection ----------
   function selectPeriod(id, { manual = false } = {}) {
-    if (manual) { followBell = false; $('btn-follow').setAttribute('aria-pressed', 'false'); }
+    if (manual) followBell = false;
     if (id === currentPeriodId) { if (!id) renderAll(); return; }
     currentPeriodId = id;
     $('period-select').value = id || '';
     setLastPeriodId(id);
     loadPeriod();
   }
-  // AUTO: whenever the bell moves to another period the teacher has a
+  // Follow the bell: whenever it moves to another period the teacher has a
   // roster for, switch to it (today only — a past day stays put).
   function followTheBell(d, sched) {
     if (!followBell || !isToday() || !byNumber.size) return;
@@ -140,11 +139,6 @@ function initAttendance({ mount = '#attendance', mode = 'full' } = {}) {
   }
   document.addEventListener('teacherpal:tick', (e) => followTheBell(e.detail.now, e.detail.sched));
   $('period-select').addEventListener('change', (e) => selectPeriod(e.target.value, { manual: true }));
-  $('btn-follow').addEventListener('click', () => {
-    followBell = !followBell;
-    $('btn-follow').setAttribute('aria-pressed', String(followBell));
-    if (followBell) { const d = new Date(); followTheBell(d, resolveSchedule(d, navState.overrides)); }
-  });
 
   // ---------- date control (full mode only) ----------
   if (full) {

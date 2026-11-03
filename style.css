@@ -6770,6 +6770,34 @@ body.noise-popout .noise-zone { font-size: clamp(1.2rem, 5vmin, 3rem); }
 .wheel-control-row button[aria-checked="false"] .when-on { display: none; }
 .wheel-control-row button[aria-checked="true"] .when-off { display: none; }
 
+/* The icon cluster: the three switches, a hairline, then the windows and
+   full screen, in one bordered group so the controls read as two clusters
+   (text controls · icons). Each button's tooltip carries its full label. */
+.wheel-icon-row {
+  width: auto; flex-wrap: nowrap; gap: 2px; padding: 2px;
+  border: 1px solid var(--border); border-radius: var(--radius-sm);
+  background: var(--card-2);
+}
+.wheel-icon-row .icon-btn {
+  width: 2.3rem; height: 2.3rem; min-height: 0; padding: 0;
+  display: inline-grid; place-items: center;
+  border-color: transparent; background: transparent; color: var(--text-muted);
+}
+.wheel-icon-row .icon-btn svg { width: 1.15rem; height: 1.15rem; }
+.wheel-icon-row .icon-btn:hover { border-color: var(--border-strong); background: var(--card-3); color: var(--text); }
+.wheel-icon-sep { align-self: stretch; width: 1px; margin: 0.35rem 0.2rem; background: var(--border-strong); }
+/* on = the accent fill (No repeats, First names) */
+.wheel-icon-row .wheel-toggle[aria-checked="true"] { border-color: var(--accent); background: var(--accent-soft); color: var(--accent-ink); }
+/* No repeats: the slash through the loop only while it's on */
+#wheel-norepeat .ico-slash { display: none; }
+#wheel-norepeat[aria-checked="true"] .ico-slash { display: inline; }
+/* Sound: the speaker itself says it (waves vs a cross), so no fill either
+   way; muted is dimmer */
+.wheel-icon-row #wheel-mute[aria-checked] { border-color: transparent; background: transparent; box-shadow: none; color: var(--text-2); }
+.wheel-icon-row #wheel-mute[aria-checked="true"] { color: var(--text-muted); }
+.wheel-icon-row #wheel-mute:hover { border-color: var(--border-strong); background: var(--card-3); color: var(--text); }
+.wheel-aa span { font-family: var(--font-body); font-weight: 700; font-size: 1rem; letter-spacing: 0; line-height: 1; text-transform: none; }
+
 .wheel-hint { font-family: var(--font-mono); font-size: 0.68rem; letter-spacing: 0.14em; text-transform: uppercase; color: var(--text-muted); }
 
 .wheel-picked { display: flex; align-items: center; gap: var(--space-2); flex-wrap: wrap; justify-content: center; }
@@ -8543,9 +8571,9 @@ body.wheel-popout .bt-spot-hint { display: none; }   /* the projector can't be c
 :root[data-theme="pink"] .wheel-page .wheel-sparks i { top: 50%; }
 
 /* the controls: a vertical card left of the cup, the same card as the
-   Picked tray on the right. Two groups on a hairline: the period (select +
-   AUTO) and Edit who's in, then the switches and windows two to a row. No
-   hint line: hovering the cup says it. */
+   Picked tray on the right. Groups on a hairline: the period select and
+   Edit who's in, the pick list, then the icon cluster (switches + windows).
+   No hint line: hovering the cup says it. */
 :root[data-theme="pink"] .wheel-page .wheel-controls {
   grid-area: controls;
   justify-self: end; align-self: center;
@@ -8569,15 +8597,18 @@ body.wheel-popout .bt-spot-hint { display: none; }   /* the projector can't be c
 }
 :root[data-theme="pink"] .wheel-page .wheel-control-row > * { min-width: 0; }
 :root[data-theme="pink"] .wheel-page .wheel-control-row button { justify-content: center; }
-/* row 1: [Period ▾      ][AUTO] / [Edit who's in · 28 on] */
-:root[data-theme="pink"] .wheel-page .wheel-control-row:first-of-type { grid-template-columns: minmax(0, 1fr) auto; }
+/* row 1: [Period ▾] / [Edit who's in · 28 on] */
+:root[data-theme="pink"] .wheel-page .wheel-control-row:first-of-type { grid-template-columns: minmax(0, 1fr); }
 :root[data-theme="pink"] .wheel-page .wheel-control-row .bar-field { display: flex; }
 :root[data-theme="pink"] .wheel-page .wheel-control-row .bar-field select { flex: 1; min-width: 0; }
 :root[data-theme="pink"] .wheel-page #wheel-edit { grid-column: 1 / -1; }
-/* row 2: [No repeats][Sound] / [First names][full screen] / windows across */
-:root[data-theme="pink"] .wheel-page .wheel-control-row .win-btn { grid-column: 1 / -1; order: 2; }
-:root[data-theme="pink"] .wheel-page .wheel-control-row .icon-btn { width: auto; justify-self: stretch; order: 1; }
-:root[data-theme="pink"] .wheel-page .wheel-control-row .icon-btn svg { margin: 0 auto; }
+/* last: the icon cluster, one centred row */
+:root[data-theme="pink"] .wheel-page .wheel-icon-row {
+  display: flex; justify-content: center; align-self: center;
+  padding: 2px; border: 1px solid var(--border);
+}
+/* the group hairline above the other rows would cut its border: reset it */
+:root[data-theme="pink"] .wheel-page :is(.pick-list-bar, .wheel-control-row) + .wheel-icon-row { padding: 2px; border-top: 1px solid var(--border); }
 :root[data-theme="pink"] .wheel-page .wheel-hint { display: none; }
 /* the pick list group between them, on its own hairline: [List ▾] across,
    then Who's picked / Reset, then the count line */
