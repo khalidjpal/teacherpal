@@ -36,7 +36,7 @@ full-screen toggle. There is no sidebar; every page uses the full width.
 | Lesson Plans | `lessons.html` | Writing plans **by course**: a Day / Week / Month calendar (courses × Mon–Fri, no-school days blocked out; one plan per course per day, shared by its periods, with an out-of-the-way per-period split) with the full editor for the selected period's day beside it; files and links attached per plan (Supabase Storage), and one search over every plan and attachment |
 | Create Groups | `groups.html` | Random / formula groups, projector view in full screen |
 | Timer | `timer.html` | Classroom countdown / stopwatch: big digits, presets, ±1 min, mute, pop-out + Picture-in-Picture for the projector while another tab is active |
-| Name Wheel | `wheel.html` | Cold-calling: spin a wheel of the period's present students, big name in the middle, no-repeats mode, saved pick lists per period ("Board work · 12 of 28 picked", kept until reset), full screen window + mini window. In halloween the wheel is a cauldron (names float in the brew as bubbles; the winner's bubble rises and pops), in pink a bubble tea cup (a boba pearl per student; the cup shakes, the pearls swirl, and the winner's pearl, its name on it, travels up the straw and comes to the front of the screen as a big disc with the name readable across the room), in thanksgiving a farmer choosing a turkey (the farmyard fills the width, controls in one row under it; a turkey per student, its first name on it, milling about a farmyard where clouds, birds, trees, grass, the barn door and the weathervane all move; the farmer walks the flock, inspects a couple and shakes his head while the rest duck and one sneaks off, then points at one, which freezes mid-gobble; he lobs it into the big oven at the side of the yard, where it lands on a rotisserie spit, the door clangs, the timer dings, and its name rises over the oven; with No repeats the picked ones stay on the spit, turning slowly with each name showing as it passes the front, the count on the door, until the full oven celebrates and "Let them out" tumbles them back into the yard) |
+| Name Wheel | `wheel.html` | Cold-calling: spin a wheel of the period's present students, big name in the middle, no-repeats mode, saved pick lists per period ("Board work · 12 of 28 picked", kept until reset), full screen window + mini window. In halloween the wheel is a cauldron (names float in the brew as bubbles; the winner's bubble rises and pops), in pink a bubble tea cup (a boba pearl per student; the cup shakes, the pearls swirl, and the winner's pearl, its name on it, travels up the straw and comes to the front of the screen as a big disc with the name readable across the room), in thanksgiving a farmer choosing a turkey (the scene fills the width, controls in one row under it: the farm on the left two thirds, a turkey per student, its first name on it, penned in a fenced yard in a still sunset farm with a painted "<display name>'s Turkey Farm" sign; the farmer (each teacher picks how they look: Settings → Your farmer…, a hijab among the options) walks the flock, inspects a couple and shakes his head while the rest duck and one sneaks off, then points at one, which freezes mid-gobble; he lobs it into the hopper at the top of a production line down the right third (as it drops in, the name comes up large over the farm and stays up): an oven (out comes a golden roast turkey, steaming), an S of conveyor belt down through a packer (white foam tray, clear film) and a labeller (a small name label) onto a grocery shelf at the bottom; with No repeats the shelf fills a slot per student from the top shelf down, the count on its base, until SOLD OUT drops and "Let them out" bursts the packages and sends the turkeys back into the pen); in winter a sledding race (a sledder per student on a snowy hill, their name on the sled; a whistle, the pack races down and one wins; picked students sit in a cabin's window with cocoa until "Let them out" sends them back up the hill) |
 | Noise Meter | `noise.html` | Room volume from the laptop mic: big green/amber/red meter, three zones with activity presets, "Too loud" hold + chime, pop-out for the projector. Mic only while you hold it on |
 | Seating | `seating.html` | Room builder + seat assignment |
 | Bathroom | `bathroom.html` | Bathroom tracker: tap a card to sign out (quick tap or timer); per-student pass checkboxes, red flag past the limit. One centred control island (period · mode · search · gear) over a scrolling student grid, with **Out now** (live timers + End timer) and **Log** (the day's trips + a day switcher; its History button opens the quarter review — counts, CSV, print) as two fixed-height panels underneath |
@@ -66,6 +66,7 @@ full-screen toggle. There is no sidebar; every page uses the full width.
 | `migration-teaches-periods.sql` | One-off migration that adds `profiles.teaches_periods integer[]` (each entry 0-7) and the `set_my_teaches_periods(int[])` RPC. Seeds `khalid` to `{1,2,3,5,6}` and `marwa` to `{2,3,4,5,6}` |
 | `migration-roster-numbers.sql` | One-off migration that adds `students.roster_number integer` (1–999, nullable): a hand-set roster number for when Aeries numbers a student differently. Ends with a check query |
 | `migration-pick-lists.sql` | One-off migration for the Name Wheel's saved pick lists: `pick_lists` (named rotations per period) and `pick_list_picks` (one row per student picked on a list), each with the four owner policies; safe to re-run, ends with a check query |
+| `migration-farmer.sql` | One-off migration for the thanksgiving farmer's look: `profiles.farmer jsonb` (null = the default farmer; a size check only, the app ignores unknown keys) and `set_my_farmer(jsonb)` (own row only); starts `marwa` as a woman in a grey hijab, with the soft face, a curvy figure and a white long-sleeve top under denim overalls (if she hasn't chosen yet, or still has an earlier seed) and gives `khalid` the wavy middle part. **Until it is run the column is missing and every farmer is the default** (the app reads `farmer` only if the profile row has it). Safe to re-run; ends with a check |
 | `migration-display-name.sql` | One-off migration that adds `profiles.display_name text` (how the teacher is addressed — the top-bar USER chip) and seeds `khalid` → "Mr. Pal", `marwa` → "Ms. Mohammadi" |
 | `index.html`   | Hub launcher (`body.hub.launcher`): `.hub-sections` — four labelled sections (Daily, Teacher tools, Planning, System) each with its own `.hub-panels` row of `.hud-panel` links; loads only `shared.js`, `schedule.js`, `nav.js` (top bar **without** nav links — the panels are the nav) |
 | `attendance.html` | Attendance screen: `#attendance` in **full** mode — big chart + side column with counts, lists, Copy, Reset, date |
@@ -78,12 +79,14 @@ full-screen toggle. There is no sidebar; every page uses the full width.
 | `timer.js`     | Countdown + stopwatch logic, plus `buildDial()` / `paintDial()` for the themed dial. **End-timestamp model**: state is `{ mode, running, paused, label, muted, targetMs, endsAt, remainingAtPause, startedAt, elapsedAtPause, zeroed }` in `localStorage['teacherpal.timer.state']`; every window computes the display from `Date.now()` against `endsAt`/`startedAt`, so tab-throttling doesn't drift. `BroadcastChannel('teacherpal-timer')` syncs main ↔ pop-out ↔ PiP. Web Audio API beep on zero (respects mute). `documentPictureInPicture.requestWindow()` on Chrome for an always-on-top floating display. Space toggles start/pause. |
 | `noise.html`   | Noise Meter screen: the `.noise-stage` in three groups — `.noise-head` (activity presets + the `#status` line, inside the card), the `.noise-meter` (reading + bar + zone word; the bunny in pink, the ghost in halloween), `.noise-foot` (one `.noise-foot-row` of Start/Stop, chime, "Full screen window" · the two zone sliders side by side · full screen, then a one-line privacy note with a `?`) — plus `#noise-privacy-dialog` (the full mic note). Loads `noise.js`. |
 | `noise.js`     | Mic → `AnalyserNode` → RMS → a 35–95 relative "dB" reading, 500ms rolling average, three zones, "Too loud" after 3s in the red, optional chime. Polls on `setInterval` (**not** rAF — rAF freezes in a background window and the pop-out would stall). `BroadcastChannel('teacherpal-noise')` feeds the pop-out. Opens the mic only on Start; stops every track on Stop and on `pagehide`. Nothing is recorded or sent anywhere. |
-| `wheel.html`   | Name Wheel screen: the wheel on the left; on the right the result panel and the controls (period, **Edit wheel**, the pick list, then an icon cluster: No repeats / sound / First names "Aa" · "Full screen window" / "Mini window" (PiP, Chrome only) / full screen), plus the `#wheel-roster-dialog` toggle-chip modal — loads `cauldron.js`, `boba.js`, `farmyard.js`, then `wheel.js`. Words that differ per skin come in `.for-wheel` / `.for-brew` / `.for-boba` / `.for-farm` sets ("Edit wheel" / "Edit who's in", the empty-wheel line, …) and CSS shows the one for the theme. |
+| `wheel.html`   | Name Wheel screen: the wheel on the left; on the right the result panel and the controls (period, **Edit wheel**, the pick list, then an icon cluster: No repeats / sound / First names "Aa" · "Full screen window" / "Mini window" (PiP, Chrome only) / full screen), plus the `#wheel-roster-dialog` toggle-chip modal — loads `cauldron.js`, `boba.js`, `farmer.js`, `farmyard.js`, `sled.js`, then `wheel.js`. Words that differ per skin come in `.for-wheel` / `.for-brew` / `.for-boba` / `.for-farm` / `.for-sled` sets ("Edit wheel" / "Edit who's in", the empty-wheel line, …) and CSS shows the one for the theme. |
 | `wheel.js`     | The wheel: draws the slices as SVG into `#wheel-rotor` (the only thing that spins), runs the spin on rAF with an ease-out, ticks as each slice passes the pointer, and syncs the pop-out over `BroadcastChannel('teacherpal-wheel')`. **Winner is drawn first** (`crypto.getRandomValues`), then the landing rotation is computed — the animation can't bias it. |
 | `wheel-popout.html` | Read-only projector wheel (`body.wheel-popout`): same dial (or, in halloween, the cauldron) filling the window, fed by broadcast, no controls. The mini window is this same page in an iframe. |
 | `cauldron.js` | The Name Wheel's halloween skin, `window.Cauldron` (`isOn`, `build`, `sync`, `run`, `finish`, `setWinner`, `setDisabled`, `BOIL_MS`, `SETTLE_MS`). Draws the cauldron into `.wheel-wrap`, floats each name as an HTML bubble (rAF physics), and animates a pick from the spin descriptor `wheel.js` hands it: boil → rise → hover → pop. Owns its sounds (bubbling that builds, a pop). Never picks anything. |
 | `boba.js` | The Name Wheel's pink skin, `window.Boba` — the same shape as `Cauldron` (`isOn`, `build`, `sync`, `run`, `finish`, `setWinner`, `setDisabled`, `setPicked`, `busy`, `HOLDS_ROUND`, `DURATION_MS`, `SETTLE_MS`). A bubble tea cup in `.wheel-wrap`: warm tan milk tea with a cream swirl, a domed lid, a narrow see-through pink straw, **the whole cup as the Spin button** (`#boba-straw`, a hit area over the cup), one near-black pearl per student with their first name on it in small cream type (rAF physics in box units: gravity, a swirl, soft collisions, the tapered walls), condensation, and "N left" in small flat text under the cup. A pick (~4s, the `T` timeline at its top) shakes the cup, swirls the pearls up, lights one up, draws it up the straw in sips, then the **spotlight**: the pearl grows into a big disc in front of the dimmed page with the name on it (click / Space / Enter / Esc closes it); with No repeats on it then arcs over into the **jar** on the right, a second cup that fills as the class is called and is poured back to start a new round. Owns its sounds (shake, slosh, slurp, pop). Never picks anything. |
-| `farmyard.js` | The Name Wheel's thanksgiving skin, `window.Farmyard` — the same shape as `Boba` (`isOn`, `build`, `sync`, `run`, `finish`, `setWinner`, `setDisabled`, `setPicked`, `busy`, `HOLDS_ROUND`, `DURATION_MS`, `SETTLE_MS`). A farmyard at sunset in `.wheel-wrap` (`#farm`, the whole scene is the Spin button): as wide as its box (`layout()`), with drifting clouds, passing birds, swaying trees, falling leaves, blowing grass, a barn door and a weathervane, warm low light and long shadows; one plump cartoon turkey per student, its first name small on its body, milling about, pecking, ruffling, looking round, and a farmer in a big thinking pose. A pick: he walks the flock, leans in at a couple of turkeys and shakes his head; the turkeys near him duck and one sneaks off; he points at the winner, it freezes mid-gobble, he hoists it and lobs it into the big oven standing at the right of the yard (glass door, warm glow), where it lands on a hook of a rotisserie spit; clang, ding, and the name rises over the oven. The decoys are on his way to the winner, from a seeded random of the spin descriptor. **The oven is where the round collects** (No repeats on): the picked turkeys ride the spit in rings, turning slowly, the back of each ring smaller and dimmer, each name showing as it passes the front, "n / N" on the door; the full oven celebrates; "Let them out" opens the door and they tumble back into the yard. Owns its sounds (clucks, footsteps, a sting, the door's creak, the clang and ding, a bell fanfare, a gobble). Never picks anything. |
+| `farmer.js` | The thanksgiving farmer, `window.FarmerArt`: `markup(look)` (the SVG, every pose), `vars(look)` (the look's colours as `--fy-*` overrides, only where it differs from `DEFAULT`, so the default farmer is exactly the theme's tokens), `apply(g, look)`, `normalize()`, `OPTIONS` / `DEFAULT`, `user()` / `current()` (the session's `farmer`, read from localStorage where shared.js isn't loaded: the pop-out), and `openDialog()`, **Settings → Your farmer…** (see the thanksgiving skin). Loaded by the Name Wheel and its pop-out before `farmyard.js`; `nav.js` loads it on first use elsewhere |
+| `farmyard.js` | The Name Wheel's thanksgiving skin, `window.Farmyard` — the same shape as `Boba` (`isOn`, `build`, `sync`, `run`, `finish`, `setWinner`, `setDisabled`, `setPicked`, `busy`, `HOLDS_ROUND`, `DURATION_MS`, `SETTLE_MS`). A farmyard at sunset in `.wheel-wrap` (`#farm`, the whole scene is the Spin button): as wide as its box (`layout()`), the scenery still (only the flock, the farmer and the line move), warm low light and long shadows, and a painted sign on posts at the back of the yard: "<display_name>'s / TURKEY FARM" (just TURKEY FARM without one). **The farm takes the left two thirds or so**: one plump cartoon turkey per student, its first name small on its body, milling about, pecking, ruffling, looking round **inside a fenced pen**, and a farmer in a big thinking pose, drawn by `farmer.js` to the teacher's own look. **The right third is the production column, top to bottom**: a hopper and an oven at the top, an S of conveyor belt down through the packer and the labeller, and a grocery shelf at the bottom. A pick: he walks the flock, leans in at a couple of turkeys and shakes his head; the turkeys near him duck and one sneaks off; he points at the winner, it freezes mid-gobble, he hoists it and lobs it into the hopper, and as it drops in the name rises large over the farm; out of the oven comes a golden roast turkey, steaming, that rides the S down, one beat per station: under the packer's stamp (white foam tray, clear film with a shine and drops), past the labeller (a small name label at the bottom of the package) and onto the shelf. The decoys are on his way to the winner, from a seeded random of the spin descriptor. **The shelf is where the round collects** (No repeats on): one slot per student, filled from the top shelf down, names on the labels, "n / N" on its base; full, a SOLD OUT sign drops and it celebrates; "Let them out" bursts the packages and the turkeys hop back to the pen. Owns its sounds (clucks, footsteps, a sting, a thud into the hopper, clacks, a rumble, a ding and hiss, the stamp, the labeller's click, a plunk, a bell fanfare, a gobble). Never picks anything. |
+| `sled.js` | The Name Wheel's winter skin, `window.Sled` — the same shape as `Farmyard` (`isOn`, `build`, `sync`, `run`, `finish`, `setWinner`, `setDisabled`, `setPicked`, `busy`, `HOLDS_ROUND`, `DURATION_MS`, `SETTLE_MS`). A snowy hill at night in `.wheel-wrap` (`#sled`, the whole scene is the Spin button), as wide as its box (`layout()`): START at the top, FINISH at the bottom, one sledder per student on the hilltop with their name on the sled, and a log cabin by the finish. A pick: a whistle, the pack races down (weaving, bumping, snow spray), one pulls ahead over the line, the name comes up large with a spray of snow; the winner walks into the cabin (No repeats on), the rest walk back up pulling their sleds. See the winter skin under Name Wheel. Owns its sounds. Never picks anything. |
 | `noise-popout.html` | Read-only projector pop-out (`body.noise-popout`): reading + bar + zone word, fed over BroadcastChannel. Never opens a mic of its own; says so when the main window isn't answering. |
 | `timer-popout.html` | Minimal read-only pop-out window (`body.timer-popout`): label + display + the same themed dial filling the window, no controls; listens for state via BroadcastChannel. |
 | `migration-lessons-bathroom.sql` | One-off migration creating `lesson_plans` + `bathroom_log` (incl. the manual-tally columns; run in the Supabase SQL editor) |
@@ -112,7 +115,7 @@ full-screen toggle. There is no sidebar; every page uses the full width.
 
 Every page: `<link rel="stylesheet" href="style.css">`, an **empty**
 `<header class="topbar"></header>` (nav.js fills it), then at the end of
-`<body>`: `shared.js`, `schedule.js`, (`cauldron.js`, `boba.js` and `farmyard.js` before `wheel.js` on the Name Wheel and its pop-out; `formula.js` on Seating and Create
+`<body>`: `shared.js`, `schedule.js`, (`cauldron.js`, `boba.js`, `farmer.js`, `farmyard.js` and `sled.js` before `wheel.js` on the Name Wheel and its pop-out; `formula.js` on Seating and Create
 Groups, `room.js` on Seating / hub / attendance), `nav.js`, then the page's
 own script (`attendance.js` + `initAttendance()` on Attendance; `lesson.js`
 on Lesson Plans; `bathroom.js` on Bathroom; `timer.js` on Timer; nothing on
@@ -158,7 +161,7 @@ shared across accounts.
   in `localStorage['teacherpal.session']` = `{ access_token,
   refresh_token, expires_at, user: { id, email, username, display_name,
   is_admin, theme,
-  teaches_periods } }`. `hydrateProfileIntoSession()` runs right after the
+  teaches_periods, farmer } }`. `hydrateProfileIntoSession()` runs right after the
   token exchange and fills in the profile fields.
 - **Self sign-up** (`migration-self-signup.sql`). The admin opens or closes
   it on `admin.html`; the state is `app_settings.signup_open` (one row,
@@ -259,6 +262,9 @@ shared across accounts.
   Theme: `THEMES` (registry), `applyTheme(id)`, `currentTheme()`,
   `setMyTheme(id)` (applies locally + POSTs `set_my_theme` RPC to persist
   on the profile).
+  Farmer: `setMyFarmer(look | null)` (the session, `teacherpal:farmer` so
+  the farm redraws at once, then the `set_my_farmer` RPC; throws if that
+  fails, e.g. before `migration-farmer.sql`).
   Teaches-periods: `currentTeachesPeriods()` → `int[]` or `null`,
   `setMyTeachesPeriods(arr)` (dedupes / sorts / clamps to 0-7 client-side,
   updates local session, dispatches `teacherpal:teachesPeriods`, POSTs
@@ -725,7 +731,7 @@ last-used period in `localStorage`), `getLastPeriodId()` / `setLastPeriodId()`,
 
 ## Themes — per-user visual styles
 
-TeacherPal ships four themes. **All four share one layout**: default is
+TeacherPal ships five themes. **All five share one layout**: default is
 the structure, and every other theme is a colour swap of it. A theme is
 (almost) nothing but a block of colour tokens.
 
@@ -781,18 +787,18 @@ the structure, and every other theme is a colour swap of it. A theme is
   `--accent`, and `--wheel-ink` on every `--wheel-r*` and `--wheel-won`.
   Student names (seats, group cards, wheel, attendance, full screen) are
   `--text` / `--wheel-ink`, so they stay high contrast automatically.
-- **Extras are opt-in by name.** Only pink, halloween and thanksgiving have any (halloween's and thanksgiving's are listed under them below); pink's are selectors written
+- **Extras are opt-in by name.** Only pink, halloween, thanksgiving and winter have any (halloween's, thanksgiving's and winter's are listed under them below); pink's are selectors written
   `:root[data-theme="pink"] …` (mascots, the Timer/Wheel skins, the
   12-hour clock in `nav.js`). A theme without extras behaves exactly like
   default: a 24-hour clock, no mascots (the `--pink-mascot-*` vars are
   undefined, so `.pink-mascot` stays hidden), and the default Timer dial
   and wheel. The one spot that names default is the Timer rule hiding
   `.dial-arc` (`:root[data-theme="default"],
-  :root[data-theme="halloween"], :root[data-theme="thanksgiving"], :root:not([data-theme])`). Any new default-like theme must join that
+  :root[data-theme="halloween"], :root[data-theme="thanksgiving"], :root[data-theme="winter"], :root:not([data-theme])`). Any new default-like theme must join that
   selector, or its dial shows both rings. `wheel.js`'s `wide` label gap
   is "not pink", so it needs nothing.
 
-**The four themes:**
+**The five themes:**
 
 - **`default`** — the original dark HUD (deep plum-navy, near-black cards,
   subtle pink accent, Orbitron uppercase labels, corner ticks). Default for
@@ -901,8 +907,35 @@ the structure, and every other theme is a colour swap of it. A theme is
       Meter section). **Name Wheel**: a farmer choosing a turkey (`farmyard.js`, see the
       Name Wheel section).
   Tokens: `--tg-*` (pie), `--tk-*` (turkey), `--fy-*` (farmyard, including
-  `--fy-oven*` and the spit `--fy-spit*`). 24-hour
+  the pen's fence `--fy-pen-*`, the farm sign `--fy-sign-*`, the column's wall `--fy-wall*`, the
+  line's oven `--fy-oven*`, belt / frame / packer / labeller, the
+  package's roast turkey `--fy-roast*` / `--fy-bone`, foam tray
+  `--fy-foam*`, film and label, and the shelf `--fy-shelf*` /
+  `--fy-sold`). 24-hour
   clock.
+- **`winter`** — a **colour swap of default** (tokens like halloween and
+  thanksgiving, depth tokens on) plus seasonal mascots. Night blue page
+  `#0F1624` → canvas `--bg-1` `#162030` (the brief's "#16203049" read as
+  that) → cards `#1D2838` → wells `--card-2` `#172131` → raised `#28364A`;
+  borders `#3D4E66`. Text `#EAF0F7`, body `#C3CEDC`, muted `#94A3B8`.
+  **Ice blue `#6BC4E8`** is `--accent` (and `--accent-ink`: it reads as
+  text on every surface); **pine `#4A8C6F`** is the secondary fill
+  (`--gradient-accent` runs ice into pine), and as text `--lavender`
+  `#7CC4A2` (pine itself is 3.7:1 on the card); **lantern amber `#E8A33D`**
+  only as tardy and the warm windows. `--on-accent` is night blue. Lowest
+  ratio over page / card / well / raised: text 10.7, text-2 7.7, muted 4.8,
+  accent 6.2, lavender 6.0, danger 5.5, ok 6.8, tardy 5.7; on-accent 9.2;
+  seat names 10.0; wheel names ≥ 6.7.
+  **Extras** (scoped like halloween's, never in the projector pop-outs; all
+  behind content, **all still**: no falling snow, for calm and speed):
+    - **Page** (the "Winter extras" block): body background layers — a
+      frost spray in each corner (`--winter-frost-tl/tr/bl/br`, inline SVG)
+      and snow settled along the bottom edge (`--winter-drift-img`, kept
+      faint so text near the bottom keeps AA).
+    - **Timer**: a melting snowman. **Noise Meter**: a snow globe. **Name
+      Wheel**: a sledding race (`sled.js`). See each section.
+  Tokens: `--wt-*` (snowman), `--sg-*` (globe), `--sl-*` (sled race),
+  `--winter-*` (page). 24-hour clock.
 - **`pink`** — a **pure colour swap of default** (depth tokens off) with four tiny extras. Same
   layout, spacing, radii, borders, fonts, weights, tracks, shadows,
   animations and components: only palette tokens differ (light cream-pink
@@ -940,7 +973,7 @@ the structure, and every other theme is a colour swap of it. A theme is
 Storage & flow:
 
 - **`profiles.theme text default 'default'`** (one of `default`, `pink`,
-  `halloween`, `thanksgiving`; NULL = never chosen on the server). **The
+  `halloween`, `thanksgiving`, `winter`; NULL = never chosen on the server). **The
   profile is the source of truth**, so a theme follows the teacher across
   devices; `localStorage['teacherpal.theme']` is only the cache the head
   script reads to avoid a flash. `hydrateProfileIntoSession()` resolves it
@@ -1849,6 +1882,25 @@ All styling lives in `style.css`; pages carry almost no inline styling.
       steam, the glow pulse and the fork's drop: the steam and glow show
       still, the fork just appears, and the slices still go (that is the
       reading).
+    - **winter — a melting snowman.** `snowmanSvg()` in `timer.js` draws
+      him once into the wrap (`.wt-snowman`, hidden in other themes; the SVG
+      dial, `.timer-flash` and `.timer-burst` hide): three snowballs
+      (ellipses whose `cx/cy/rx/ry` are set as CSS properties so they ease
+      between ticks), stick arms, coal buttons, a red scarf, a carrot and a
+      top hat. `paintSnowman(wrap, m, alarm, done)` melts him from `m` = 1 −
+      remaining: the bottom ball spreads first (0–0.45), then the middle
+      (0.3–0.75), then the head sinks (0.6–1), and the puddle grows the
+      whole time. **The head and face last to the end** (it shrinks to 70%
+      and sinks into the slush), so the final minute's alarm is always
+      visible: `warn` swaps the calm face for wide eyes, raised brows and an
+      "o", adds sweat drops and a shiver that grows with `--alarm` (0..1
+      over the last minute). The digits ride on his middle (`--dig-y`,
+      night blue on snow); once the middle is too small for them
+      (`data-digs="air"`) they float above him in frost on the night. At
+      zero (`alert`): the balls are gone, the hat, carrot, scarf and sticks
+      lie in a puddle with three coals, and a small "aww…" fades in. Wrap
+      sizes as halloween's. Reduced motion stops the shiver and drips; the
+      melt itself still eases (it is the reading).
   **States** come from `data-state` on `.timer-display-wrap`: `warn` (final
   minute) pulses the ring in both themes; `alert` (zero) flashes the whole
   dial via `.timer-flash` in default and fires `.timer-burst` (hearts +
@@ -1995,8 +2047,11 @@ All styling lives in `style.css`; pages carry almost no inline styling.
   stopped.
   **Who's on it**: the period's roster minus today's absentees (the
   `attendance` table, falling back to `readAbsentCache`) minus
-  `readSitOutCache` — the same two exclusions Create Groups uses. The
-  period follows the bell via `suggestedPeriod()`, exactly like Attendance.
+  `readSitOutCache` — the same two exclusions Create Groups uses. They
+  are re-read by `refreshAbsent()` (storage event from another tab, tab
+  focus, every 60s), so marking someone absent elsewhere takes them off.
+  The period follows the bell via `suggestedPeriod()`, exactly like
+  Attendance.
   **Pick lists** (`pick_lists` + `pick_list_picks`, see the schema): each
   period has named rotations ("Board work", "Cold call", "Read aloud"), each
   with its own picked / still-to-go state that **lasts until that list is
@@ -2013,7 +2068,7 @@ All styling lives in `style.css`; pages carry almost no inline styling.
     - **A list never refills on its own.** When everyone here has been
       picked, the bar says **Round complete** (plus "N not here still to
       go") and Reset turns primary. Reset asks first. So do the jar's "Pour
-      them back" and the oven's "Let them out": the skins dispatch a
+      them back" and the shelf's "Let them out": the skins dispatch a
       cancelable `teacherpal:wheel-reset-request` before pouring and stop if
       wheel.js cancels it, then `teacherpal:wheel-reset` as before.
     - **The bar** (`#pick-list-bar`, a `<section>` between the period row
@@ -2218,8 +2273,8 @@ All styling lives in `style.css`; pages carry almost no inline styling.
       flicker, the name's glow pulse); the brew and the pick run, like the
       wheel's spin.
   **Skins**: `wheel.js` keeps `skins()` =
-  `[Cauldron, Boba, Farmyard]`, `skinFor(doc)` = the one whose `isOn(doc)` is true
-  (halloween / pink / thanksgiving), and `eachSkin()` to keep every skin's DOM in sync
+  `[Cauldron, Boba, Farmyard, Sled]`, `skinFor(doc)` = the one whose `isOn(doc)` is true
+  (halloween / pink / thanksgiving / winter), and `eachSkin()` to keep every skin's DOM in sync
   (each is built and synced always, and hidden by CSS outside its theme).
   `startSpin()` takes the active skin's `DURATION_MS` / `SETTLE_MS`;
   `runSpin()` / `finishSpin()` call its `run()` / `finish()`;
@@ -2232,12 +2287,13 @@ All styling lives in `style.css`; pages carry almost no inline styling.
   and the mascot, and shows `.farm`, which **is** the Spin button (click,
   Space, Enter). **Keep it comic, not grim**: the picked turkey looks
   startled and silly, never distressed, and **it is in on the joke**: it
-  goes into the oven gleeful (eyes shut, beak open, "wheee"), rides the
-  spit content and eyes shut, and tumbles back out unharmed. The student is
-  watching their own name on that turkey, so the gag must read as "you got
-  picked", never as something happening to them: the spit is a ride, the
-  glow is warm light: no smoke, no browning, no roasting, nothing sizzling.
-  It's a joke about being picked.
+  goes into the hopper with a gleeful somersault ("wheee"), and whole and
+  cheerful it hops back out of its package when the round is let out. In
+  between, the line shows a cartoon roast turkey in a supermarket pack (a
+  shop-window toy line). The student is watching their own name on it, so
+  the gag must read as "you got picked", never as something happening to
+  them: golden and glossy with a little steam, no smoke, no charring,
+  nothing sizzling.
     - **Layout** (thanksgiving only, the rules just before the skin's
       reduced-motion block): **the farmyard fills the page's width** and
       the controls are **one centred row under it** (`.wheel-layout` is one
@@ -2253,32 +2309,66 @@ All styling lives in `style.css`; pages carry almost no inline styling.
     - **The scene is as wide as its box** (`layout()`, on a
       `ResizeObserver`): 400 units tall, and the viewBox is `x0 0 W 400`
       with `W = 400 × box aspect` (clamped 360–1500) centred on x 500
-      (`MID`). The art is drawn across x −400..1400: the old square scene
-      sits in 300..700, so a square pop-out looks as it always did, with
-      more farm either side. The oven, the farmer's spot and the yard
-      follow the view (`setView()`): the oven stands at the right edge
-      (`v.oven`, scale `W / 680` clamped 0.6–1.3), the farmer's spot
-      (`v.home`) just left of it, and the yard (`v.yard`) is the rest;
-      yard turkeys never wander past the oven. HTML overlays (the name, the
-      bursts) are placed in px through `toPx()`; `--u` on `.farm` is px
-      per unit. All `--fy-*` tokens.
+      (`MID`). The art is drawn across x −400..1400, so any width shows
+      more farm. The column, the pen and the farmer's spot follow the view
+      (`setView()`):
+      - **The column** (`v.col = { x, y, s }`, one `.fy-col` group,
+        `translate(x y) scale(s)`): its own 300 × 400 units, 31% of the
+        width (42% under 700 units), at most 0.95 scale so the hopper's
+        rim stays in the box, standing on the bottom right. It sits in the
+        SVG **before `.fy-actors`**, so a thrown turkey flies over it.
+      - **The pen** (`v.yard`, `PEN` in farmyard.js): the rest of the
+        width, from `l` to `r`, depth `back` 224 to `front` 388, its sides
+        slanting in by `slant` toward the back (`penL()` / `penR()`); the
+        flock stands in rows `y0..y1`. `penMarkup()` draws the fence:
+        posts and two rails, the back and sides in `.fy-pen` (behind the
+        shadows), the front in `.fy-pen-f`, a fixed actor at depth `front`
+        so it stands in front of the flock. `makeHomes()`, `yardStep()`'s
+        clamp, the sneaker and the walk's spots all keep inside it.
+      - **The farmer's spot** (`v.home`) is by the pen's front right
+        corner, near the column.
+
+      HTML overlays (the name, the bursts) are placed in px through
+      `toPx()`; `--u` on `.farm` is px per unit. All `--fy-*` tokens.
     - **The farm** (`bgMarkup()`, seeded so every window draws the same
       one): a sunset sky with a warm sun glow, near and far hills, a red
       barn with a silo, hay bales and rolls, pumpkins, a fence, a dirt
-      yard. **What moves on its own** (CSS, each item on its own beat from
-      inline vars): clouds drifting across (`fy-drift`, 160–280s), a flock
-      of birds crossing now and then (`fy-flock`, off-screen most of each
-      loop, wings beating), trees swaying from the foot (`fy-sway`), a few
-      leaves letting go and tumbling down (`fy-fall`), grass tufts blowing
-      (`fy-blow`), the barn doors swinging open a little and shut
-      (`fy-door`, showing the dark inside and some hay), and the
-      weathervane turning (`fy-vane`, a squash in x). **Light**: a warm
+      yard, clouds, trees, grass tufts, a weathervane. **The scenery is
+      still** (asked for: no drifting clouds, birds, swaying trees, falling
+      leaves, blowing grass, barn door or turning vane); only the flock,
+      the farmer, the line and the reveal move. **The farm sign**
+      (`.fy-sign`, `renderSign()` / `placeSign()`): a hand-painted wooden
+      board on two posts at the back of the yard against the left edge of
+      the view (smaller, down to 0.7, when it would reach the barn),
+      tilted a little, with grain, nails and a darker bottom edge, and
+      cream painted letters (`--fy-sign-*`). Two lines, "<display_name>'s"
+      (sized to fit, measured on a canvas) over a tracked "TURKEY FARM";
+      just "TURKEY FARM" when the profile has no `display_name` (never the
+      username). The name goes in by `textContent`. It is redrawn when the
+      fonts load and when the profile changes (`teacherpal:profile`, or a
+      `storage` event in the pop-out). **Light**: a warm
       soft-light wash from the sun over everything (`.fy-warm`) and a
       little dusk at the front (`.fy-dusk`), both after the actors.
       **Long shadows**: every turkey and the farmer casts a soft blot at
       the feet plus a streak along the ground, away from the low sun
       (`shade()` / `placeShade()`: rotated toward the viewer and away from
       `SUN_X`, squashed onto the ground).
+    - **The MISSING flyer** (`.fy-missing`, `renderMissing()` /
+      `setAbsent(doc, list)`): a weathered lost-turkey poster tacked to the
+      barn wall left of the doors (x 350–376), tilted −4° with a nail, a
+      curled bottom-right corner and a couple of stains. "MISSING" in red,
+      a little line-drawn turkey, then **today's absentees' first names**
+      (3 rows, then "+N more"; 4 fit without it; names past 8 letters are
+      cut). The full names are in its `<title>`, so hovering shows the whole
+      list. **Only while someone in the period is absent today**; otherwise
+      the `<g>` is `hidden` and the barn is clean. Still, never animated.
+      **Absent only**: wheel.js's `missingList()` reads `absentIds` (the
+      `attendance` table, else the absent cache) and never `sitOutIds`.
+      `refreshAbsent()` keeps it (and the wheel's pool) current: at once on
+      a `storage` event for the period's absent / sit-out cache (Attendance
+      in another tab), on returning to the tab, and every 60s while
+      visible. The pop-out gets the list in the broadcast (`missing`).
+      Colours `--fy-paper*`.
     - **Everyone stands on the ground plane**: `x`, `y` (depth, the feet)
       and `z` (height, only a lifted turkey has one), drawn at `(x, y − z)`,
       smaller further back (`persp()`). Draw order is depth, farmer
@@ -2289,8 +2379,9 @@ All styling lives in `style.css`; pages carry almost no inline styling.
       unless that's off, cut to 8 letters + "…" past 9; cream with a dark
       halo; counter-flipped in `paint()` so it never reads backwards). It's
       a detail for up close, not for the back of the room. Home spots are
-      staggered rows across the yard (`makeHomes()`: the row count follows
-      the yard's shape, so a wide yard gets long rows), and they are as big
+      staggered rows across the pen (`makeHomes()`: the row count follows
+      the pen's shape, each row gets turkeys in proportion to its width),
+      and they are as big
       as a row's spacing allows (`v.S` = cell width / 44, 0.75–1.3).
       **Idle**, every bird on its own beats (`--peck`, `--flap`, `--ruf`,
       `--look` and their delays, from hashes): it wanders round its spot,
@@ -2298,12 +2389,100 @@ All styling lives in `style.css`; pages carry almost no inline styling.
       the tail + `fy-fluff` on the body), cranes up and glances about
       (`fy-crane`, `fy-glance`), and turns round to look the other way
       (`nextTurn` in `yardStep()`).
-    - **The farmer** (`.fy-farmer`): straw hat, mustache, plaid shirt,
-      overalls, boots. He stands on the right (`v.home`). Poses come from
+    - **The farmer** (`.fy-farmer`): a cartoon of the teacher who made the
+      app, **drawn to the turkeys' standard**: flat fills, a darker tone on
+      the far side, and outlined at the same weight on screen (`.o` 1.1 at
+      his scale = their 0.9 at theirs; arms, sleeves and the pointing finger
+      get an outline path under them, `.ff-arm-o` / `.ff-sleeve-o` /
+      `.ff-finger-o`). About 112 units tall with a smaller head than before
+      (an ellipse, 10.4 × 11.4) on a visible neck with a shadow under the
+      chin. Medium-brown skin (`--fy-skin`, `--fy-skin-d` for the shading,
+      the far ear's inside, elbow creases and knuckles). Short wavy dark
+      hair parted in the middle, no hat (see the hair styles below). A 3/4 face: two eyes with whites, pupils
+      and a highlight each, brows, a small nose, blush, a friendly smile
+      (`think` and `walk`), clean-shaven, slim and young. A red t-shirt
+      (`--fy-shirt`, `--fy-shirt-back` on the far side, a `--fy-shirt-hi`
+      highlight, a crew collar and a couple of folds; each arm is bare skin,
+      `.ff-arm`, bent at the elbow, with a short `.ff-sleeve` over it: the
+      same path dashed to its first 9 units), black jeans (`.ff-jeans`,
+      the far leg and the near leg's far side `--fy-jeans-d`, a belt line,
+      folds at the knees in `--fy-jeans-hi`), round hands, and brown shoes
+      with a cream sole (`--fy-boot`, `--fy-sole`). That is the **default
+      look**; the art lives in `farmer.js`, and **each teacher can change
+      it**:
+      - **Settings → Your farmer…** (the gear menu, shown in thanksgiving
+        only; `openDialog()`): a walking preview beside a row per choice:
+        skin (6 tones), **face** (classic, or soft: `faceSoft()`, larger
+        round eyes with two highlights and lashes, thinner arched brows, a
+        wider smile, oval blush, and a narrower softer jaw, `JAW` /
+        `JAW_HIJAB`), **figure** (straight, or curvy: an hourglass shirt,
+        hips and overalls bib, `SHIRT` / `HIPS` / `OVER['overalls-curvy']`,
+        same shoulders and legs), hair (below) and its colour, headwear (none, cap,
+        beanie) and its colour, shirt colour, short or long sleeves,
+        **farm clothes** (`over`: none or overalls — a bib, straps and
+        buttons over the shirt, in the trousers' colour, `OVER` in
+        farmer.js), trousers colour, eyelashes. Grey is the first hijab /
+        headwear colour, white the last shirt colour. With a hijab the hair colour row
+        becomes **Hijab colour** (`headColor`) and headwear goes
+        (`rowsFor()`); the headwear colour shows only with a cap or beanie. Every
+        change shows at once and saves 400ms later through `setMyFarmer()`;
+        "Back to the default" stores null. A save error (no migration yet)
+        is said in the dialog's footer.
+      - **Stored on the profile**, `profiles.farmer` jsonb
+        (`migration-farmer.sql`), cached on the session as `user.farmer`
+        and refreshed with the profile. `normalize()` keeps only known
+        values, key by key. The option colours are data in `OPTIONS` (the
+        teacher's choices, not theme tokens); `vars()` turns each into its
+        `--fy-*` override plus a darker and a lighter tone, set inline on
+        the `.fy-farmer` group, and only for choices that differ from
+        `DEFAULT`, so the default farmer draws from the theme's tokens
+        exactly. Headwear is `--fy-headwear(-d/-hi)`, always inline.
+      - **Hair styles** (`HAIR` in farmer.js, `hairStyle`): **wavy, middle
+        part** (the default: two sides falling from a centre parting, a
+        wave in each, some height), short straight (a cut fringe), curly
+        (a mass of coils: outlined circles, then the same circles plain, so
+        only the outside is outlined), buzz cut (a close cap with stubble
+        dots), tied back (combed back into a ponytail with a band) and
+        **hijab**. Each is one outlined shape (`.o`, the body's weight) with
+        a darker underside / far side (`.ff-hair-d`, `--fy-hair-d`), strand
+        lines (`.ff-hair-strand`) and a highlight (`.ff-hair-hi`); checked
+        at the size the farmer is in the scene, not just zoomed in. Under a
+        cap or beanie the hair is cut to `UNDER_HAT` (a buzz cut stays).
+        Old looks still load: `normalize()` maps crop → straight, long /
+        bun → tied, and `head: 'hijab'` → `hairStyle: 'hijab'`.
+      - **The hijab** (a hair style, not headwear; it is what makes the
+        farmer recognisable from across the room, so it is the biggest
+        shape on her): one smooth rounded hood round the face, **outlined
+        only round the outside** (`.ff-hood-edge`, an open path; the fill
+        has no outline) so it flows on into the drape with no edge across
+        the neck (that edge, and a light rim round the face, made it read
+        as a helmet). A soft gather under the chin, a highlight along the
+        top (`.ff-hood-top`), the far side in shadow. The drape is a short
+        rounded cape over the shoulders ending mid-chest, with two soft
+        folds (`.ff-soft`): longer, it hid the figure like a sack. Keep
+        the fold lines few: more made it read as chainmail or a beard. marwa's account starts
+        with it via the migration (fair skin, the soft face, a curvy
+        figure, a grey hijab, a white long-sleeve top under denim
+        overalls, lashes); everyone else keeps the default until
+        they change it.
+      - Long sleeves are the arm's sleeve dash run to the wrist (inline
+        `stroke-dasharray` from the arm's length); the elbow crease then
+        takes the shirt's fold colour.
+      - **Every head carries an invisible `.ff-head-box`** (x −16..24, y
+        −118..−64, wide enough for the ponytail), so its fill-box is the
+        same for any hair or headwear and the CSS pivot (`37.5% 66.7%`) is
+        the neck. Widen the box and you must move the pivot with it. (`transform-box:
+        view-box` with px origins does *not* use the farmer's own units:
+        it swung the head off the neck.)
+      - The farm redraws on `teacherpal:farmer` / `teacherpal:profile`, and
+        the pop-out and mini window on the session's `storage` event.
+
+      He stands by the pen's front right corner (`v.home`). Poses come from
       `data-pose`, one arm set per pose (`.ff-a-<pose>`):
       - `think`: the idle pose. Hand on chin, head tilted, a slow sway, a
         tapping finger, and a "?" thought bubble.
-      - `walk`: striding legs and swinging arms; with `data-pace="run"`
+      - `walk`: striding legs, arms swinging (`ff-swing`) and his head
+        nodding in step (`ff-nod`); with `data-pace="run"`
         (when his route is long for the time he has) a quicker jog, leaning
         in.
       - `lean`: bent toward a turkey, still with the bubble.
@@ -2313,7 +2492,7 @@ All styling lives in `style.css`; pages carry almost no inline styling.
       - `toss`: a heave forward, both arms out (`.ff-a-toss`), a grin.
       - `cheer`: the lift arms, up in a little bounce, at the reveal
         (and after the pick).
-    - **A pick** (`DURATION_MS` 3300 + `SETTLE_MS` 1700 = 5s; the `T`
+    - **A pick** (`DURATION_MS` 3300 + `SETTLE_MS` 2400 = 5.7s; the `T`
       timeline at the top of the file). `makePlan()` picks the turkeys he
       inspects **on his way**: ones along the line from him to the winner
       (else the winner's neighbours), chosen by a **seeded random of the
@@ -2328,112 +2507,216 @@ All styling lives in `style.css`; pages carry almost no inline styling.
         - Turkeys within `SCARE_R` of him duck and shiver, and shuffle away
           and a little back, behind the others (`.scared`). That number
           also drives the clucking.
-        - One turkey tiptoes off toward the edge of the yard (`.sneak`) and
+        - One turkey tiptoes off toward the side of the pen (`.sneak`) and
           wanders back afterwards.
         - 2.3s: he stops beside the winner and **points**. Its neighbours
           edge away so it stands clear. At 2.34s it **freezes mid-gobble**
           (`.caught`): beak open, eyes huge with tiny pupils, raised brows,
           tail fanned, puffed up, a "!" and three loose feathers, with a
           warm glow.
-        - **Into the oven** (the `T` timeline; the oven doesn't move):
-            - 2.67–2.9s: he **hoists** the turkey over his head (`lift`
-              pose, `HELD_GROW` 1.6×) and turns to the oven. At 2.76s the
-              bottom-hinged door drops open on a spring with a puff of
-              steam (`data-door="open"`, `.puff`).
-            - 2.98–3.56s: he **lobs** it (`toss` pose) in an arc across the
-              yard and in at the door (`.tossed`: a gleeful somersault,
-              legs flailing, eyes shut, beak open). Meanwhile the spit
-              **whirls** a full turn plus however far it takes to bring an
-              empty hook to the front (`aim()`, `.whirl`: the glow
-              brightens, the timer dial spins), so the turkey lands right
-              on it (`hookPoint()`).
-            - 3.56s: the door **slams with a clang** (`.clang`). The thrown
-              turkey hides (`.baked`) and the spit draws it from now on;
-              it glows, eyes open, and hops on its hook (`.won`, 2.6s).
-            - 3.9s: **DING!** The bell on top rings.
-            - 4.2s: the **name** rises over the oven on a cream-on-cocoa
-              plate (`.fy-name`, Rajdhani 700, sized in scene units from the
-              longest word, `placeName()`, kept under the top of the box),
-              with **autumn leaves** bursting round it. He cheers.
-            - The spit holds still with the new one at the front until
-              6.8s (`T.rest`), then goes back to turning.
-
-          The picked turkey's part is `heldStep()` (`mode: 'held'`) and
-          its classes `setPhase()` (`caught`, `held`, `tossed`,
-          `baked`). The timeline's events fire once each through
-          `once()` (`v.done`).
+        - **Down the line** (the `T` timeline; it can't drag, it runs
+          several times a period):
+            - 2.58–2.76s: he **hoists** the turkey over his head (`lift`
+              pose, `HELD_GROW` 1.6×) and turns to the hopper.
+            - 2.8–3.28s: he **lobs** it (`toss` pose, `.tossed`: a gleeful
+              somersault) up over the fence and into the hopper
+              (`hopperPoint()`: it rises early and shrinks as it nears the
+              top, so it stays on screen). It drops in (`intoHopper()`, the
+              hopper gulps, a thud and a rumble): from here a **package**
+              (`.fy-pack`, `PACK` in farmyard.js) on the line is it, and
+              the pen turkey hides (phase `away`). **At the same moment
+              the name** rises large over the middle of the farm on a
+              cream-on-cocoa plate (`reveal()` → `.fy-name`, `placeName()`,
+              sized in scene units from the longest word) with **autumn
+              leaves** bursting round it and a big gobble, and he cheers.
+              It stays up through the rest of the line.
+            - 3.28–3.72s: the oven cooks (`.cooking`: the window glows, the
+              coil heats, the dial spins, the lamp lights, the oven
+              rattles). The package is hidden (`.inside`).
+            - 3.72s: out of the hatch on the oven's right with a ding, a
+              hiss, a puff and steam (`.out-open`, `.puff`, `.emerge`,
+              `.steaming`): a golden roast turkey on the belt.
+            - The belt then moves it **one station at a time** (`ROUTE`, an
+              eased move per stop, as a distance along the belt; `routeD()`
+              then `beltAt()`, which tilts it round the pulleys): right
+              along the top, round the right-hand pulley, left along the
+              middle run.
+            - 4.12s under the packer: 4.14s the **stamp** comes down
+              (`.stamp`), and at 4.21s it's on a white foam tray under
+              clear film (`.packed`, `.squash`).
+            - 4.48s at the labeller: 4.51s the arm **slaps** the label on
+              (`.slap`, `.labelled`, `.slapped`): a small label at the
+              bottom of the package with the student's name printed on it
+              (`.pk-name`, sized to the label) and a click.
+            - Round the left-hand pulley and right along the bottom run;
+              at 5.0s off the end in an arc down onto its slot on the shelf
+              (`shelfTarget()`), landing at 5.38s (`shelve()`) with a
+              bounce (`.landed`) and a plunk.
+          The machines' moments are classes on the front layer, the
+          package's look classes on it, both from `lineTick()` every
+          frame; the events fire once each through `once()` (`v.done`).
+          The picked turkey's own part is `heldStep()` (`mode: 'held'`,
+          phases `caught`, `held`, `tossed`, `away`, `shelved`).
+        - **The belt runs all the time**: its slats are a dashed path along
+          the S whose offset `beltStep()` sets, and the pulleys' spokes
+          turn with it. Between picks it creeps 10 units every 0.9s (a
+          gentle mechanical rhythm); during one it moves exactly with the
+          package.
 
       The name stays up until the next pick. With No repeats off the
-      winner rides the spit until then, and as the next pick starts the
-      door pops open and it tumbles back out to its spot; he walks on from
-      where he stands.
+      winner waits on the shelf until then, and as the next pick starts its
+      package bursts and it hops back into the pen; he walks on from where
+      he stands.
     - **Draw order moves only what's out of place** (`paint()`:
       `insertBefore` per misplaced node). It used to re-append every actor
       whenever the depth order changed, and re-appending a node restarts its
       CSS animations, so a caught turkey's "!" kept popping back to scale 0
-      as the flock wandered. The spit's turkeys sort the same way.
-    - **The oven** (`.fy-oven`, `OVEN` in farmyard.js: feet at 0, 170
-      units wide, 224 tall, in the actors layer so it sorts by depth):
-      cream enamel, a control panel (knobs, a lamp, the timer dial, the
-      bell), a cavity clipped by `#fy-clip-oven` with a warm flickering
-      glow and a glowing coil, a bottom-hinged door with a tinted glass
-      window, and a drawer. **The oven is where the round collects**, and
-      it replaced the basket and the board (whose names overlapped):
-      - **The spit** (`spitGeom()`, `renderSpit()`, `paintSpit()` every
-        frame): one hook per student in the round (`total`; 8 without No
-        repeats), in **rings** round the rod: one ring up to 10, two up to
-        22, three past that, **filled bottom ring first**, so the oven
-        fills up visibly. Each ring is an ellipse (`RX` 52 × `RRY` 8)
-        seen from the front; hooks hang off spokes, rings staggered by
-        half a step. The rings turn slowly (`IDLE_W`, a turn every 36s).
-      - **Depth**: a turkey at the back of a ring is drawn at 62% and
-        `brightness(0.4)`, coming up to full size and brightness at the
-        front; back-half turkeys draw behind the rod, front-half in front.
-        Each faces the way it is moving and narrows at the sides, with a
-        little swing.
-      - **Names**: only the turkey passing the front of each ring shows
-        its name (`.fy-spit-name`, cream with a dark halo, faded in by how
-        near the front it is), so names never pile up.
-      - **The count** is on the door (`.fy-oven-plate`, "7 / 28", shown
-        with No repeats on, page only); "N left" stays top left.
-      - **Full** (`.full`): the plate turns solid. When the **last hook
-        fills** (`celebrate()`, `.party` for `PARTY_MS` 2.8s) the oven
-        hops for joy, its bell rings, the plate pulses, autumn leaves burst
-        out of the window (`.fy-burst-oven`) and a bell fanfare plays. It
-        fires only on the change to full (`v.wasFull === false`), never on
-        a page load that finds the oven already full.
+      as the flock wandered. The pen's front fence is a fixed actor in the
+      same sort (`v.fixed`, at depth `PEN.front`); a held or thrown turkey
+      sorts in front of everything.
+    - **The line** (`COL_BACK` / `COL_FRONT` in farmyard.js, column
+      units): a dark wall panel; the belt is one path (`BELT_D`, from
+      `BELT`: run A under the oven, the right-hand pulley, run B, the
+      left-hand pulley, run C; `SEG` holds where each stretch ends, `ST`
+      the stations as distances); pulleys with spokes, rails under each
+      run. In front: the funnel hopper with a pipe into the oven's left
+      side; a squat cream oven with a window, coil, knobs, a lamp, a timer
+      dial, a chimney's smoke and a flap hatch on its right; the yellow
+      PACK press with a roll of film on top (over run B); the cranberry
+      labeller with its roll of labels and an arm (further along B). Layer
+      order: back, the shelf, the package (`.fy-line-items`), front.
+    - **The package** (`PACK`, origin at the bottom of its tray, ~58 × 48;
+      `PK_B` 0.52 on the belt): **the roast turkey is the main thing you
+      see** (`.pk-roast`: a golden body, a breast highlight, two
+      drumsticks with white bones and paper frills, gloss). `.packed` adds
+      the white foam tray and the clear film over it, with a shine and a
+      few drops of moisture; `.labelled` adds the small label at the bottom
+      (a coloured band and the name). Steam while it's fresh.
+    - **The shelf** (`.fy-shelf`, at the bottom of the column, column
+      units, `SH`): a wooden grocery shelf under a green "FRESH TURKEYS"
+      sign. **It is where the round
+      collects**:
+      - One slot per student in the round (`total`; 6 without No repeats),
+        **filled from the top shelf down, left to right**, empty ones
+        dashed, so the round's progress reads at a glance. `shelfGeom()`
+        picks the rows and columns that give the biggest package (28 →
+        4 shelves of 7). **No rotation**: every label faces front, the
+        names readable along the whole shelf.
+      - The newest lands with a bounce (`.landed`).
+      - **The count** is on its base ("7 / 28", `.fs-count`, with No
+        repeats on, page only); "N left" stays top left.
+      - **Full** (`.full`): a red **SOLD OUT** sign drops on two short
+        chains onto the shelf's sign and swings. When the **last slot fills**
+        (`celebrate()`, `.party` for `PARTY_MS` 2.8s) every package hops,
+        the sign flashes, autumn leaves burst out of the shelf
+        (`.fy-burst-shelf`) and a bell fanfare plays. It fires only on the
+        change to full (`v.wasFull === false`), never on a page load that
+        finds the shelf already full.
       - **Let them out** (`.fy-pour`, top left under the count, page
         only, primary once full; Reset in the pick-list bar does the
         same): `pour()` dispatches the cancelable
-        `teacherpal:wheel-reset-request`, opens the door, then
-        `teacherpal:wheel-reset`; wheel.js empties the round and
-        `setPicked()` sends everyone who left the list **tumbling out of
-        the door** back to their spots (`tumbleOut()`, staggered ≤ 70ms,
-        `.tumbling`; `.waiting` hides one until its turn). Someone who
-        isn't in the yard yet starts from the oven too (`v.incoming`).
-        `busy()` blocks a pick while it runs. `HOLDS_ROUND` is true, so
-        a finished round waits for it.
+        `teacherpal:wheel-reset-request`, then `teacherpal:wheel-reset`;
+        wheel.js empties the round and `setPicked()` **bursts every
+        package** (`.burst`: the film pops, feathers fly, the tray drops,
+        staggered ≤ 70ms) and each turkey hops out of its package back to
+        its spot in the pen (`tumbleOut()` from `packScenePos()`,
+        `.tumbling`; `.waiting` hides one until its turn). Someone who isn't in the pen
+        yet starts from their package too (`v.incoming`). `busy()` blocks a
+        pick while it runs. `HOLDS_ROUND` is true, so a finished round
+        waits for it.
       - **Don't name a new class `fy-roll`**: that's the hay rolls.
     - **Counts**: "N left" (or "N in the yard" without No repeats) in the
       top-left corner.
     - **Sound** (main window only, respects mute): clucks (a squawky square
       through a bandpass), more often and higher the more turkeys are
       nervous; footsteps while he walks; a "dun, dun, DUNNN" sting when he
-      points; the door's creak; a whoosh and two squawks for the toss; a
-      metal clang (inharmonic partials on a noise hit); a kitchen-timer
-      ding; a springy "boing" as a turkey hops back out; clucks as they
-      tumble out; a bell fanfare when the oven fills; and a big warbling
-      gobble-obble-obble on the reveal.
+      points; a whoosh and two squawks for the toss; a soft thud into the
+      hopper (with a big warbling gobble-obble-obble as the name comes up);
+      a clack-clack each time the belt moves on; a low rumble in the oven; a
+      ding and a hiss of steam coming out; a heavy stamp with a metal ring
+      at the packer; a crisp click at the labeller; a plunk onto the
+      shelf; pops and clucks as packages burst; a springy "boing" as a
+      turkey hops back out; and a bell fanfare when the shelf fills.
     - The pop-out and mini window show the scene filling the window, with
-      no count plate or Let them out (they get no pick-list data, so their
-      spit holds only the current winner). Under reduced motion every CSS loop, the scenery
-      and the burst stop (`.farm * { animation: none }`), and the bird
-      flocks hide. The walk, the lift, the toss, the spit and the tumbles
-      out still run (JS; the throw's whirl skips the extra turn), and the poses still change: they are the
-      pick. The door snaps open and shut (the app-wide `transition: none`).
+      no count or Let them out (they get no pick-list data, so their
+      shelf holds only the current winner). Under reduced motion every CSS
+      loop, the gulp, stamp and slap and the bursts stop (`.farm * {
+      animation: none }`) and the belt doesn't creep between picks. The walk, the lift, the toss, the package's trip
+      down the line and onto the shelf and the hops home still run (JS),
+      and the poses and the package's look still change: they are the
+      pick. SOLD OUT just appears (the app-wide `transition: none`).
     - **`transform-box: fill-box` only on the parts that move** (listed in
       the CSS). On `*` it also moves the SVG `transform` attributes inside
       (tail feathers), which knocked them out of place.
+  **winter skin — a sledding race instead of the wheel** (`sled.js`, the
+  "Name Wheel — winter skin: a SLEDDING RACE" block in `style.css`). CSS
+  hides the wheel SVG, the hub button and the mascot, and shows `.sled`,
+  which **is** the Spin button (click, Space, Enter). Layout: the
+  thanksgiving one (the scene fills the width, one row of controls under
+  it; those rules are `:root:is([data-theme="thanksgiving"],
+  [data-theme="winter"])`).
+    - **The scene** (`bgMarkup(W)`, redrawn when the width changes): 400
+      units tall, `W = 400 × box aspect` (620–1300). A night sky with stars
+      and a moon, far hills, a snowy hill whose ridge (`ridgeY()`) runs from
+      a flat top left down to a valley on the right, grooves down the track,
+      pines (kept off the track), a red START banner and dashed line at the
+      top, a blue FINISH banner and checkered line at the bottom, and a log
+      cabin by the finish (`cabinBox()`): snowy roof, chimney smoke, a door
+      and a big lit window.
+    - **The track** (`track(W, u, l)`): a cubic from the start line to the
+      finish, `u` 0..1 down it (past 1 = the run-out on the flat), `l` the
+      lane across it (-1..1, mostly depth). Further up = smaller
+      (`persp()`).
+    - **Sledders** (`RIDER`): one per name in `displayList`, facing
+      downhill: a wooden sled with the student's name on its side board
+      (`.sl-tag`, the wheel's label, cut to 8 letters + "…"; cream on wood,
+      a close-up detail), a rider in one of five coats, three hats, three
+      skin tones (from a hash), and a standing walker (pulling the sled by a
+      rope) for the walk pose. Poses are `data-pose`: `idle` (a breath),
+      `ready` (leaning back), `race` (tucked forward, a rattle, snow spray
+      behind), `stopped`, `walk` (the walker, legs swinging, flipped to face
+      the way they go; the name is outside the flip so it never mirrors).
+      At rest they wait on the hilltop in staggered rows (`homesFor()`),
+      packed smaller for a big class (`homeS`, blended back to full size on
+      the slope).
+    - **A pick** (`DURATION_MS` 3500 + `SETTLE_MS` 2300; `T` at the top of
+      the file; everything from a seeded random of the descriptor, so the
+      pop-out runs the same race): a whistle; at 0.45s they push off from
+      their spots onto the track, each in a shuffled lane, weaving
+      (`wob`), jostling for places and now and then bumped (`.bump`, a
+      thump); the pack stays together (each racer's `pace` 0.72–0.92 of the
+      way when the winner crosses) until the second half, when the winner
+      pulls ahead and crosses the line at 3.5s. The name comes up large over
+      the hill on a frost-on-night plate (`.sl-name`, `placeName()`) with a
+      spray of snow (`.sl-burst`) and a bell. The others coast to a stop
+      past the line. With No repeats on the winner then walks to the cabin
+      door (from 4.1s) and goes in, and appears in the window; the others
+      walk back up the hill a few at a time (`finish()`), and race from
+      wherever they are if the next pick comes first.
+    - **The cabin is where the round collects**: everyone picked sits in
+      the window (`renderCabin()`, the most even grid for the round, filled
+      from the bottom row up) with a mug of cocoa, steam rising; "n / N"
+      on a plate by the door (page only). Full: the window pulses, snow
+      bursts out of it and a chime plays (only on the change to full).
+      **Let them out** (`.sl-pour`, top right, page only, primary once
+      full; Reset does the same) dispatches the cancelable
+      `teacherpal:wheel-reset-request`, then `teacherpal:wheel-reset`; as
+      they come back into `displayList` they walk out of the cabin door and
+      up the hill (`incoming` / `inCabin`, or still on the old picked list
+      when `sync()` runs before `setPicked()`). `busy()` blocks a pick
+      meanwhile. `HOLDS_ROUND` is true.
+    - **Counts**: "N left" (or "N on the hill" without No repeats) top left,
+      page only.
+    - **Sound** (main window only, respects mute): a referee's whistle, the
+      hiss of runners swelling down the hill, a thump per bump, a bell and a
+      cheer at the line, a chime when the cabin fills, a door bell on Let
+      them out.
+    - Under reduced motion every CSS loop and the bursts stop
+      (`.sled * { animation: none }`); the race, the walks and the poses
+      still run (JS): they are the pick.
+    - **`.sl-art` must not get `transform-box: fill-box`**: its flip
+      (`scale(-1 1)`) would then turn about the art's own edge and the sled
+      would leave its name behind.
   **pink skin — a bubble tea cup instead of the wheel** (`boba.js`, the
   "Name Wheel — pink skin: a BUBBLE TEA cup" block in `style.css`). CSS
   hides the wheel SVG, the hub button and the wheel's bunny, and shows
@@ -2852,6 +3135,23 @@ All styling lives in `style.css`; pages carry almost no inline styling.
   amber → orange → cranberry fill, with an acorn (`--noise-rider`) riding
   its tip and rocking. Colours are `--tk-*` tokens. Under reduced motion
   the loops stop, but the fan and the face crossfades keep their easing.
+  **winter skin — a snow globe** (the "Noise Meter — winter skin" block).
+  `GLOBE_SVG` (viewBox 0 0 200 200) in `noise.js`, built as `.nw-stage`
+  beside the others, on the shared mascot layout (winter joins every
+  `:root:is(…)` selector). A glass globe on a wooden base with a plaque; a
+  tiny village inside (three houses with lit amber windows, pines, chimney
+  smoke) under a night sky. **It reads `--level` directly, not the
+  debounced mood**, so it always answers the room: the settled snow pile on
+  the floor lifts away (`scaleY` from level 0.3), a gentle drift fades in
+  from 0.3, a swirl from 0.55, a blizzard and a white haze from 0.7 that
+  all but hides the village. The globe shakes with an amplitude computed
+  from the level (`--shk` on the meter, `clamp((level − 0.5) × 9, 0, 4.5)`
+  degrees) and the base rattles once loud. Quiet: nothing moves (the flake
+  animations are paused outside `ok` / `loud`). Off: greyed. Alert: the
+  zone word a solid red pill. **The level bar** is an icy tube (pine → ice
+  → amber → red) with a snowflake (`--noise-rider`) at its leading edge,
+  turning slowly. Colours are `--sg-*` tokens. Under reduced motion the
+  shake and the falling stop; the layers still fade in with the level.
 - **Attendance view (`attendance.js`) — the Attendance screen.**
   `.attendance[data-mode="full"]` is a grid `minmax(0,1fr) clamp(19rem, 26vw,
   26rem)` — the `.att-chart` box on the left, `.att-side` (counts card with

@@ -1,68 +1,92 @@
 // farmyard.js — the Name Wheel's thanksgiving skin: a farmer choosing a
-// turkey in a farmyard instead of the wheel.
+// turkey instead of the wheel.
 //
 // Same shape as cauldron.js / boba.js: wheel.js still owns everything that
 // matters (who's in, the fair draw, No repeats, the pop-out broadcast) and
 // hands this file a spin descriptor { startedAt, duration, settle, winnerId }.
-// One plump cartoon turkey per student (its first name small on its body),
-// milling about in front of a barn and hay bales. The farmer stands to the
-// right in a big thinking pose, beside a big cartoon oven with a glass door
-// and a warm glow inside. A pick (~5s, the T timeline below): he strides
+// The farm fills the left two thirds or so: one plump cartoon turkey per
+// student (its first name small on its body) penned in a fenced yard in
+// front of a barn and hay bales, and the farmer by the pen's fence in a big
+// thinking pose. The right third is a little production line running top to
+// bottom: an oven at the top with a hopper on its farm side, an S of
+// conveyor belt down through the packer and the labeller, and a grocery
+// shelf at the bottom. A pick (~5.7s, the T timeline below): he strides
 // along the flock, stops at a turkey or two, leans in and shakes his head;
-// the turkeys near him duck and shuffle away, and one tries to sneak off. At
-// the winner he stops and POINTS; it freezes mid-gobble. He hoists it over
-// his head as the oven door drops open, turns and lobs it across the yard
-// into the oven (legs flailing, whee), where it lands on an empty hook of
-// the rotisserie spit, which has whirled round to meet it; the door clangs,
-// the timer dings, and its name rises over the oven. The turkey is in on the
-// joke: it is a ride, nobody cooks. With No repeats on it stays on the spit:
-// the oven is where the round collects, one hook per student, filling ring by
-// ring from the bottom, the count on its door, the rings turning slowly with
-// the name of whoever passes the front showing. When the last hook fills, the
-// oven celebrates; "Let them out" (or Reset) opens the door and they all
-// tumble back into the yard. With No repeats off the winner rides until the
-// next pick, then hops back out. The decoys and the sneaker come from a
-// seeded random from the descriptor, so the pop-out plays the same pick.
+// the turkeys near him duck and shuffle away, and one tries to sneak off.
+// At the winner he stops and POINTS; it freezes mid-gobble. He hoists it
+// over his head and lobs it into the hopper, and as it drops in the name
+// comes up large over the farm. The oven rattles and glows, and out of its
+// hatch comes a golden roast turkey, steaming, that rides the S down: under
+// the packer (a white foam tray, clear film), past the labeller (a small
+// label with the student's name) and onto the shelf. With No repeats on the shelf is where the
+// round collects, one slot per student, filling from the top shelf down,
+// the count on its base; when it's full a SOLD OUT sign drops. "Let them
+// out" (or Reset) bursts the packages and the turkeys, whole and cheerful,
+// hop back into the pen. With No repeats off the winner sits on the shelf
+// until the next pick, then hops back. The decoys and the sneaker come from
+// a seeded random from the descriptor, so the pop-out plays the same pick.
 // Never picks anything.
 (() => {
   const DURATION_MS = 3300;
-  const SETTLE_MS = 1700;                          // 5s in all
+  const SETTLE_MS = 2400;                          // 5.7s in all
   // ms from the start of a pick. The walk ends at `point`; he hoists the
-  // winner (grab..grabEnd) while the oven door drops open (doorOpen), lobs it
-  // (toss..land) as the spit whirls an empty hook round to the front, the
-  // door clangs shut, the timer dings, and the name rises at reveal. The spit
-  // holds still with the new one at the front until `rest`.
+  // winner (grab..grabEnd) and lobs it into the hopper (toss..drop; at drop
+  // the name comes up over the farm). It cooks out of sight until outOven,
+  // then the belt carries the package down one station at a time: the packer
+  // (stamp, then packed), the labeller (slap: the label), the end of the belt
+  // (end) and the shelf (shelf).
   const T = {
     start: 150, point: 2300, freeze: 2340,
-    grab: 2670, doorOpen: 2760, grabEnd: 2900,
-    toss: 2980, land: 3560, ding: 3900, reveal: 4200, out: 4250,
-    rest: 6800,
+    grab: 2580, grabEnd: 2760, toss: 2800, drop: 3280,
+    outOven: 3720, atPack: 4120, stamp: 4140, packed: 4210, leavePack: 4320,
+    atLabel: 4480, slap: 4510, leaveLabel: 4620,
+    end: 5000, shelf: 5380,
   };
+  T.out = T.shelf;
   const DWELL = 500;                               // one inspection: lean in, then shake the head
   const LEAN = 210;                                // ...of which the lean
   const RELIEF_MS = 700;                           // a turkey's hop of relief after he moves on
 
   // ---- the scene: 400 units tall, as wide as its box ----
   // The art is drawn across x -400..1400 around a centre of 500; the viewBox
-  // is `x0 0 W 400`, W from the box's aspect (layout()), so the yard fills
+  // is `x0 0 W 400`, W from the box's aspect (layout()), so the farm fills
   // any width. Everyone stands on the ground plane: x across, y the depth
   // (the feet), z the height above the ground (only a lifted turkey has one).
-  // The oven, the farmer's spot and the yard follow the view (v.oven, v.home,
-  // v.yard): the oven at the right edge, his spot beside it, the yard the rest.
+  // The production column (v.col) takes the right of the view; the pen
+  // (v.yard) is the rest, a fenced trapezoid a little narrower at the back.
   const MID = 500;
   const SUN_X = 596;                               // shadows fall away from it
-  const LIFT_Z = 127;                              // a lifted turkey's feet, in farmer units (just over his hat)
+  const LIFT_Z = 127;                              // a lifted turkey's feet, in farmer units (just over his head)
   const HELD_GROW = 1.6;                           // a lifted turkey is drawn this much bigger
-  const PHASES = ['caught', 'held', 'tossed', 'baked'];
+  const PHASES = ['caught', 'held', 'tossed', 'away', 'shelved'];
   const SCARE_R = 62;                              // how close he gets before a turkey ducks
-  // the oven, in its own units: feet at y 0, 170 wide, 224 to the top of its
-  // control panel; the window in the door spans y -178..-78
-  const OV = { hw: 85, top: 224, win: { y0: -178, y1: -78 } };
-  const OV_Y = 360;                                // where its feet stand in the yard
-  // the spit: each ring is an ellipse seen from the front
-  const RX = 52, RRY = 8;
-  const IDLE_W = (Math.PI * 2) / 36;               // one turn every 36s
-  const PARTY_MS = 2800;                           // the full oven's celebration
+  // the pen: its fence (back / front depth, sides slanting in by `slant`
+  // per unit of depth) and the rows the flock stands in (y0..y1)
+  const PEN = { back: 224, front: 388, y0: 240, y1: 366, slant: 0.2 };
+  const penL = (Y, y) => Y.l + (Y.front - y) * Y.slant;
+  const penR = (Y, y) => Y.r - (Y.front - y) * Y.slant;
+  // ---- the production column: its own 300 x 400 units, scaled by v.col.s ----
+  const COL_W = 300;
+  // the belt's centre line: right along the top under the oven (A), round the
+  // right-hand pulley, left (B: the packer, the labeller), round the
+  // left-hand pulley, and right again (C) to the shelf
+  const BELT = { ax: 186, ay: 79.5, rx: 254, rr: 26.5, by: 132.5, lx: 46, lr: 24.5, cy: 181.5, cx: 252 };
+  const BELT_D = `M${BELT.ax} ${BELT.ay}H${BELT.rx}A${BELT.rr} ${BELT.rr} 0 0 1 ${BELT.rx} ${BELT.by}H${BELT.lx}A${BELT.lr} ${BELT.lr} 0 0 0 ${BELT.lx} ${BELT.cy}H${BELT.cx}`;
+  // where each stretch ends, as a distance along the belt
+  const SEG = (() => {
+    const a = BELT.rx - BELT.ax, r = a + Math.PI * BELT.rr, b = r + BELT.rx - BELT.lx, l = b + Math.PI * BELT.lr;
+    return { a, r, b, l, c: l + BELT.cx - BELT.lx };
+  })();
+  const PACK_X = 160, LABEL_X = 88, END_X = 244;
+  const ST = { out: 14, pack: SEG.r + BELT.rx - PACK_X, label: SEG.r + BELT.rx - LABEL_X, end: SEG.l + END_X - BELT.lx };
+  const PK_B = 0.52;                               // a package on the belt (it's ~58 x 48 at 1)
+  const HOPPER = { x: 34, y: 2 };                  // the hopper's mouth
+  // where the package is on the belt: one eased move per station, so it runs in beats
+  const ROUTE = [[T.outOven, ST.out], [T.atPack, ST.pack], [T.leavePack, ST.pack], [T.atLabel, ST.label],
+    [T.leaveLabel, ST.label], [T.end, ST.end]];
+  // ---- the shelf, in column units: the sign, the rows between rows0 and rows1, the base ----
+  const SH = { x: 4, w: 292, sign: 191, rows0: 216, rows1: 386, base: 398 };
+  const PARTY_MS = 2800;                           // the full shelf's celebration
 
   const views = new Map();
   const isOn = (doc) => doc.documentElement.getAttribute('data-theme') === 'thanksgiving';
@@ -117,108 +141,93 @@
   const PALETTES = 3;
   const palOf = (id) => hash(id + 'p') % PALETTES;
 
-  // ---------- the farmer: facing left, feet at (0, 0), about 117 units to the hat ----------
-  const arm = (cls, d, hx, hy, extra = '') => `<g class="ff-a ${cls}"><path class="ff-sleeve" d="${d}"/><circle class="ff-hand o" cx="${hx}" cy="${hy}" r="3.8"/>${extra}</g>`;
-  const FARMER = `
-    <g class="ff-body">
-      <g class="ff-leg ff-leg-b"><rect class="ff-denim o" x="1.5" y="-41" width="9.6" height="35" rx="3"/><path class="ff-boot o" d="M1-7.6H11.6C12.6-3 12.4 0 8 0H1Z"/></g>
-      <g class="ff-leg ff-leg-f"><rect class="ff-denim o" x="-11" y="-41" width="9.6" height="35" rx="3"/><path class="ff-boot o" d="M-1-7.6H-10C-17-7-17.8 0-12.6 0H-1Z"/></g>
-      <g class="ff-upper">
-        ${arm('ff-a-think ff-back', 'M10.5-72L21-60.5 14.5-50', 14.5, -50)}
-        ${arm('ff-a-walk ff-back ff-swing-b', 'M10-72L12.4-47.5', 12.4, -47)}
-        ${arm('ff-a-lean ff-back', 'M10.5-72L18.5-58 10-51.5', 10, -51.5)}
-        ${arm('ff-a-nope ff-back', 'M10.5-72L21-60.5 14.5-50', 14.5, -50)}
-        ${arm('ff-a-point ff-back', 'M10.5-72L21-60.5 14.5-50', 14.5, -50)}
-        ${arm('ff-a-lift ff-back', 'M10-74L15-98 10.5-124', 10.5, -125)}
-        ${arm('ff-a-toss ff-back', 'M10.5-72L-1-88-12-104', -12.4, -105)}
-        <ellipse class="ff-shirt o" cx="0" cy="-58" rx="16.5" ry="21.5"/>
-        <path class="ff-check" d="M-10-74V-40M-3-79V-37M4-79V-37M11-74V-40M-15-66H15M-16.4-56H16.4M-15-47H15"/>
-        <path class="ff-bib o" d="M-11.5-70H11.5V-45C11.5-40-11.5-40-11.5-45Z"/>
-        <path class="ff-strap" d="M-9.5-70L-12.5-79M9.5-70L12.5-79"/>
-        <circle class="ff-button" cx="-8" cy="-67" r="1.6"/><circle class="ff-button" cx="8" cy="-67" r="1.6"/>
-        <path class="ff-pocket" d="M-5-63H5V-56Q0-54-5-56Z"/>
-        <g class="ff-head">
-          <path class="ff-hair" d="M5-98C11-99 14-94 13-88 11-91 9-92 7-91Z"/>
-          <circle class="ff-skin o" cx="-1" cy="-91.5" r="12.6"/>
-          <ellipse class="ff-skin o" cx="10" cy="-90.5" rx="3" ry="4.2"/>
-          <circle class="ff-blush" cx="-5" cy="-86" r="3"/>
-          <ellipse class="ff-nose o" cx="-12.4" cy="-89.6" rx="4.6" ry="4"/>
-          <g class="ff-mouth ff-m-smile"><path d="M-11-81.6Q-8-79.4-5-81.4"/></g>
-          <g class="ff-mouth ff-m-hmm"><path d="M-11-81.2H-5.4"/></g>
-          <g class="ff-mouth ff-m-grin"><path class="ff-grin" d="M-13-82.4Q-8-75.6-3.2-82Z"/></g>
-          <path class="ff-stache o" d="M-17.4-85.2C-14.4-88.2-10.6-87.4-8.6-85.8-6.4-87.4-2.6-87.6 0-85 -3-82.6-6.4-82.6-8.6-84.2-11-82.4-15-82.6-17.4-85.2Z"/>
-          <g class="ff-eye"><circle cx="-7" cy="-95.6" r="1.7"/></g>
-          <path class="ff-brow" d="M-11-100.6Q-7.4-102.8-3.4-100.4"/>
-          <path class="ff-hat-crown o" d="M-11.6-101.6C-11.8-113-8.4-117.4 0-117.4 8.4-117.4 11.8-113 11.6-101.6Z"/>
-          <path class="ff-hat-band" d="M-11.7-106.4H11.7V-102.4H-11.7Z"/>
-          <ellipse class="ff-hat-brim o" cx="0" cy="-101.6" rx="22" ry="4.6"/>
-          <path class="ff-straw" d="M-18-101.6L-15-100M-8-103L-6-100.6M6-103L4-100.6M17-101.8L14.6-100"/>
-        </g>
-        ${arm('ff-a-think ff-front ff-tap', 'M-10.5-72L-19-59.5-11.6-80.4', -11.6, -80.6)}
-        ${arm('ff-a-walk ff-front ff-swing-f', 'M-10-72L-12.4-47.5', -12.4, -47)}
-        ${arm('ff-a-lean ff-front', 'M-10.5-72L-19-59.5-11.6-80.4', -11.6, -80.6)}
-        ${arm('ff-a-nope ff-front ff-wag', 'M-10.5-72L-22-73-24.6-89', -24.6, -89.6, '<path class="ff-finger" d="M-24.6-91.4V-97.6"/>')}
-        ${arm('ff-a-point ff-front', 'M-10.5-72L-44-64.6', -45, -64.4, '<path class="ff-finger" d="M-47-64L-54.4-62.4"/>')}
-        ${arm('ff-a-lift ff-front', 'M-10-74L-15-98-10.5-124', -10.5, -125)}
-        ${arm('ff-a-toss ff-front', 'M-10.5-72L-27-82-38-98', -38.6, -99)}
+  // ---------- the farmer ----------
+  // farmer.js draws him (or her) to the teacher's own look: FarmerArt.apply().
+  // Facing left, feet at (0, 0), about 112 units to the top of the head.
+
+  // ---------- the production column, in column units ----------
+  // Three layers with the shelf and the package between them: COL_BACK (the
+  // wall, the belt and its pulleys), then the shelf, the package, and
+  // COL_FRONT (the hopper, the oven, which hides the package while it
+  // cooks, the packer and the labeller).
+  const COL_BACK = `
+    <rect class="fc-wall" x="-6" y="-12" width="312" height="424" rx="12"/>
+    <path class="fc-rivets" d="M8 -2h0M292 -2h0M8 186h0M292 186h0"/>
+    <path class="fl-rail" d="M190 87H254M46 140H254M46 189H250"/>
+    <circle class="fl-drum o" cx="${BELT.rx}" cy="${(BELT.ay + BELT.by) / 2}" r="${BELT.rr - 4.5}"/>
+    <circle class="fl-drum o" cx="${BELT.lx}" cy="${(BELT.by + BELT.cy) / 2}" r="${BELT.lr - 4.5}"/>
+    <path class="fl-spokes"/>
+    <circle class="fl-hub" cx="${BELT.rx}" cy="${(BELT.ay + BELT.by) / 2}" r="3.4"/><circle class="fl-hub" cx="${BELT.lx}" cy="${(BELT.by + BELT.cy) / 2}" r="3.4"/>
+    <path class="fl-band-o" d="${BELT_D}"/><path class="fl-band" d="${BELT_D}"/><path class="fl-slats" d="${BELT_D}"/>`;
+  const COL_FRONT = `
+    <g class="fl-hopper">
+      <path class="fl-pipe o" d="M36 22H50V36H64V50H36Z"/>
+      <path class="fl-hop o" d="M6 0H62L52 25H32Z"/>
+      <ellipse class="fl-hop-mouth" cx="34" cy="1" rx="26" ry="3.6"/>
+      <rect class="fl-hop-rim o" x="3" y="-3.4" width="62" height="4.6" rx="2"/>
+    </g>
+    <g class="fl-oven">
+      <g class="fl-smoke"><circle cx="150" cy="0" r="4.5"/><circle cx="152" cy="-6" r="6"/><circle cx="149" cy="-13" r="7.5"/></g>
+      <g class="fl-oven-body">
+        <rect class="fl-oven-box o" x="62" y="4" width="136" height="72" rx="9"/>
+        <rect class="fl-oven-strip o" x="69" y="10" width="122" height="13" rx="4"/>
+        <circle class="fl-knob o" cx="80" cy="16.5" r="3.4"/><circle class="fl-knob o" cx="91" cy="16.5" r="3.4"/>
+        <circle class="fl-lamp" cx="102" cy="16.5" r="2.3"/>
+        <circle class="fl-dial o" cx="180" cy="16.5" r="4.8"/><path class="fl-dial-hand" d="M180 16.5V12.8"/>
+        <rect class="fl-win o" x="74" y="28" width="98" height="40" rx="6"/>
+        <rect class="fl-win-glow" x="74" y="28" width="98" height="40" rx="6"/>
+        <path class="fl-coil" d="M80 62q4-4 8 0t8 0 8 0 8 0 8 0 8 0 8 0 8 0 8 0 8 0 8 0"/>
+        <path class="fl-win-shine" d="M82 33L92 62M90 33L93 42"/>
+        <g class="fl-hatch"><rect class="fl-hatch-mouth" x="196" y="44" width="9" height="32" rx="2"/><g class="fl-flap"><rect class="o" x="196" y="44" width="9" height="32" rx="2"/><path d="M199 48V72M202 48V72"/></g></g>
       </g>
-      <g class="ff-bubble"><circle cx="-17" cy="-121" r="2.4"/><circle cx="-23" cy="-128" r="3.6"/><ellipse cx="-31" cy="-142" rx="11" ry="9.6"/><text class="ff-bubble-q" x="-31" y="-137.6">?</text></g>
-      <g class="ff-alarm"><text x="-24" y="-124">!</text></g>
+      <g class="fl-puff"><circle cx="214" cy="52" r="7"/><circle cx="222" cy="42" r="9"/><circle cx="212" cy="34" r="6"/></g>
+    </g>
+    <g class="fl-packer">
+      <rect class="fl-foil o" x="${PACK_X - 30}" y="82" width="60" height="7" rx="3.5"/>
+      <rect class="fl-pk-head o" x="${PACK_X - 24}" y="87" width="48" height="11" rx="3"/>
+      <text class="fl-pk-word" x="${PACK_X}" y="92.8">PACK</text>
+      <g class="fl-stamp"><rect class="fl-press o" x="${PACK_X - 17}" y="97" width="34" height="5" rx="1.5"/></g>
+    </g>
+    <g class="fl-labeller">
+      <circle class="fl-lab-roll o" cx="${LABEL_X - 20}" cy="91" r="7.5"/><circle class="fl-lab-core" cx="${LABEL_X - 20}" cy="91" r="2.8"/>
+      <rect class="fl-lab-box o" x="${LABEL_X - 13}" y="86" width="26" height="12" rx="3"/>
+      <g class="fl-arm"><path class="fl-arm-rod" d="M${LABEL_X} 97V101"/><rect class="fl-arm-pad o" x="${LABEL_X - 11}" y="99" width="22" height="5" rx="1.5"/></g>
     </g>`;
 
-  // ---------- the oven: front on, feet at (0, 0), 170 wide, 224 tall ----------
-  // The door is hinged at the bottom (y -54) and drops open. Behind its window
-  // the cavity: a warm glow, a glowing coil, and the spit (filled by
-  // paintSpit(): the hoops, spokes and empty hooks, the turkeys behind the rod
-  // and in front of it, and the names on top).
-  const OVEN = `
-    <ellipse class="fy-oven-light" cx="0" cy="2" rx="130" ry="28"/>
-    <g class="fy-oven-body"><g class="fy-oven-shake">
-      <rect class="fy-oven-foot o" x="-74" y="-14" width="18" height="14" rx="3"/><rect class="fy-oven-foot o" x="56" y="-14" width="18" height="14" rx="3"/>
-      <rect class="fy-oven-back o" x="-76" y="-224" width="152" height="30" rx="9"/>
-      <circle class="fy-oven-knob o" cx="-58" cy="-209" r="5.4"/><circle class="fy-oven-knob o" cx="-41" cy="-209" r="5.4"/>
-      <circle class="fy-oven-lamp" cx="-22" cy="-209" r="3.2"/>
-      <circle class="fy-oven-dial o" cx="30" cy="-209" r="10"/><path class="fy-oven-hand" d="M30-209V-216.5"/>
-      <g class="fy-oven-bell"><path class="fy-oven-bell-b o" d="M52-224C52-234 66-234 66-224Z"/><circle class="fy-oven-bell-k o" cx="59" cy="-236" r="2.4"/></g>
-      <rect class="fy-oven-box o" x="-85" y="-200" width="170" height="190" rx="12"/>
-      <rect class="fy-oven-top o" x="-90" y="-204" width="180" height="9" rx="4.5"/>
-      <rect class="fy-oven-cav o" x="-72" y="-188" width="144" height="134" rx="10"/>
-      <g class="fy-oven-inside" clip-path="url(#fy-clip-oven)">
-        <rect class="fy-oven-in" x="-72" y="-188" width="144" height="134"/>
-        <rect class="fy-oven-glow" x="-72" y="-188" width="144" height="134"/>
-        <path class="fy-oven-rail" d="M-64-184V-58M64-184V-58"/>
-        <g class="fy-spit-frame"><path class="fy-hoops"/><path class="fy-spokes"/><path class="fy-hooks"/></g>
-        <g class="fy-spit-back"></g>
-        <path class="fy-rod" d="M0-190V-58"/><circle class="fy-rod-cap o" cx="0" cy="-184" r="3.4"/>
-        <g class="fy-spit-front"></g>
-        <g class="fy-spit-names"></g>
-        <path class="fy-oven-coil" d="M-62-61q6-6 12 0t12 0 12 0 12 0 12 0 12 0 12 0 12 0 12 0 12 0"/>
-      </g>
-      <g class="fy-oven-door">
-        <path class="fy-oven-door-p o" fill-rule="evenodd" d="M-66-188H66Q72-188 72-182V-60Q72-54 66-54H-66Q-72-54-72-60V-182Q-72-188-66-188ZM-56-178H56Q60-178 60-174V-82Q60-78 56-78H-56Q-60-78-60-82V-174Q-60-178-56-178Z"/>
-        <rect class="fy-oven-glass" x="-60" y="-178" width="120" height="100" rx="4"/>
-        <path class="fy-oven-shine" d="M-50-172L-34-92M-38-172L-31-140"/>
-        <rect class="fy-oven-handle o" x="-52" y="-196" width="104" height="7" rx="3.5"/>
-        <g class="fy-oven-plate"><rect class="o" x="-27" y="-75" width="54" height="17" rx="5"/><text class="fy-oven-count" x="0" y="-66.2"></text></g>
-      </g>
-      <rect class="fy-oven-drawer o" x="-72" y="-48" width="144" height="30" rx="5"/><path class="fy-oven-pull" d="M-20-33H20"/>
-    </g></g>
-    <path class="fy-oven-clang" d="M-96-150L-110-160M-100-120H-116M-96-90L-110-80M96-150L110-160M100-120H116M96-90L110-80"/>
-    <g class="fy-oven-puff"><circle cx="-26" cy="-150" r="14"/><circle cx="2" cy="-166" r="18"/><circle cx="30" cy="-148" r="12"/></g>
-    <text class="fy-oven-ding" x="59" y="-246">DING!</text>`;
+  // ---------- a package: origin at the bottom of its tray, ~58 wide, 48 tall ----------
+  // Out of the oven it's just the golden roast turkey (steaming); the packer
+  // puts it on a white foam tray under clear film (.packed), the labeller
+  // adds the small name label at the bottom (.labelled). The turkey is the
+  // thing you see; the film has a shine and a few drops of moisture.
+  const PACK = `<g class="pk-in">
+    <g class="pk-steam"><path d="M-10-42q-4-6 0-12t0-12"/><path d="M2-46q-4-6 0-12t0-12"/><path d="M14-42q-4-6 0-12t0-12"/></g>
+    <path class="pk-tray-in" d="M-26-14H26L29-11H-29Z"/>
+    <g class="pk-roast">
+      <ellipse class="pk-body o" cx="0" cy="-24" rx="21" ry="12.5"/>
+      <ellipse class="pk-breast" cx="-3" cy="-28.5" rx="12" ry="5.2"/>
+      <path class="pk-leg o" d="M-9-27C-18-26-24-32-21-37.5-18-42-12-38.6-8.6-32.6Z"/><path class="pk-bone" d="M-20-37L-23.4-41.4"/><circle class="pk-frill o" cx="-24.6" cy="-43" r="2.8"/>
+      <path class="pk-leg o" d="M9-27C18-26 24-32 21-37.5 18-42 12-38.6 8.6-32.6Z"/><path class="pk-bone" d="M20-37L23.4-41.4"/><circle class="pk-frill o" cx="24.6" cy="-43" r="2.8"/>
+      <path class="pk-gloss" d="M-13-31Q-5-35.4 5-33.6M14-22Q17-25 17-29"/>
+    </g>
+    <path class="pk-tray o" d="M-29-12H29L26 0H-26Z"/><path class="pk-tray-hi" d="M-27-8H27M-26.5-4H26.5"/>
+    <path class="pk-film" d="M-29-12C-31-36-19-48 0-48 19-48 31-36 29-12Z"/>
+    <path class="pk-film-hi" d="M-21-33Q-16-42-6-44.5M22-29Q24-23 23.5-17"/>
+    <g class="pk-drops"><circle cx="-14" cy="-19" r="1.2"/><circle cx="12" cy="-41" r=".9"/><circle cx="18" cy="-22" r="1.4"/><circle cx="-7" cy="-42" r=".8"/><circle cx="6" cy="-17" r="1"/><circle cx="-23" cy="-26" r=".9"/><circle cx="16" cy="-35" r=".7"/></g>
+    <g class="pk-label"><rect class="pk-tag o" x="-25" y="-17" width="50" height="15.5" rx="2"/><rect class="pk-tag-band" x="-24.4" y="-16.4" width="48.8" height="2.4" rx="1"/><text class="pk-name" x="0" y="-8"></text></g>
+    <g class="pk-feathers"><path class="fy-fe c1 o" d="${FEATHER}" transform="translate(-14 -30) rotate(-30) scale(.45)"/><path class="fy-fe c0 o" d="${FEATHER}" transform="translate(12 -34) rotate(35) scale(.4)"/><path class="fy-fe c2 o" d="${FEATHER}" transform="translate(0 -44) scale(.4)"/></g>
+  </g>`;
 
   // ---------- the farmyard ----------
   // Drawn wide (x -400..1400): the old square scene sits in the middle
-  // (300..700), with more farm either side for wider boxes. Everything that
-  // moves on its own (clouds, birds, trees, leaves, grass, the barn door, the
-  // weathervane) is CSS; the per-item beats are inline vars, seeded so every
+  // (300..700), with more farm either side for wider boxes. The scenery is
+  // still: only the flock, the farmer and the line move. Seeded, so every
   // window draws the same farm.
   function bgMarkup() {
     const r = seeded(20251127);
     const R = (a, b) => a + r() * (b - a);
     const f = (n) => n.toFixed(1);
-    // a tree: trunk + crowns, swaying about its foot
-    const tree = (x, base, top, crowns) => `<g class="fy-tree" style="--tt:${f(R(4.5, 7.5))}s;--td:${f(-R(0, 7))}s">`
+    // a tree: trunk + crowns
+    const tree = (x, base, top, crowns) => '<g class="fy-tree">'
       + `<path class="fy-trunk" d="M${x} ${base}V${top}"/>`
       + crowns.map(([cx, cy, cr, c]) => `<circle class="fy-crown c${c} o" cx="${cx}" cy="${cy}" r="${cr}"/>`).join('') + '</g>';
     const trees = [
@@ -235,20 +244,14 @@
       tree(1090, 196, 164, [[1090, 152, 18, 2], [1104, 164, 12, 0]]),
       tree(1200, 198, 170, [[1200, 158, 16, 1]]),
     ].join('');
-    // a few leaves letting go of the crowns and drifting down
-    const leaves = [[652, 160], [780, 156], [70, 158], [318, 166], [905, 160], [674, 166], [-150, 160], [1090, 160], [140, 166], [985, 164]]
-      .map(([x, y], i) => `<g transform="translate(${x} ${y})"><path class="fy-leaf c${i % 3}" style="--lt:${f(R(8, 13))}s;--ld:${f(-R(0, 13))}s;--lx:${f(R(-34, 34))}px" d="M0-3.4C2.4-3.2 3.4-1 3.2.4 3 2.4 1 3.4 0 3.4-1.2 1.6-2.4-.6 0-3.4Z"/></g>`).join('');
-    // clouds drifting slowly across
-    const cloud = (y, s, l) => `<g transform="translate(0 ${y})"><g class="fy-cloud" style="--cl:${l}s;--cd:${f(-R(0, l))}s"><g transform="scale(${s})">`
+    // clouds, still
+    const cloud = (x, y, s) => `<g class="fy-cloud" transform="translate(${x} ${y}) scale(${s})">`
       + '<path class="fy-cloud-b" d="M-34 2C-36-6-26-11-17-8-13-18 3-21 10-12 18-17 32-12 32-3 40-2 40 6 32 6H-30C-38 6-38 2-34 2Z"/>'
-      + '<path class="fy-cloud-u" d="M-30 6H32C36 6 38 4 37 2 30 4 12 5-6 4-20 4-30 3-36 2-37 5-34 6-30 6Z"/></g></g></g>';
-    const clouds = cloud(34, 1.6, 190) + cloud(62, 1.1, 240) + cloud(98, 0.85, 160) + cloud(22, 1.25, 280) + cloud(82, 0.7, 210) + cloud(48, 1, 230);
-    // now and then a few birds cross the sky
-    const flyer = (x, y, s, d) => `<g transform="translate(${x} ${y}) scale(${s})"><path class="fy-flyer" style="--fd:${d}ms" d="M-6 0Q-3-3.6 0 0Q3-3.6 6 0"/></g>`;
-    const birds = `<g class="fy-flock a" transform="translate(0 70)"><g class="fy-flock-move">${flyer(0, 0, 1, 0)}${flyer(-15, 6, 0.85, 120)}${flyer(-27, -3, 0.75, 220)}</g></g>`
-      + `<g class="fy-flock b" transform="translate(0 44)"><g class="fy-flock-move">${flyer(0, 0, 0.8, 60)}${flyer(-12, 5, 0.7, 180)}</g></g>`;
-    // grass tufts along the fence and at the front, each blowing on its own beat
-    const tuft = (x, y, s) => `<g transform="translate(${f(x)} ${f(y)}) scale(${s.toFixed(2)})"><path class="fy-tuft" style="--gs:${f(R(2.2, 3.8))}s;--gd:${f(-R(0, 4))}s" d="M-4.5 0Q-4.5-4-3-7.5Q-3.2-3.6-1.6 0M-1.4 0Q-1-6 .6-9.5Q.6-4.4 1.6 0M1.8 0Q2.6-3.8 5-6.5Q3.8-3 4.4 0"/></g>`;
+      + '<path class="fy-cloud-u" d="M-30 6H32C36 6 38 4 37 2 30 4 12 5-6 4-20 4-30 3-36 2-37 5-34 6-30 6Z"/></g>';
+    const clouds = cloud(-250, 40, 1.2) + cloud(-40, 72, 0.8) + cloud(190, 52, 1.1) + cloud(330, 26, 1.4) + cloud(520, 64, 0.85)
+      + cloud(760, 34, 1.5) + cloud(960, 86, 0.75) + cloud(1120, 46, 1.15) + cloud(1300, 70, 0.9);
+    // grass tufts along the fence and at the front
+    const tuft = (x, y, s) => `<g transform="translate(${f(x)} ${f(y)}) scale(${s.toFixed(2)})"><path class="fy-tuft" d="M-4.5 0Q-4.5-4-3-7.5Q-3.2-3.6-1.6 0M-1.4 0Q-1-6 .6-9.5Q.6-4.4 1.6 0M1.8 0Q2.6-3.8 5-6.5Q3.8-3 4.4 0"/></g>`;
     let tufts = '';
     for (let i = 0; i < 46; i++) tufts += tuft(R(-380, 1380), R(217, 234), R(0.9, 1.5));
     for (let i = 0; i < 26; i++) tufts += tuft(R(-380, 1380), R(384, 399), R(1.5, 2.2));
@@ -268,9 +271,6 @@
         <radialGradient id="fy-g-glow" gradientUnits="userSpaceOnUse" cx="${SUN_X}" cy="170" r="520"><stop offset="0"/><stop offset=".5"/><stop offset="1"/></radialGradient>
         <linearGradient id="fy-g-dusk" x1="0" y1="0" x2="0" y2="1"><stop offset=".5"/><stop offset="1"/></linearGradient>
         <linearGradient id="fy-g-shade" x1="0" y1="0" x2="1" y2="0"><stop offset="0"/><stop offset="1"/></linearGradient>
-        <radialGradient id="fy-g-oven"><stop offset="0"/><stop offset="1"/></radialGradient>
-        <radialGradient id="fy-g-ovenin" cy=".8" r=".8"><stop offset="0"/><stop offset=".55"/><stop offset="1"/></radialGradient>
-        <clipPath id="fy-clip-oven"><rect x="-72" y="-188" width="144" height="134" rx="10"/></clipPath>
         <filter id="fy-glowf" x="-60%" y="-60%" width="220%" height="220%">
           <feMorphology in="SourceAlpha" operator="dilate" radius="1.4" result="ring"/>
           <feFlood class="fy-glow-c"/><feComposite in2="ring" operator="in" result="ringc"/>
@@ -282,7 +282,6 @@
       <circle class="fy-sunglow" cx="${SUN_X}" cy="170" r="260"/>
       <circle class="fy-sun" cx="${SUN_X}" cy="170" r="70"/>
       <g class="fy-clouds">${clouds}</g>
-      <g class="fy-birds">${birds}</g>
       <path class="fy-hill-far" d="M-400 172C-300 150-200 158-100 164S60 146 160 166 280 150 300 176C360 150 420 160 480 168S600 140 700 158C780 168 860 142 960 152S1160 168 1260 150 1400 160V216H-400Z"/>
       <path class="fy-hill-near" d="M-400 194C-260 182-120 186 20 190S260 180 330 192 520 186 640 194 880 178 1040 188 1260 184 1400 190V216H-400Z"/>
       <g class="fy-trees">${trees}</g>
@@ -306,6 +305,7 @@
           <path class="fy-vane-cock" d="M395 52C394 47 397 43.6 401 44 401.6 41.6 404.4 41.4 404.6 43.6 406.6 43 407.8 45 406.4 46.4L408.2 47.6 406 48.4C406.6 50.4 405.4 52 403.6 52Z M394.6 48C391 46.4 390.4 43 391.6 41 392.8 43.4 394 44.6 396 45Z"/>
         </g>
       </g>
+      <g class="fy-missing" hidden></g>
       <g class="fy-bales">
         <rect class="fy-bale o" x="552" y="178" width="46" height="22" rx="3"/><rect class="fy-bale o" x="600" y="182" width="42" height="20" rx="3"/>
         <rect class="fy-bale o" x="570" y="158" width="44" height="21" rx="3"/>
@@ -326,13 +326,135 @@
       <path class="fy-straw-bits" d="${straw}"/>
       <g class="fy-feed">${feed}</g>
       <g class="fy-grass">${tufts}</g>
-      <g class="fy-fall">${leaves}</g>`;
+      <g class="fy-sign"></g>`;
+  }
+
+  // ---------- the farm sign: "<display name>'s Turkey Farm" ----------
+  // A hand-painted board on two posts at the back of the yard, left of the
+  // barn. The name is the profile's display_name (never the username); with
+  // none it just says TURKEY FARM. Board units; the origin is the ground
+  // between the posts.
+  const SIGN_MAX = 176;                            // the widest board
+  let measurer = null;
+  const measure = (doc, text, font) => {
+    measurer = measurer || doc.createElement('canvas').getContext('2d');
+    measurer.font = font;
+    return measurer.measureText(text).width;
+  };
+  function signLines() {
+    const u = window.FarmerArt ? FarmerArt.user() : null;
+    const name = String((u && u.display_name) || '').trim();
+    return name ? [`${name}'s`, 'TURKEY FARM'] : ['TURKEY FARM'];
+  }
+  function renderSign(v) {
+    const lines = signLines(), key = lines.join('|');
+    if (v.signKey === key) return;
+    v.signKey = key;
+    const fam = v.doc.defaultView.getComputedStyle(v.el).getPropertyValue('--font-body').trim() || 'sans-serif';
+    const two = lines.length === 2;
+    const per = measure(v.doc, lines[0], `700 10px ${fam}`) / 10;           // width per px of type
+    const fs = Math.min(two ? 15 : 16, (SIGN_MAX - 24) / per);
+    const sub = 8.4, subW = two ? measure(v.doc, lines[1], `700 ${sub}px ${fam}`) + 0.2 * sub * (lines[1].length - 1) : 0;
+    const w = clamp(Math.max(per * fs, subW) + 24, 96, SIGN_MAX), h = two ? 36 : 26;
+    const x = w / 2, top = -18 - h, bot = -18, px = x - 13;
+    const n = (k) => k.toFixed(1);
+    const nails = [-px, px].map((cx) => `<circle class="fy-sign-nail" cx="${n(cx)}" cy="${n(top + 4.6)}" r="1.1"/><circle class="fy-sign-nail" cx="${n(cx)}" cy="${n(bot - 4.6)}" r="1.1"/>`).join('');
+    const grain = `M${n(-x + 8)} ${n(top + h * 0.22)}q${n(w * 0.18)} -2 ${n(w * 0.34)} 0M${n(x * 0.1)} ${n(top + h * 0.3)}q${n(w * 0.16)} 1.6 ${n(w * 0.3)} 0`
+      + `M${n(-x + 14)} ${n(top + h * 0.8)}q${n(w * 0.2)} 1.6 ${n(w * 0.4)} 0M${n(x * 0.3)} ${n(top + h * 0.86)}q${n(w * 0.1)} -1.4 ${n(w * 0.2)} 0`;
+    v.sign.innerHTML = `<g transform="rotate(-1.4)">`
+      + `<path class="fy-sign-post o" d="M${n(-px - 3)} 2V${n(top - 5)}H${n(-px + 3)}V2ZM${n(px - 3)} 2V${n(top - 5)}H${n(px + 3)}V2Z"/>`
+      + `<rect class="fy-sign-board o" x="${n(-x)}" y="${n(top)}" width="${n(w)}" height="${h}" rx="3"/>`
+      + (two ? `<path class="fy-sign-seam" d="M${n(-x + 1.5)} ${n(top + h / 2)}H${n(x - 1.5)}"/>` : '')
+      + `<path class="fy-sign-grain" d="${grain}"/>`
+      + `<path class="fy-sign-edge" d="M${n(-x + 2.5)} ${n(bot - 1.6)}H${n(x - 2.5)}"/>`
+      + nails
+      + (two
+        ? `<text class="fy-sign-name" y="${n(top + h * 0.34)}" style="font-size:${n(fs)}px"></text><text class="fy-sign-sub" y="${n(top + h * 0.77)}" style="font-size:${sub}px">${lines[1]}</text>`
+        : `<text class="fy-sign-name" y="${n(top + h / 2)}" style="font-size:${n(fs)}px">${lines[0]}</text>`)
+      + '</g>';
+    if (two) v.sign.querySelector('.fy-sign-name').textContent = lines[0];   // the teacher's own text: never markup
+    v.signW = w;
+    placeSign(v);
+  }
+  // at the back of the yard against the left edge of the view, smaller if
+  // it would run into the barn
+  function placeSign(v) {
+    if (!v.signW || v.x0 === undefined) return;
+    const room = 334 - (v.x0 + 14);
+    const s = clamp(room / v.signW, 0.7, 1.25);
+    const cx = v.x0 + 14 + (v.signW * s) / 2;
+    v.sign.setAttribute('transform', `translate(${cx.toFixed(1)} 221) scale(${s.toFixed(3)})`);
+  }
+  // ---------- the MISSING flyer: today's absentees, tacked to the barn ----------
+  // A weathered lost-pet poster on the barn wall left of the doors: MISSING,
+  // a little turkey, then first names (FLY_ROWS at most, then "+N more"; the
+  // whole list in its <title>, on hover). Only while someone is absent; still.
+  const FLY_ROWS = 3, FLY_STEP = 4.6;
+  const flyShort = (n) => (n.length > 8 ? n.slice(0, 7) + '…' : n);
+  function renderMissing(v) {
+    const names = v.missing || [];
+    v.fly.toggleAttribute('hidden', !names.length);
+    if (!names.length) { v.fly.innerHTML = ''; return; }
+    const doc = v.doc;
+    const over = names.length > FLY_ROWS + 1;              // "+1 more" would take a row anyway
+    const shown = over ? names.slice(0, FLY_ROWS) : names.slice(0, FLY_ROWS + 1);
+    const rows = shown.length + (over ? 1 : 0);
+    // it fits the wall panel left of the doors (x 348-378, under the eaves)
+    const w = 26, h = 23 + (rows - 1) * FLY_STEP + 3;
+    // the paper, its bottom-right corner curling up, a nail at the top
+    v.fly.innerHTML = `<g transform="translate(363 131) rotate(-4)">`
+      + `<path class="fy-fly-paper o" d="M${-w / 2} 0H${w / 2}V${h - 5}L${w / 2 - 5} ${h}H${-w / 2}Z"/>`
+      + `<path class="fy-fly-stain" d="M${-w / 2 + 2.5} ${(h * 0.7).toFixed(1)}q3 -2.4 6 .8M${w / 2 - 7} 4.6q2.4 1.6 4.8 0"/>`
+      + `<path class="fy-fly-curl o" d="M${w / 2} ${h - 5}L${w / 2 - 5} ${h}Q${w / 2 - 4.4} ${h - 4.6} ${w / 2 - 6.6} ${h - 6.2}Q${w / 2 - 2.4} ${h - 5.6} ${w / 2} ${h - 5}Z"/>`
+      + `<circle class="fy-fly-nail" cx="0" cy="1.6" r=".8"/>`
+      + `<text class="fy-fly-head" x="0" y="7.6">MISSING</text>`
+      // a little turkey, side on: tail fan, body, head with beak and wattle, legs
+      + `<g class="fy-fly-pic" transform="translate(0 13.6)">`
+      + `<path d="M2.6-1.6l2.8-3M3.2-.6l3.6-1.6M3.4.6l3.6.2"/>`
+      + `<ellipse cx=".6" cy="0" rx="3.8" ry="2.8"/>`
+      + `<path d="M-2.4-1.4Q-3.2-2.4-3-3.6"/><circle cx="-3.2" cy="-4" r="1.3"/>`
+      + `<path d="M-4.4-4.2l-1.3.4 1.2.4M-3.8-3l-.2 1.2M-.4 2.8v2M1.6 2.8v2"/></g>`
+      + `<g class="fy-fly-names"></g>`
+      + `</g><title></title>`;
+    const list = v.fly.querySelector('.fy-fly-names');
+    shown.forEach((n, i) => {
+      const t = doc.createElementNS('http://www.w3.org/2000/svg', 'text');
+      t.setAttribute('x', '0'); t.setAttribute('y', (23 + i * FLY_STEP).toFixed(1));
+      t.textContent = flyShort(n);                          // student names: never markup
+      list.appendChild(t);
+    });
+    if (over) {
+      const t = doc.createElementNS('http://www.w3.org/2000/svg', 'text');
+      t.setAttribute('x', '0'); t.setAttribute('y', (23 + FLY_ROWS * FLY_STEP).toFixed(1));
+      t.setAttribute('class', 'fy-fly-more');
+      t.textContent = `+${names.length - FLY_ROWS} more`;
+      list.appendChild(t);
+    }
+    v.fly.querySelector('title').textContent = `Missing today: ${(v.missingFull || names).join(', ')}`;
+  }
+  // wheel.js: the period's absentees today ({ first, full } each), [] = none
+  function setAbsent(doc, list) {
+    const v = views.get(doc);
+    if (!v) return;
+    const sig = (list || []).map((x) => x.full).join('|');
+    if (v.missingSig === sig) return;
+    v.missingSig = sig;
+    v.missing = (list || []).map((x) => x.first);
+    v.missingFull = (list || []).map((x) => x.full);
+    renderMissing(v);
+  }
+
+  // the profile changed (here, or in another window): the farmer's look and the sign
+  function refreshProfile(v) {
+    if (window.FarmerArt) FarmerArt.apply(v.farmer.g, FarmerArt.current());
+    renderSign(v);
   }
   // warm low sunlight over everything, and a little dusk at the front
   const LIGHT = `<rect class="fy-warm" x="-400" width="1800" height="400"/><rect class="fy-dusk" x="-400" width="1800" height="400"/>`;
   const markup = () => `
     <svg class="fy-svg" viewBox="300 0 400 400" preserveAspectRatio="xMidYMax meet" aria-hidden="true" focusable="false">
       ${bgMarkup()}
+      <g class="fy-pen"></g>
       <g class="fy-shadows"></g>
       <g class="fy-actors"></g>
       ${LIGHT}
@@ -341,7 +463,7 @@
     <button type="button" class="fy-pour" hidden>Let them out</button>
     <div class="fy-name" aria-hidden="true"><span></span></div>
     <div class="fy-burst" aria-hidden="true"></div>
-    <div class="fy-burst fy-burst-oven" aria-hidden="true"></div>`;
+    <div class="fy-burst fy-burst-shelf" aria-hidden="true"></div>`;
 
   const LEAF = 'M50 4 57 22 66 16 64 36 80 26 76 38 92 40 80 52 86 58 64 62 66 72 52 66 52 92 48 92 48 66 34 72 36 62 14 58 20 52 8 40 24 38 20 26 36 36 34 16 43 22Z';
   const LEAF2 = 'M50 6C58 8 60 16 56 20 64 18 70 24 64 30 72 30 76 38 68 42 76 44 78 54 68 56 74 62 70 70 60 66 60 74 56 78 52 78L52 94 48 94 48 78C44 78 40 74 40 66 30 70 26 62 32 56 22 54 24 44 32 42 24 38 28 30 36 30 30 24 36 18 44 20 40 16 42 8 50 6Z';
@@ -381,54 +503,78 @@
     el.innerHTML = markup();
     wrap.appendChild(el);
     const fg = svgEl(doc, 'g', 'fy-farmer');
-    fg.innerHTML = FARMER;
     fg.dataset.pose = 'think';
+    if (window.FarmerArt) FarmerArt.apply(fg, FarmerArt.current());
     const fsh = shade(doc, 118, 15, 18);
-    const og = svgEl(doc, 'g', 'fy-oven');
-    og.innerHTML = OVEN;
-    const osh = shade(doc, 200, 36, 74);
-    const q = (c) => og.querySelector(c);
+    // the column: the wall and the belt, the shelf, the package, the machines
+    const col = svgEl(doc, 'g', 'fy-col');
+    const back = svgEl(doc, 'g', 'fy-line-b');
+    back.innerHTML = COL_BACK;
+    const shelf = svgEl(doc, 'g', 'fy-shelf');
+    shelf.innerHTML = '<g class="fs-frame"></g><path class="fs-boards o"/><path class="fs-empty"/><g class="fs-packs"></g>'
+      + '<g class="fs-count"><rect class="o" rx="3"/><text></text></g>'
+      + '<g class="fs-sold"><g class="fs-sold-in"><path class="fs-string"/><rect class="fs-sold-b o" rx="6"/><text class="fs-sold-t">SOLD OUT</text></g></g>';
+    const items = svgEl(doc, 'g', 'fy-line-items');
+    const front = svgEl(doc, 'g', 'fy-line-f');
+    front.innerHTML = COL_FRONT;
+    [back, shelf, items, front].forEach((g) => col.appendChild(g));
+    // the pen's front fence stands among the actors (it's in front of the flock)
+    const penFront = svgEl(doc, 'g', 'fy-pen-f');
+    const q = (g, c) => g.querySelector(c);
     const v = {
       doc, el,
       svg: el.querySelector('.fy-svg'),
       actors: el.querySelector('.fy-actors'),
       shadows: el.querySelector('.fy-shadows'),
+      penBack: el.querySelector('.fy-pen'),
+      penFront,
+      fly: el.querySelector('.fy-missing'),
+      colG: col,
       left: el.querySelector('.fy-left'),
       pourBtn: el.querySelector('.fy-pour'),
       name: el.querySelector('.fy-name'),
       burst: el.querySelector('.fy-burst'),
-      burstOven: el.querySelector('.fy-burst-oven'),
+      burstShelf: el.querySelector('.fy-burst-shelf'),
       birds: new Map(),                          // id -> turkey
       leaving: [],                               // turkeys fading out
-      farmer: { g: fg, sh: fsh, x: 672, y: 340, face: 1, pose: 'think', depth: 340 },
+      farmer: { g: fg, sh: fsh, x: 520, y: 330, face: 1, pose: 'think', depth: 330 },
       order: '',
       S: 1,
       // the view (layout() keeps these in step with the box)
       W: 400, x0: 300, k: 1, offX: 0, offY: 0, bw: 0, bh: 0,
-      yard: null, home: null,
+      yard: null, home: null, col: { x: 0, y: 0, s: 1 },
       active: null, plan: null, held: null, done: new Set(), pickS: null,
-      oven: { g: og, sh: osh, id: '#oven', x: 0, y: OV_Y, s: 1, depth: OV_Y, cls: null, door: null, count: q('.fy-oven-count') },
-      doorUntil: 0, puffUntil: 0, partyUntil: 0,
-      // the spit: rings of hooks; items = the turkeys on it (id -> its drawing)
-      spit: {
-        back: q('.fy-spit-back'), front: q('.fy-spit-front'), names: q('.fy-spit-names'),
-        hoops: q('.fy-hoops'), spokes: q('.fy-spokes'), hooks: q('.fy-hooks'),
-        items: new Map(), geom: null, phi: 0, lock: null, filled: 0, order: '',
+      // the line: its layers, the package riding it, how far the belt has run
+      line: { back, front, items, item: null, cls: null, slats: q(back, '.fl-slats'), spokes: q(back, '.fl-spokes'), pos: 0, drawn: null, idle: null, lastD: null },
+      // the grocery shelf: one slot per student in the round (id -> its package)
+      shelf: {
+        g: shelf, frame: q(shelf, '.fs-frame'), boards: q(shelf, '.fs-boards'), empty: q(shelf, '.fs-empty'), packs: q(shelf, '.fs-packs'),
+        count: q(shelf, '.fs-count rect'), countT: q(shelf, '.fs-count text'), sold: q(shelf, '.fs-sold'),
+        items: new Map(), geom: null, filled: 0, cls: null,
       },
+      fixed: [{ id: '#pen', g: penFront, depth: PEN.front }],
+      partyUntil: 0,
       picked: null, total: 0, full: false, wasFull: undefined, off: false, pouring: false,
-      incoming: new Map(),                       // id -> where it tumbles out of the oven (not in the yard yet)
+      incoming: new Map(),                       // id -> where it hops out of its package (not in the pen yet)
       sound: false, cluckAcc: 0, stepAt: 0,
       last: 0, timers: [],
     };
+    v.sign = el.querySelector('.fy-sign');
+    v.svg.insertBefore(col, v.actors);
     v.actors.appendChild(fg);
+    v.actors.appendChild(penFront);
     v.shadows.appendChild(fsh);
-    v.actors.appendChild(og);
-    v.shadows.appendChild(osh);
     views.set(doc, v);
+    shelfFrame(v);
     setView(v, 400, 300);
     v.pourBtn.addEventListener('click', (e) => { e.stopPropagation(); pour(v); });
     v.pourBtn.addEventListener('keydown', (e) => e.stopPropagation());
     const win = doc.defaultView;
+    renderSign(v);
+    if (doc.fonts) doc.fonts.ready.then(() => { v.signKey = null; renderSign(v); });
+    doc.addEventListener('teacherpal:profile', () => refreshProfile(v));
+    doc.addEventListener('teacherpal:farmer', () => refreshProfile(v));
+    win.addEventListener('storage', (e) => { if (e.key === 'teacherpal.session') refreshProfile(v); });
     if (win.ResizeObserver) new win.ResizeObserver(() => layout(v)).observe(el);
     layout(v);
     const frame = (t) => { step(v, t); win.requestAnimationFrame(frame); };
@@ -447,7 +593,7 @@
     v.offX = (bw - W * v.k) / 2;
     v.offY = bh - 400 * v.k;
     v.el.style.setProperty('--u', `${v.k.toFixed(4)}px`);
-    if (W === v.W && v.yard) { if (v.nameBird) placeName(v, v.nameBird); placeOvenBurst(v); return; }
+    if (W === v.W && v.yard) { if (v.nameBird) placeName(v); placeShelfBurst(v); return; }
     setView(v, W, MID - W / 2);
     assignHomes(v);
     const f = v.farmer;
@@ -455,21 +601,43 @@
       if (v.held) f.x = clamp(f.x, v.x0 + 40, v.x0 + W - 30);
       else { f.x = v.home.x; f.y = v.home.y; f.face = 1; }
     }
-    if (v.nameBird) placeName(v, v.nameBird);
+    if (v.nameBird) placeName(v);
   }
   function setView(v, W, x0) {
     v.W = W; v.x0 = x0;
     v.svg.setAttribute('viewBox', `${x0.toFixed(1)} 0 ${W} 400`);
-    // the oven stands at the right edge, a little smaller in a narrow view;
-    // the farmer's spot is beside it and the yard is everything to the left
-    const o = v.oven;
-    o.s = clamp(W / 680, 0.6, 1.3);
-    o.x = x0 + W - 14 - OV.hw * o.s;
-    o.g.setAttribute('transform', `translate(${o.x.toFixed(1)} ${o.y}) scale(${o.s.toFixed(3)})`);
-    placeShade(o.sh, o.x, o.y, o.s, '1');
-    v.home = { x: o.x - OV.hw * o.s - 30, y: 340 };   // where the farmer stands and thinks
-    v.yard = { x0: x0 + 24, x1: v.home.x - 40, y0: 238, y1: 362 };
-    placeOvenBurst(v);
+    // the column: a little under a third of the width (more in a narrow
+    // window), standing on the bottom of the box
+    const cw = clamp(W * (W >= 700 ? 0.31 : 0.42), 150, COL_W * 0.95), cs = cw / COL_W;   // ≤ 0.95: the hopper's rim stays in the box
+    const c = v.col = { x: x0 + W - 6 - cw, y: 400 - 400 * cs, s: cs };
+    v.colG.setAttribute('transform', `translate(${c.x.toFixed(1)} ${c.y.toFixed(1)}) scale(${cs.toFixed(4)})`);
+    // the pen: the rest of the width, the farmer's spot by its front right corner
+    const Y = v.yard = { l: x0 + 16, r: c.x - 14, ...PEN };
+    v.home = { x: penR(Y, 332) - 26, y: 332 };
+    const fence = penMarkup(Y);
+    v.penBack.innerHTML = fence.back;
+    v.penFront.innerHTML = fence.front;
+    placeShelfBurst(v);
+    placeSign(v);
+  }
+  // The pen's fence: posts and two rails along each side, the back and sides
+  // behind the flock, the front among the actors so it stands in front of it.
+  function penMarkup(Y) {
+    const f = (n) => n.toFixed(1);
+    const run = (x0, y0, x1, y1, step) => {
+      const n = Math.max(1, Math.round(Math.hypot(x1 - x0, (y1 - y0) * 1.6) / step));
+      const pts = [];
+      for (let i = 0; i <= n; i++) { const u = i / n, y = lerp(y0, y1, u); pts.push({ x: lerp(x0, x1, u), y, h: 25 * persp(y), w: 4 * persp(y) }); }
+      const rail = (k) => `M${pts.map((p) => `${f(p.x)} ${f(p.y - p.h * k)}`).join('L')}`;
+      return pts.map((p) => `<rect class="fy-pen-post o" x="${f(p.x - p.w / 2)}" y="${f(p.y - p.h - 1.5)}" width="${f(p.w)}" height="${f(p.h + 1.5)}" rx="1"/>`).join('')
+        + `<path class="fy-pen-rail" d="${rail(0.38)}${rail(0.78)}"/>`;
+    };
+    const bl = penL(Y, Y.back), br = penR(Y, Y.back), fl = penL(Y, Y.front), fr = penR(Y, Y.front);
+    return {
+      back: `<path class="fy-pen-floor" d="M${f(bl)} ${Y.back}H${f(br)}L${f(fr)} ${Y.front}H${f(fl)}Z"/>`
+        + run(bl, Y.back, br, Y.back, 42) + run(bl, Y.back, fl, Y.front, 34) + run(br, Y.back, fr, Y.front, 34),
+      front: run(fl, Y.front, fr, Y.front, 46),
+    };
   }
   // scene units -> px in the box
   const toPx = (v, x, y) => ({ x: v.offX + (x - v.x0) * v.k, y: v.offY + y * v.k });
@@ -504,7 +672,7 @@
       tx: 0, ty: 0, nextWander: 0,                // where it is wandering to
       nextTurn: performance.now() + 1500 + (h2 % 6000),   // when it next turns round to look the other way
       ox: 0, oy: 0,                               // shuffled away from the farmer
-      phase: '', hook: null,                      // once picked: hoisted, tossed, then on the spit (its hook)
+      phase: '',                                  // once picked: hoisted, tossed, then on the line and the shelf
       x: 0, y: 0, z: 0, sc: 1, face: (h & 1) ? 1 : -1,
       mode: 'yard', placed: false, fly: null, cls: '',
     };
@@ -513,7 +681,7 @@
   }
 
   // Draw the current list: add new turkeys, drop missing ones (the held one
-  // is in the oven; anyone taken off just fades), keep the rest.
+  // is packed on the shelf; anyone taken off just fades), keep the rest.
   function sync(doc, list) {
     const v = views.get(doc) || (build(doc) && views.get(doc));
     if (!v) return;
@@ -523,7 +691,7 @@
       if (v.active && v.active.winnerId === id) continue;
       v.birds.delete(id);
       if (b === v.held) { v.held = null; hideName(v); if (!v.active) setPose(v, 'think'); }
-      if (b.mode === 'held') drop(v, b);         // it's in the oven: on the spit (v.picked) or nowhere
+      if (b.mode === 'held') drop(v, b);         // it's packed: on the shelf (v.picked) or nowhere
       else { b.mode = 'gone'; b.g.classList.add('leaving'); v.leaving.push(b); setTimeout(() => drop(v, b), 420); }
     }
     for (const item of list) {
@@ -540,7 +708,7 @@
     }
     v.built = true;
     assignHomes(v);
-    renderSpit(v);
+    renderShelf(v);
   }
   function drop(v, b) {
     b.g.remove(); b.sh.remove();
@@ -548,22 +716,34 @@
   }
   const isPopout = (v) => v.doc.body.classList.contains('wheel-popout');
 
-  // Home spots: staggered rows across the yard, so the flock reads as a
-  // crowd at any class size and any width. The rows follow the yard's shape
-  // (a wide yard gets long rows), and the turkeys are as big as a row's
-  // spacing allows.
+  // Home spots: staggered rows across the pen, so the flock reads as a
+  // crowd at any class size and any width. Each row gets turkeys in
+  // proportion to its width (the pen narrows a little toward the back), and
+  // they are as big as the tightest row's spacing allows.
   function makeHomes(Y, n) {
     if (!n) return { pts: [], cw: 60 };
-    const W = Y.x1 - Y.x0, H = Y.y1 - Y.y0, pts = [];
-    const rows = clamp(Math.round(Math.sqrt((n * H * 1.8) / W)), 1, 6);
-    const per = Math.ceil(n / rows);
-    const cw = W / per;
+    const H = Y.y1 - Y.y0;
+    const span = (y) => [penL(Y, y) + 14, penR(Y, y) - 12];
+    const m = span((Y.y0 + Y.y1) / 2);
+    const rows = clamp(Math.round(Math.sqrt((n * H * 1.8) / Math.max(40, m[1] - m[0]))), 1, 6);
+    const ys = [], ws = [];
     for (let r = 0; r < rows; r++) {
-      const inRow = r === rows - 1 ? n - per * (rows - 1) : per;
-      const y = rows === 1 ? Y.y0 + H * 0.6 : Y.y0 + (r / (rows - 1)) * H;
-      const x0 = Y.x0 + (W - cw * inRow) / 2 + (r % 2 ? cw * 0.3 : 0) - (r % 2 ? 0 : cw * 0.1);
-      for (let i = 0; i < inRow; i++) pts.push({ x: clamp(x0 + cw * (i + 0.5), Y.x0, Y.x1), y });
+      const y = rows === 1 ? Y.y0 + H * 0.55 : Y.y0 + (r / (rows - 1)) * H;
+      const [a, b] = span(y);
+      ys.push(y); ws.push(Math.max(20, b - a));
     }
+    // turkeys per row, in proportion to its width (largest remainder)
+    const tot = ws.reduce((a, b) => a + b, 0);
+    const raw = ws.map((w) => (n * w) / tot), cnt = raw.map(Math.floor);
+    let spare = n - cnt.reduce((a, b) => a + b, 0);
+    raw.map((x, i) => [x - cnt[i], i]).sort((a, b) => b[0] - a[0]).forEach(([, i]) => { if (spare > 0) { cnt[i]++; spare--; } });
+    const cw = Math.min(...ws.map((w, i) => (cnt[i] ? w / cnt[i] : Infinity)));
+    const pts = [];
+    ys.forEach((y, r) => {
+      const a = span(y)[0], w = ws[r], c = w / Math.max(1, cnt[r]);
+      const x0 = a + (r % 2 ? c * 0.3 : -c * 0.1);
+      for (let i = 0; i < cnt[r]; i++) pts.push({ x: clamp(x0 + c * (i + 0.5), a, a + w), y });
+    });
     return { pts, cw };
   }
   function assignHomes(v) {
@@ -572,10 +752,10 @@
     const { pts: homes, cw } = makeHomes(v.yard, n);
     v.S = clamp(cw / 44, 0.75, 1.3);
     list.forEach((b, i) => {
-      const hm = homes[i] || { x: (v.yard.x0 + v.yard.x1) / 2, y: 300 };
+      const hm = homes[i] || { x: (v.yard.l + v.yard.r) / 2, y: 300 };
       const jx = ((hash(b.id + 'x') % 1000) / 1000 - 0.5) * 10, jy = ((hash(b.id + 'y') % 1000) / 1000 - 0.5) * 6;
       b.hx = hm.x + jx; b.hy = hm.y + jy;
-      if (b.from) {                              // tumbled out of the oven: back to its spot
+      if (b.from) {                              // hopped out of its package: back to its spot
         b.x = b.from.x; b.y = b.from.y; b.z = b.from.z; b.sc = b.from.draw / (v.S * b.k * persp(b.from.y));
         startFly(v, b, { x: b.hx, y: b.hy, z: 0, sc: 1 }, { delay: b.from.delay, dur: 760, lift: 70, tumble: true });
         b.px = b.hx; b.py = b.hy; b.tx = b.hx; b.ty = b.hy;
@@ -600,14 +780,13 @@
     const el = s ? Date.now() - s.startedAt : 0;
     const f = v.farmer;
     if (s && v.plan) farmerStep(v, el);
-    spitStep(v, dt);
-    ovenTick(v, t);
     let near = 0;
     for (const b of v.birds.values()) {
       if (b.mode === 'yard') near += yardStep(v, b, el, dt, t);
       else if (b.mode === 'fly') flyStep(v, b, t);
       else if (b.mode === 'held') heldStep(v, b, el);
     }
+    lineTick(v, t);
     // clucking rises as he passes: more nervous birds, faster and higher
     if (s && v.sound && el < T.point) {
       v.cluckAcc += dt * (0.8 + near * 2.6);
@@ -615,7 +794,6 @@
     }
     if (s && v.sound && f.pose === 'walk' && t - v.stepAt > 190) { v.stepAt = t; footstep(); }
     paint(v);
-    paintSpit(v, t);
   }
 
   // A turkey in the yard: wander about its spot (pecking and flapping are
@@ -682,7 +860,10 @@
     }
     const k = Math.min(1, dt * (scared ? 6 : 2.2));
     b.ox += (wx - b.ox) * k; b.oy += (wy - b.oy) * k;
-    b.x = clamp(b.px + b.ox, v.x0 + 6, v.oven.x - OV.hw * v.oven.s - 6); b.y = clamp(b.py + b.oy, v.yard.y0 - 12, 392);
+    // penned in: never through the fence
+    const Y = v.yard;
+    b.y = clamp(b.py + b.oy, Y.y0 - 10, Y.y1 + 8);
+    b.x = clamp(b.px + b.ox, penL(Y, b.y) + 8, penR(Y, b.y) - 6);
     b.z = 0; b.sc += (1 - b.sc) * Math.min(1, dt * 6);
     setCls(b, cls);
     return scared;
@@ -696,7 +877,7 @@
   function flyStep(v, b, now) {
     const f = b.fly;
     const u = clamp((now - f.t0) / f.dur, 0, 1);
-    if (u <= 0) { setCls(b, 'waiting'); return; }   // still in the oven, its turn to come out
+    if (u <= 0) { setCls(b, 'waiting'); return; }   // still in its package, its turn to come out
     const e = easeInOut(u);
     b.x = f.from.x + (f.to.x - f.from.x) * e;
     b.y = f.from.y + (f.to.y - f.from.y) * e;
@@ -713,10 +894,11 @@
     b.phase = ph;
   }
   // The picked turkey after the point: hoisted over his head, then lobbed in
-  // an arc across the yard and in at the oven door, landing on its hook
-  // (b.hook, from aim()). From then on the spit draws it (phase 'baked'
-  // hides this one).
+  // an arc over the fence and into the hopper on top of the line. From then
+  // on the line's package is it (phase 'away' hides this one), and then the
+  // shelf ('shelved').
   function heldStep(v, b, el) {
+    if (b.phase === 'away' || b.phase === 'shelved') return;
     const f = v.farmer, fs = persp(f.y);
     const E = v.active ? el : 1e9;
     const over = { x: f.x, y: f.y + 1, z: LIFT_Z * fs, sc: HELD_GROW };
@@ -728,30 +910,20 @@
       setPhase(b, 'held caught');
       return;
     }
-    const m = hookPoint(v, b);
-    if (E < T.land) {                            // wheee: across the yard and in at the door
-      const u = (E - T.toss) / (T.land - T.toss);
-      b.x = lerp(over.x, m.x, u); b.y = lerp(over.y, m.y, u);
-      b.z = lerp(over.z, m.z, u) + (46 + 0.2 * Math.abs(m.x - over.x)) * fs * Math.sin(Math.PI * u);
-      b.sc = lerp(over.sc, m.sc, u);
-      b.face = m.x < over.x ? 1 : -1;
-      setPhase(b, 'tossed');
-    } else if (b.phase !== 'baked') {            // on the hook: the spit has it now
-      b.x = m.x; b.y = m.y; b.z = m.z; b.sc = m.sc;
-      setPhase(b, 'baked');
-      renderSpit(v);
-      const it = v.spit.items.get(b.id);
-      if (it) it.wonUntil = performance.now() + 2600;
-    }
+    const m = hopperPoint(v, b);
+    const u = clamp((E - T.toss) / (T.drop - T.toss), 0, 1);   // wheee: up, over the fence and in
+    b.x = lerp(over.x, m.x, u); b.y = lerp(over.y, m.y, u);
+    // up early, then across into the mouth: the hopper is near the top of the box, so the arc stays low
+    b.z = lerp(over.z, m.z, 1 - (1 - u) ** 2) + 16 * fs * Math.sin(Math.PI * u);
+    b.sc = lerp(over.sc, m.sc, Math.sqrt(u));   // shrinks early, so it stays on screen as it nears the top
+    b.face = m.x < over.x ? 1 : -1;
+    setPhase(b, 'tossed');
   }
-  // where the lobbed turkey ends up: its hook at the front of its ring, as a
-  // yard turkey would be drawn there (feet, height off the ground, scale)
-  function hookPoint(v, b) {
-    const o = v.oven, G = v.spit.geom || spitGeom(8);
-    const q = slotOf(G, b.hook ?? 0), sc = G.sc;
-    const feetY = G.ys[q.tier] + RRY + 28 * sc;
-    const y = o.y + 2;
-    return { x: o.x - 3 * sc * o.s, y, z: y - (o.y + feetY * o.s), sc: (sc * o.s) / (v.S * b.k * persp(y)) };
+  // the hopper's mouth, as a turkey dropping into it would be drawn there
+  // (feet, height off the ground, scale)
+  function hopperPoint(v, b) {
+    const c = v.col, y = 392;
+    return { x: c.x + HOPPER.x * c.s, y, z: y - (c.y + (HOPPER.y + 4) * c.s), sc: (0.42 * c.s) / (v.S * b.k * persp(y)) };
   }
 
   // ---------- the farmer's walk ----------
@@ -776,17 +948,13 @@
       f.x = w.at.x; f.y = w.at.y;
       if (el < T.grab) { f.face = w.bird.x < f.x ? 1 : -1; pose = 'point'; }
       else {
-        f.face = v.oven.x < f.x ? 1 : -1;        // turned to the oven
-        pose = el < T.toss ? 'lift' : el < T.land + 240 ? 'toss' : el < T.reveal ? 'think' : 'cheer';
+        f.face = v.col.x + HOPPER.x * v.col.s < f.x ? 1 : -1;   // turned to the hopper
+        pose = el < T.toss ? 'lift' : el < T.drop + 240 ? 'toss' : 'cheer';
       }
     }
     once(v, 'freeze', el >= T.freeze, freeze);
     once(v, 'grab', el >= T.grab, lift);
-    once(v, 'door', el >= T.doorOpen, () => { v.puffUntil = performance.now() + 700; if (v.sound) creak(); });
-    once(v, 'toss', el >= T.toss, () => { aim(v); if (v.sound) whoosh(); });
-    once(v, 'land', el >= T.land, () => v.sound && clang());
-    once(v, 'ding', el >= T.ding, () => v.sound && ding());
-    once(v, 'reveal', el >= T.reveal, reveal);
+    once(v, 'toss', el >= T.toss, () => v.sound && whoosh());
     setPose(v, pose);
   }
   const once = (v, key, due, fn) => { if (due && !v.done.has(key)) { v.done.add(key); fn(v); } };
@@ -797,178 +965,259 @@
     f.g.dataset.pose = pose;
   }
 
-  // ---------- the oven ----------
-  // It stays put. The door drops open for the throw (doorOpen..land), and
-  // whenever someone comes out (v.doorUntil); clang, ding, a puff of steam,
-  // the whirl of the spit, and the party when the last hook fills.
-  function ovenTick(v, now) {
-    const o = v.oven;
-    const el = v.pickS ? Date.now() - v.pickS.startedAt : 1e9;
-    const door = (el >= T.doorOpen && el < T.land) || now < v.doorUntil ? 'open' : 'shut';
+  // ---------- the production line ----------
+  // Its clock is the pick's (T, from v.pickS, so it carries on after the
+  // pick is over): how far down the belt the package is (routeD(), then
+  // beltAt() for the spot), the machines' moments (classes on the front
+  // layer), the package's look (classes on it). The belt creeps on in little
+  // steps between picks, and during one it moves exactly with the package.
+  function routeD(el) {
+    if (el <= ROUTE[0][0]) return ROUTE[0][1];
+    for (let i = 0; i < ROUTE.length - 1; i++) {
+      const [t0, d0] = ROUTE[i], [t1, d1] = ROUTE[i + 1];
+      if (el < t1) return d0 === d1 ? d0 : lerp(d0, d1, easeInOut((el - t0) / (t1 - t0)));
+    }
+    return ROUTE[ROUTE.length - 1][1];
+  }
+  // a package's spot (the bottom of its tray) at distance d along the belt,
+  // tilting a little as it goes round a pulley
+  function beltAt(d) {
+    const B = BELT;
+    let x, y, rot = 0;
+    if (d <= SEG.a) { x = B.ax + d; y = B.ay; }
+    else if (d <= SEG.r) {
+      const u = (d - SEG.a) / (SEG.r - SEG.a), a = Math.PI * (u - 0.5);
+      x = B.rx + B.rr * Math.cos(a); y = (B.ay + B.by) / 2 + B.rr * Math.sin(a); rot = 16 * Math.sin(Math.PI * u);
+    } else if (d <= SEG.b) { x = B.rx - (d - SEG.r); y = B.by; }
+    else if (d <= SEG.l) {
+      const u = (d - SEG.b) / (SEG.l - SEG.b), a = -Math.PI * (0.5 + u);
+      x = B.lx + B.lr * Math.cos(a); y = (B.by + B.cy) / 2 + B.lr * Math.sin(a); rot = -16 * Math.sin(Math.PI * u);
+    } else { x = B.lx + (d - SEG.l); y = B.cy; }
+    return { x, y: y - 3.5, rot };
+  }
+  const within = (el, a, b) => el >= a && el < b;
+  function lineTick(v, now, elAt) {
+    const el = elAt ?? (v.pickS ? Date.now() - v.pickS.startedAt : 1e9);
+    const ln = v.line;
     let cls = '';
-    if (el >= T.toss && el < T.land + 200) cls += ' whirl';
-    if (el >= T.land && el < T.land + 340) cls += ' clang';
-    if (el >= T.ding && el < T.ding + 420) cls += ' ding';
-    if (now < v.puffUntil) cls += ' puff';
-    if (now < v.partyUntil) cls += ' party';
-    if (v.full) cls += ' full';
-    if (v.picked && !isPopout(v)) cls += ' counting';
-    if (o.cls !== cls) { o.cls = cls; o.g.setAttribute('class', `fy-oven${cls}`); }
-    if (o.door !== door) { o.door = door; o.g.dataset.door = door; }
+    if (within(el, T.drop - 40, T.drop + 420)) cls += ' gulp';
+    if (within(el, T.drop, T.outOven + 80)) cls += ' cooking';
+    if (within(el, T.outOven - 90, T.outOven + 220)) cls += ' out-open';
+    if (within(el, T.outOven, T.outOven + 800)) cls += ' puff';
+    if (within(el, T.stamp, T.stamp + 320)) cls += ' stamp';
+    if (within(el, T.slap - 60, T.slap + 260)) cls += ' slap';
+    if (ln.cls !== cls) { ln.cls = cls; ln.front.setAttribute('class', `fy-line-f${cls}`); }
+    // the moments, once each
+    if (v.active) {
+      once(v, 'drop', el >= T.drop, intoHopper);
+      once(v, 'reveal', el >= T.drop, reveal);
+      if (v.sound) {
+        once(v, 'out', el >= T.outOven, () => { ding(); hiss(); });
+        once(v, 'go', el >= T.outOven + 40, clack);
+        once(v, 'stamp', el >= T.packed - 10, thump);
+        once(v, 'go2', el >= T.leavePack, clack);
+        once(v, 'slap', el >= T.slap, click);
+        once(v, 'go3', el >= T.leaveLabel, clack);
+      }
+    }
+    const it = ln.item;
+    if (it && el >= T.shelf) shelve(v);
+    else if (it) {
+      let x, y, sc = PK_B, rot = 0;
+      if (el < T.end) {
+        const p = beltAt(routeD(el));
+        x = p.x; y = p.y; rot = p.rot;
+      } else {                                   // off the end of the belt and down onto its slot on the shelf
+        if (!it.to) it.to = shelfTarget(v, it.id);
+        const u = clamp((el - T.end) / (T.shelf - T.end), 0, 1), e = easeInOut(u), p = beltAt(ST.end);
+        x = lerp(p.x, it.to.x, e);
+        y = lerp(p.y, it.to.y, e) - 22 * Math.sin(Math.PI * u);
+        sc = lerp(PK_B, it.to.s, e);
+        rot = Math.sin(Math.PI * 2 * u) * 6;
+      }
+      const k = `${x.toFixed(1)} ${y.toFixed(1)}) rotate(${rot.toFixed(1)}) scale(${sc.toFixed(3)}`;
+      if (k !== it.k) { it.k = k; it.g.setAttribute('transform', `translate(${k})`); }
+      let c = '';
+      if (el < T.outOven) c += ' inside';
+      if (within(el, T.outOven, T.outOven + 320)) c += ' emerge';
+      if (within(el, T.outOven, T.outOven + 1600)) c += ' steaming';
+      if (el >= T.packed) c += ' packed';
+      if (within(el, T.packed, T.packed + 220)) c += ' squash';
+      if (el >= T.slap) c += ' labelled';
+      if (within(el, T.slap, T.slap + 300)) c += ' slapped';
+      if (c !== it.cls) { it.cls = c; it.g.setAttribute('class', `fy-pack${c}`); }
+    }
+    beltStep(v, now, el);
+    const sh = v.shelf;
+    const scls = `${v.full ? ' full' : ''}${now < v.partyUntil ? ' party' : ''}${v.picked && !isPopout(v) ? ' counting' : ''}`;
+    if (sh.cls !== scls) { sh.cls = scls; sh.g.setAttribute('class', `fy-shelf${scls}`); }
+  }
+  // the belt: 10 units every 0.9s between picks (a gentle mechanical
+  // rhythm), exactly the package's travel during one; the pulleys turn with it
+  function beltStep(v, now, el) {
+    const ln = v.line;
+    const ph = now / 900;
+    const idle = Math.floor(ph) * 10 + 10 * easeInOut(Math.min(1, (ph % 1) / 0.6));
+    if (ln.item && el >= T.outOven && el < T.end) {
+      const d = routeD(el);
+      if (ln.lastD != null) ln.pos += d - ln.lastD;
+      ln.lastD = d;
+    } else {
+      ln.lastD = null;
+      if (ln.idle != null && !reduced(v.doc)) ln.pos += idle - ln.idle;
+    }
+    ln.idle = idle;
+    if (ln.drawn !== null && Math.abs(ln.pos - ln.drawn) < 0.1) return;
+    ln.drawn = ln.pos;
+    ln.slats.style.strokeDashoffset = (-ln.pos % 10).toFixed(2);
+    const f = (n) => n.toFixed(2);
+    const spokes = (cx, cy, r, a) => [0, 1, 2].map((i) => {
+      const t = a + (i * Math.PI) / 3, dx = Math.cos(t) * r, dy = Math.sin(t) * r;
+      return `M${f(cx - dx)} ${f(cy - dy)}L${f(cx + dx)} ${f(cy + dy)}`;
+    }).join('');
+    const B = BELT;
+    ln.spokes.setAttribute('d', spokes(B.rx, (B.ay + B.by) / 2, B.rr - 8, ln.pos / B.rr) + spokes(B.lx, (B.by + B.cy) / 2, B.lr - 8, -ln.pos / B.lr));
+  }
+  // the turkey drops into the hopper: from here the line's package is it
+  // (cooking out of sight until it comes out of the oven)
+  function intoHopper(v) {
+    const b = v.held;
+    if (!b) return;
+    const ln = v.line;
+    if (ln.item) ln.item.g.remove();
+    const g = makePack(v, b.label, 'inside');
+    ln.items.appendChild(g);
+    ln.item = { g, id: b.id, cls: null, k: '', to: null };
+    setPhase(b, 'away');
+    if (v.sound) { thud(); rumble(); }
+  }
+  // ...and it lands on the shelf, with a bounce
+  function shelve(v) {
+    const ln = v.line, it = ln.item, b = v.held;
+    ln.item = null;
+    it.g.remove();
+    if (!b || b.id !== it.id) return;
+    setPhase(b, 'shelved');
+    renderShelf(v);
+    const p = v.shelf.items.get(b.id);
+    if (p) { p.g.classList.add('landed'); setTimeout(() => p.g.classList.remove('landed'), 700); }
+    if (v.sound && v.active) plunk();
   }
 
-  // ---------- the spit ----------
-  // n hooks in rings (bottom ring first, so the oven fills from the bottom
-  // up); each ring is RX × RRY seen from the front, its turkeys hanging from
-  // hooks on spokes off the rod. A ring's hooks are spaced evenly, the rings
-  // staggered by half a step. sc is how big a turkey on the spit is drawn.
-  function spitGeom(n) {
-    const tiers = n <= 10 ? 1 : n <= 22 ? 2 : 3;
-    const counts = [];
-    for (let i = 0; i < tiers; i++) counts.push(Math.floor(n / tiers) + (i < n % tiers ? 1 : 0));
-    const most = Math.max(...counts, 1);
-    const tierH = 94 / tiers;
-    const sc = clamp(Math.min(tierH / 38, (RX * Math.PI * 2) / most / 24), 0.42, 1.2);
-    // stack the rings in the middle of the window (a turkey reaches about
-    // 13·sc above its hook at the back of a ring and 30·sc below at the front)
-    const span = (tiers - 1) * tierH + 2 * RRY + 43 * sc;
-    const bottom = (OV.win.y0 + OV.win.y1) / 2 + span / 2 - RRY - 30 * sc;
-    const ys = counts.map((_, i) => bottom - i * tierH);
-    return { n, tiers, counts, sc, ys };
+  // ---------- the grocery shelf ----------
+  // One slot per student in the round (No repeats on), filled from the top
+  // shelf down, left to right, the empty ones dashed, so the round's
+  // progress reads at a glance; six slots and only the current winner with
+  // No repeats off. Rows and columns give the biggest package that fits
+  // (shelfGeom()). Column units, like the rest of the line.
+  function shelfFrame(v) {
+    const sh = v.shelf, { x, w } = SH, f = (n) => n.toFixed(1), top = SH.sign + 21;
+    sh.frame.innerHTML = `<rect class="fs-back" x="${x + 6}" y="${top}" width="${w - 12}" height="${SH.base - top}"/>`
+      + `<rect class="fs-post o" x="${x}" y="${top - 2}" width="7" height="${SH.base - top + 2}" rx="2"/>`
+      + `<rect class="fs-post o" x="${x + w - 7}" y="${top - 2}" width="7" height="${SH.base - top + 2}" rx="2"/>`
+      + `<rect class="fs-kick o" x="${x}" y="${SH.rows1}" width="${w}" height="${SH.base - SH.rows1}" rx="2"/>`
+      + `<rect class="fs-sign o" x="${x - 3}" y="${SH.sign}" width="${w + 6}" height="21" rx="5"/>`
+      + `<text class="fs-sign-t" x="${f(x + w / 2)}" y="${SH.sign + 10.8}">FRESH TURKEYS</text>`;
+    const c = sh.count;
+    c.setAttribute('x', f(x + w / 2 - 22)); c.setAttribute('y', SH.rows1 + 1.5); c.setAttribute('width', 44); c.setAttribute('height', 9.5);
+    sh.countT.setAttribute('x', f(x + w / 2)); sh.countT.setAttribute('y', SH.rows1 + 6.4);
+    // the SOLD OUT sign, over the shelf's own sign, on two short chains
+    const a = w * 0.47;
+    sh.sold.setAttribute('transform', `translate(${f(x + w / 2)} ${SH.sign + 10.5})`);
+    sh.sold.querySelector('.fs-string').setAttribute('d', `M${f(-a * 0.6)}-16V-30M${f(a * 0.6)}-16V-30`);
+    const b = sh.sold.querySelector('.fs-sold-b');
+    b.setAttribute('x', f(-a)); b.setAttribute('y', -17); b.setAttribute('width', f(2 * a)); b.setAttribute('height', 34);
   }
-  function slotOf(G, j) {
-    let i = 0, c = 0;
-    while (i < G.tiers - 1 && j >= c + G.counts[i]) { c += G.counts[i]; i++; }
-    return { tier: i, idx: j - c, count: Math.max(1, G.counts[i]) };
+  function shelfGeom(n) {
+    const W = SH.w - 12, H = SH.rows1 - SH.rows0;
+    let best = null;
+    for (let r = 1; r <= 9; r++) {
+      const c = Math.ceil(n / r), cw = W / c, rh = H / r;
+      const s = Math.min(cw / 62, (rh - 6) / 50, 1.2);
+      if (!best || s > best.s + 1e-6) best = { r, c, cw, rh, s };
+    }
+    return best;
   }
-  const slotAngle = (G, j) => { const q = slotOf(G, j); return (Math.PI * 2 * (q.idx + (q.tier % 2) * 0.5)) / q.count; };
-  // who's on the spit: everyone picked this round (No repeats on), in order,
-  // plus the winner just thrown in if it isn't on the list yet
-  function spitList(v) {
+  // a slot: the middle of the board its package stands on
+  const slotPos = (G, j) => ({ x: SH.x + 6 + G.cw * ((j % G.c) + 0.5), y: SH.rows0 + G.rh * (Math.floor(j / G.c) + 1) - 5 });
+  // who's on the shelf: everyone picked this round (No repeats on), in
+  // order, plus the winner just landed if it isn't on the list yet
+  function shelfList(v) {
     const list = v.picked ? v.picked.map((p) => ({ id: p.id, label: p.label })) : [];
     const h = v.held;
-    if (h && h.phase === 'baked' && !list.some((p) => p.id === h.id)) list.push({ id: h.id, label: h.label });
+    if (h && h.phase === 'shelved' && !list.some((p) => p.id === h.id)) list.push({ id: h.id, label: h.label });
     return list;
   }
-  function renderSpit(v, leaving = null) {
-    const sp = v.spit, list = spitList(v);
-    const hooks = v.picked ? Math.max(v.total, list.length, 1) : Math.max(8, list.length);
-    sp.geom = spitGeom(hooks);
-    sp.filled = list.length;
+  // where a package coming off the belt lands
+  function shelfTarget(v, id) {
+    const list = shelfList(v);
+    let j = list.findIndex((p) => p.id === id);
+    const others = list.filter((p) => p.id !== id).length;
+    if (j < 0) j = others;
+    const n = v.picked ? Math.max(v.total, others + 1, 1) : Math.max(6, others + 1);
+    const G = shelfGeom(n), q = slotPos(G, j);
+    return { x: q.x, y: q.y, s: G.s };
+  }
+  function setPackName(g, label) {
+    const t = shortName(label), n = g.querySelector('.pk-name');
+    n.textContent = t;
+    n.style.fontSize = `${clamp(47 / (Math.max(3, t.length) * 0.52), 6, 12.5).toFixed(2)}px`;   // small, but as big as the label allows
+  }
+  function makePack(v, label, cls) {
+    const g = svgEl(v.doc, 'g', `fy-pack${cls ? ` ${cls}` : ''}`);
+    g.innerHTML = PACK;
+    setPackName(g, label);
+    return g;
+  }
+  function renderShelf(v, leaving = null) {
+    const sh = v.shelf, list = shelfList(v);
+    const n = v.picked ? Math.max(v.total, list.length, 1) : Math.max(6, list.length);
+    const G = sh.geom = shelfGeom(n);
+    sh.filled = list.length;
     const keep = new Set(list.map((p) => p.id));
-    for (const [id, it] of sp.items) {
+    for (const [id, it] of sh.items) {
       if (keep.has(id) || it.goneAt) continue;
       const wait = leaving && leaving.get(id);
-      if (wait != null) { it.goneAt = performance.now() + wait; setTimeout(() => dropSpit(v, id, it), wait); }
-      else dropSpit(v, id, it);
+      if (wait != null) {                        // Let them out: it bursts open, then it's gone
+        it.goneAt = performance.now() + wait;
+        setTimeout(() => it.g.classList.add('burst'), wait);
+        setTimeout(() => dropPack(v, id, it), wait + 520);
+      } else dropPack(v, id, it);
     }
     list.forEach((p, j) => {
-      let it = sp.items.get(p.id);
-      if (it && it.goneAt) { dropSpit(v, p.id, it); it = null; }
+      let it = sh.items.get(p.id);
+      if (it && it.goneAt) { dropPack(v, p.id, it); it = null; }
       if (!it) {
-        const g = svgEl(v.doc, 'g', `fy-turkey fy-spitbird p${palOf(p.id)}`);
-        g.innerHTML = `<g transform="translate(-3 28)">${TURKEY}</g>`;
-        const name = svgEl(v.doc, 'text', 'fy-spit-name');
-        sp.back.appendChild(g);
-        sp.names.appendChild(name);
-        it = { g, name, label: null, ph: (hash(p.id + 's') % 1000) / 160, lit: -1, op: -1, won: false, wonUntil: 0 };
-        sp.items.set(p.id, it);
-      }
-      it.slot = j;
-      if (it.label !== p.label) {
-        it.label = p.label;
-        const t = shortName(p.label);
-        it.name.textContent = t;
-        it.fs = clamp(Math.min(13, 96 / (Math.max(3, t.length) * 0.56)), 7, 13);
-      }
+        it = { g: makePack(v, p.label, 'packed labelled'), label: p.label };
+        sh.packs.appendChild(it.g);
+        sh.items.set(p.id, it);
+      } else if (it.label !== p.label) { it.label = p.label; setPackName(it.g, p.label); }
+      const q = slotPos(G, j);
+      it.x = q.x; it.y = q.y; it.s = G.s;
+      it.g.setAttribute('transform', `translate(${q.x.toFixed(1)} ${q.y.toFixed(1)}) scale(${G.s.toFixed(3)})`);
     });
-    // the hoops and the empty hooks don't move with the names; the spokes do (paintSpit)
-    sp.hoops.setAttribute('d', sp.geom.ys.map((y) => `M${-RX} ${y.toFixed(1)}a${RX} ${RRY} 0 1 0 ${2 * RX} 0a${RX} ${RRY} 0 1 0 ${-2 * RX} 0`).join(''));
-    sp.order = '';
+    // the boards, and a dashed outline wherever a package is still to come
+    let boards = '', empty = '';
+    for (let r = 0; r < G.r; r++) boards += `M${SH.x + 6} ${(SH.rows0 + G.rh * (r + 1) - 5).toFixed(1)}H${SH.x + SH.w - 6}v5H${SH.x + 6}Z`;
+    const a = 28 * G.s, h = 46 * G.s;
+    for (let j = list.length; j < n; j++) {
+      const q = slotPos(G, j);
+      empty += `M${(q.x - a).toFixed(1)} ${(q.y - 1).toFixed(1)}v${(-h).toFixed(1)}h${(2 * a).toFixed(1)}v${h.toFixed(1)}Z`;
+    }
+    sh.boards.setAttribute('d', boards);
+    sh.empty.setAttribute('d', empty);
     paintCount(v);
   }
-  function dropSpit(v, id, it) {
-    it.g.remove(); it.name.remove();
-    if (v.spit.items.get(id) === it) v.spit.items.delete(id);
+  function dropPack(v, id, it) {
+    it.g.remove();
+    if (v.shelf.items.get(id) === it) v.shelf.items.delete(id);
   }
-  // where a turkey on the spit is in the scene, as a yard turkey would be drawn
-  function spitScenePos(v, it) {
-    const o = v.oven, y = o.y + 2;
-    const feet = (it.ly ?? -110) + 28 * (it.lsc ?? 0.6);
-    return { x: o.x + (it.lx ?? 0) * o.s, y, z: y - (o.y + feet * o.s), draw: (it.lsc ?? 0.6) * o.s };
-  }
-  // the rings turn slowly; through a throw (aim() .. T.rest) the pick's clock
-  // drives them: a whirl to bring the empty hook to the front, then a pause
-  function spitStep(v, dt) {
-    const sp = v.spit, L = sp.lock;
-    const el = L ? Date.now() - L.s.startedAt : 0;
-    if (L && L.to != null && el >= T.toss) {
-      if (el < T.land) sp.phi = lerp(L.from, L.to, easeInOut(clamp((el - T.toss) / (T.land - T.toss), 0, 1)));
-      else { sp.phi = L.to; if (el >= T.rest) sp.lock = null; }
-    } else sp.phi += IDLE_W * dt;
-  }
-  function aim(v) {
-    const sp = v.spit, b = v.active && v.birds.get(v.active.winnerId);
-    if (!b || !sp.lock) return;
-    const list = spitList(v).filter((p) => p.id !== b.id);
-    const hooks = v.picked ? Math.max(v.total, list.length + 1) : Math.max(8, list.length + 1);
-    sp.geom = spitGeom(hooks);
-    b.hook = list.length;
-    const a = slotAngle(sp.geom, b.hook), TAU = Math.PI * 2;
-    const back = (((-(sp.phi + a)) % TAU) + TAU) % TAU;   // how far round the hook has to come
-    sp.lock.from = sp.phi;
-    sp.lock.to = sp.phi + (reduced(v.doc) ? 0 : TAU) + back;
-  }
-  function paintSpit(v, now) {
-    const sp = v.spit, G = sp.geom;
-    if (!G || !isOn(v.doc)) return;
-    const whirl = sp.lock && sp.lock.to != null && Date.now() - sp.lock.s.startedAt < T.land;
-    let spokes = '', hooks = '';
-    for (let j = 0; j < G.n; j++) {
-      const q = slotOf(G, j), th = sp.phi + slotAngle(G, j), y0 = G.ys[q.tier];
-      const x = RX * Math.sin(th), y = y0 + RRY * Math.cos(th);
-      spokes += `M0 ${y0.toFixed(1)}L${x.toFixed(1)} ${y.toFixed(1)}`;
-      if (j >= sp.filled) hooks += `M${x.toFixed(1)} ${y.toFixed(1)}v3.4q0 2.8 2.8 2.8`;
-    }
-    sp.spokes.setAttribute('d', spokes);
-    sp.hooks.setAttribute('d', hooks);
-    const back = [], front = [];
-    for (const it of sp.items.values()) {
-      const q = slotOf(G, it.slot), th = sp.phi + slotAngle(G, it.slot);
-      const c = Math.cos(th), s = Math.sin(th);
-      const depth = (c + 1) / 2;                   // 1 at the front of the ring
-      const lsc = G.sc * (0.62 + 0.38 * depth);
-      const lx = RX * s, ly = G.ys[q.tier] + RRY * c;
-      it.lx = lx; it.ly = ly; it.lsc = lsc;
-      // facing the way it's going (right across the front), narrow at the sides
-      const sx = (c >= 0 ? -1 : 1) * (0.36 + 0.64 * Math.abs(c));
-      const swing = whirl ? -14 : Math.sin(now / 1100 + it.ph) * 5;
-      it.g.setAttribute('transform', `translate(${lx.toFixed(1)} ${ly.toFixed(1)}) rotate(${swing.toFixed(1)}) scale(${(sx * lsc).toFixed(3)} ${lsc.toFixed(3)})`);
-      const won = now < it.wonUntil;
-      if (won !== it.won) { it.won = won; it.g.classList.toggle('won', won); it.lit = -1; }
-      const lit = Math.round((0.4 + 0.6 * depth) * 40) / 40;
-      if (lit !== it.lit) { it.lit = lit; it.g.style.filter = won ? 'url(#fy-glowf)' : `brightness(${lit})`; }
-      // the name shows only on the turkey passing the front of its ring
-      const a = Math.abs(Math.atan2(s, c)) / (Math.PI / q.count);
-      const op = it.goneAt ? 0 : won ? 1 : Math.round(clamp(1.6 - 2.4 * a, 0, 1) * 20) / 20;
-      if (op !== it.op) { it.op = op; it.name.style.opacity = op; }
-      if (op > 0) {
-        it.name.setAttribute('x', lx.toFixed(1));
-        it.name.setAttribute('y', (ly + 11 * lsc).toFixed(1));
-        it.name.style.fontSize = `${(it.fs * (won ? 1.1 : 1)).toFixed(2)}px`;
-      }
-      (c < 0 ? back : front).push({ it, c });
-    }
-    back.sort((a, b) => a.c - b.c); front.sort((a, b) => a.c - b.c);
-    const key = back.map((q) => q.it.slot).join(',') + '|' + front.map((q) => q.it.slot).join(',');
-    if (key !== sp.order) {
-      sp.order = key;
-      const put = (grp, arr) => { const kids = grp.children; arr.forEach((q, i) => { if (kids[i] !== q.it.g) grp.insertBefore(q.it.g, kids[i] || null); }); };
-      put(sp.back, back); put(sp.front, front);
-    }
+  // where the turkey in a package on the shelf is, as a pen turkey would be drawn there
+  function packScenePos(v, it) {
+    const c = v.col, y = 392;
+    return { x: c.x + it.x * c.s, y, z: y - (c.y + (it.y - 8 * it.s) * c.s), draw: it.s * c.s * 0.9 };
   }
 
-  // positions → transforms; draw order by depth (a lifted bird in front)
   function paint(v) {
     const f = v.farmer, fs = persp(f.y);
     f.g.setAttribute('transform', `translate(${f.x.toFixed(1)} ${f.y.toFixed(1)}) scale(${(fs * f.face).toFixed(3)} ${fs.toFixed(3)})`);
@@ -978,7 +1227,6 @@
     }
     placeShade(f.sh, f.x, f.y, fs, '1');
     f.depth = f.y;
-    const o = v.oven;
     const all = [...v.birds.values(), ...v.leaving];
     for (const b of all) {
       const sc = v.S * b.k * persp(b.y) * b.sc;
@@ -991,7 +1239,7 @@
       placeShade(b.sh, b.x, b.y, sc * (1 - lift * 0.5), b.mode === 'held' || b.cls === 'waiting' ? '0' : (1 - lift * 0.9).toFixed(2));
       b.depth = (b.mode === 'held' || (b.mode === 'fly' && b.z > 4)) ? 900 + b.y : b.y;
     }
-    const list = [f, o, ...all].sort((a, b) => a.depth - b.depth);
+    const list = [f, ...v.fixed, ...all].sort((a, b) => a.depth - b.depth);
     const key = list.map((q) => (q === f ? '*' : q.id)).join(',');
     if (key !== v.order) {
       v.order = key;
@@ -1040,15 +1288,16 @@
     if (pool.length >= 2) {
       const sn = pool[Math.floor(rand() * pool.length)], x = pos(sn).x;
       roles.set(sn.id, 'sneak');
-      const Y = v.yard;
-      sneakTo = x < (Y.x0 + Y.x1) / 2 ? Math.max(v.x0 + 8, x - 70) : Math.min(Y.x1 + 20, x + 70);
+      const Y = v.yard, y = pos(sn).y, a = penL(Y, y) + 10, b = penR(Y, y) - 8;
+      sneakTo = x < (a + b) / 2 ? Math.max(a, x - 70) : Math.min(b, x + 70);
     }
     // stand beside each one, on the side he arrives from
     let at = { x: f.x, y: f.y };
     const stops = [...decoys, winner].filter(Boolean).map((b) => {
       const q = pos(b), side = Math.sign(at.x - q.x) || 1;
       const gap = 22 * v.S * b.k * persp(q.y) + 15 * persp(q.y);
-      const spot = { x: clamp(q.x + side * gap, v.x0 + 16, v.x0 + v.W - 14), y: q.y - 2 };   // a step behind, so the bird stays in view
+      const sy = q.y - 2;   // a step behind, so the bird stays in view, and never out of the pen
+      const spot = { x: clamp(q.x + side * gap, penL(v.yard, sy) + 10, penR(v.yard, sy) - 4), y: sy };
       const st = { bird: b, at: spot, from: at, dist: Math.max(40, Math.hypot(spot.x - at.x, (spot.y - at.y) * 1.4)) };
       at = spot;
       return st;
@@ -1074,20 +1323,20 @@
     if (!v) return;
     v.timers.forEach(clearTimeout); v.timers = [];
     hideName(v);
-    // last pick's turkey, still on the spit (No repeats off): the door pops
-    // open and it hops back out to its spot
+    // a package still on its way (a window that never got to finish): onto the shelf
+    if (v.line.item) shelve(v);
+    // last pick's turkey, still on the shelf (No repeats off): its package
+    // bursts open and it hops back out to its spot
     const h = v.held;
     v.held = null;
     if (h && v.birds.get(h.id) === h) {
-      const it = v.spit.items.get(h.id);
-      const p = it ? spitScenePos(v, it) : hookPoint(v, h);
-      renderSpit(v);
+      const it = v.shelf.items.get(h.id);
+      const p = it ? packScenePos(v, it) : hopperPoint(v, h);
+      renderShelf(v, new Map([[h.id, 0]]));
       setCls(h, '');
       setPhase(h, '');
       h.x = p.x; h.y = p.y; h.z = p.z; h.sc = p.draw ? p.draw / (v.S * h.k * persp(p.y)) : p.sc;
-      startFly(v, h, { x: h.hx, y: h.hy, z: 0, sc: 1 }, { delay: 140, dur: 700, lift: 60, tumble: true });
-      v.doorUntil = performance.now() + 700;
-      v.puffUntil = performance.now() + 700;
+      startFly(v, h, { x: h.hx, y: h.hy, z: 0, sc: 1 }, { delay: 160, dur: 700, lift: 60, tumble: true });
       if (sound) popOut();
     }
     for (const b of v.birds.values()) if (b.mode === 'fly' && b.fly && b !== h) { b.mode = 'yard'; b.x = b.px = b.fly.to.x; b.y = b.py = b.fly.to.y; b.z = 0; b.sc = 1; b.tumble = false; setCls(b, ''); }
@@ -1097,7 +1346,6 @@
     v.sound = sound;
     v.cluckAcc = 0;
     v.plan = makePlan(v, s);
-    v.spit.lock = { s, from: null, to: null };
     v.farmer.g.dataset.pace = v.plan.pace;
     v.el.dataset.state = 'walking';
     paintPour(v);
@@ -1111,7 +1359,7 @@
     setPhase(b, 'caught');
     if (v.sound) sting();
   }
-  // he grabs it: from here on it is the held turkey, on the oven's timeline
+  // he grabs it: from here on it is the held turkey, on the line's timeline
   function lift(v) {
     const b = v.active && v.birds.get(v.active.winnerId);
     if (!b) return;
@@ -1120,19 +1368,19 @@
     setPhase(b, 'held caught');
     v.held = b;
   }
+  // it drops into the oven: the name, large, over the farm (up until the next pick)
   function reveal(v) {
-    const b = v.active && v.birds.get(v.active.winnerId);
+    const b = v.held;
     if (!b) return;
     showName(v, b);
     if (v.sound) gobble();
   }
-  // the name, large, above the oven
   function showName(v, b) {
     const label = b.label || '';
     v.name.firstChild.textContent = label;
     v.name.title = label;
     v.nameBird = b;
-    placeName(v, b);
+    placeName(v);
     v.name.classList.remove('go');
     void v.name.offsetWidth;
     v.name.classList.add('go');
@@ -1141,44 +1389,49 @@
     void v.burst.offsetWidth;
     v.burst.classList.add('go');
   }
-  // over the oven, in px for this box (sizes in scene units, so the name is
-  // the same size against the scene at any width)
-  function placeName(v, b) {
-    const o = v.oven;
-    const longest = Math.max(4, ...(b.label || '').split(/\s+/).map((w) => w.length));
-    const size = Math.min(48, 352 / (longest * 0.56)) * v.k;
-    const p = toPx(v, o.x, o.y - (OV.top + 16) * o.s);
-    const left = clamp(p.x, v.bw * 0.12, v.bw * 0.88);
-    const bottom = clamp(v.bh - p.y, v.bh * 0.2, v.bh - size * 1.55 - 6);   // never off the top
+  // high over the middle of the farm, as big as fits (sizes in scene units,
+  // so it is the same size against the scene at any width): readable from
+  // the back of the room without watching the belt
+  function placeName(v) {
+    const label = v.name.title || '';
+    const longest = Math.max(4, ...label.split(/\s+/).map((w) => w.length));
+    const mid = toPx(v, (v.x0 + v.col.x) / 2, 0).x;   // over the middle of the farm
+    const left = clamp(mid, v.bw * 0.25, v.bw * 0.75);
+    const room = 2 * Math.min(left, v.bw - left) * 0.94;
+    let size = Math.min(64, 560 / (longest * 0.56)) * v.k;
+    size = Math.min(size, room / (Math.max(4, label.length) * 0.56 + 1.2));
+    const bottom = v.bh * 0.95 - size * 1.45;
     v.name.style.setProperty('--fs', `${size.toFixed(1)}px`);
     v.name.style.left = `${left.toFixed(1)}px`;
     v.name.style.bottom = `${bottom.toFixed(1)}px`;
     v.burst.style.left = `${left.toFixed(1)}px`;
     v.burst.style.bottom = `${(bottom + size * 0.6).toFixed(1)}px`;
   }
-  // the party's leaves come out of the oven's window
-  function placeOvenBurst(v) {
-    if (!v.burstOven || !v.bw) return;
-    const o = v.oven, p = toPx(v, o.x, o.y - 128 * o.s);
-    v.burstOven.style.left = `${p.x.toFixed(1)}px`;
-    v.burstOven.style.bottom = `${(v.bh - p.y).toFixed(1)}px`;
+  // the party's leaves come out of the middle of the shelf
+  function placeShelfBurst(v) {
+    if (!v.burstShelf || !v.bw) return;
+    const c = v.col, p = toPx(v, c.x + (SH.x + SH.w / 2) * c.s, c.y + 300 * c.s);
+    v.burstShelf.style.left = `${p.x.toFixed(1)}px`;
+    v.burstShelf.style.bottom = `${(v.bh - p.y).toFixed(1)}px`;
   }
   function hideName(v) {
     v.nameBird = null;
     v.name.classList.remove('go');
     v.burst.classList.remove('go');
   }
-  // the end: the winner on its hook, the name over the oven (even if this
-  // window missed frames). The spit carries on turning after T.rest.
+  // the end: the winner's package on the shelf, the name over the scene
+  // (even if this window missed frames; its sounds are skipped)
   function finish(doc, s) {
     const v = views.get(doc);
     if (!v) return;
     if (!v.active) v.active = s;
     if (!v.pickS) v.pickS = s;
-    if (!v.spit.lock) v.spit.lock = { s, from: null, to: null };
     if (!v.plan) v.plan = makePlan(v, s);
-    farmerStep(v, Math.max(T.out, Date.now() - s.startedAt));
-    for (const b of v.birds.values()) if (b.mode === 'held') heldStep(v, b, T.out);
+    const el = Math.max(T.out, Date.now() - s.startedAt);
+    v.sound = false;
+    farmerStep(v, el);
+    for (const b of v.birds.values()) if (b.mode === 'held') heldStep(v, b, el);
+    lineTick(v, performance.now(), el);
     v.active = null;
     v.plan = null;
     v.el.dataset.state = 'picked';
@@ -1205,7 +1458,7 @@
     let n = 0;
     for (const b of v.birds.values()) if (b !== v.held || !v.picked) n++;
     v.left.textContent = v.picked ? `${n} left` : `${n} in the yard`;
-    v.oven.count.textContent = v.picked ? `${v.spit.filled} / ${v.total}` : '';
+    v.shelf.countT.textContent = v.picked ? `${v.shelf.filled} / ${v.total}` : '';
     paintPour(v);
   }
   function paintPour(v) {
@@ -1214,36 +1467,35 @@
     v.pourBtn.classList.toggle('primary', v.full);
   }
 
-  // ---------- the round: everyone picked so far is on the spit ----------
-  // wheel.js calls this after every change. Anyone who was on the spit and
-  // isn't any more (Let them out, Reset, No repeats off) tumbles out of the
-  // door back to their spot; the last hook filling sets the oven off.
+  // ---------- the round: everyone picked so far is on the shelf ----------
+  // wheel.js calls this after every change. Anyone who was on the shelf and
+  // isn't any more (Let them out, Reset, No repeats off) bursts out of their
+  // package and hops back to their spot; the last slot filling drops the
+  // SOLD OUT sign.
   function setPicked(doc, list, total) {
     const v = views.get(doc);
     if (!v) return;
     const before = new Map();
-    for (const [id, it] of v.spit.items) if (!it.goneAt) before.set(id, spitScenePos(v, it));
+    for (const [id, it] of v.shelf.items) if (!it.goneAt) before.set(id, packScenePos(v, it));
     const was = new Set((v.picked || []).map((p) => p.id));
     v.picked = list;
     v.total = Math.max(total || 0, list ? list.length : 0);
-    // the winner still on its hook from a list that's just been emptied comes out too
+    // the winner just shelved, from a list that's just been emptied, comes out too
     const h = v.held;
-    if (h && h.phase === 'baked' && was.has(h.id) && !(list || []).some((p) => p.id === h.id)) {
+    if (h && h.phase === 'shelved' && was.has(h.id) && !(list || []).some((p) => p.id === h.id)) {
       v.held = null;
       hideName(v);
       setPhase(h, '');
       if (!v.active) setPose(v, 'think');
     }
-    const going = [...before.keys()].filter((id) => !spitList(v).some((p) => p.id === id));
+    const going = [...before.keys()].filter((id) => !shelfList(v).some((p) => p.id === id));
     const gap = reduced(v.doc) ? 0 : Math.min(70, 1200 / Math.max(1, going.length));
-    const leaving = new Map(going.map((id, i) => [id, 160 + i * gap]));
-    renderSpit(v, leaving);
-    going.forEach((id) => tumbleOut(v, id, before.get(id), leaving.get(id)));
-    if (going.length) {
-      const now = performance.now();
-      v.doorUntil = Math.max(v.doorUntil, now + 260 + going.length * gap + 500);
-      v.puffUntil = now + 700;
-      if (soundOn(v.doc) && !isPopout(v)) { const c = audio(); if (c) going.forEach((_, i) => { if (i % 3 === 0) cluckAt(c, c.currentTime + (160 + i * gap) / 1000 + 0.1, rnd(1, 1.3), 0.05); }); }
+    const leaving = new Map(going.map((id, i) => [id, 120 + i * gap]));
+    renderShelf(v, leaving);
+    going.forEach((id) => tumbleOut(v, id, before.get(id), leaving.get(id) + 160));
+    if (going.length && soundOn(v.doc) && !isPopout(v)) {
+      const c = audio();
+      if (c) going.forEach((_, i) => { if (i % 3 === 0) { const at = c.currentTime + (120 + i * gap) / 1000; popAt(c, at); cluckAt(c, at + 0.12, rnd(1, 1.3), 0.05); } });
     }
     const full = !!list && v.total > 0 && list.length >= v.total;
     if (full && v.wasFull === false) celebrate(v);
@@ -1251,7 +1503,7 @@
     v.full = full;
     paintCount(v);
   }
-  // one turkey out of the oven door and back to its spot in the yard
+  // one turkey out of its package and back to its spot in the yard
   function tumbleOut(v, id, p, delay) {
     const b = v.birds.get(id);
     if (!b || b.mode === 'gone') {               // not in the yard yet: sync() picks it up
@@ -1266,18 +1518,19 @@
     startFly(v, b, { x: b.hx, y: b.hy, z: 0, sc: 1 }, { delay, dur: 760, lift: 70, tumble: true });
     b.px = b.tx = b.hx; b.py = b.ty = b.hy;
   }
-  // the last hook filled: the oven hops, rings, glows and throws leaves
+  // the last slot filled: SOLD OUT drops (CSS, off .full), the sign flashes,
+  // leaves burst out of the shelf and the bells ring
   function celebrate(v) {
     v.partyUntil = performance.now() + PARTY_MS;
-    v.burstOven.innerHTML = burstMarkup(v.k * v.oven.s, 28);
-    v.burstOven.classList.remove('go');
-    void v.burstOven.offsetWidth;
-    v.burstOven.classList.add('go');
+    v.burstShelf.innerHTML = burstMarkup(v.k * clamp(v.shelf.w / 200, 0.8, 1.4), 28);
+    v.burstShelf.classList.remove('go');
+    void v.burstShelf.offsetWidth;
+    v.burstShelf.classList.add('go');
     if (soundOn(v.doc) && !isPopout(v)) fanfare();
   }
 
   // "Let them out": the wheel says go (a saved list asks first), then
-  // wheel.js empties the round and setPicked() tumbles everyone out
+  // wheel.js empties the round and setPicked() bursts every package open
   function pour(v) {
     if (v.pouring || v.active || !v.picked || !v.picked.length) return;
     if (!v.doc.dispatchEvent(new CustomEvent('teacherpal:wheel-reset-request', { cancelable: true }))) return;
@@ -1285,16 +1538,12 @@
     v.el.setAttribute('aria-disabled', 'true');
     paintPour(v);
     const n = v.picked.length;
-    v.doorUntil = performance.now() + 2000;
-    if (soundOn(v.doc)) creak();
+    v.doc.dispatchEvent(new CustomEvent('teacherpal:wheel-reset'));   // the round starts over
     setTimeout(() => {
-      v.doc.dispatchEvent(new CustomEvent('teacherpal:wheel-reset'));   // the round starts over
-      setTimeout(() => {
-        v.pouring = false;
-        setDisabled(v.doc, v.off);
-        paintCount(v);
-      }, reduced(v.doc) ? 400 : 160 + Math.min(1200, n * 70) + 900);
-    }, reduced(v.doc) ? 0 : 320);
+      v.pouring = false;
+      setDisabled(v.doc, v.off);
+      paintCount(v);
+    }, reduced(v.doc) ? 400 : 280 + Math.min(1200, n * 70) + 900);
   }
 
   // ---------- sound: clucks, footsteps, a sting, a big gobble ----------
@@ -1354,7 +1603,7 @@
       o.start(at); o2.start(at); o.stop(at + len + 0.02); o2.stop(at + len + 0.02);
     });
   }
-  // a burst of filtered noise (the oven's casters, the throw, the clang's hit)
+  // a burst of filtered noise (the throw, the belt, steam, the stamp's hit)
   function noiseAt(c, at, len, { type = 'lowpass', f0 = 400, f1 = f0, q = 1, gain = 0.05 } = {}) {
     const n = c.createBufferSource(), f = c.createBiquadFilter(), g = c.createGain();
     n.buffer = noiseBuf;
@@ -1366,25 +1615,58 @@
     n.connect(f); f.connect(g); g.connect(c.destination);
     n.start(at); n.stop(at + len + 0.02);
   }
-  // the oven door: a short metal creak
-  const creak = () => { const c = audio(); if (c) { noiseAt(c, c.currentTime, 0.26, { type: 'bandpass', f0: 900, f1: 520, q: 6, gain: 0.05 }); noiseAt(c, c.currentTime + 0.2, 0.08, { f0: 300, gain: 0.05 }); } };
   const whoosh = () => { const c = audio(); if (!c) return; noiseAt(c, c.currentTime, 0.42, { type: 'bandpass', f0: 450, f1: 1900, q: 1.4, gain: 0.07 }); cluckAt(c, c.currentTime + 0.05, 1.35, 0.05); cluckAt(c, c.currentTime + 0.16, 1.45, 0.045); };
-  // the door slams: a metal clang (inharmonic partials ringing down) on a hit
-  function clang() {
+  // a low thump (onto the belt, under the stamp)
+  function thumpAt(c, at, f0, gain) {
+    const o = c.createOscillator(), g = c.createGain();
+    o.frequency.setValueAtTime(f0, at); o.frequency.exponentialRampToValueAtTime(f0 * 0.35, at + 0.12);
+    g.gain.setValueAtTime(0.0001, at); g.gain.exponentialRampToValueAtTime(gain, at + 0.006); g.gain.exponentialRampToValueAtTime(0.0001, at + 0.16);
+    o.connect(g); g.connect(c.destination); o.start(at); o.stop(at + 0.18);
+  }
+  // onto the belt: a soft bump and an indignant cluck
+  const thud = () => { const c = audio(); if (c) { thumpAt(c, c.currentTime, 170, 0.1); cluckAt(c, c.currentTime + 0.07, 1.25, 0.045); } };
+  // the belt moving on: a soft clack-clack
+  const clack = () => { const c = audio(); if (c) { noiseAt(c, c.currentTime, 0.05, { type: 'bandpass', f0: 1500, q: 5, gain: 0.03 }); noiseAt(c, c.currentTime + 0.1, 0.05, { type: 'bandpass', f0: 1150, q: 5, gain: 0.025 }); } };
+  // in the oven: a warm low rumble; out of it: a puff of steam
+  const rumble = () => { const c = audio(); if (c) noiseAt(c, c.currentTime, 0.4, { f0: 240, f1: 140, q: 0.8, gain: 0.06 }); };
+  const hiss = () => { const c = audio(); if (c) noiseAt(c, c.currentTime, 0.5, { type: 'highpass', f0: 2600, f1: 5200, gain: 0.035 }); };
+  // the packer's stamp: a heavy thump with a short metal ring
+  function thump() {
     const c = audio();
     if (!c) return;
     const at = c.currentTime;
-    noiseAt(c, at, 0.07, { type: 'highpass', f0: 1800, gain: 0.08 });
-    [[310, 0.07, 0.75], [517, 0.06, 0.6], [843, 0.045, 0.45], [1291, 0.03, 0.35], [1984, 0.02, 0.22]].forEach(([fr, gain, len]) => {
+    thumpAt(c, at, 120, 0.16);
+    noiseAt(c, at, 0.06, { f0: 900, gain: 0.07 });
+    [[392, 0.035, 0.3], [661, 0.022, 0.22], [1045, 0.012, 0.16]].forEach(([fr, gain, len]) => {
       const o = c.createOscillator(), g = c.createGain();
       o.type = 'triangle'; o.frequency.value = fr;
-      g.gain.setValueAtTime(0.0001, at);
-      g.gain.exponentialRampToValueAtTime(gain, at + 0.004);
-      g.gain.exponentialRampToValueAtTime(0.0001, at + len);
+      g.gain.setValueAtTime(0.0001, at); g.gain.exponentialRampToValueAtTime(gain, at + 0.004); g.gain.exponentialRampToValueAtTime(0.0001, at + len);
       o.connect(g); g.connect(c.destination); o.start(at); o.stop(at + len + 0.02);
     });
   }
-  // the kitchen timer: one bright bell
+  // the labeller: a crisp click
+  function click() {
+    const c = audio();
+    if (!c) return;
+    const at = c.currentTime, o = c.createOscillator(), g = c.createGain();
+    noiseAt(c, at, 0.025, { type: 'highpass', f0: 3200, gain: 0.08 });
+    o.type = 'square'; o.frequency.value = 2300;
+    g.gain.setValueAtTime(0.0001, at); g.gain.exponentialRampToValueAtTime(0.03, at + 0.002); g.gain.exponentialRampToValueAtTime(0.0001, at + 0.03);
+    o.connect(g); g.connect(c.destination); o.start(at); o.stop(at + 0.04);
+  }
+  // onto the shelf: a light plunk
+  function plunk() {
+    const c = audio();
+    if (!c) return;
+    const at = c.currentTime, o = c.createOscillator(), g = c.createGain();
+    o.type = 'sine';
+    o.frequency.setValueAtTime(560, at); o.frequency.exponentialRampToValueAtTime(300, at + 0.12);
+    g.gain.setValueAtTime(0.0001, at); g.gain.exponentialRampToValueAtTime(0.08, at + 0.008); g.gain.exponentialRampToValueAtTime(0.0001, at + 0.16);
+    o.connect(g); g.connect(c.destination); o.start(at); o.stop(at + 0.18);
+  }
+  // a package bursting open
+  const popAt = (c, at) => noiseAt(c, at, 0.09, { type: 'bandpass', f0: 900, f1: 2600, q: 1.2, gain: 0.06 });
+  // the oven's timer, as the turkey comes out: one bright bell
   function ding() {
     const c = audio();
     if (c) bell(c, c.currentTime, 1568, 0.12);
@@ -1399,7 +1681,7 @@
       o.connect(g); g.connect(c.destination); o.start(at); o.stop(at + len + 0.02);
     });
   }
-  // the full oven: a run of bells up the scale, a ding-ding and a happy gobble
+  // the full shelf: a run of bells up the scale, a ding-ding and happy clucks
   function fanfare() {
     const c = audio();
     if (!c) return;
@@ -1408,7 +1690,7 @@
     bell(c, t0 + 0.62, 1568, 0.1); bell(c, t0 + 0.8, 1568, 0.1);
     [0.3, 0.42, 0.55, 0.7].forEach((d, i) => cluckAt(c, t0 + d, 1.1 + i * 0.08, 0.05));
   }
-  // the door pops open: a springy "boing" and two pleased clucks
+  // out of a package: a springy "boing" and two pleased clucks
   function popOut() {
     const c = audio();
     if (!c) return;
@@ -1446,5 +1728,5 @@
     });
   }
 
-  window.Farmyard = { DURATION_MS, SETTLE_MS, HOLDS_ROUND: true, isOn, busy, build, sync, run, finish, setWinner, setDisabled, setPicked };
+  window.Farmyard = { DURATION_MS, SETTLE_MS, HOLDS_ROUND: true, isOn, busy, build, sync, run, finish, setWinner, setDisabled, setPicked, setAbsent };
 })();

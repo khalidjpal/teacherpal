@@ -217,6 +217,7 @@ function renderSettingsMenu() {
       <div class="hud-menu-title">Periods I teach</div>
       <div class="hud-periods">${cells}</div>
       <button type="button" class="hud-menu-item hud-menu-btn" id="hud-courses">Courses…<span>which periods share a lesson plan</span></button>
+      <button type="button" class="hud-menu-item hud-menu-btn" id="hud-farmer"${current === 'thanksgiving' ? '' : ' hidden'}>Your farmer…<span>how you look on the Name Wheel's farm</span></button>
       <a class="hud-menu-item hud-menu-btn" href="setup.html">Getting started<span>the setup steps, any time</span></a>`;
   }
 
@@ -253,6 +254,20 @@ function wireSettingsMenu(header) {
       input.checked = input.value === t;
     });
   });
+  // Your farmer… (thanksgiving only): farmer.js has the dialog; pages
+  // without the Name Wheel load it on first use.
+  const farmerBtn = details.querySelector('#hud-farmer');
+  if (farmerBtn) {
+    document.addEventListener('teacherpal:theme', (e) => { farmerBtn.hidden = !(e.detail && e.detail.theme === 'thanksgiving'); });
+    farmerBtn.addEventListener('click', () => {
+      details.open = false;
+      if (window.FarmerArt) { FarmerArt.openDialog(); return; }
+      const s = document.createElement('script');
+      s.src = 'farmer.js';
+      s.onload = () => FarmerArt.openDialog();
+      document.head.appendChild(s);
+    });
+  }
   const coursesBtn = details.querySelector('#hud-courses');
   if (coursesBtn) coursesBtn.addEventListener('click', () => { details.open = false; openCoursesDialog(); });
   // Teach-periods checkboxes: save on every toggle. Menu stays open so the

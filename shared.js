@@ -249,6 +249,8 @@ async function hydrateProfileIntoSession() {
     // No column yet (before migration-onboarding.sql) = keep what we have.
     if ('bell_schedule' in p)  _session.user.bell_schedule  = p.bell_schedule || null;
     if ('setup_progress' in p) _session.user.setup_progress = p.setup_progress || null;
+    // The thanksgiving farmer's look (before migration-farmer.sql: keep what we have).
+    if ('farmer' in p)         _session.user.farmer         = p.farmer || null;
 
     if (JSON.stringify(_session.user) === before) return;   // nothing moved
     saveSession(_session);
@@ -1679,6 +1681,7 @@ const THEMES = [
   { id: 'pink',    label: 'Pink'    },
   { id: 'halloween', label: 'Halloween' },
   { id: 'thanksgiving', label: 'Thanksgiving' },
+  { id: 'winter', label: 'Winter' },
 ];
 
 // Old theme ids, from before the rename (migration-theme-rename.sql moves
@@ -1720,6 +1723,18 @@ async function setMyTheme(theme) {
       console.error('theme save', err);
     }
   }
+}
+
+// The thanksgiving Name Wheel's farmer: how the teacher looks on the farm
+// (profiles.farmer, see farmer.js; null = the default farmer). Updates the
+// session and the scene at once ('teacherpal:farmer'), then the profile
+// through set_my_farmer (migration-farmer.sql). Throws if that fails.
+async function setMyFarmer(look) {
+  if (!_session || !_session.user) return;
+  _session.user.farmer = look || null;
+  saveSession(_session);
+  document.dispatchEvent(new CustomEvent('teacherpal:farmer', { detail: { farmer: _session.user.farmer } }));
+  await sb('rpc/set_my_farmer', { method: 'POST', body: { p_farmer: _session.user.farmer } });
 }
 
 // If we already have a stored session with a theme, apply it now so pages
