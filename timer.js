@@ -611,6 +611,9 @@
     });
     pipWin.document.documentElement.setAttribute('data-theme',
       document.documentElement.getAttribute('data-theme') || 'default');
+    if (document.documentElement.getAttribute('data-effects') === 'reduced') {
+      pipWin.document.documentElement.setAttribute('data-effects', 'reduced');   // Reduce effects
+    }
     pipWin.document.body.className = 'timer-popout';
     pipWin.document.body.innerHTML = `
       <div class="timer-popout-inner">

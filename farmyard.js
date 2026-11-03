@@ -1049,7 +1049,7 @@
     }
     beltStep(v, now, el);
     const sh = v.shelf;
-    const scls = `${v.full ? ' full' : ''}${now < v.partyUntil ? ' party' : ''}${v.picked && !isPopout(v) ? ' counting' : ''}`;
+    const scls = `${v.full ? ' full' : ''}${now < v.partyUntil ? ' party' : ''}${v.picked ? ' counting' : ''}`;
     if (sh.cls !== scls) { sh.cls = scls; sh.g.setAttribute('class', `fy-shelf${scls}`); }
   }
   // the belt: 10 units every 0.9s between picks (a gentle mechanical

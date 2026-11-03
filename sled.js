@@ -627,8 +627,8 @@
     for (const r of v.riders.values()) if (r.mode !== 'cabin' && r.mode !== 'inside') n++;
     if (v.winner && v.picked && v.riders.has(v.winner.id) && v.winner.mode === 'home') n--;
     v.left.textContent = v.picked ? `${n} left` : `${n} on the hill`;
-    if (v.countT) v.countT.textContent = v.picked && !isPopout(v) ? `${v.picked.length} / ${v.total}` : '';
-    v.bg.querySelector('.sl-count')?.toggleAttribute('hidden', !v.picked || isPopout(v));
+    if (v.countT) v.countT.textContent = v.picked ? `${v.picked.length} / ${v.total}` : '';
+    v.bg.querySelector('.sl-count')?.toggleAttribute('hidden', !v.picked);
     paintPour(v);
   }
   function paintPour(v) {

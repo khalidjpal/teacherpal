@@ -67,6 +67,7 @@ full-screen toggle. There is no sidebar; every page uses the full width.
 | `migration-roster-numbers.sql` | One-off migration that adds `students.roster_number integer` (1–999, nullable): a hand-set roster number for when Aeries numbers a student differently. Ends with a check query |
 | `migration-pick-lists.sql` | One-off migration for the Name Wheel's saved pick lists: `pick_lists` (named rotations per period) and `pick_list_picks` (one row per student picked on a list), each with the four owner policies; safe to re-run, ends with a check query |
 | `migration-farmer.sql` | One-off migration for the thanksgiving farmer's look: `profiles.farmer jsonb` (null = the default farmer; a size check only, the app ignores unknown keys) and `set_my_farmer(jsonb)` (own row only); starts `marwa` as a woman in a grey hijab, with the soft face, a curvy figure and a white long-sleeve top under denim overalls (if she hasn't chosen yet, or still has an earlier seed) and gives `khalid` the wavy middle part. **Until it is run the column is missing and every farmer is the default** (the app reads `farmer` only if the profile row has it). Safe to re-run; ends with a check |
+| `migration-reduce-effects.sql` | One-off migration for **Reduce effects**: `profiles.reduce_effects boolean not null default false` and `set_my_reduce_effects(boolean)` (own row only). Before it runs, the gear-menu switch still works in that browser (localStorage) but doesn't follow the teacher; the first time the column is seen, a switch already on in this browser wins over the default `false` and is saved. Safe to re-run; ends with a check |
 | `migration-display-name.sql` | One-off migration that adds `profiles.display_name text` (how the teacher is addressed — the top-bar USER chip) and seeds `khalid` → "Mr. Pal", `marwa` → "Ms. Mohammadi" |
 | `index.html`   | Hub launcher (`body.hub.launcher`): `.hub-sections` — four labelled sections (Daily, Teacher tools, Planning, System) each with its own `.hub-panels` row of `.hud-panel` links; loads only `shared.js`, `schedule.js`, `nav.js` (top bar **without** nav links — the panels are the nav) |
 | `attendance.html` | Attendance screen: `#attendance` in **full** mode — big chart + side column with counts, lists, Copy, Reset, date |
@@ -81,7 +82,7 @@ full-screen toggle. There is no sidebar; every page uses the full width.
 | `noise.js`     | Mic → `AnalyserNode` → RMS → a 35–95 relative "dB" reading, 500ms rolling average, three zones, "Too loud" after 3s in the red, optional chime. Polls on `setInterval` (**not** rAF — rAF freezes in a background window and the pop-out would stall). `BroadcastChannel('teacherpal-noise')` feeds the pop-out. Opens the mic only on Start; stops every track on Stop and on `pagehide`. Nothing is recorded or sent anywhere. |
 | `wheel.html`   | Name Wheel screen: the wheel on the left; on the right the result panel and the controls (period, **Edit wheel**, the pick list, then an icon cluster: No repeats / sound / First names "Aa" · "Full screen window" / "Mini window" (PiP, Chrome only) / full screen), plus the `#wheel-roster-dialog` toggle-chip modal — loads `cauldron.js`, `boba.js`, `farmer.js`, `farmyard.js`, `sled.js`, then `wheel.js`. Words that differ per skin come in `.for-wheel` / `.for-brew` / `.for-boba` / `.for-farm` / `.for-sled` sets ("Edit wheel" / "Edit who's in", the empty-wheel line, …) and CSS shows the one for the theme. |
 | `wheel.js`     | The wheel: draws the slices as SVG into `#wheel-rotor` (the only thing that spins), runs the spin on rAF with an ease-out, ticks as each slice passes the pointer, and syncs the pop-out over `BroadcastChannel('teacherpal-wheel')`. **Winner is drawn first** (`crypto.getRandomValues`), then the landing rotation is computed — the animation can't bias it. |
-| `wheel-popout.html` | Read-only projector wheel (`body.wheel-popout`): same dial (or, in halloween, the cauldron) filling the window, fed by broadcast, no controls. The mini window is this same page in an iframe. |
+| `wheel-popout.html` | The full screen window (`body.wheel-popout`): the same dial or skin scene filling the window, fed by broadcast, no controls; a click on the scene or Space asks the main window for a pick. The mini window is this same page at `?mini=1` in an iframe, which shows the compact `.wm-view` instead (see Name Wheel). |
 | `cauldron.js` | The Name Wheel's halloween skin, `window.Cauldron` (`isOn`, `build`, `sync`, `run`, `finish`, `setWinner`, `setDisabled`, `BOIL_MS`, `SETTLE_MS`). Draws the cauldron into `.wheel-wrap`, floats each name as an HTML bubble (rAF physics), and animates a pick from the spin descriptor `wheel.js` hands it: boil → rise → hover → pop. Owns its sounds (bubbling that builds, a pop). Never picks anything. |
 | `boba.js` | The Name Wheel's pink skin, `window.Boba` — the same shape as `Cauldron` (`isOn`, `build`, `sync`, `run`, `finish`, `setWinner`, `setDisabled`, `setPicked`, `busy`, `HOLDS_ROUND`, `DURATION_MS`, `SETTLE_MS`). A bubble tea cup in `.wheel-wrap`: warm tan milk tea with a cream swirl, a domed lid, a narrow see-through pink straw, **the whole cup as the Spin button** (`#boba-straw`, a hit area over the cup), one near-black pearl per student with their first name on it in small cream type (rAF physics in box units: gravity, a swirl, soft collisions, the tapered walls), condensation, and "N left" in small flat text under the cup. A pick (~4s, the `T` timeline at its top) shakes the cup, swirls the pearls up, lights one up, draws it up the straw in sips, then the **spotlight**: the pearl grows into a big disc in front of the dimmed page with the name on it (click / Space / Enter / Esc closes it); with No repeats on it then arcs over into the **jar** on the right, a second cup that fills as the class is called and is poured back to start a new round. Owns its sounds (shake, slosh, slurp, pop). Never picks anything. |
 | `farmer.js` | The thanksgiving farmer, `window.FarmerArt`: `markup(look)` (the SVG, every pose), `vars(look)` (the look's colours as `--fy-*` overrides, only where it differs from `DEFAULT`, so the default farmer is exactly the theme's tokens), `apply(g, look)`, `normalize()`, `OPTIONS` / `DEFAULT`, `user()` / `current()` (the session's `farmer`, read from localStorage where shared.js isn't loaded: the pop-out), and `openDialog()`, **Settings → Your farmer…** (see the thanksgiving skin). Loaded by the Name Wheel and its pop-out before `farmyard.js`; `nav.js` loads it on first use elsewhere |
@@ -969,6 +970,37 @@ the structure, and every other theme is a colour swap of it. A theme is
   text; cards are opaque in pink, so the hearts only show in the gutters.
   The projector pop-outs (`body.timer-popout`, `body.noise-popout`) set
   `background-image: none` to stay flat. No image file — data URI only.
+- **Reduce effects — "for slower computers"** (a checkbox in the gear menu,
+  under the themes; works with every theme). `profiles.reduce_effects`
+  (`migration-reduce-effects.sql`) is the source of truth, so it follows
+  the teacher between computers; `localStorage['teacherpal.effects'] =
+  'reduced'` is the cache every head script reads (next to the theme), so
+  a page never starts with the effects on. `shared.js`: `reduceEffects()`,
+  `applyReduceEffects(on)` (attribute + cache + `teacherpal:effects`),
+  `setMyReduceEffects(on)` (also the `set_my_reduce_effects` RPC); the
+  profile refresh re-applies it. On = `<html data-effects="reduced">` (the
+  timer's mini window copies it), and the **"Reduce effects" block at the
+  very end of `style.css`** does the rest; there is no JS behaviour change.
+  **It keeps** every scene, every pick animation (spin, boil, the farmer's
+  walk / lift / toss, the race, the cup's shake / swirl / straw /
+  spotlight), the timer's drain, final-minute and time's-up states, and the
+  noise meter's reading and its loud / alert reactions. **It drops**:
+    - ambient motion: the page decorations (bats, fog, leaves), idle loops
+      (breathing, bobbing, blinking, pecking, swaying, the thinking
+      farmer), smoke, flicker, licking flames, the level bar's rider;
+    - half of every particle burst (`> i:nth-child(even)`), half the snow
+      globe's flakes and mood fx, and the cauldron's embers;
+    - expensive paint: backdrop blur everywhere, drop-shadow glows and blur
+      filters in the tools (the farm's sun glow and the cabin's window glow
+      are hidden), animated filters, the glow tokens (`--hover-glow: none`,
+      `--hud-glow*` = `0 0 0 transparent`, since they sit inside shadow
+      lists), and the big digit glow on the default / halloween timer.
+  Farm turkeys share parts between idle and pick states, so the idle rules
+  exclude the pick classes (`.fy-turkey:not(.scared, .inspected) .fy-torso`,
+  …). **A new themed animation must pick a side**: if it's ambient or a
+  glow, add it to that block; if it is the pick / timer itself, leave it.
+  It is not the same as `prefers-reduced-motion` (which also stops some
+  pick-time motion and is the OS's call); both can be on at once.
 
 Storage & flow:
 
@@ -1971,12 +2003,29 @@ All styling lives in `style.css`; pages carry almost no inline styling.
   clearing it (clearing would leave nothing to animate). Under it sits the
   small `.wheel-result-sub`: the remaining count and the contextual
   put-back / take-off button. Controls follow below: the "press the hub or
-  Space" hint, period + **Edit wheel**, the pick-list bar, then **the icon
-  cluster** (`.wheel-icon-row`, one bordered group so the controls read as
-  text controls · icons): No repeats (a loop, slashed while on), sound (a
-  speaker with waves, or crossed when muted; no fill, the icon is the
-  state), First names ("Aa"), a hairline, then Full screen window, Mini
-  window and full screen. The two switches that are "on" get the accent
+  Space" hint, then **four groups** (`.wheel-groups` > `.wheel-group`,
+  each a `<section>` with a small `.wg-label` heading; a gap and a
+  `--border-strong` hairline between groups, buttons close together inside
+  each):
+    1. **Class** (`.wg-class`): period select + **Edit wheel** / Edit who's in.
+    2. **List** (`.wg-list`, also `#pick-list-bar`, hidden without the
+       migration): List select, Who's picked, Reset, and the
+       `.pick-list-line` status ("Cold call · 6 of 24 picked") as quiet
+       muted mono text under the buttons (beside them in the one-row bar),
+       cut with an ellipsis, the whole line in its `title`.
+    3. **Options** (`.wg-options`): the icon tray of No repeats (a loop,
+       slashed while on), sound (a speaker with waves, or crossed when
+       muted; no fill, the icon is the state) and First names ("Aa").
+    4. **View** (`.wg-view`): the icon tray of Full screen window, Mini
+       window and full screen.
+  **Per layout**: default's right column is a 2×2 grid (Class | List over
+  Options | View, hairline before the right-hand column; the columns
+  shrink, so a group wraps inside itself rather than overflowing); the
+  thanksgiving / winter bar under the scene is **one row with no labels**
+  (they'd make it taller), groups wrapping without hairlines under 1100px;
+  pink's card stacks the four with hairlines between; phones stack them.
+  The inline "Period" / "List" `.lbl`s are hidden in groups (the selects
+  have aria-labels). The two switches that are "on" get the accent
   fill; every icon's `title` is its full label, and `renderControls()`
   rewrites the switches' titles to say their state. No AUTO chip: the
   period follows the bell until it is changed by hand (a reload follows
@@ -2205,13 +2254,33 @@ All styling lives in `style.css`; pages carry almost no inline styling.
         from `.wb-burst`). Under reduced motion the loops, hops and burst
         stop; the poses still change.
   A Web Audio tick fires as each slice crosses the pointer (mute toggle,
-  main window only so the pop-out doesn't double it), and the pop-out gets
-  `{ list, rotation, spin, winnerId }` over `BroadcastChannel` and runs the
-  same `runSpin()` descriptor, so both windows follow the same curve.
+  main window only so the pop-out doesn't double it).
+  **The other windows mirror the main one** over
+  `BroadcastChannel('teacherpal-wheel')`. The main window is still the only
+  writer; `broadcast()` sends everything they show: `list` (who's on the
+  wheel / in the yard), `rotation`, `spin`, `winnerId` + `winnerLabel` /
+  `spinLabel`, `picked` + `pickedTotal` (the round: who's on the shelf /
+  in the cabin, `pickedState()`), `listName` / `listPicked` / `roster`
+  (the pick list's count), `left`, `noRepeats`, `missing`, `period`.
+  `rebuildPool()` broadcasts, so every change to the round reaches them
+  (picks loaded late, a list switch, Reset). The pop-out runs the same
+  `runSpin()` descriptor, so both windows follow the same curve, and applies
+  `picked` to the skins' `setPicked()` (`applyRemotePicked()`): straight
+  away, or mid-spin after its own `finishSpin()`, in the page's order.
+  **Both ways**: a window opening posts `request-state` and is answered at
+  once (it never starts fresh); a click on the pop-out's scene, Space there,
+  or the mini window's Pick posts `spin-request`, and the main window runs
+  `startSpin()` (ignored while one of its dialogs is open), so the pick plays
+  in every window and the shelf fills in all of them.
   **Mini window** (`#wheel-pip`, Chrome's `documentPictureInPicture`,
-  hidden elsewhere): an always-on-top window holding `wheel-popout.html` in
-  an iframe. It is fed over the same BroadcastChannel; the main window
-  broadcasts once the iframe loads.
+  hidden elsewhere): an always-on-top 420px window holding
+  `wheel-popout.html?mini=1` in an iframe. The scene shrunk that far was
+  unreadable, so `initMini()` builds no skin and shows `.wm-view` (body
+  `.wm-mode`; **not** `.wheel-mini`, which is the result panel's small
+  pill buttons): the period · list on top, the winner's name as large as
+  fits (cqi sizes by length; "Picking…" until the main scene reveals it at
+  `startedAt + duration`), a compact count ("8 of 24 picked", or "16 left"
+  without lists) and a **Pick** button.
   **halloween skin — a cauldron instead of the wheel** (`cauldron.js`, the
   "Name Wheel — halloween skin" block in `style.css`). The other themes keep
   the wheel. CSS hides the wheel SVG and the hub button, and shows
@@ -2604,7 +2673,7 @@ All styling lives in `style.css`; pages carry almost no inline styling.
         names readable along the whole shelf.
       - The newest lands with a bounce (`.landed`).
       - **The count** is on its base ("7 / 28", `.fs-count`, with No
-        repeats on, page only); "N left" stays top left.
+        repeats on, page and full screen window); "N left" stays top left.
       - **Full** (`.full`): a red **SOLD OUT** sign drops on two short
         chains onto the shelf's sign and swings. When the **last slot fills**
         (`celebrate()`, `.party` for `PARTY_MS` 2.8s) every package hops,
@@ -2637,9 +2706,9 @@ All styling lives in `style.css`; pages carry almost no inline styling.
       at the packer; a crisp click at the labeller; a plunk onto the
       shelf; pops and clucks as packages burst; a springy "boing" as a
       turkey hops back out; and a bell fanfare when the shelf fills.
-    - The pop-out and mini window show the scene filling the window, with
-      no count or Let them out (they get no pick-list data, so their
-      shelf holds only the current winner). Under reduced motion every CSS
+    - The full screen window shows the scene filling the window with the
+      same shelf and count as the page (the round comes in the broadcast),
+      but no Let them out; the mini window shows the compact view instead. Under reduced motion every CSS
       loop, the gulp, stamp and slap and the bursts stop (`.farm * {
       animation: none }`) and the belt doesn't creep between picks. The walk, the lift, the toss, the package's trip
       down the line and onto the shelf and the hops home still run (JS),
@@ -2696,7 +2765,7 @@ All styling lives in `style.css`; pages carry almost no inline styling.
     - **The cabin is where the round collects**: everyone picked sits in
       the window (`renderCabin()`, the most even grid for the round, filled
       from the bottom row up) with a mug of cocoa, steam rising; "n / N"
-      on a plate by the door (page only). Full: the window pulses, snow
+      on a plate by the door (page and full screen window). Full: the window pulses, snow
       bursts out of it and a chime plays (only on the change to full).
       **Let them out** (`.sl-pour`, top right, page only, primary once
       full; Reset does the same) dispatches the cancelable
@@ -2790,8 +2859,10 @@ All styling lives in `style.css`; pages carry almost no inline styling.
       `:empty`), dead centre (a `1fr auto 1fr` grid), with Put back / Take
       off to its right.
       **Controls** are a vertical card (`--card`, the standard card recipe):
-      groups on a hairline — [period select] / [Edit who's in], the pick
-      list, then the icon cluster as one centred row. The hint line is
+      the four control groups stacked under their labels, a hairline
+      between each — Class [period select] / [Edit who's in], List [List ▾]
+      / [Who's picked][Reset] / status, then the Options and View icon
+      trays. The hint line is
       hidden (hovering the cup says it).
       **Under 900px** it's one column — name, cup (a `min(100%, 34rem)`
       square), jar, controls — with `flex: none` on the layout so it

@@ -227,6 +227,10 @@ function renderSettingsMenu() {
       <div class="hud-menu" role="menu">
         <div class="hud-menu-title">Theme</div>
         ${themeItems}
+        <label class="hud-menu-item hud-effects" title="Keeps the scenes and the pick and timer animations; drops background motion, glows and blur, and uses fewer particles">
+          <input type="checkbox" name="reduce-effects"${typeof reduceEffects === 'function' && reduceEffects() ? ' checked' : ''}>
+          <span>Reduce effects<small>for slower computers</small></span>
+        </label>
         ${periodsBlock}
       </div>
     </details>`;
@@ -254,6 +258,16 @@ function wireSettingsMenu(header) {
       input.checked = input.value === t;
     });
   });
+  // Reduce effects: saves at once (profile + this browser); the menu stays
+  // open, like the period checkboxes. Kept in sync if the profile refresh
+  // changes it.
+  const effects = details.querySelector('input[name="reduce-effects"]');
+  if (effects) {
+    effects.addEventListener('change', () => {
+      if (typeof setMyReduceEffects === 'function') setMyReduceEffects(effects.checked);
+    });
+    document.addEventListener('teacherpal:effects', (e) => { effects.checked = !!(e.detail && e.detail.reduced); });
+  }
   // Your farmer… (thanksgiving only): farmer.js has the dialog; pages
   // without the Name Wheel load it on first use.
   const farmerBtn = details.querySelector('#hud-farmer');

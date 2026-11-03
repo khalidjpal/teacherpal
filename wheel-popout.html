@@ -8,7 +8,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Comfortaa:wght@400;500;600;700&family=Orbitron:wght@500;600;700&family=Pirata+One&family=Rajdhani:wght@500;600;700&family=Share+Tech+Mono&display=swap" rel="stylesheet">
-  <script>(function(){try{var t=localStorage.getItem('teacherpal.theme')||'default';t={jarvis:'default',marwa:'pink',earthy:'default'}[t]||t;document.documentElement.setAttribute('data-theme',t);}catch(e){document.documentElement.setAttribute('data-theme','default');}})();</script>
+  <script>(function(){try{var t=localStorage.getItem('teacherpal.theme')||'default';t={jarvis:'default',marwa:'pink',earthy:'default'}[t]||t;document.documentElement.setAttribute('data-theme',t);if(localStorage.getItem('teacherpal.effects')==='reduced')document.documentElement.setAttribute('data-effects','reduced');}catch(e){document.documentElement.setAttribute('data-theme','default');}})();</script>
   <link rel="stylesheet" href="style.css">
 </head>
 <body class="wheel-popout">
@@ -72,6 +72,18 @@
       <p class="wheel-empty" id="wheel-empty" hidden>Waiting for the Name Wheel tab…</p>
     </div>
   </div>
+  <!-- The mini window (wheel-popout.html?mini=1, inside the Picture-in-
+       Picture window): no scene, just what reads at that size. Shown by
+       wheel.js's initMini(). -->
+  <section class="wm-view" id="wm-view" data-state="" hidden>
+    <p class="wm-where" id="wm-where"></p>
+    <p class="wm-name" id="wm-name" aria-live="polite"></p>
+    <p class="wm-empty" id="wm-empty">Waiting for the Name Wheel tab…</p>
+    <div class="wm-foot">
+      <span class="wm-count" id="wm-count"></span>
+      <button type="button" class="primary" id="wm-pick" title="Pick a student (Space)">Pick</button>
+    </div>
+  </section>
   <script src="cauldron.js"></script>
   <script src="boba.js"></script>
   <script src="farmer.js"></script>

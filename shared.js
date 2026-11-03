@@ -90,6 +90,7 @@ function normalizeSession(raw, recovery = !!(_session && _session.recovery)) {
         setup_done: prevUser ? prevUser.setup_done !== false : true,
         bell_schedule: prevUser && prevUser.bell_schedule || null,
         setup_progress: prevUser && prevUser.setup_progress || null,
+        ...(prevUser && 'reduce_effects' in prevUser ? { reduce_effects: !!prevUser.reduce_effects } : {}),
       }
     : prevUser;
   return {
@@ -251,10 +252,26 @@ async function hydrateProfileIntoSession() {
     if ('setup_progress' in p) _session.user.setup_progress = p.setup_progress || null;
     // The thanksgiving farmer's look (before migration-farmer.sql: keep what we have).
     if ('farmer' in p)         _session.user.farmer         = p.farmer || null;
+    // Reduce effects (before migration-reduce-effects.sql: keep this browser's choice).
+    // The first time the column is seen, a switch turned on here before the
+    // migration wins over the column's default false, and is saved.
+    if ('reduce_effects' in p) {
+      const firstSeen = !('reduce_effects' in _session.user);
+      const cachedOn = (() => { try { return localStorage.getItem(EFFECTS_KEY) === 'reduced'; } catch { return false; } })();
+      if (firstSeen && !p.reduce_effects && cachedOn) {
+        _session.user.reduce_effects = true;
+        sb('rpc/set_my_reduce_effects', { method: 'POST', body: { p_on: true } }).catch((err) => console.error('reduce effects save', err));
+      } else {
+        _session.user.reduce_effects = !!p.reduce_effects;
+      }
+    }
 
     if (JSON.stringify(_session.user) === before) return;   // nothing moved
     saveSession(_session);
     if (currentTheme() !== _session.user.theme) applyTheme(_session.user.theme);
+    if ('reduce_effects' in _session.user && reduceEffects() !== _session.user.reduce_effects) {
+      applyReduceEffects(_session.user.reduce_effects);
+    }
     if (JSON.stringify(_session.user.teaches_periods) !== prevTeaches) {
       document.dispatchEvent(new CustomEvent('teacherpal:teachesPeriods', {
         detail: { teachesPeriods: _session.user.teaches_periods.slice() },
@@ -1737,9 +1754,53 @@ async function setMyFarmer(look) {
   await sb('rpc/set_my_farmer', { method: 'POST', body: { p_farmer: _session.user.farmer } });
 }
 
+// ---------------------------------------------------------------------------
+// Reduce effects — "for slower computers". profiles.reduce_effects
+// (migration-reduce-effects.sql) is the source of truth, so it follows the
+// teacher between computers; localStorage['teacherpal.effects'] = 'reduced'
+// is only the cache the head scripts read so a page never starts with the
+// effects on. On: data-effects="reduced" on <html>, and the "Reduce effects"
+// block at the end of style.css drops ambient motion, thins particles and
+// skips glows / blur filters. The scenes, the picks and the timer stay.
+// ---------------------------------------------------------------------------
+const EFFECTS_KEY = 'teacherpal.effects';
+
+function reduceEffects() { return document.documentElement.getAttribute('data-effects') === 'reduced'; }
+
+// Apply and cache locally (no server call: setMyReduceEffects does that).
+function applyReduceEffects(on) {
+  on = !!on;
+  if (on) document.documentElement.setAttribute('data-effects', 'reduced');
+  else document.documentElement.removeAttribute('data-effects');
+  try { if (on) localStorage.setItem(EFFECTS_KEY, 'reduced'); else localStorage.removeItem(EFFECTS_KEY); } catch { /* ignore */ }
+  document.dispatchEvent(new CustomEvent('teacherpal:effects', { detail: { reduced: on } }));
+}
+
+// The gear menu's switch: apply at once, then save to the profile.
+async function setMyReduceEffects(on) {
+  on = !!on;
+  applyReduceEffects(on);
+  if (_session && _session.user) {
+    _session.user.reduce_effects = on;
+    saveSession(_session);
+    try {
+      await sb('rpc/set_my_reduce_effects', { method: 'POST', body: { p_on: on } });
+    } catch (err) {
+      // Before the migration: still on in this browser, just not synced.
+      console.error('reduce effects save', err);
+    }
+  }
+}
+
 // If we already have a stored session with a theme, apply it now so pages
 // come up in the right theme even before the head script runs.
 if (_session && _session.user && _session.user.theme) applyTheme(_session.user.theme);
+// Same for Reduce effects (pages without the head script, and an old cache).
+if (_session && _session.user && 'reduce_effects' in _session.user) {
+  applyReduceEffects(_session.user.reduce_effects);
+} else {
+  try { if (localStorage.getItem(EFFECTS_KEY) === 'reduced') document.documentElement.setAttribute('data-effects', 'reduced'); } catch { /* ignore */ }
+}
 
 // Re-read the profile once per page load. The stored session is a cache;
 // this is what makes a display_name / theme / is_admin / teaches_periods

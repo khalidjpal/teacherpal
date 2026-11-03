@@ -2017,6 +2017,11 @@ a.hud-link:hover, a.hud-link:focus-visible { border-bottom-color: var(--hud); ou
 }
 .hud-menu-item:hover { background: var(--card-2); }
 .hud-menu-item input[type="radio"] { accent-color: var(--accent); }
+/* Reduce effects: a checkbox under the themes, its "for slower computers" on a second line */
+.hud-effects { margin-top: 0.15rem; border-top: 1px solid var(--border); border-radius: 0; }
+.hud-effects input[type="checkbox"] { accent-color: var(--accent); margin: 0; flex: none; }
+.hud-effects span { display: flex; flex-direction: column; gap: 0.05rem; font-weight: var(--fw-semibold); }
+.hud-effects small { color: var(--text-muted); font-size: var(--fs-xs); font-weight: var(--fw-regular); }
 
 /* "Periods I teach" — compact 4×2 pill grid */
 .hud-periods {
@@ -7272,11 +7277,53 @@ body.noise-popout .noise-zone { font-size: clamp(1.2rem, 5vmin, 3rem); }
 .wheel-control-row button[aria-checked="false"] .when-on { display: none; }
 .wheel-control-row button[aria-checked="true"] .when-off { display: none; }
 
-/* The icon cluster: the three switches, a hairline, then the windows and
-   full screen, in one bordered group so the controls read as two clusters
-   (text controls · icons). Each button's tooltip carries its full label. */
+/* ---- the controls in four groups: Class · List · Options · View ----
+   Each group is its own cluster (its buttons close together), with a gap
+   and a hairline between groups. Here (default's right column) they stack
+   two by two under small labels; thanksgiving / winter lay them in one
+   low row with no labels, pink stacks them in its card (see those blocks).
+   The groups' selects carry aria-labels, so the old inline "Period" /
+   "List" labels go: the group label (or the select's value) says it. */
+.wheel-groups {
+  display: grid; grid-template-columns: minmax(0, max-content) minmax(0, max-content);   /* shrink to fit: a group then wraps inside itself */
+  grid-template-areas: "class list" "options view";
+  justify-content: center; align-items: start;
+  row-gap: var(--space-4);
+  width: 100%;
+}
+.wg-class   { grid-area: class; }
+.wg-list    { grid-area: list; }
+.wg-options { grid-area: options; }
+.wg-view    { grid-area: view; }
+.wheel-group { display: flex; flex-direction: column; align-items: flex-start; gap: 0.4rem; min-width: 0; padding: 0 var(--space-4); }
+.wheel-group[hidden] { display: none; }
+/* the hairline sits in the gap, before the right-hand group of each row */
+.wg-list, .wg-view { border-left: 1px solid var(--border-strong); }
+.wg-label {
+  margin: 0;
+  font-family: var(--font-display); font-weight: 600;
+  font-size: 0.58rem; line-height: 1;
+  letter-spacing: var(--track-label); text-transform: var(--label-transform, uppercase);
+  color: var(--label-ink);
+}
+.wheel-group .wheel-control-row { width: auto; justify-content: flex-start; flex-wrap: wrap; gap: 0.5rem; }
+.wheel-group .lbl { display: none; }
+.wheel-group .wheel-control-row > :is(.bar-field, button) { flex: none; }   /* nowrap rows: never squeeze a select under its arrow */
+.wg-list-body { display: flex; flex-direction: column; align-items: flex-start; gap: 0.35rem; min-width: 0; }
+/* phones: one group per row, the hairline above instead of beside (pink's
+   card already stacks; thanksgiving / winter wrap in their own block) */
+@media (max-width: 640px) {
+  .wheel-groups { grid-template-columns: auto; grid-template-areas: "class" "list" "options" "view"; row-gap: var(--space-3); }
+  .wheel-group { padding: 0; }
+  .wg-list, .wg-view { border-left: 0; }
+  .wheel-group:not([hidden]) ~ .wheel-group:not([hidden]) { padding-top: var(--space-3); border-top: 1px solid var(--border); }
+  .wheel-group .wheel-control-row { flex-wrap: wrap; }
+}
+
+/* An icon cluster (Options, View): the buttons in one bordered tray. Each
+   button's tooltip carries its full label. */
 .wheel-icon-row {
-  width: auto; flex-wrap: nowrap; gap: 2px; padding: 2px;
+  width: auto; flex-wrap: nowrap; gap: 4px; padding: 3px;
   border: 1px solid var(--border); border-radius: var(--radius-sm);
   background: var(--card-2);
 }
@@ -7287,7 +7334,6 @@ body.noise-popout .noise-zone { font-size: clamp(1.2rem, 5vmin, 3rem); }
 }
 .wheel-icon-row .icon-btn svg { width: 1.15rem; height: 1.15rem; }
 .wheel-icon-row .icon-btn:hover { border-color: var(--border-strong); background: var(--card-3); color: var(--text); }
-.wheel-icon-sep { align-self: stretch; width: 1px; margin: 0.35rem 0.2rem; background: var(--border-strong); }
 /* on = the accent fill (No repeats, First names) */
 .wheel-icon-row .wheel-toggle[aria-checked="true"] { border-color: var(--accent); background: var(--accent-soft); color: var(--accent-ink); }
 /* No repeats: the slash through the loop only while it's on */
@@ -7379,16 +7425,17 @@ dialog.wheel-roster-dialog::backdrop { background: rgba(8, 6, 14, 0.6); backdrop
 
 /* ---- pick lists: the List select + "Who's picked" / Reset, and one line
    under them ("Board work · 12 of 28 picked", or Round complete) ---- */
-.pick-list-bar { width: 100%; display: flex; flex-direction: column; align-items: center; gap: 0.3rem; }
 .pick-list-bar[hidden] { display: none; }
+/* quiet status text, not a control: small, muted, no box */
 .pick-list-line {
-  margin: 0;
+  margin: 0; max-width: 100%;
   font-family: var(--font-mono); font-variant-numeric: tabular-nums;
-  font-size: 0.72rem; letter-spacing: 0.04em;
+  font-size: 0.7rem; letter-spacing: 0.04em; line-height: 1.3;
   color: var(--text-muted);
-  text-align: center;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;   /* the whole line is its title */
 }
-.pick-list-line b { font-weight: inherit; color: var(--text); }
+.pick-list-line:empty { display: none; }
+.pick-list-line b { font-weight: inherit; color: var(--text-2); }
 .pick-list-bar[data-done="1"] .pick-list-line b { color: var(--ok); }
 
 /* the dialog: two columns, picked (numbered, with the date) and still to go */
@@ -7453,7 +7500,7 @@ dialog.pick-list-dialog { width: min(48rem, 94vw); }
 /* slices are clickable (take that student off); the label must not swallow it */
 .slice { cursor: pointer; }
 .slice-label { pointer-events: none; }
-body.wheel-popout .slice { cursor: default; }
+body.wheel-popout .slice { cursor: pointer; }   /* a click anywhere on the scene asks the main window for a pick */
 
 /* full screen: controls go, the wheel takes the room */
 body.present .wheel-wrap { width: min(80vh, 94vw); }
@@ -7476,6 +7523,49 @@ body.wheel-popout .wheel-period {
   font-family: var(--font-display); text-transform: var(--label-transform);
   letter-spacing: var(--track-label); font-size: 0.8rem; color: var(--text-muted);
 }
+body.wheel-popout .wheel-wrap { cursor: pointer; }
+
+/* The mini window (?mini=1): no scene, which would be unreadable at 420px.
+   The period and list on top, the winner's name as large as fits, a compact
+   count and a Pick button at the bottom. Every theme, from tokens only. */
+.wm-view[hidden], body.wm-mode .wheel-stage { display: none; }
+body.wm-mode { place-items: stretch; }
+.wm-view {
+  box-sizing: border-box; width: 100vw; height: 100vh; height: 100dvh;
+  display: grid; grid-template-rows: auto 1fr auto;
+  padding: clamp(0.6rem, 4vmin, 1.2rem);
+  container-type: inline-size;
+  text-align: center;
+}
+.wm-where {
+  margin: 0; min-height: 1.2em;
+  font-family: var(--font-display); text-transform: var(--label-transform, uppercase);
+  letter-spacing: var(--track-label); font-size: clamp(0.62rem, 3.4cqi, 0.9rem);
+  color: var(--label-ink, var(--text-muted));
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.wm-name, .wm-empty { grid-row: 2; align-self: center; margin: 0; }
+.wm-name {
+  font-family: var(--font-body); font-weight: 700; line-height: 1.05;
+  font-size: 19cqi; color: var(--text);
+  overflow-wrap: normal; word-break: normal;     /* wraps between words, never mid-name */
+}
+.wm-name:empty { display: none; }
+.wm-name[data-len="mid"]  { font-size: 14cqi; }
+.wm-name[data-len="long"] { font-size: 10.5cqi; }
+.wm-view[data-state="picking"] .wm-name { font-size: 11cqi; color: var(--text-muted); font-weight: 600; }
+.wm-view[data-state="picked"] .wm-name { animation: wm-in 420ms var(--sp-spring, cubic-bezier(0.34, 1.56, 0.64, 1)) both; }
+@keyframes wm-in { from { opacity: 0; transform: scale(0.6); } }
+@media (prefers-reduced-motion: reduce) { .wm-view .wm-name { animation: none !important; } }
+:root[data-theme="pink"] .wm-name { font-family: 'Comfortaa', var(--font-body); }
+:root[data-theme="halloween"] .wm-name { font-family: 'Pirata One', var(--font-body); font-weight: 400; }
+.wm-empty { font-size: clamp(0.9rem, 5cqi, 1.3rem); color: var(--text-muted); }
+.wm-foot { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); }
+.wm-count {
+  font-family: var(--font-mono); font-variant-numeric: tabular-nums;
+  font-size: clamp(0.8rem, 4.4cqi, 1.15rem); color: var(--text-2);
+}
+.wm-foot button { min-height: 2.4rem; padding-inline: 1.4rem; margin-left: auto; }
 
 /* ---------------------------------------------------------------------------
    Name Wheel - pink skin: the prettiest wheel. Five pastels in turn (pink,
@@ -7771,7 +7861,7 @@ body.wheel-popout .wheel-period {
   -webkit-tap-highlight-color: transparent;
 }
 .cauldron[aria-disabled="true"] { cursor: default; }
-body.wheel-popout .cauldron { cursor: default; }
+body.wheel-popout .cauldron { cursor: pointer; }
 .cauldron:focus-visible { outline: 2px solid var(--accent); outline-offset: 4px; }
 .cd-back, .cd-front { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; pointer-events: none; }
 .cd-back { z-index: 1; }
@@ -8036,7 +8126,7 @@ body.wheel-popout .cauldron { cursor: default; }
   -webkit-tap-highlight-color: transparent;
 }
 .farm[aria-disabled="true"] { cursor: default; }
-body.wheel-popout .farm { cursor: default; border: 0; }
+body.wheel-popout .farm { cursor: pointer; border: 0; }
 .farm:focus-visible { outline: 2px solid var(--accent); outline-offset: 4px; }
 .fy-svg { position: absolute; inset: 0; width: 100%; height: 100%; }
 .farm .o { stroke: var(--fy-line); stroke-width: 1.4; stroke-linejoin: round; }
@@ -8671,18 +8761,30 @@ body.wheel-popout .farm { cursor: default; border: 0; }
 }
 :root:is([data-theme="thanksgiving"], [data-theme="winter"]) .wheel-page .wheel-result-actions { display: none; }
 :root:is([data-theme="thanksgiving"], [data-theme="winter"]) .wheel-page .wheel-hint { display: none; }
-:root:is([data-theme="thanksgiving"], [data-theme="winter"]) .wheel-page .wheel-controls {
-  flex-direction: row; flex-wrap: wrap;
-  justify-content: center; align-items: center;
-  gap: 0.4rem 0.8rem;
+:root:is([data-theme="thanksgiving"], [data-theme="winter"]) .wheel-page .wheel-controls { flex-direction: row; justify-content: center; align-items: center; }
+/* one low row: the four groups side by side, a gap and a hairline between
+   each, no labels (they would make the bar taller); the List group's status
+   sits beside its buttons as quiet text */
+:root:is([data-theme="thanksgiving"], [data-theme="winter"]) .wheel-page .wheel-groups { display: flex; flex-wrap: nowrap; align-items: center; justify-content: center; width: auto; row-gap: 0; }
+:root:is([data-theme="thanksgiving"], [data-theme="winter"]) .wheel-page .wheel-group { flex: none; flex-direction: row; align-items: center; padding: 0.15rem var(--space-5); }
+:root:is([data-theme="thanksgiving"], [data-theme="winter"]) .wheel-page .wheel-group .wheel-control-row { flex-wrap: nowrap; }
+:root:is([data-theme="thanksgiving"], [data-theme="winter"]) .wheel-page .wheel-group:first-child { padding-left: 0; }
+:root:is([data-theme="thanksgiving"], [data-theme="winter"]) .wheel-page .wheel-group:last-child { padding-right: 0; }
+:root:is([data-theme="thanksgiving"], [data-theme="winter"]) .wheel-page .wg-options { border-left: 1px solid var(--border-strong); }
+:root:is([data-theme="thanksgiving"], [data-theme="winter"]) .wheel-page .wg-label { display: none; }
+:root:is([data-theme="thanksgiving"], [data-theme="winter"]) .wheel-page .wg-list-body { flex-direction: row; align-items: center; gap: var(--space-3); }
+:root:is([data-theme="thanksgiving"], [data-theme="winter"]) .wheel-page .wheel-control-row button:not(.icon-btn) { padding-left: 0.65rem; padding-right: 0.65rem; }
+:root:is([data-theme="thanksgiving"], [data-theme="winter"]) .wheel-page .wheel-control-row select { padding-left: 0.65rem; padding-right: 1.9rem; }
+:root:is([data-theme="thanksgiving"], [data-theme="winter"]) .wheel-page .pick-list-line { max-width: 14rem; }   /* "Round complete · …" is cut; the whole line is its title */
+/* narrower than the one row fits: the groups wrap, centred, and the
+   hairlines go (a wrapped line would start with one) */
+@media (max-width: 1100px) {
+  :root:is([data-theme="thanksgiving"], [data-theme="winter"]) .wheel-page .wheel-groups { flex-wrap: wrap; row-gap: var(--space-3); }
+  :root:is([data-theme="thanksgiving"], [data-theme="winter"]) .wheel-page .wheel-group, :root:is([data-theme="thanksgiving"], [data-theme="winter"]) .wheel-page .wheel-group:first-child, :root:is([data-theme="thanksgiving"], [data-theme="winter"]) .wheel-page .wheel-group:last-child { padding: 0 var(--space-3); border-left: 0 !important; border-top: 0 !important; }
 }
-:root:is([data-theme="thanksgiving"], [data-theme="winter"]) .wheel-page .wheel-control-row { width: auto; }
-:root:is([data-theme="thanksgiving"], [data-theme="winter"]) .wheel-page .pick-list-bar:not([hidden]) { width: auto; display: flex; flex-direction: row; align-items: center; gap: 0.5rem; }
-:root:is([data-theme="thanksgiving"], [data-theme="winter"]) .wheel-page .wheel-control-row .lbl { display: none; }   /* the selects say what they are */
-:root:is([data-theme="thanksgiving"], [data-theme="winter"]) .wheel-page .wheel-control-row { gap: 0.35rem; }
-:root:is([data-theme="thanksgiving"], [data-theme="winter"]) .wheel-page .wheel-control-row :is(button, select) { padding-left: 0.6rem; padding-right: 0.6rem; }
-:root:is([data-theme="thanksgiving"], [data-theme="winter"]) .wheel-page .wheel-control-row select { padding-right: 1.7rem; }
-:root:is([data-theme="thanksgiving"], [data-theme="winter"]) .wheel-page .pick-list-line { margin: 0; max-width: 13rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }   /* one row: "Round complete · …" is cut, the whole line is its title */
+@media (max-width: 640px) {
+  :root:is([data-theme="thanksgiving"], [data-theme="winter"]) .wheel-page .wg-list-body { flex-wrap: wrap; justify-content: center; }
+}
 :root:is([data-theme="thanksgiving"], [data-theme="winter"]) .wheel-page .wheel-stage { height: 100%; padding: 0; }
 :root:is([data-theme="thanksgiving"], [data-theme="winter"]) .wheel-page .wheel-stage > .tick { display: none; }
 :root:is([data-theme="thanksgiving"], [data-theme="winter"]) .wheel-wrap { width: 100%; height: 100%; max-width: none; aspect-ratio: auto; }
@@ -8736,7 +8838,7 @@ body.wheel-popout .farm { cursor: default; border: 0; }
   -webkit-tap-highlight-color: transparent;
 }
 .sled[aria-disabled="true"] { cursor: default; }
-body.wheel-popout .sled { cursor: default; border: 0; border-radius: 0; }
+body.wheel-popout .sled { cursor: pointer; border: 0; border-radius: 0; }
 .sled:focus-visible { outline: 2px solid var(--accent); outline-offset: 4px; }
 .sl-svg { position: absolute; inset: 0; width: 100%; height: 100%; }
 .sled [hidden] { display: none; }
@@ -9377,8 +9479,7 @@ body.wheel-popout .bt-spot-hint { display: none; }   /* the projector can't be c
 :root[data-theme="pink"] .wheel-page .wheel-sparks i { top: 50%; }
 
 /* the controls: a vertical card left of the cup, the same card as the
-   Picked tray on the right. Groups on a hairline: the period select and
-   Edit who's in, the pick list, then the icon cluster (switches + windows).
+   Picked tray on the right, holding the four control groups (below).
    No hint line: hovering the cup says it. */
 :root[data-theme="pink"] .wheel-page .wheel-controls {
   grid-area: controls;
@@ -9392,40 +9493,27 @@ body.wheel-popout .bt-spot-hint { display: none; }   /* the projector can't be c
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-card);
 }
-:root[data-theme="pink"] .wheel-page .wheel-control-row {
-  display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-  gap: 0.4rem;
-  width: auto;
-}
-:root[data-theme="pink"] .wheel-page .wheel-control-row + .wheel-control-row {
-  padding-top: var(--space-3);
-  border-top: 1px solid var(--border);
+/* the four groups stacked in the card, a hairline between each, each under
+   its small label: Class [Period ▾] / [Edit who's in], List [List ▾] /
+   [Who's picked][Reset] / its status line, then the Options and View trays */
+:root[data-theme="pink"] .wheel-page .wheel-groups { display: flex; flex-direction: column; align-items: stretch; gap: var(--space-3); }
+:root[data-theme="pink"] .wheel-page .wheel-group { align-items: stretch; gap: 0.45rem; padding: 0; border-left: 0; }
+:root[data-theme="pink"] .wheel-page .wheel-group:not([hidden]) ~ .wheel-group:not([hidden]) { padding-top: var(--space-3); border-top: 1px solid var(--border); }
+:root[data-theme="pink"] .wheel-page .wheel-group .wheel-control-row {
+  display: grid; grid-template-columns: minmax(0, 1fr);
+  gap: 0.45rem;
 }
 :root[data-theme="pink"] .wheel-page .wheel-control-row > * { min-width: 0; }
 :root[data-theme="pink"] .wheel-page .wheel-control-row button { justify-content: center; }
-/* row 1: [Period ▾] / [Edit who's in · 28 on] */
-:root[data-theme="pink"] .wheel-page .wheel-control-row:first-of-type { grid-template-columns: minmax(0, 1fr); }
 :root[data-theme="pink"] .wheel-page .wheel-control-row .bar-field { display: flex; }
 :root[data-theme="pink"] .wheel-page .wheel-control-row .bar-field select { flex: 1; min-width: 0; }
-:root[data-theme="pink"] .wheel-page #wheel-edit { grid-column: 1 / -1; }
-/* last: the icon cluster, one centred row */
-:root[data-theme="pink"] .wheel-page .wheel-icon-row {
-  display: flex; justify-content: center; align-self: center;
-  padding: 2px; border: 1px solid var(--border);
-}
-/* the group hairline above the other rows would cut its border: reset it */
-:root[data-theme="pink"] .wheel-page :is(.pick-list-bar, .wheel-control-row) + .wheel-icon-row { padding: 2px; border-top: 1px solid var(--border); }
+:root[data-theme="pink"] .wheel-page .wg-list .wheel-control-row { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+:root[data-theme="pink"] .wheel-page .wg-list .bar-field { grid-column: 1 / -1; }
+:root[data-theme="pink"] .wheel-page .wg-list-body { align-items: stretch; }
+:root[data-theme="pink"] .wheel-page .pick-list-line { text-align: center; }
+/* the icon trays: one row each, left under their label */
+:root[data-theme="pink"] .wheel-page .wheel-group .wheel-icon-row { display: flex; justify-content: flex-start; align-self: flex-start; padding: 3px; border: 1px solid var(--border); }
 :root[data-theme="pink"] .wheel-page .wheel-hint { display: none; }
-/* the pick list group between them, on its own hairline: [List ▾] across,
-   then Who's picked / Reset, then the count line */
-:root[data-theme="pink"] .wheel-page .pick-list-bar,
-:root[data-theme="pink"] .wheel-page .pick-list-bar + .wheel-control-row {
-  padding-top: var(--space-3);
-  border-top: 1px solid var(--border);
-}
-:root[data-theme="pink"] .wheel-page .pick-list-bar { align-items: stretch; gap: 0.4rem; }
-:root[data-theme="pink"] .wheel-page .pick-list-bar .wheel-control-row { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
-:root[data-theme="pink"] .wheel-page .pick-list-bar .bar-field { grid-column: 1 / -1; }
 /* narrow screens: one column — name, cup, Picked, controls — and the page
    scrolls. After the card rules above so it wins the cascade. */
 @media (max-width: 900px) {
@@ -10841,3 +10929,113 @@ body.embed main.page.seating-page { grid-row: 1; padding: 0; }
 .sw-pchip[aria-current="step"] { border: 1px solid var(--accent); background: var(--gradient-accent); box-shadow: var(--shadow-pressed); color: var(--text); }
 .sw-pchip[aria-current="step"] .sw-pchip-k { color: var(--accent-ink); }
 @media (max-width: 760px) { .sw-pstrip { flex-wrap: wrap; gap: var(--space-2); } }
+
+/* ============================================================================
+   Reduce effects — "for slower computers" (gear menu; profiles.reduce_effects,
+   cached in localStorage['teacherpal.effects'], applied as
+   <html data-effects="reduced"> by shared.js and every head script).
+
+   Keeps: every scene, the pick animations (spin, boil, walk / lift / toss,
+   race, shake / swirl / straw / spotlight), the timer's drain, final-minute
+   and time's-up states, and the noise meter's reading and its loud / alert
+   reactions.
+   Drops:
+     1. ambient motion: page decorations, idle loops (breathing, bobbing,
+        blinking, pecking, swaying), smoke, flicker, licking flames;
+     2. half of every particle burst, and the cauldron's embers;
+     3. the expensive paint: drop-shadow glows, blur filters, backdrop blur,
+        animated filters and glow shadows.
+   Every rule is !important so it beats the components' own (often
+   !important) rules wherever they sit in this file.
+   ============================================================================ */
+
+/* ---- 3a. app-wide: backdrop blur and glow tokens ---- */
+:root[data-effects="reduced"] *,
+:root[data-effects="reduced"] *::before,
+:root[data-effects="reduced"] *::after,
+:root[data-effects="reduced"] dialog::backdrop {
+  -webkit-backdrop-filter: none !important;
+  backdrop-filter: none !important;
+}
+:root[data-effects="reduced"] {
+  --hover-glow: none !important;                     /* used on its own */
+  --hud-glow: 0 0 0 transparent !important;          /* used inside shadow lists: must stay a valid shadow */
+  --hud-glow-soft: 0 0 0 transparent !important;
+}
+
+/* ---- 1. page decorations (halloween bats + fog, thanksgiving leaves) stay put ---- */
+:root[data-effects="reduced"]::before,
+:root[data-effects="reduced"]::after,
+:root[data-effects="reduced"] body::after { animation: none !important; }
+
+/* ---- Timer ---- */
+/* default: 60 ticks each with its own glow, and a 42px glow on the digits */
+:root[data-effects="reduced"] .dial-segs line,
+:root[data-effects="reduced"] .pointer-arm { filter: none !important; }
+:root[data-effects="reduced"]:is([data-theme="default"], [data-theme="halloween"], :not([data-theme])) .timer-display { text-shadow: none !important; }
+/* pink: no breathing while it runs; the silhouette loses its soft shadow */
+:root[data-effects="reduced"][data-theme="pink"] .timer-display-wrap[data-mood="calm"] { animation: none !important; }
+:root[data-effects="reduced"][data-theme="pink"] .timer-display-wrap::before { filter: none !important; }
+/* halloween: the pumpkin still pulses in the final minute, but its glow
+   doesn't (animated drop-shadows / brightness), and the face doesn't flare */
+:root[data-effects="reduced"][data-theme="halloween"] .timer-display-wrap::after,
+:root[data-effects="reduced"][data-theme="halloween"] .timer-display-wrap .timer-flash,
+:root[data-effects="reduced"][data-theme="halloween"] .timer-display-wrap .timer-display { animation: none !important; filter: none !important; }
+/* thanksgiving: the pie's warm glow pulse and the blurred dish shadow */
+:root[data-effects="reduced"] .tg-slices { animation: none !important; filter: none !important; }
+:root[data-effects="reduced"] .tg-shadow { filter: none !important; }
+
+/* ---- Noise meter ---- */
+/* the calm moods sit still; loud and alert still shake (that's the reading) */
+:root[data-effects="reduced"] .noise-meter:is([data-mood="quiet"], [data-mood="ok"]) :is(.nm-move, .nt-move, .nh-float),
+:root[data-effects="reduced"] .nm-ear-wig,
+:root[data-effects="reduced"] .nh-wisps path,
+:root[data-effects="reduced"] :is(.nm-fx.zzz, .nm-fx.hearts, .nt-fx.zzz, .nt-fx.leaves) > g { animation: none !important; }
+/* the level bar's rider stops bobbing / flapping / spinning, and loses its glow */
+:root[data-effects="reduced"] .noise-rider i { animation: none !important; filter: none !important; }
+/* halloween's flame flicker is an animated filter over the whole bar */
+:root[data-effects="reduced"] .noise-fill { animation: none !important; }
+:root[data-effects="reduced"] :is(.nh-ghost, .nw-win) { filter: none !important; }
+:root[data-effects="reduced"] .noise-meter[data-alert="1"] .noise-bar { box-shadow: 0 0 0 2px var(--noise-loud-soft) !important; }
+/* fewer particles: half the snow in the globe, half the loud stars / drops */
+:root[data-effects="reduced"] .nw-flakes .nw-fl:nth-child(even),
+:root[data-effects="reduced"] :is(.nm-fx, .nt-fx) > g:nth-child(even) { display: none !important; }
+
+/* ---- Name Wheel: default wheel ---- */
+:root[data-effects="reduced"] .wheel-rim { filter: none !important; animation: none !important; }
+:root[data-effects="reduced"] .wheel-mascot[data-mood="idle"] .wb-breathe { animation: none !important; }
+
+/* ---- Name Wheel: halloween cauldron ---- the fire is still there, just still */
+:root[data-effects="reduced"] :is(.cd-steam path, .cd-flame path, .cd-light, .cd-bed, .cd-pot-rimlight, .cd-log .lg-crack, .cd-winner) { animation: none !important; }
+:root[data-effects="reduced"] .cd-embers { display: none !important; }
+:root[data-effects="reduced"] .cd-log .lg-crack { filter: none !important; }
+/* the brew and the flames still brighten as it boils; only the glow goes */
+:root[data-effects="reduced"] .cd-brew-surface { filter: brightness(calc(1 + var(--boil, 0) * 0.5)) !important; }
+:root[data-effects="reduced"] .cd-flames { filter: brightness(calc(1 + var(--boil, 0) * 0.3)) !important; }
+:root[data-effects="reduced"] .cd-flames.back { filter: brightness(calc(0.9 + var(--boil, 0) * 0.3)) !important; }
+
+/* ---- Name Wheel: thanksgiving farmyard ---- idle turkeys and the thinking
+   farmer stand still; every pick state (scared, inspected, sneak, caught,
+   held, tossed, tumbling, flying, walking) still moves */
+:root[data-effects="reduced"] .fy-turkey :is(.fy-head, .fy-pupil, .fy-tail),
+:root[data-effects="reduced"] .fy-turkey:not(.scared, .inspected) .fy-torso,
+:root[data-effects="reduced"] .fy-turkey:not(.flying, .tossed, .tumbling) .fy-wing,
+:root[data-effects="reduced"] .fy-farmer[data-pose="think"] :is(.ff-body, .ff-tap, .ff-bubble),
+:root[data-effects="reduced"] .fl-smoke circle { animation: none !important; }
+:root[data-effects="reduced"] .fy-sunglow { display: none !important; }   /* a 28px blur over the sky */
+:root[data-effects="reduced"] :is(.fy-bird, .fl-lamp, .fl-coil, .fy-burst i svg) { filter: none !important; }
+
+/* ---- Name Wheel: winter sled hill ---- */
+:root[data-effects="reduced"] :is(.sl-smoke circle, .sl-fire),
+:root[data-effects="reduced"] .sl-rider[data-pose="idle"] .sl-seated { animation: none !important; }
+:root[data-effects="reduced"] .sl-win-glow { display: none !important; }   /* a blurred glow behind the lit window */
+
+/* ---- Name Wheel: pink bubble tea ---- the cup and the jar stop bobbing,
+   breathing and blinking at rest; the pick's shake, swirl and party stay */
+:root[data-effects="reduced"] .boba[data-mood="idle"]:not([data-state="shaking"]),
+:root[data-effects="reduced"] .boba[data-mood="idle"] .bf-eye,
+:root[data-effects="reduced"] .bt-jar-cup:is([data-fill="sleepy"], [data-fill="content"], [data-fill="happy"]),
+:root[data-effects="reduced"] .bt-jar-cup :is(.bf-z, .bf-eye) { animation: none !important; }
+
+/* ---- 2. fewer particles: every burst plays with half its pieces ---- */
+:root[data-effects="reduced"] :is(.timer-burst, .wheel-sparks, .wb-burst, .cd-burst, .fy-burst, .sl-burst, .bt-burst, .bt-spot-burst) > i:nth-child(even) { display: none !important; }

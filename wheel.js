@@ -664,6 +664,7 @@
     spin = null;
     const skin = skinFor(doc);
     if (skin) skin.finish(doc, s, { respawn: !noRepeats });
+    if (isPopout) applyRemotePicked();
     if (!isPopout) {
       // a saved list records every pick (its history), No repeats or not
       if (useLists() || noRepeats) callAdd(winnerId);
@@ -797,16 +798,20 @@
     renderControls();
     renderPicked();
     renderListBar();
+    broadcast();                       // every change to the round reaches the other windows
   }
   // Who's been called this round, in pick order, and how many are in the
   // round, for a skin that shows them (the bubble tea's jar); null with No
   // repeats off.
-  function renderPicked() {
+  function pickedState() {
     const list = noRepeats
       ? [...called].map((id) => eligible.find((s) => s.id === id)).filter(Boolean)
         .map((s) => ({ id: s.id, label: labelFor(s, eligible) }))
       : null;
-    const total = eligible.filter((s) => !removed.has(s.id)).length;
+    return { list, total: eligible.filter((s) => !removed.has(s.id)).length };
+  }
+  function renderPicked() {
+    const { list, total } = pickedState();
     eachSkin((k) => k.setPicked && k.setPicked(document, list, total));
   }
 
@@ -1059,16 +1064,28 @@
   }
 
   // ---------- broadcast ----------
+  // The other windows (full screen window, mini window) hold no data of
+  // their own: everything they show comes in here - the wheel / yard, the
+  // spin, the winner, the round (who's on the shelf / in the cabin and out
+  // of how many), the period and the open pick list with its count.
   function broadcast() {
     if (!bc || isPopout) return;
+    const p = pickedState();
+    const list = useLists() ? openList() : null;
     bc.postMessage({
       type: 'state',
       state: {
         list: displayList,
         rotation, spin, winnerId,
+        winnerLabel: winnerId ? nameOf(winnerId) : '',
+        spinLabel: spin ? nameOf(spin.winnerId) : '',
         left: pool.length, total: eligible.length, noRepeats,
+        picked: p.list, pickedTotal: p.total,
+        listName: list ? list.name : '',
+        listPicked: useLists() ? pickedCount() : null,
+        roster: roster.length,
         missing: missingList(),
-        period: (periods.find((p) => p.id === currentPeriodId) || {}).name || '',
+        period: (periods.find((x) => x.id === currentPeriodId) || {}).name || '',
       },
     });
   }
@@ -1302,7 +1319,7 @@
         const d = pip.document;
         d.body.style.cssText = 'margin:0;height:100vh;overflow:hidden;background:#000';
         const frame = d.createElement('iframe');
-        frame.src = new URL('wheel-popout.html', location.href).href;
+        frame.src = new URL('wheel-popout.html?mini=1', location.href).href;
         frame.title = 'Name Wheel';
         frame.style.cssText = 'border:0;width:100%;height:100%;display:block';
         frame.addEventListener('load', () => setTimeout(broadcast, 100));
@@ -1317,7 +1334,14 @@
       startSpin();
     });
 
-    if (bc) bc.onmessage = (ev) => { if (ev.data && ev.data.type === 'request-state') broadcast(); };
+    // The other windows ask for the state when they open, and for a pick
+    // when they're clicked: it runs here (the only writer) and the broadcast
+    // plays it in every window.
+    if (bc) bc.onmessage = (ev) => {
+      const t = ev.data && ev.data.type;
+      if (t === 'request-state') broadcast();
+      else if (t === 'spin-request' && !document.querySelector('dialog[open]')) startSpin();
+    };
     renderWinner();
     renderControls();
   }
@@ -1339,15 +1363,40 @@
   }
 
   // ---------- pop-out ----------
+  // The round (picked list + its size) as the main window last sent it.
+  // Applied at once, except mid-spin: then finishSpin() applies it after the
+  // skin has landed the winner, in the same order as the page does.
+  let remotePicked = null;
+  function applyRemotePicked() {
+    if (!remotePicked || spin) return;
+    const { list, total } = remotePicked;
+    eachSkin((k) => k.setPicked && k.setPicked(document, list, total));
+  }
+  // Ask the main window for a pick (a click on the scene, or Space, here).
+  function requestSpin() { if (bc) bc.postMessage({ type: 'spin-request' }); }
+
   function initPopout() {
+    if (new URLSearchParams(location.search).has('mini')) { initMini(); return; }
     eachSkin((k) => k.build(document));
     drawWheel(document, []);
     buildDialRing(document);
     buildBuddy(document);
+    // a click on the scene (the wheel, the farm, the hill, the cauldron, the
+    // cup) picks, as on the page; other buttons inside keep their own job
+    document.getElementById('wheel-stage').addEventListener('click', (e) => {
+      if (e.target.closest('button:not(#boba-straw), a, input, select')) return;
+      requestSpin();
+    });
+    document.addEventListener('keydown', (e) => {
+      if (e.key !== ' ' || e.defaultPrevented) return;
+      e.preventDefault();
+      requestSpin();
+    });
     if (bc) {
       bc.onmessage = (ev) => {
         if (!ev.data || ev.data.type !== 'state') return;
         const s = ev.data.state;
+        remotePicked = { list: s.picked === undefined ? null : s.picked, total: s.pickedTotal || 0 };
         const sig = s.list.map((x) => x.id + ':' + x.label).join('|');
         if (sig !== drawnSig) { displayList = s.list; drawWheel(document, s.list); }
         const label = document.getElementById('wheel-period');
@@ -1366,9 +1415,61 @@
           applyRotation(document);
           renderWinner();
         }
+        applyRemotePicked();
       };
       bc.postMessage({ type: 'request-state' });
     }
+  }
+
+  // ---------- mini window ----------
+  // The mini window is small (420px): the whole scene shrunk into it is
+  // unreadable, so it shows only what carries across the room - the period
+  // and list, the winner's name large, a compact count - and a Pick button.
+  // No skin is built here.
+  function initMini() {
+    document.body.classList.add('wm-mode');
+    const el = (id) => document.getElementById(id);
+    el('wm-view').hidden = false;
+    let last = null, revealT = null, shownSpin = 0;
+    const paint = () => {
+      const s = last;
+      if (!s) return;
+      el('wm-where').textContent = [s.period, s.listName].filter(Boolean).join(' · ');
+      // the name comes up when the main window's scene reveals it
+      const picking = !!s.spin && Date.now() < s.spin.startedAt + s.spin.duration;
+      const name = picking ? '' : (s.spin ? s.spinLabel : s.winnerLabel) || '';
+      const n = el('wm-name');
+      n.textContent = picking ? 'Picking…' : name;
+      n.dataset.len = name.length > 14 ? 'long' : name.length > 9 ? 'mid' : '';
+      el('wm-view').dataset.state = picking ? 'picking' : name ? 'picked' : '';
+      const empty = el('wm-empty');
+      empty.hidden = picking || !!name;
+      empty.textContent = s.list.length ? 'Ready to pick' : (s.period ? 'Nobody left to pick' : 'Waiting for the Name Wheel tab…');
+      // compact count: the list's "8 of 24 picked", else "16 left" with No repeats
+      el('wm-count').textContent = s.listPicked != null ? `${s.listPicked} of ${s.roster} picked`
+        : s.noRepeats ? `${s.left} left` : '';
+      el('wm-pick').disabled = !s.list.length || !!s.spin;
+    };
+    if (bc) {
+      bc.onmessage = (ev) => {
+        if (!ev.data || ev.data.type !== 'state') return;
+        last = ev.data.state;
+        if (last.spin && last.spin.startedAt !== shownSpin) {
+          shownSpin = last.spin.startedAt;
+          clearTimeout(revealT);
+          const wait = last.spin.startedAt + last.spin.duration - Date.now();
+          if (wait > 0) revealT = setTimeout(paint, wait + 20);
+        }
+        paint();
+      };
+      bc.postMessage({ type: 'request-state' });
+    }
+    el('wm-pick').addEventListener('click', requestSpin);
+    document.addEventListener('keydown', (e) => {
+      if (e.key !== ' ' || e.target.closest('button')) return;
+      e.preventDefault();
+      requestSpin();
+    });
   }
 
   document.addEventListener('DOMContentLoaded', () => {
