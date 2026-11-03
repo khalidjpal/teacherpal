@@ -739,6 +739,39 @@
       removed = new Set([...loadIdSet(removedKey(currentPeriodId))].filter((id) => ids.has(id)));
     }
     rebuildPool();
+    renderMissing();
+    broadcast();
+  }
+
+  // The thanksgiving farm's MISSING flyer: today's absentees, by name.
+  // Sitting out is not absent, so it never lists them.
+  function missingList() {
+    return roster.filter((s) => absentIds.has(s.id))
+      .map((s) => { const full = s.name.trim(); return { first: full.split(/\s+/)[0], full }; })
+      .sort((a, b) => a.full.localeCompare(b.full));
+  }
+  function renderMissing() {
+    const m = missingList();
+    eachSkin((k) => k.setAbsent && k.setAbsent(document, m));
+  }
+  // Attendance changed somewhere else (another tab, another device): re-read
+  // today's absentees and sitting out, and catch the wheel and the flyer up.
+  async function refreshAbsent() {
+    const pid = currentPeriodId, seq = loadSeq;
+    if (!pid) return;
+    let ids;
+    try {
+      const att = await getAttendance(pid, todayKey());
+      ids = att ? absentIdsOf(att.marks) : readAbsentCache(pid);
+    } catch { ids = readAbsentCache(pid); }
+    if (seq !== loadSeq || pid !== currentPeriodId) return;
+    const sit = readSitOutCache(pid);
+    const sig = (set) => [...set].sort().join(',');
+    if (sig(ids) === sig(absentIds) && sig(sit) === sig(sitOutIds)) return;
+    absentIds = ids; sitOutIds = sit;
+    eligible = roster.filter((s) => !absentIds.has(s.id) && !sitOutIds.has(s.id));
+    rebuildPool();                     // no redraw mid-spin: rebuildPool checks
+    renderMissing();
     broadcast();
   }
 
@@ -1021,6 +1054,7 @@
         list: displayList,
         rotation, spin, winnerId,
         left: pool.length, total: eligible.length, noRepeats,
+        missing: missingList(),
         period: (periods.find((p) => p.id === currentPeriodId) || {}).name || '',
       },
     });
@@ -1142,7 +1176,7 @@
     // over the cup in the CSS)
     const straw = $('boba-straw');
     if (straw) straw.addEventListener('click', startSpin);
-    // The jar's "Pour them back" and the oven's "Let them out" ask first on a saved list (the
+    // The jar's "Pour them back" and the shelf's "Let them out" ask first on a saved list (the
     // skin cancels the pour on a no)...
     document.addEventListener('teacherpal:wheel-reset-request', (e) => {
       if (spin || (useLists() && !confirmReset())) e.preventDefault();
@@ -1176,7 +1210,14 @@
     // picks made on another device show up when you come back to this tab
     document.addEventListener('visibilitychange', () => {
       if (document.visibilityState === 'visible' && !document.querySelector('dialog[open]')) reloadPicks();
+      if (document.visibilityState === 'visible') refreshAbsent();
     });
+    // attendance marked in another tab writes the absent cache: follow it at
+    // once; a mark from another device shows within a minute
+    window.addEventListener('storage', (e) => {
+      if (currentPeriodId && (e.key === 'teacherpal.absent.' + currentPeriodId || e.key === 'teacherpal.sitout.' + currentPeriodId)) refreshAbsent();
+    });
+    setInterval(() => { if (document.visibilityState === 'visible') refreshAbsent(); }, 60000);
     // a finished round is held only while the jar is on screen: leaving
     // pink refills it like any other round
     document.addEventListener('teacherpal:theme', () => { if (!spin) { rebuildPool(); broadcast(); } });
@@ -1298,6 +1339,7 @@
         winnerId = s.winnerId;
         rotation = s.rotation;
         noRepeats = !!s.noRepeats;           // the cauldron re-floats a popped name only without it
+        eachSkin((k) => k.setAbsent && k.setAbsent(document, s.missing || []));
         if (s.spin) {
           // a spin just started in the main window - run the same curve here
           if (!spin || spin.startedAt !== s.spin.startedAt) {
