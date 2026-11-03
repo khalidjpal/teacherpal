@@ -91,13 +91,14 @@
   const $ = (id) => document.getElementById(id);
   // The skins (each is a no-op outside its own theme), and the one that is
   // showing in a given document, if any.
-  const skins = () => [window.Cauldron, window.Boba, window.Farmyard].filter(Boolean);
+  const skins = () => [window.Cauldron, window.Boba, window.Farmyard, window.Sled].filter(Boolean);
   const skinFor = (doc = document) => skins().find((k) => k.isOn(doc)) || null;
   const eachSkin = (fn) => skins().forEach(fn);
   // the words follow the skin
   const onIt = () => (window.Cauldron && window.Cauldron === skinFor() ? 'in the brew'
     : window.Boba && window.Boba === skinFor() ? 'in the cup'
-    : window.Farmyard && window.Farmyard === skinFor() ? 'in the yard' : 'on the wheel');
+    : window.Farmyard && window.Farmyard === skinFor() ? 'in the yard'
+    : window.Sled && window.Sled === skinFor() ? 'on the hill' : 'on the wheel');
   const reduceMotion = () => window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
   // ---------- names (same rule as Create Groups) ----------
@@ -1171,6 +1172,15 @@
       farm.setAttribute('aria-label', 'Send the farmer to pick a student');
       farm.addEventListener('click', startSpin);
       farm.addEventListener('keydown', (e) => { if (e.key === 'Enter' && e.target === farm) { e.preventDefault(); startSpin(); } });
+    }
+    // winter: the whole sledding hill
+    const sled = $('sled');
+    if (sled) {
+      sled.setAttribute('role', 'button');
+      sled.setAttribute('tabindex', '0');
+      sled.setAttribute('aria-label', 'Start the sledding race to pick a student');
+      sled.addEventListener('click', startSpin);
+      sled.addEventListener('keydown', (e) => { if (e.key === 'Enter' && e.target === sled) { e.preventDefault(); startSpin(); } });
     }
     // pink: the whole bubble tea cup (its hit area is #boba-straw, sized
     // over the cup in the CSS)

@@ -1681,6 +1681,7 @@ const THEMES = [
   { id: 'pink',    label: 'Pink'    },
   { id: 'halloween', label: 'Halloween' },
   { id: 'thanksgiving', label: 'Thanksgiving' },
+  { id: 'winter', label: 'Winter' },
 ];
 
 // Old theme ids, from before the rename (migration-theme-rename.sql moves

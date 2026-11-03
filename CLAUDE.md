@@ -36,7 +36,7 @@ full-screen toggle. There is no sidebar; every page uses the full width.
 | Lesson Plans | `lessons.html` | Writing plans **by course**: a Day / Week / Month calendar (courses × Mon–Fri, no-school days blocked out; one plan per course per day, shared by its periods, with an out-of-the-way per-period split) with the full editor for the selected period's day beside it; files and links attached per plan (Supabase Storage), and one search over every plan and attachment |
 | Create Groups | `groups.html` | Random / formula groups, projector view in full screen |
 | Timer | `timer.html` | Classroom countdown / stopwatch: big digits, presets, ±1 min, mute, pop-out + Picture-in-Picture for the projector while another tab is active |
-| Name Wheel | `wheel.html` | Cold-calling: spin a wheel of the period's present students, big name in the middle, no-repeats mode, saved pick lists per period ("Board work · 12 of 28 picked", kept until reset), full screen window + mini window. In halloween the wheel is a cauldron (names float in the brew as bubbles; the winner's bubble rises and pops), in pink a bubble tea cup (a boba pearl per student; the cup shakes, the pearls swirl, and the winner's pearl, its name on it, travels up the straw and comes to the front of the screen as a big disc with the name readable across the room), in thanksgiving a farmer choosing a turkey (the scene fills the width, controls in one row under it: the farm on the left two thirds, a turkey per student, its first name on it, penned in a fenced yard in a still sunset farm with a painted "<display name>'s Turkey Farm" sign; the farmer (each teacher picks how they look: Settings → Your farmer…, a hijab among the options) walks the flock, inspects a couple and shakes his head while the rest duck and one sneaks off, then points at one, which freezes mid-gobble; he lobs it into the hopper at the top of a production line down the right third (as it drops in, the name comes up large over the farm and stays up): an oven (out comes a golden roast turkey, steaming), an S of conveyor belt down through a packer (white foam tray, clear film) and a labeller (a small name label) onto a grocery shelf at the bottom; with No repeats the shelf fills a slot per student from the top shelf down, the count on its base, until SOLD OUT drops and "Let them out" bursts the packages and sends the turkeys back into the pen) |
+| Name Wheel | `wheel.html` | Cold-calling: spin a wheel of the period's present students, big name in the middle, no-repeats mode, saved pick lists per period ("Board work · 12 of 28 picked", kept until reset), full screen window + mini window. In halloween the wheel is a cauldron (names float in the brew as bubbles; the winner's bubble rises and pops), in pink a bubble tea cup (a boba pearl per student; the cup shakes, the pearls swirl, and the winner's pearl, its name on it, travels up the straw and comes to the front of the screen as a big disc with the name readable across the room), in thanksgiving a farmer choosing a turkey (the scene fills the width, controls in one row under it: the farm on the left two thirds, a turkey per student, its first name on it, penned in a fenced yard in a still sunset farm with a painted "<display name>'s Turkey Farm" sign; the farmer (each teacher picks how they look: Settings → Your farmer…, a hijab among the options) walks the flock, inspects a couple and shakes his head while the rest duck and one sneaks off, then points at one, which freezes mid-gobble; he lobs it into the hopper at the top of a production line down the right third (as it drops in, the name comes up large over the farm and stays up): an oven (out comes a golden roast turkey, steaming), an S of conveyor belt down through a packer (white foam tray, clear film) and a labeller (a small name label) onto a grocery shelf at the bottom; with No repeats the shelf fills a slot per student from the top shelf down, the count on its base, until SOLD OUT drops and "Let them out" bursts the packages and sends the turkeys back into the pen); in winter a sledding race (a sledder per student on a snowy hill, their name on the sled; a whistle, the pack races down and one wins; picked students sit in a cabin's window with cocoa until "Let them out" sends them back up the hill) |
 | Noise Meter | `noise.html` | Room volume from the laptop mic: big green/amber/red meter, three zones with activity presets, "Too loud" hold + chime, pop-out for the projector. Mic only while you hold it on |
 | Seating | `seating.html` | Room builder + seat assignment |
 | Bathroom | `bathroom.html` | Bathroom tracker: tap a card to sign out (quick tap or timer); per-student pass checkboxes, red flag past the limit. One centred control island (period · mode · search · gear) over a scrolling student grid, with **Out now** (live timers + End timer) and **Log** (the day's trips + a day switcher; its History button opens the quarter review — counts, CSV, print) as two fixed-height panels underneath |
@@ -79,13 +79,14 @@ full-screen toggle. There is no sidebar; every page uses the full width.
 | `timer.js`     | Countdown + stopwatch logic, plus `buildDial()` / `paintDial()` for the themed dial. **End-timestamp model**: state is `{ mode, running, paused, label, muted, targetMs, endsAt, remainingAtPause, startedAt, elapsedAtPause, zeroed }` in `localStorage['teacherpal.timer.state']`; every window computes the display from `Date.now()` against `endsAt`/`startedAt`, so tab-throttling doesn't drift. `BroadcastChannel('teacherpal-timer')` syncs main ↔ pop-out ↔ PiP. Web Audio API beep on zero (respects mute). `documentPictureInPicture.requestWindow()` on Chrome for an always-on-top floating display. Space toggles start/pause. |
 | `noise.html`   | Noise Meter screen: the `.noise-stage` in three groups — `.noise-head` (activity presets + the `#status` line, inside the card), the `.noise-meter` (reading + bar + zone word; the bunny in pink, the ghost in halloween), `.noise-foot` (one `.noise-foot-row` of Start/Stop, chime, "Full screen window" · the two zone sliders side by side · full screen, then a one-line privacy note with a `?`) — plus `#noise-privacy-dialog` (the full mic note). Loads `noise.js`. |
 | `noise.js`     | Mic → `AnalyserNode` → RMS → a 35–95 relative "dB" reading, 500ms rolling average, three zones, "Too loud" after 3s in the red, optional chime. Polls on `setInterval` (**not** rAF — rAF freezes in a background window and the pop-out would stall). `BroadcastChannel('teacherpal-noise')` feeds the pop-out. Opens the mic only on Start; stops every track on Stop and on `pagehide`. Nothing is recorded or sent anywhere. |
-| `wheel.html`   | Name Wheel screen: the wheel on the left; on the right the result panel and the controls (period, AUTO, **Edit wheel**, First names / No repeats / tick mute / "Full screen window" / full screen), "Mini window" (PiP, Chrome only), plus the `#wheel-roster-dialog` toggle-chip modal — loads `cauldron.js`, `boba.js`, `farmer.js`, `farmyard.js`, then `wheel.js`. Words that differ per skin come in `.for-wheel` / `.for-brew` / `.for-boba` / `.for-farm` sets ("Edit wheel" / "Edit who's in", "Tick on" / "Sound on", …) and CSS shows the one for the theme. |
+| `wheel.html`   | Name Wheel screen: the wheel on the left; on the right the result panel and the controls (period, AUTO, **Edit wheel**, First names / No repeats / tick mute / "Full screen window" / full screen), "Mini window" (PiP, Chrome only), plus the `#wheel-roster-dialog` toggle-chip modal — loads `cauldron.js`, `boba.js`, `farmer.js`, `farmyard.js`, `sled.js`, then `wheel.js`. Words that differ per skin come in `.for-wheel` / `.for-brew` / `.for-boba` / `.for-farm` sets ("Edit wheel" / "Edit who's in", "Tick on" / "Sound on", …) and CSS shows the one for the theme. |
 | `wheel.js`     | The wheel: draws the slices as SVG into `#wheel-rotor` (the only thing that spins), runs the spin on rAF with an ease-out, ticks as each slice passes the pointer, and syncs the pop-out over `BroadcastChannel('teacherpal-wheel')`. **Winner is drawn first** (`crypto.getRandomValues`), then the landing rotation is computed — the animation can't bias it. |
 | `wheel-popout.html` | Read-only projector wheel (`body.wheel-popout`): same dial (or, in halloween, the cauldron) filling the window, fed by broadcast, no controls. The mini window is this same page in an iframe. |
 | `cauldron.js` | The Name Wheel's halloween skin, `window.Cauldron` (`isOn`, `build`, `sync`, `run`, `finish`, `setWinner`, `setDisabled`, `BOIL_MS`, `SETTLE_MS`). Draws the cauldron into `.wheel-wrap`, floats each name as an HTML bubble (rAF physics), and animates a pick from the spin descriptor `wheel.js` hands it: boil → rise → hover → pop. Owns its sounds (bubbling that builds, a pop). Never picks anything. |
 | `boba.js` | The Name Wheel's pink skin, `window.Boba` — the same shape as `Cauldron` (`isOn`, `build`, `sync`, `run`, `finish`, `setWinner`, `setDisabled`, `setPicked`, `busy`, `HOLDS_ROUND`, `DURATION_MS`, `SETTLE_MS`). A bubble tea cup in `.wheel-wrap`: warm tan milk tea with a cream swirl, a domed lid, a narrow see-through pink straw, **the whole cup as the Spin button** (`#boba-straw`, a hit area over the cup), one near-black pearl per student with their first name on it in small cream type (rAF physics in box units: gravity, a swirl, soft collisions, the tapered walls), condensation, and "N left" in small flat text under the cup. A pick (~4s, the `T` timeline at its top) shakes the cup, swirls the pearls up, lights one up, draws it up the straw in sips, then the **spotlight**: the pearl grows into a big disc in front of the dimmed page with the name on it (click / Space / Enter / Esc closes it); with No repeats on it then arcs over into the **jar** on the right, a second cup that fills as the class is called and is poured back to start a new round. Owns its sounds (shake, slosh, slurp, pop). Never picks anything. |
 | `farmer.js` | The thanksgiving farmer, `window.FarmerArt`: `markup(look)` (the SVG, every pose), `vars(look)` (the look's colours as `--fy-*` overrides, only where it differs from `DEFAULT`, so the default farmer is exactly the theme's tokens), `apply(g, look)`, `normalize()`, `OPTIONS` / `DEFAULT`, `user()` / `current()` (the session's `farmer`, read from localStorage where shared.js isn't loaded: the pop-out), and `openDialog()`, **Settings → Your farmer…** (see the thanksgiving skin). Loaded by the Name Wheel and its pop-out before `farmyard.js`; `nav.js` loads it on first use elsewhere |
 | `farmyard.js` | The Name Wheel's thanksgiving skin, `window.Farmyard` — the same shape as `Boba` (`isOn`, `build`, `sync`, `run`, `finish`, `setWinner`, `setDisabled`, `setPicked`, `busy`, `HOLDS_ROUND`, `DURATION_MS`, `SETTLE_MS`). A farmyard at sunset in `.wheel-wrap` (`#farm`, the whole scene is the Spin button): as wide as its box (`layout()`), the scenery still (only the flock, the farmer and the line move), warm low light and long shadows, and a painted sign on posts at the back of the yard: "<display_name>'s / TURKEY FARM" (just TURKEY FARM without one). **The farm takes the left two thirds or so**: one plump cartoon turkey per student, its first name small on its body, milling about, pecking, ruffling, looking round **inside a fenced pen**, and a farmer in a big thinking pose, drawn by `farmer.js` to the teacher's own look. **The right third is the production column, top to bottom**: a hopper and an oven at the top, an S of conveyor belt down through the packer and the labeller, and a grocery shelf at the bottom. A pick: he walks the flock, leans in at a couple of turkeys and shakes his head; the turkeys near him duck and one sneaks off; he points at the winner, it freezes mid-gobble, he hoists it and lobs it into the hopper, and as it drops in the name rises large over the farm; out of the oven comes a golden roast turkey, steaming, that rides the S down, one beat per station: under the packer's stamp (white foam tray, clear film with a shine and drops), past the labeller (a small name label at the bottom of the package) and onto the shelf. The decoys are on his way to the winner, from a seeded random of the spin descriptor. **The shelf is where the round collects** (No repeats on): one slot per student, filled from the top shelf down, names on the labels, "n / N" on its base; full, a SOLD OUT sign drops and it celebrates; "Let them out" bursts the packages and the turkeys hop back to the pen. Owns its sounds (clucks, footsteps, a sting, a thud into the hopper, clacks, a rumble, a ding and hiss, the stamp, the labeller's click, a plunk, a bell fanfare, a gobble). Never picks anything. |
+| `sled.js` | The Name Wheel's winter skin, `window.Sled` — the same shape as `Farmyard` (`isOn`, `build`, `sync`, `run`, `finish`, `setWinner`, `setDisabled`, `setPicked`, `busy`, `HOLDS_ROUND`, `DURATION_MS`, `SETTLE_MS`). A snowy hill at night in `.wheel-wrap` (`#sled`, the whole scene is the Spin button), as wide as its box (`layout()`): START at the top, FINISH at the bottom, one sledder per student on the hilltop with their name on the sled, and a log cabin by the finish. A pick: a whistle, the pack races down (weaving, bumping, snow spray), one pulls ahead over the line, the name comes up large with a spray of snow; the winner walks into the cabin (No repeats on), the rest walk back up pulling their sleds. See the winter skin under Name Wheel. Owns its sounds. Never picks anything. |
 | `noise-popout.html` | Read-only projector pop-out (`body.noise-popout`): reading + bar + zone word, fed over BroadcastChannel. Never opens a mic of its own; says so when the main window isn't answering. |
 | `timer-popout.html` | Minimal read-only pop-out window (`body.timer-popout`): label + display + the same themed dial filling the window, no controls; listens for state via BroadcastChannel. |
 | `migration-lessons-bathroom.sql` | One-off migration creating `lesson_plans` + `bathroom_log` (incl. the manual-tally columns; run in the Supabase SQL editor) |
@@ -114,7 +115,7 @@ full-screen toggle. There is no sidebar; every page uses the full width.
 
 Every page: `<link rel="stylesheet" href="style.css">`, an **empty**
 `<header class="topbar"></header>` (nav.js fills it), then at the end of
-`<body>`: `shared.js`, `schedule.js`, (`cauldron.js`, `boba.js`, `farmer.js` and `farmyard.js` before `wheel.js` on the Name Wheel and its pop-out; `formula.js` on Seating and Create
+`<body>`: `shared.js`, `schedule.js`, (`cauldron.js`, `boba.js`, `farmer.js`, `farmyard.js` and `sled.js` before `wheel.js` on the Name Wheel and its pop-out; `formula.js` on Seating and Create
 Groups, `room.js` on Seating / hub / attendance), `nav.js`, then the page's
 own script (`attendance.js` + `initAttendance()` on Attendance; `lesson.js`
 on Lesson Plans; `bathroom.js` on Bathroom; `timer.js` on Timer; nothing on
@@ -730,7 +731,7 @@ last-used period in `localStorage`), `getLastPeriodId()` / `setLastPeriodId()`,
 
 ## Themes — per-user visual styles
 
-TeacherPal ships four themes. **All four share one layout**: default is
+TeacherPal ships five themes. **All five share one layout**: default is
 the structure, and every other theme is a colour swap of it. A theme is
 (almost) nothing but a block of colour tokens.
 
@@ -786,18 +787,18 @@ the structure, and every other theme is a colour swap of it. A theme is
   `--accent`, and `--wheel-ink` on every `--wheel-r*` and `--wheel-won`.
   Student names (seats, group cards, wheel, attendance, full screen) are
   `--text` / `--wheel-ink`, so they stay high contrast automatically.
-- **Extras are opt-in by name.** Only pink, halloween and thanksgiving have any (halloween's and thanksgiving's are listed under them below); pink's are selectors written
+- **Extras are opt-in by name.** Only pink, halloween, thanksgiving and winter have any (halloween's, thanksgiving's and winter's are listed under them below); pink's are selectors written
   `:root[data-theme="pink"] …` (mascots, the Timer/Wheel skins, the
   12-hour clock in `nav.js`). A theme without extras behaves exactly like
   default: a 24-hour clock, no mascots (the `--pink-mascot-*` vars are
   undefined, so `.pink-mascot` stays hidden), and the default Timer dial
   and wheel. The one spot that names default is the Timer rule hiding
   `.dial-arc` (`:root[data-theme="default"],
-  :root[data-theme="halloween"], :root[data-theme="thanksgiving"], :root:not([data-theme])`). Any new default-like theme must join that
+  :root[data-theme="halloween"], :root[data-theme="thanksgiving"], :root[data-theme="winter"], :root:not([data-theme])`). Any new default-like theme must join that
   selector, or its dial shows both rings. `wheel.js`'s `wide` label gap
   is "not pink", so it needs nothing.
 
-**The four themes:**
+**The five themes:**
 
 - **`default`** — the original dark HUD (deep plum-navy, near-black cards,
   subtle pink accent, Orbitron uppercase labels, corner ticks). Default for
@@ -912,6 +913,29 @@ the structure, and every other theme is a colour swap of it. A theme is
   `--fy-foam*`, film and label, and the shelf `--fy-shelf*` /
   `--fy-sold`). 24-hour
   clock.
+- **`winter`** — a **colour swap of default** (tokens like halloween and
+  thanksgiving, depth tokens on) plus seasonal mascots. Night blue page
+  `#0F1624` → canvas `--bg-1` `#162030` (the brief's "#16203049" read as
+  that) → cards `#1D2838` → wells `--card-2` `#172131` → raised `#28364A`;
+  borders `#3D4E66`. Text `#EAF0F7`, body `#C3CEDC`, muted `#94A3B8`.
+  **Ice blue `#6BC4E8`** is `--accent` (and `--accent-ink`: it reads as
+  text on every surface); **pine `#4A8C6F`** is the secondary fill
+  (`--gradient-accent` runs ice into pine), and as text `--lavender`
+  `#7CC4A2` (pine itself is 3.7:1 on the card); **lantern amber `#E8A33D`**
+  only as tardy and the warm windows. `--on-accent` is night blue. Lowest
+  ratio over page / card / well / raised: text 10.7, text-2 7.7, muted 4.8,
+  accent 6.2, lavender 6.0, danger 5.5, ok 6.8, tardy 5.7; on-accent 9.2;
+  seat names 10.0; wheel names ≥ 6.7.
+  **Extras** (scoped like halloween's, never in the projector pop-outs; all
+  behind content, **all still**: no falling snow, for calm and speed):
+    - **Page** (the "Winter extras" block): body background layers — a
+      frost spray in each corner (`--winter-frost-tl/tr/bl/br`, inline SVG)
+      and snow settled along the bottom edge (`--winter-drift-img`, kept
+      faint so text near the bottom keeps AA).
+    - **Timer**: a melting snowman. **Noise Meter**: a snow globe. **Name
+      Wheel**: a sledding race (`sled.js`). See each section.
+  Tokens: `--wt-*` (snowman), `--sg-*` (globe), `--sl-*` (sled race),
+  `--winter-*` (page). 24-hour clock.
 - **`pink`** — a **pure colour swap of default** (depth tokens off) with four tiny extras. Same
   layout, spacing, radii, borders, fonts, weights, tracks, shadows,
   animations and components: only palette tokens differ (light cream-pink
@@ -949,7 +973,7 @@ the structure, and every other theme is a colour swap of it. A theme is
 Storage & flow:
 
 - **`profiles.theme text default 'default'`** (one of `default`, `pink`,
-  `halloween`, `thanksgiving`; NULL = never chosen on the server). **The
+  `halloween`, `thanksgiving`, `winter`; NULL = never chosen on the server). **The
   profile is the source of truth**, so a theme follows the teacher across
   devices; `localStorage['teacherpal.theme']` is only the cache the head
   script reads to avoid a flash. `hydrateProfileIntoSession()` resolves it
@@ -1858,6 +1882,25 @@ All styling lives in `style.css`; pages carry almost no inline styling.
       steam, the glow pulse and the fork's drop: the steam and glow show
       still, the fork just appears, and the slices still go (that is the
       reading).
+    - **winter — a melting snowman.** `snowmanSvg()` in `timer.js` draws
+      him once into the wrap (`.wt-snowman`, hidden in other themes; the SVG
+      dial, `.timer-flash` and `.timer-burst` hide): three snowballs
+      (ellipses whose `cx/cy/rx/ry` are set as CSS properties so they ease
+      between ticks), stick arms, coal buttons, a red scarf, a carrot and a
+      top hat. `paintSnowman(wrap, m, alarm, done)` melts him from `m` = 1 −
+      remaining: the bottom ball spreads first (0–0.45), then the middle
+      (0.3–0.75), then the head sinks (0.6–1), and the puddle grows the
+      whole time. **The head and face last to the end** (it shrinks to 70%
+      and sinks into the slush), so the final minute's alarm is always
+      visible: `warn` swaps the calm face for wide eyes, raised brows and an
+      "o", adds sweat drops and a shiver that grows with `--alarm` (0..1
+      over the last minute). The digits ride on his middle (`--dig-y`,
+      night blue on snow); once the middle is too small for them
+      (`data-digs="air"`) they float above him in frost on the night. At
+      zero (`alert`): the balls are gone, the hat, carrot, scarf and sticks
+      lie in a puddle with three coals, and a small "aww…" fades in. Wrap
+      sizes as halloween's. Reduced motion stops the shiver and drips; the
+      melt itself still eases (it is the reading).
   **States** come from `data-state` on `.timer-display-wrap`: `warn` (final
   minute) pulses the ring in both themes; `alert` (zero) flashes the whole
   dial via `.timer-flash` in default and fires `.timer-burst` (hearts +
@@ -2221,8 +2264,8 @@ All styling lives in `style.css`; pages carry almost no inline styling.
       flicker, the name's glow pulse); the brew and the pick run, like the
       wheel's spin.
   **Skins**: `wheel.js` keeps `skins()` =
-  `[Cauldron, Boba, Farmyard]`, `skinFor(doc)` = the one whose `isOn(doc)` is true
-  (halloween / pink / thanksgiving), and `eachSkin()` to keep every skin's DOM in sync
+  `[Cauldron, Boba, Farmyard, Sled]`, `skinFor(doc)` = the one whose `isOn(doc)` is true
+  (halloween / pink / thanksgiving / winter), and `eachSkin()` to keep every skin's DOM in sync
   (each is built and synced always, and hidden by CSS outside its theme).
   `startSpin()` takes the active skin's `DURATION_MS` / `SETTLE_MS`;
   `runSpin()` / `finishSpin()` call its `run()` / `finish()`;
@@ -2596,6 +2639,75 @@ All styling lives in `style.css`; pages carry almost no inline styling.
     - **`transform-box: fill-box` only on the parts that move** (listed in
       the CSS). On `*` it also moves the SVG `transform` attributes inside
       (tail feathers), which knocked them out of place.
+  **winter skin — a sledding race instead of the wheel** (`sled.js`, the
+  "Name Wheel — winter skin: a SLEDDING RACE" block in `style.css`). CSS
+  hides the wheel SVG, the hub button and the mascot, and shows `.sled`,
+  which **is** the Spin button (click, Space, Enter). Layout: the
+  thanksgiving one (the scene fills the width, one row of controls under
+  it; those rules are `:root:is([data-theme="thanksgiving"],
+  [data-theme="winter"])`).
+    - **The scene** (`bgMarkup(W)`, redrawn when the width changes): 400
+      units tall, `W = 400 × box aspect` (620–1300). A night sky with stars
+      and a moon, far hills, a snowy hill whose ridge (`ridgeY()`) runs from
+      a flat top left down to a valley on the right, grooves down the track,
+      pines (kept off the track), a red START banner and dashed line at the
+      top, a blue FINISH banner and checkered line at the bottom, and a log
+      cabin by the finish (`cabinBox()`): snowy roof, chimney smoke, a door
+      and a big lit window.
+    - **The track** (`track(W, u, l)`): a cubic from the start line to the
+      finish, `u` 0..1 down it (past 1 = the run-out on the flat), `l` the
+      lane across it (-1..1, mostly depth). Further up = smaller
+      (`persp()`).
+    - **Sledders** (`RIDER`): one per name in `displayList`, facing
+      downhill: a wooden sled with the student's name on its side board
+      (`.sl-tag`, the wheel's label, cut to 8 letters + "…"; cream on wood,
+      a close-up detail), a rider in one of five coats, three hats, three
+      skin tones (from a hash), and a standing walker (pulling the sled by a
+      rope) for the walk pose. Poses are `data-pose`: `idle` (a breath),
+      `ready` (leaning back), `race` (tucked forward, a rattle, snow spray
+      behind), `stopped`, `walk` (the walker, legs swinging, flipped to face
+      the way they go; the name is outside the flip so it never mirrors).
+      At rest they wait on the hilltop in staggered rows (`homesFor()`),
+      packed smaller for a big class (`homeS`, blended back to full size on
+      the slope).
+    - **A pick** (`DURATION_MS` 3500 + `SETTLE_MS` 2300; `T` at the top of
+      the file; everything from a seeded random of the descriptor, so the
+      pop-out runs the same race): a whistle; at 0.45s they push off from
+      their spots onto the track, each in a shuffled lane, weaving
+      (`wob`), jostling for places and now and then bumped (`.bump`, a
+      thump); the pack stays together (each racer's `pace` 0.72–0.92 of the
+      way when the winner crosses) until the second half, when the winner
+      pulls ahead and crosses the line at 3.5s. The name comes up large over
+      the hill on a frost-on-night plate (`.sl-name`, `placeName()`) with a
+      spray of snow (`.sl-burst`) and a bell. The others coast to a stop
+      past the line. With No repeats on the winner then walks to the cabin
+      door (from 4.1s) and goes in, and appears in the window; the others
+      walk back up the hill a few at a time (`finish()`), and race from
+      wherever they are if the next pick comes first.
+    - **The cabin is where the round collects**: everyone picked sits in
+      the window (`renderCabin()`, the most even grid for the round, filled
+      from the bottom row up) with a mug of cocoa, steam rising; "n / N"
+      on a plate by the door (page only). Full: the window pulses, snow
+      bursts out of it and a chime plays (only on the change to full).
+      **Let them out** (`.sl-pour`, top right, page only, primary once
+      full; Reset does the same) dispatches the cancelable
+      `teacherpal:wheel-reset-request`, then `teacherpal:wheel-reset`; as
+      they come back into `displayList` they walk out of the cabin door and
+      up the hill (`incoming` / `inCabin`, or still on the old picked list
+      when `sync()` runs before `setPicked()`). `busy()` blocks a pick
+      meanwhile. `HOLDS_ROUND` is true.
+    - **Counts**: "N left" (or "N on the hill" without No repeats) top left,
+      page only.
+    - **Sound** (main window only, respects mute): a referee's whistle, the
+      hiss of runners swelling down the hill, a thump per bump, a bell and a
+      cheer at the line, a chime when the cabin fills, a door bell on Let
+      them out.
+    - Under reduced motion every CSS loop and the bursts stop
+      (`.sled * { animation: none }`); the race, the walks and the poses
+      still run (JS): they are the pick.
+    - **`.sl-art` must not get `transform-box: fill-box`**: its flip
+      (`scale(-1 1)`) would then turn about the art's own edge and the sled
+      would leave its name behind.
   **pink skin — a bubble tea cup instead of the wheel** (`boba.js`, the
   "Name Wheel — pink skin: a BUBBLE TEA cup" block in `style.css`). CSS
   hides the wheel SVG, the hub button and the wheel's bunny, and shows
@@ -3015,6 +3127,23 @@ All styling lives in `style.css`; pages carry almost no inline styling.
   amber → orange → cranberry fill, with an acorn (`--noise-rider`) riding
   its tip and rocking. Colours are `--tk-*` tokens. Under reduced motion
   the loops stop, but the fan and the face crossfades keep their easing.
+  **winter skin — a snow globe** (the "Noise Meter — winter skin" block).
+  `GLOBE_SVG` (viewBox 0 0 200 200) in `noise.js`, built as `.nw-stage`
+  beside the others, on the shared mascot layout (winter joins every
+  `:root:is(…)` selector). A glass globe on a wooden base with a plaque; a
+  tiny village inside (three houses with lit amber windows, pines, chimney
+  smoke) under a night sky. **It reads `--level` directly, not the
+  debounced mood**, so it always answers the room: the settled snow pile on
+  the floor lifts away (`scaleY` from level 0.3), a gentle drift fades in
+  from 0.3, a swirl from 0.55, a blizzard and a white haze from 0.7 that
+  all but hides the village. The globe shakes with an amplitude computed
+  from the level (`--shk` on the meter, `clamp((level − 0.5) × 9, 0, 4.5)`
+  degrees) and the base rattles once loud. Quiet: nothing moves (the flake
+  animations are paused outside `ok` / `loud`). Off: greyed. Alert: the
+  zone word a solid red pill. **The level bar** is an icy tube (pine → ice
+  → amber → red) with a snowflake (`--noise-rider`) at its leading edge,
+  turning slowly. Colours are `--sg-*` tokens. Under reduced motion the
+  shake and the falling stop; the layers still fade in with the level.
 - **Attendance view (`attendance.js`) — the Attendance screen.**
   `.attendance[data-mode="full"]` is a grid `minmax(0,1fr) clamp(19rem, 26vw,
   26rem)` — the `.att-chart` box on the left, `.att-side` (counts card with

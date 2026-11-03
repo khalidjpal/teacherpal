@@ -399,7 +399,7 @@
       $('sw-name').addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); guard(next); } });
 
       // ---------- look ----------
-      const THEME_NOTES = { default: 'Dark', pink: 'Light and pastel', halloween: 'Seasonal', thanksgiving: 'Seasonal' };
+      const THEME_NOTES = { default: 'Dark', pink: 'Light and pastel', halloween: 'Seasonal', thanksgiving: 'Seasonal', winter: 'Seasonal' };
       function applyThemeLocal(t) { document.documentElement.setAttribute('data-theme', t); }
       function renderLook() {
         $('sw-themes').innerHTML = THEMES.map((t) => `

@@ -464,6 +464,58 @@
     <g class="nt-fx shout">${fx(['<path d="M140 96l12-6M142 104h14M140 112l12 6"/>', '<path d="M60 96l-12-6M58 104h-14M60 112l-12 6"/>', '<text x="100" y="22">GOBBLE!</text>'])}</g>
   </svg>`;
 
+  // winter's snow globe (.nw-stage; the CSS hides it in other themes). Its
+  // inside follows --level directly: the settled snow lifts off the floor,
+  // a drift, then a swirl, then a blizzard and a white haze that all but
+  // hides the village; the globe shakes harder the louder it gets.
+  const GLOBE_SVG = (() => {
+    let seed = 7;
+    const rnd = () => ((seed = (seed * 16807) % 2147483647) / 2147483647);
+    const flakes = (n, cls, f) => Array.from({ length: n }, (_, i) => f(i, rnd)).map((a) =>
+      `<g class="nw-fl" style="--d:${a.d.toFixed(2)}s;--dl:${(-a.dl).toFixed(2)}s;--sx:${a.sx.toFixed(1)}px"><circle cx="${a.x.toFixed(1)}" cy="${a.y.toFixed(1)}" r="${a.r.toFixed(2)}"/></g>`).join('');
+    const drift = flakes(26, 'drift', (i, r) => ({ x: 40 + r() * 120, y: 22, r: 1 + r() * 1.3, d: 6 + r() * 5, dl: r() * 10, sx: (r() - 0.5) * 16 }));
+    const swirl = flakes(30, 'swirl', (i, r) => { const a = r() * 6.283, d = 12 + r() * 52; return { x: 100 + Math.cos(a) * d, y: 92 + Math.sin(a) * d * 0.9, r: 1.1 + r() * 1.4, d: 1.6 + r() * 1.6, dl: r() * 3, sx: 0 }; });
+    const bliz = flakes(44, 'bliz', (i, r) => ({ x: 10 + r() * 180, y: 20, r: 0.9 + r() * 1.6, d: 0.55 + r() * 0.5, dl: r() * 1.2, sx: 30 + r() * 30 }));
+    const house = (x, w, h, c) => `<g class="nw-house ${c}"><rect x="${x}" y="${140 - h}" width="${w}" height="${h}"/><path class="nw-roof" d="M${x - 3} ${141 - h}L${x + w / 2} ${128 - h}L${x + w + 3} ${141 - h}Z"/><rect class="nw-win" x="${x + w * 0.22}" y="${146 - h}" width="${w * 0.2}" height="${w * 0.2}"/><rect class="nw-win" x="${x + w * 0.58}" y="${146 - h}" width="${w * 0.2}" height="${w * 0.2}"/><rect class="nw-door" x="${x + w * 0.4}" y="${133}" width="${w * 0.2}" height="7"/></g>`;
+    const tree = (x, s) => `<g class="nw-tree" transform="translate(${x} 141) scale(${s})"><path d="M0-34L-11-14H-6L-14 0H14L6-14H11Z"/><path class="nw-tree-snow" d="M0-34L-5-24Q0-22 5-24ZM-8-14Q0-11 8-14L6-17Q0-15-6-17Z"/></g>`;
+    return `
+  <svg class="nw-svg" viewBox="0 0 200 200" aria-hidden="true" focusable="false">
+    <defs>
+      <clipPath id="nw-clip"><circle cx="100" cy="92" r="67"/></clipPath>
+      <linearGradient id="nw-sky" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="var(--sg-sky-1)"/><stop offset="1" stop-color="var(--sg-sky-2)"/></linearGradient>
+      <radialGradient id="nw-shine" cx=".32" cy=".26" r=".7"><stop offset="0" stop-color="#fff" stop-opacity=".34"/><stop offset=".45" stop-color="#fff" stop-opacity=".05"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></radialGradient>
+    </defs>
+    <ellipse class="nw-shadow" cx="100" cy="192" rx="62" ry="5"/>
+    <g class="nw-base">
+      <path class="nw-base-body" d="M42 152H158L170 186Q171 190 166 190H34Q29 190 30 186Z"/>
+      <path class="nw-base-top" d="M40 148H160Q164 148 163 153L161 157H39L37 153Q36 148 40 148Z"/>
+      <path class="nw-base-hi" d="M46 162H154"/>
+      <rect class="nw-plaque" x="82" y="168" width="36" height="12" rx="2"/>
+      <path class="nw-plaque-line" d="M88 174H112"/>
+    </g>
+    <g class="nw-globe">
+      <g clip-path="url(#nw-clip)">
+        <rect x="30" y="22" width="140" height="140" fill="url(#nw-sky)"/>
+        <g class="nw-stars"><circle cx="70" cy="48" r=".9"/><circle cx="128" cy="40" r=".8"/><circle cx="148" cy="70" r=".7"/><circle cx="56" cy="78" r=".7"/><circle cx="100" cy="34" r=".8"/></g>
+        <path class="nw-hill" d="M30 128Q70 104 110 118T170 112V162H30Z"/>
+        <g class="nw-village">
+          ${tree(52, 0.95)}${house(62, 22, 22, 'h1')}${tree(92, 1.15)}${house(104, 28, 28, 'h2')}${tree(142, 0.85)}${house(146, 16, 16, 'h3')}
+          <g class="nw-smoke"><circle cx="124" cy="104" r="2.4"/><circle cx="127" cy="98" r="3"/><circle cx="125" cy="91" r="3.4"/></g>
+        </g>
+        <path class="nw-ground" d="M30 140Q100 134 170 140V162H30Z"/>
+        <g class="nw-pile"><path d="M33 162V150Q50 143 70 147T110 145T150 147Q162 148 168 152V162Z"/></g>
+        <g class="nw-flakes drift">${drift}</g>
+        <g class="nw-flakes swirl"><g class="nw-swirl">${swirl}</g></g>
+        <rect class="nw-haze" x="30" y="22" width="140" height="140"/>
+        <g class="nw-flakes bliz">${bliz}</g>
+      </g>
+      <circle class="nw-glass" cx="100" cy="92" r="67"/>
+      <circle cx="100" cy="92" r="67" fill="url(#nw-shine)"/>
+      <path class="nw-glint" d="M58 52Q70 36 90 30"/>
+    </g>
+  </svg>`;
+  })();
+
   function buildMascot() {
     const meter = document.getElementById('noise-meter');
     if (!meter || meter.querySelector('.nm-stage')) return;
@@ -476,7 +528,10 @@
     const turkey = document.createElement('div');
     turkey.className = 'nt-stage noise-mascot';
     turkey.innerHTML = TURKEY_SVG;
-    meter.prepend(stage, ghost, turkey);
+    const globe = document.createElement('div');
+    globe.className = 'nw-stage noise-mascot';
+    globe.innerHTML = GLOBE_SVG;
+    meter.prepend(stage, ghost, turkey, globe);
     // the level bar's rider (a heart, a bat, a leaf, a bright cap — per theme)
     const bar = document.getElementById('noise-bar');
     if (bar && !bar.querySelector('.noise-rider')) {

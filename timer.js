@@ -159,10 +159,99 @@
       </svg>`;
   }
 
+  // winter's dial: a snowman who melts as the time runs down (paintSnowman).
+  // Built once, hidden by CSS in the other themes. The balls are ellipses
+  // whose cx/cy/rx/ry are set as CSS properties, so they ease between ticks.
+  // Feet on the snow at y 95 of the 100-unit box.
+  const SM_G = 95;
+  function snowmanSvg() {
+    return `<svg class="wt-snowman" viewBox="0 0 100 100" aria-hidden="true" focusable="false">
+        <ellipse class="wt-ground" cx="50" cy="96.6" rx="47" ry="3.6"/>
+        <g class="wt-puddle"><ellipse class="wt-pool" cx="50" cy="95.6" rx="8" ry="1.5"/><ellipse class="wt-pool-hi" cx="44" cy="95" rx="3" ry=".5"/></g>
+        <g class="wt-man">
+          <g class="wt-arm l"><path class="wt-stick" d="M0 0L-13-9M-8-5.4L-10.4-11M-11-7.6L-16.6-8"/></g>
+          <g class="wt-arm r"><path class="wt-stick" d="M0 0L13-9M8-5.4L10.4-11M11-7.6L16.6-8"/></g>
+          <ellipse class="wt-ball wt-b0" cx="50" cy="75" rx="20" ry="20"/>
+          <ellipse class="wt-ball wt-b1" cx="50" cy="42" rx="17" ry="17"/>
+          <g class="wt-buttons"><circle cx="0" cy="-7" r="1.5"/><circle cx="0" cy="0" r="1.5"/><circle cx="0" cy="7" r="1.5"/></g>
+          <g class="wt-scarf"><path class="wt-scarf-band" d="M-11-1.6Q0 2.4 11-1.6V2.2Q0 6.2-11 2.2Z"/><path class="wt-scarf-tail" d="M5 1.6L9.4 14.6 4.2 15.4 1.6 2.6Z"/><path class="wt-scarf-stripe" d="M5.8 6.2L7.6 5.8M6.8 10L8.6 9.6"/></g>
+          <ellipse class="wt-ball wt-b2" cx="50" cy="16" rx="9.5" ry="9.5"/>
+          <g class="wt-face">
+            <g class="wt-calm"><circle cx="-3.4" cy="-2.4" r="1.15"/><circle cx="2.6" cy="-2.4" r="1.15"/><path d="M-4.4 2.8Q-.6 6 3.4 2.8"/></g>
+            <g class="wt-alarm"><circle class="wt-eye-w" cx="-3.6" cy="-2.4" r="2"/><circle class="wt-eye-w" cx="2.8" cy="-2.4" r="2"/><circle cx="-3.4" cy="-2.2" r=".95"/><circle cx="2.6" cy="-2.2" r=".95"/><path class="wt-brow" d="M-5.6-6.2L-1.8-5.4M5-6.2L1.2-5.4"/><ellipse cx="-.4" cy="4.2" rx="1.6" ry="2"/></g>
+            <g class="wt-sweat"><path d="M7.4-6Q8.8-3.6 7.4-2.6Q6-3.6 7.4-6Z"/><path d="M-8.4-3Q-7.2-.8-8.4.2Q-9.6-.8-8.4-3Z"/></g>
+          </g>
+          <g class="wt-carrot"><path d="M0-.9L-9.5 .3 0 1.4Z"/><path class="wt-carrot-l" d="M-3 .1L-3.6 1M-6 .4L-6.4 1"/></g>
+          <g class="wt-hat"><rect class="wt-hat-crown" x="-6.6" y="-11" width="13.2" height="11" rx="1"/><rect class="wt-hat-band" x="-6.6" y="-3.6" width="13.2" height="2.6"/><rect class="wt-hat-brim" x="-10.4" y="-1.4" width="20.8" height="2.4" rx="1.2"/></g>
+          <g class="wt-coal"><circle cx="38" cy="95.4" r="1.1"/><circle cx="45" cy="96.4" r=".9"/><circle cx="57" cy="95.8" r="1"/></g>
+        </g>
+        <text class="wt-aww" x="50" y="78">aww…</text>
+      </svg>`;
+  }
+  // m: how melted, 0 (whole) .. 1 (a puddle); alarm 0..1 in the final minute.
+  // The head lasts: it shrinks and sinks into the slush but keeps its face to
+  // the end, so the final minute's alarm is always visible.
+  function paintSnowman(wrap, m, alarm, done) {
+    const svg = wrap.querySelector('.wt-snowman');
+    if (!svg) return;
+    const cl = (v) => Math.max(0, Math.min(1, v));
+    const a = cl(m / 0.45), b = cl((m - 0.3) / 0.45), c = cl((m - 0.6) / 0.4);
+    // the bottom ball spreads first, then the middle, then the head sinks
+    const b0 = { rx: 20 * (1 + 0.75 * a + 0.35 * b), ry: 20 * Math.max(0.1, 1 - 0.6 * a - 0.3 * b) };
+    const b1 = { rx: 17 * (1 + 0.45 * b + 0.25 * c), ry: 17 * Math.max(0.08, 1 - 0.6 * b - 0.32 * c) };
+    const b2 = { rx: 9.5 * (1 + 0.1 * c), ry: 9.5 * (1 - 0.3 * c) };
+    b0.cy = SM_G - b0.ry;
+    b1.cy = SM_G - 2 * b0.ry + 3 * (b0.ry / 20) - b1.ry;
+    const top1 = b1.cy - b1.ry;
+    b2.cy = top1 + 2.4 - b2.ry + 3 * c;
+    const top2 = b2.cy - b2.ry;
+    const set = (el, o) => { if (el) for (const k of ['rx', 'ry', 'cy']) if (o[k] !== undefined) el.style[k] = o[k].toFixed(2) + 'px'; };
+    if (done) {   // all of him is puddle now
+      Object.assign(b0, { rx: 40, ry: 0.4, cy: SM_G });
+      Object.assign(b1, { rx: 30, ry: 0.3, cy: SM_G });
+      Object.assign(b2, { rx: 12, ry: 0.2, cy: SM_G });
+    }
+    set(svg.querySelector('.wt-b0'), b0);
+    set(svg.querySelector('.wt-b1'), b1);
+    set(svg.querySelector('.wt-b2'), b2);
+    const put = (sel, x, y, r = 0, sx = 1, sy = sx) => { const el = svg.querySelector(sel); if (el) el.style.transform = `translate(${x.toFixed(2)}px, ${y.toFixed(2)}px) rotate(${r.toFixed(1)}deg) scale(${sx.toFixed(3)}, ${sy.toFixed(3)})`; };
+    set(svg.querySelector('.wt-pool'), { rx: 8 + m * 38, ry: 1.5 + m * 3.4 });
+    svg.dataset.done = done ? '1' : '';
+    if (done) {
+      // just the hat, the carrot and the scarf, lying in the puddle
+      put('.wt-hat', 60, 95.2, -16, 0.9);
+      put('.wt-carrot', 45, 95.2, -6);
+      put('.wt-scarf', 50, 94.4, 0, 0.9, 0.7);
+      put('.wt-arm.l', 31, 96, -30);
+      put('.wt-arm.r', 70, 96.4, 32);
+      put('.wt-face', 50, 104, 0, 0.001);
+      put('.wt-buttons', 50, 104, 0, 0.001);
+    } else {
+      const hs = b2.ry / 9.5;
+      put('.wt-hat', 50 + 1.4 * c, top2 + 1.4, -8 - 14 * c, 0.9 + 0.1 * hs);
+      put('.wt-face', 50, b2.cy, 0, hs);
+      put('.wt-carrot', 46.6 + 0.2 * c, b2.cy + 0.8 * hs, -6 * c - 4 * b, hs);
+      put('.wt-scarf', 50, top1 + 1.2, 0, 1 + 0.3 * b + 0.2 * c, 1);
+      // the sticks droop as the middle goes, but never below the slush
+      const ay = Math.min(b1.cy - 3 * (b1.ry / 17), SM_G - 5);
+      put('.wt-arm.l', 50 - b1.rx * 0.92, ay, -24 * b - 10 * c);
+      put('.wt-arm.r', 50 + b1.rx * 0.92, ay, 24 * b + 10 * c);
+      put('.wt-buttons', 50, b0.cy, 0, 1, Math.max(0.001, b0.ry / 20));
+    }
+    const btn = svg.querySelector('.wt-buttons');
+    if (btn) btn.style.opacity = done ? 0 : Math.max(0, Math.min(1, (b0.ry - 9) / 5)).toFixed(2);
+    // the digits ride on his middle; once it's too small for them they
+    // float above him (frost on the night)
+    const air = done || b1.ry < 10.5;
+    wrap.dataset.digs = air ? 'air' : '';
+    wrap.style.setProperty('--dig-y', (air ? (done ? 56 : Math.min(40, top2 - 14)) : b1.cy).toFixed(2));
+    wrap.style.setProperty('--alarm', alarm.toFixed(3));
+  }
   function buildDial(doc = document) {
     const NS = 'http://www.w3.org/2000/svg';
     const wrap = doc.getElementById('timer-dial-wrap');
     if (wrap && !wrap.querySelector('.tg-pie')) wrap.insertAdjacentHTML('afterbegin', pieSvg());
+    if (wrap && !wrap.querySelector('.wt-snowman')) wrap.insertAdjacentHTML('afterbegin', snowmanSvg());
     const segs = doc.getElementById('timer-segs');
     const marks = doc.getElementById('timer-marks');
     const burst = doc.getElementById('timer-burst');
@@ -433,6 +522,11 @@
     if (slices.length) {
       const lit = countdown ? Math.ceil(remaining * slices.length - 1e-6) : slices.length;
       slices.forEach((el, i) => el.classList.toggle('gone', i >= lit));
+    }
+    // winter's snowman: melts with the time; alarmed through the final minute
+    if (wrap.querySelector('.wt-snowman')) {
+      const left = countdown && (state.running || state.paused || state.zeroed) ? remainingMs(now) : Infinity;
+      paintSnowman(wrap, countdown ? 1 - remaining : 0, left <= 60_000 ? Math.max(0, Math.min(1, 1 - left / 60_000)) : 0, st === 'alert');
     }
     const mood = st === 'alert' ? 'party' : (st === 'warn' ? 'excited' : (state.running ? 'calm' : 'idle'));
     wrap.dataset.mood = mood;                // pink's bunny: calm / excited / party
