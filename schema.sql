@@ -129,35 +129,18 @@
 --     created_at  timestamptz
 --     updated_at  timestamptz
 --
---   game_results                (the Leaderboard: one row per game ended with
---                                teams split from a roster)
+--   scoreboards                 (the Leaderboard: a standalone scorekeeper)
 --     id          uuid        primary key
 --     owner_id    uuid        -> auth.users.id (cascade delete)
---     period_id   uuid        -> periods.id (cascade delete)
---     game        text        'feud' | 'quiz'
---     set_id      text        the set / board played (no FK; may be 'starter' / 'sample')
---     set_name    text        its name then
---     teams       jsonb       [{ name, score, won, members: [{ id, name, points }] }] (2–4)
---     counts      boolean     counts toward the standings
---     cleared_at  timestamptz set by Reset (stays in the history, no longer counts)
---     played_at   timestamptz
---
---   leaderboard_adjustments     (hand corrections to a student's points)
---     id          uuid        primary key
---     owner_id    uuid        -> auth.users.id (cascade delete)
---     period_id   uuid        -> periods.id (cascade delete)
---     student_id  uuid        -> students.id (cascade delete)
---     points      integer     + or −, never 0
---     note        text        optional, ≤ 120 chars
---     cleared_at  timestamptz set by Reset
+--     name        text        1–80 chars
+--     kind        text        'teams' | 'students'
+--     entries     jsonb       [{ id, name, score, members: [{ id, name }], sid? }] (≤ 200)
+--     sort_mode   text        'score' | 'order'
+--     buttons     jsonb       the quick-add buttons, e.g. [1, 5, 10, -1] (1–6)
+--     start_score integer     the score every entry starts at (and Reset goes back to)
+--     period_id   uuid        -> periods.id (set null): the class it was set up from
 --     created_at  timestamptz
---
---   leaderboard_settings        (one row per teacher)
---     owner_id      uuid      primary key -> auth.users.id (cascade delete)
---     winner_mode   text      'score' | 'fixed'
---     winner_points integer   each winner's points when 'fixed'
---     loser_points  integer   each other player's points
---     updated_at    timestamptz
+--     updated_at  timestamptz
 --
 --   attendance                  (one row per period AND date; present students
 --                                are not stored)
@@ -494,43 +477,23 @@ create table if not exists public.quiz_boards (
 );
 create index if not exists quiz_boards_owner_idx on public.quiz_boards (owner_id, sort_order);
 
-create table if not exists public.game_results (
+create table if not exists public.scoreboards (
   id          uuid primary key default gen_random_uuid(),
   owner_id    uuid not null default auth.uid() references auth.users(id) on delete cascade,
-  period_id   uuid not null references public.periods(id) on delete cascade,
-  game        text not null check (game in ('feud', 'quiz')),
-  set_id      text,
-  set_name    text check (set_name is null or length(set_name) <= 120),
-  teams       jsonb not null default '[]'::jsonb
-                check (jsonb_typeof(teams) = 'array' and jsonb_array_length(teams) between 2 and 4
-                       and pg_column_size(teams) <= 60000),
-  counts      boolean not null default true,
-  cleared_at  timestamptz,
-  played_at   timestamptz not null default now()
+  name        text not null check (length(btrim(name)) between 1 and 80),
+  kind        text not null default 'teams' check (kind in ('teams', 'students')),
+  entries     jsonb not null default '[]'::jsonb
+                check (jsonb_typeof(entries) = 'array' and jsonb_array_length(entries) <= 200
+                       and pg_column_size(entries) <= 200000),
+  sort_mode   text not null default 'score' check (sort_mode in ('score', 'order')),
+  buttons     jsonb not null default '[1, 5, 10, -1]'::jsonb
+                check (jsonb_typeof(buttons) = 'array' and jsonb_array_length(buttons) between 1 and 6),
+  start_score integer not null default 0 check (start_score between -1000000 and 1000000),
+  period_id   uuid references public.periods(id) on delete set null,
+  created_at  timestamptz not null default now(),
+  updated_at  timestamptz not null default now()
 );
-create index if not exists game_results_owner_idx  on public.game_results (owner_id);
-create index if not exists game_results_period_idx on public.game_results (period_id, played_at desc);
-
-create table if not exists public.leaderboard_adjustments (
-  id          uuid primary key default gen_random_uuid(),
-  owner_id    uuid not null default auth.uid() references auth.users(id) on delete cascade,
-  period_id   uuid not null references public.periods(id) on delete cascade,
-  student_id  uuid not null references public.students(id) on delete cascade,
-  points      integer not null check (points <> 0 and points between -100000 and 100000),
-  note        text check (note is null or length(note) <= 120),
-  cleared_at  timestamptz,
-  created_at  timestamptz not null default now()
-);
-create index if not exists leaderboard_adjustments_owner_idx  on public.leaderboard_adjustments (owner_id);
-create index if not exists leaderboard_adjustments_period_idx on public.leaderboard_adjustments (period_id);
-
-create table if not exists public.leaderboard_settings (
-  owner_id      uuid primary key default auth.uid() references auth.users(id) on delete cascade,
-  winner_mode   text not null default 'score' check (winner_mode in ('score', 'fixed')),
-  winner_points integer not null default 100 check (winner_points between 0 and 100000),
-  loser_points  integer not null default 10 check (loser_points between 0 and 100000),
-  updated_at    timestamptz not null default now()
-);
+create index if not exists scoreboards_owner_idx on public.scoreboards (owner_id, updated_at desc);
 
 create table if not exists public.schedule_overrides (
   id           uuid primary key default gen_random_uuid(),
@@ -572,9 +535,7 @@ alter table public.pick_list_picks    enable row level security;
 alter table public.survey_questions   enable row level security;
 alter table public.survey_sets        enable row level security;
 alter table public.quiz_boards        enable row level security;
-alter table public.game_results            enable row level security;
-alter table public.leaderboard_adjustments enable row level security;
-alter table public.leaderboard_settings    enable row level security;
+alter table public.scoreboards        enable row level security;
 
 do $$
 declare
@@ -585,7 +546,7 @@ begin
     'periods','courses','students','room_layouts','seat_assignments','seating_arrangements','seating_rules',
     'attendance','lesson_plans','lesson_attachments','bathroom_log','schedule_overrides',
     'pick_lists','pick_list_picks','survey_questions','survey_sets','quiz_boards',
-    'game_results','leaderboard_adjustments','leaderboard_settings'
+    'scoreboards'
   ] loop
     policy_name := format('%s owner select', t);
     if not exists (select 1 from pg_policies where schemaname='public' and tablename=t and policyname=policy_name) then

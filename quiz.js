@@ -22,10 +22,7 @@
 // Game state (localStorage teacherpal.quiz.game, so a reload keeps the game):
 //   { boardId, round: 1|2, used: { key: 1 }, results: { key: { v, r: { team: 1|-1 } } },
 //     teams: [{ name, adjust, members: [label] }] (2-4),
-//     open: null | { key, c, r, phase: 'wager'|'clue'|'answer', wagerTeam, wager, at },
-//     roster: null | { periodId, periodName, students: { label: { id, name } } } }
-//   roster: set when the teams were split from a class, so End game can put
-//   the game on that period's Leaderboard (game-end.js); null = just names.
+//     open: null | { key, c, r, phase: 'wager'|'clue'|'answer', wagerTeam, wager, at } }
 //   key = `${boardId}:${round}:${c}-${r}`. A team's score is its `adjust` (a
 //   hand-set correction) plus every result: + or − the clue's value (or the
 //   wager). Scores can go negative.
@@ -369,7 +366,7 @@
 
   // ---------- the main tab ----------
   const freshTeams = (n = 2) => Array.from({ length: n }, (_, k) => ({ name: `Team ${k + 1}`, adjust: 0, members: [] }));
-  const freshGame = () => ({ boardId: null, round: 1, used: {}, results: {}, teams: freshTeams(), open: null, roster: null });
+  const freshGame = () => ({ boardId: null, round: 1, used: {}, results: {}, teams: freshTeams(), open: null });
 
   let boards = [SAMPLE];
   let bankReady = false;        // false = the table isn't there (sample board, read-only)
@@ -384,7 +381,6 @@
         return {
           ...freshGame(), ...g,
           used: g.used || {}, results: g.results || {}, round: g.round === 2 ? 2 : 1,
-          roster: g.roster && g.roster.periodId && g.roster.students && typeof g.roster.students === 'object' ? g.roster : null,
           teams: g.teams.map((t, k) => ({ name: String(t.name || `Team ${k + 1}`), adjust: +t.adjust || 0, members: Array.isArray(t.members) ? t.members : [] })),
         };
       }
@@ -426,7 +422,6 @@
     send();
     paintHost();
     $('qb-undo').disabled = !undo.length;
-    $('qb-end').disabled = !inProgress();
     $('qb-round-1').setAttribute('aria-pressed', String(st.round === 1));
     $('qb-round-2').setAttribute('aria-pressed', String(st.round === 2));
   }
@@ -645,26 +640,6 @@
     }));
   }
 
-  // End game: the final scores, then (teams from a roster) onto the
-  // Leaderboard; the game then starts fresh on the start screen
-  function endGame() {
-    if (typeof openGameEnd !== 'function') return;
-    const b = currentBoard();
-    openGameEnd({
-      game: 'quiz', palette: 'qb-game',
-      setId: b ? b.id : null, setName: b ? b.name : '',
-      teams: st.teams.map((t, k) => ({ name: t.name || `Team ${k + 1}`, score: scoreOf(st, k), members: t.members.slice() })),
-      roster: st.roster,
-      onEnd(saved) {
-        act(() => {
-          const teams = st.teams.map((t) => ({ ...t, adjust: 0 }));
-          Object.assign(st, { used: {}, results: {}, open: null, round: 1, teams });
-        });
-        setStart(true);
-        setStatus(saved ? `Game saved to the ${(st.roster && st.roster.periodName) || 'class'} leaderboard.` : 'Game ended.', 'ok');
-      },
-    });
-  }
   function resetGame() {
     if (!confirm('Start a new game? Every score goes back to 0 and every clue comes back. Team names and members stay.')) return;
     act(() => {
@@ -766,20 +741,6 @@
     });
     paintTeamsDialog();
   }
-  // each student's label on the board, unique within the class, and the
-  // label -> student map End game records the leaderboard from
-  function rosterFor(periodId, present) {
-    const label = new Map();
-    const students = {};
-    for (const s of present) {
-      let l = labelFor(s, present);
-      for (let n = 2; students[l]; n++) l = `${labelFor(s, present)} (${n})`;
-      label.set(s.id, l);
-      students[l] = { id: s.id, name: s.name };
-    }
-    const opt = $('qb-period').selectedOptions[0];
-    return { label, info: { periodId, periodName: opt ? opt.textContent : '', students } };
-  }
   async function splitClass() {
     const periodId = $('qb-period').value;
     if (!periodId) { setStatus('Add a period in Rosters first.', 'error'); return; }
@@ -810,10 +771,8 @@
         const mixed = shuffle(present.slice());
         groups = Array.from({ length: n }, (_, k) => mixed.filter((_, i) => i % n === k));
       }
-      const roster = rosterFor(periodId, present);
       act(() => {
-        st.roster = roster.info;
-        groups.forEach((g, k) => { st.teams[k].members = g.map((s) => roster.label.get(s.id)).sort((a, b) => a.localeCompare(b)); });
+        groups.forEach((g, k) => { st.teams[k].members = g.map((s) => labelFor(s, present)).sort((a, b) => a.localeCompare(b)); });
       });
       const skipped = students.length - present.length;
       $('qb-split-note').textContent = `${present.length} students split ${how}${skipped ? ` (${skipped} absent or sitting out)` : ''}.`;
@@ -1461,8 +1420,7 @@
   editor.addEventListener('close', () => { if (setup.open) paintSetup(); if (startOn) paintStart(); });
   $('qb-count').addEventListener('change', (e) => setTeamCount(+e.target.value));
   $('qb-split').addEventListener('click', splitClass);
-  $('qb-clear-members').addEventListener('click', () => { act(() => { st.teams.forEach((t) => { t.members = []; }); st.roster = null; }); paintTeamsDialog(); });
-  $('qb-end').addEventListener('click', endGame);
+  $('qb-clear-members').addEventListener('click', () => { act(() => { st.teams.forEach((t) => { t.members = []; }); }); paintTeamsDialog(); });
   $('qb-period').addEventListener('change', (e) => setLastPeriodId(e.target.value));
   $('qb-team-cols').addEventListener('input', (e) => {
     const t = e.target;

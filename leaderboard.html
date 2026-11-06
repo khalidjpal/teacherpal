@@ -20,106 +20,147 @@
 
       <!-- the home screen: where the page opens -->
       <section class="lb-home no-present" id="lb-home" aria-labelledby="lb-home-title">
-        <div class="lb-home-top">
-          <h1 class="lb-home-title" id="lb-home-title">Leaderboard</h1>
-          <div class="lb-slot" id="lb-home-slot"><select id="lb-period" aria-label="Class period"></select></div>
-        </div>
-        <div class="lb-preview" aria-live="polite">
+        <h1 class="lb-home-title" id="lb-home-title">Leaderboard</h1>
+        <p class="lb-tagline" id="lb-tagline" hidden>Teams or students, for a game, a competition, anything in the room.</p>
+        <div class="lb-boards" id="lb-boards" aria-label="Your scoreboards"></div>
+        <div class="lb-preview" id="lb-preview" aria-live="polite">
           <ol class="lb-trio" id="lb-trio" aria-label="Top three"></ol>
           <div class="lb-none" id="lb-none" hidden><b id="lb-none-t"></b><span id="lb-none-s"></span></div>
           <p class="lb-meta" id="lb-meta"></p>
         </div>
-        <div class="lb-home-actions">
-          <button type="button" class="lb-go" id="lb-go">See full standings</button>
+        <div class="lb-home-actions" id="lb-home-actions">
+          <button type="button" class="lb-go lb-btn lb-btn-primary lb-btn-lg" id="lb-go">Keep score</button>
           <div class="lb-more">
-            <button type="button" class="lb-sec" id="lb-go-history"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5M12 7v5l3 2"/></svg>Games played</button>
-            <button type="button" class="lb-sec" data-fullscreen aria-pressed="false" title="Show the top of the standings big (F)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="4" width="20" height="13" rx="1.5"/><path d="M8 21h8M12 17v4"/></svg>Projector view</button>
-            <button type="button" class="lb-sec" id="lb-go-settings"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 21v-7M4 10V3M12 21v-9M12 8V3M20 21v-5M20 12V3M1 14h6M9 8h6M17 16h6"/></svg>Settings</button>
+            <button type="button" class="lb-btn lb-btn-outline lb-proj-btn" data-projector title="Opens a window you can make full screen on your projector"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="4" width="20" height="13" rx="1.5"/><path d="M8 21h8M12 17v4"/></svg>Projector window<span class="lb-dot" aria-hidden="true"></span></button>
+            <button type="button" class="lb-btn lb-btn-outline" id="lb-edit-home"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>Edit</button>
           </div>
         </div>
+        <section class="lb-new-sec" id="lb-new-sec" aria-labelledby="lb-new-h" hidden>
+          <h2 class="lb-new-h" id="lb-new-h">New scoreboard</h2>
+          <div class="lb-presets" id="lb-presets"></div>
+        </section>
       </section>
 
+      <!-- keeping score -->
       <header class="lb-head no-present">
-        <button type="button" class="lb-back" id="lb-back" title="Back to the Leaderboard home (Esc)" aria-label="Leaderboard home"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 18l-6-6 6-6"/></svg><span class="lb-title">Leaderboard</span></button>
-        <div class="lb-slot" id="lb-head-slot"></div>
-        <div class="lb-tabs" role="tablist" aria-label="Leaderboard views">
-          <button type="button" role="tab" id="lb-tab-standings" aria-selected="true" aria-controls="lb-standings">Standings</button>
-          <button type="button" role="tab" id="lb-tab-history" aria-selected="false" aria-controls="lb-history" tabindex="-1">Games played</button>
-        </div>
+        <button type="button" class="lb-back lb-btn lb-btn-ghost lb-btn-icon" id="lb-back" title="Back to the Leaderboard home (Esc)" aria-label="Leaderboard home"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 18l-6-6 6-6"/></svg></button>
+        <h1 class="lb-board-name" id="lb-board-name"></h1>
+        <span class="lb-save" id="lb-save" aria-live="polite"></span>
         <div class="lb-actions">
-          <button type="button" id="lb-reset" title="Everyone back to 0 for this class. The games stay in the history.">Reset standings</button>
-          <button type="button" id="lb-settings-btn" class="icon-btn" title="How points work" aria-label="How points work"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></button>
-          <button type="button" class="lb-show-btn" data-fullscreen aria-pressed="false" title="Show the top of the standings big, for the projector (F)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="4" width="20" height="13" rx="1.5"/><path d="M8 21h8M12 17v4"/></svg><span>Show on projector</span></button>
+          <div class="lb-tabs" role="group" aria-label="Order">
+            <button type="button" id="lb-sort-score" aria-pressed="true" title="Highest score first">By score</button>
+            <button type="button" id="lb-sort-order" aria-pressed="false" title="The order they were added">Entry order</button>
+          </div>
+          <button type="button" class="lb-btn lb-btn-outline" id="lb-undo" title="Undo (Ctrl+Z)" disabled><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 14 4 9l5-5"/><path d="M4 9h11a5 5 0 0 1 0 10h-3"/></svg>Undo</button>
+          <button type="button" class="lb-btn lb-btn-outline" id="lb-reset">Reset scores</button>
+          <button type="button" class="lb-btn lb-btn-outline" id="lb-edit"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>Edit</button>
+          <button type="button" class="lb-btn lb-btn-primary lb-proj-btn" data-projector title="Opens a window you can make full screen on your projector"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="4" width="20" height="13" rx="1.5"/><path d="M8 21h8M12 17v4"/></svg>Projector window<span class="lb-dot" aria-hidden="true"></span></button>
         </div>
       </header>
 
-      <section class="lb-panel no-present" id="lb-standings" role="tabpanel" aria-labelledby="lb-tab-standings">
-        <div class="lb-cols" aria-hidden="true"><span>Rank</span><span>Student</span><span>Points</span><span>Games</span><span></span></div>
-        <ol class="lb-list" id="lb-list"></ol>
+      <section class="lb-score no-present" id="lb-score" aria-label="Scores">
+        <ol class="lb-entries" id="lb-entries"></ol>
         <p class="lb-empty" id="lb-empty" hidden></p>
       </section>
 
-      <section class="lb-panel no-present" id="lb-history" role="tabpanel" aria-labelledby="lb-tab-history" hidden>
-        <div class="lb-hcols" aria-hidden="true"><span>Date</span><span>Game</span><span>Questions</span><span>Final scores</span><span>Counts</span></div>
-        <ol class="lb-games" id="lb-games"></ol>
-        <p class="lb-empty" id="lb-hempty" hidden></p>
-      </section>
-
-      <!-- the projector view: only in full screen -->
-      <section class="lb-show" id="lb-show" aria-label="Leaderboard, top standings">
-        <h1 class="lb-show-title"><span id="lb-show-period"></span><b>Leaderboard</b></h1>
-        <ol class="lb-podium" id="lb-podium"></ol>
-        <ol class="lb-rest" id="lb-rest"></ol>
-        <p class="lb-show-empty" id="lb-show-empty" hidden>No games yet. Play one to get on the board!</p>
+      <!-- the standings alone: full screen here, and the projector window -->
+      <section class="lb-show" id="lb-show" aria-label="Standings">
+        <h1 class="lb-show-title" id="lb-show-title"></h1>
+        <ol class="lb-stand" id="lb-show-list"></ol>
+        <p class="lb-show-empty" id="lb-show-empty" hidden></p>
       </section>
     </main>
   </div>
 
-  <dialog id="lb-adjust" class="sd-dialog lb-dialog" aria-labelledby="lb-adjust-title">
-    <form class="sd-dialog-inner" id="lb-adjust-form" method="dialog">
-      <header class="sd-dialog-head"><h2 id="lb-adjust-title">Adjust points</h2><span class="lb-adj-total" id="lb-adj-total"></span></header>
+  <!-- one entry: rename, set the score, remove -->
+  <dialog id="lb-entry" class="sd-dialog lb-dialog" aria-labelledby="lb-entry-title">
+    <form class="sd-dialog-inner" id="lb-entry-form" method="dialog">
+      <header class="sd-dialog-head"><h2 id="lb-entry-title">Edit</h2></header>
       <div class="sd-dialog-body">
-        <p class="lb-adj-name" id="lb-adj-name"></p>
-        <label class="lb-field"><span>Points</span>
-          <input type="number" id="lb-adj-points" step="1" min="-100000" max="100000" required placeholder="20 or -20"></label>
-        <label class="lb-field"><span>Note</span>
-          <input type="text" id="lb-adj-note" maxlength="120" placeholder="Bonus for the review game"></label>
-        <ul class="lb-adj-list" id="lb-adj-list"></ul>
-        <p class="ge-err" id="lb-adj-err" role="alert"></p>
+        <label class="lb-field"><span>Name</span>
+          <input type="text" id="lb-e-name" maxlength="60" required></label>
+        <label class="lb-field"><span>Score</span>
+          <input type="text" id="lb-e-score" inputmode="numeric" autocomplete="off"></label>
+        <p class="lb-err" id="lb-e-err" role="alert"></p>
       </div>
       <footer class="sd-dialog-foot">
-        <button type="button" id="lb-adj-cancel">Cancel</button>
-        <button type="submit" class="primary" id="lb-adj-save">Save</button>
+        <button type="button" class="lb-btn lb-btn-ghost lb-danger" id="lb-e-remove">Remove</button>
+        <span class="lb-grow"></span>
+        <button type="button" class="lb-btn lb-btn-outline" id="lb-e-cancel">Cancel</button>
+        <button type="submit" class="lb-btn lb-btn-primary" id="lb-e-save">Save</button>
       </footer>
     </form>
   </dialog>
 
-  <dialog id="lb-settings" class="sd-dialog lb-dialog" aria-labelledby="lb-settings-title">
-    <form class="sd-dialog-inner" id="lb-settings-form" method="dialog">
-      <header class="sd-dialog-head"><h2 id="lb-settings-title">How points work</h2></header>
+  <!-- a new scoreboard, or editing one -->
+  <dialog id="lb-setup" class="sd-dialog lb-dialog lb-setup" aria-labelledby="lb-setup-title">
+    <form class="sd-dialog-inner" id="lb-setup-form" method="dialog">
+      <header class="sd-dialog-head"><div class="lb-setup-head"><h2 id="lb-setup-title">New scoreboard</h2><p class="lb-setup-line" id="lb-setup-line"></p></div></header>
       <div class="sd-dialog-body">
-        <fieldset class="lb-set">
-          <legend>Each player on the winning team gets</legend>
-          <label class="lb-radio"><input type="radio" name="lb-wmode" value="score" checked> <span>Their team's final score</span></label>
-          <label class="lb-radio"><input type="radio" name="lb-wmode" value="fixed"> <span>A set amount:</span>
-            <input type="number" id="lb-wpoints" min="0" max="100000" step="1" aria-label="Points for each winner"> <span>points</span></label>
-        </fieldset>
-        <fieldset class="lb-set">
-          <legend>Each player on the other teams gets</legend>
-          <label class="lb-radio"><input type="number" id="lb-lpoints" min="0" max="100000" step="1" aria-label="Points for each other player"> <span>points for playing</span></label>
-        </fieldset>
-        <p class="lb-set-note">A tie for first: every team on it wins. Games already played keep their points.</p>
-        <p class="ge-err" id="lb-set-err" role="alert"></p>
+        <label class="lb-field"><span>Name</span>
+          <input type="text" id="lb-s-name" maxlength="80" placeholder="Spelling bee" autocomplete="off"></label>
+        <div class="lb-field" id="lb-s-kind-row"><span id="lb-s-kind-l">Keep score for</span>
+          <div class="lb-tabs" role="group" aria-labelledby="lb-s-kind-l">
+            <button type="button" data-kind="teams" aria-pressed="true">Teams</button>
+            <button type="button" data-kind="students" aria-pressed="false">Students</button>
+          </div>
+        </div>
+        <div class="lb-s-group" id="lb-s-classgrp">
+          <div class="lb-s-class">
+            <select id="lb-s-period" aria-label="Class period"></select>
+            <button type="button" class="lb-btn lb-btn-outline lb-for-teams" id="lb-s-split">Split the class into these teams</button>
+            <button type="button" class="lb-btn lb-btn-outline lb-for-students" id="lb-s-addclass">Add the class</button>
+            <button type="button" class="lb-btn lb-btn-ghost lb-for-teams" id="lb-s-clear">Clear the names</button>
+          </div>
+          <p class="lb-s-note" id="lb-s-note"></p>
+        </div>
+        <p class="lb-s-label"><span>On the scoreboard</span><span class="lb-s-count-all" id="lb-s-count-all"></span></p>
+        <div class="lb-s-group lb-for-teams">
+          <ul class="lb-s-teams" id="lb-s-teams"></ul>
+          <button type="button" class="lb-btn lb-btn-outline lb-btn-sm lb-s-addteam" id="lb-s-addteam">+ Add team</button>
+        </div>
+        <div class="lb-s-group lb-for-students">
+          <div class="lb-s-type">
+            <textarea id="lb-s-names" rows="2" placeholder="Type names, one per line" aria-label="Names to add, one per line"></textarea>
+            <button type="button" class="lb-btn lb-btn-outline" id="lb-s-add">Add</button>
+          </div>
+          <ul class="lb-s-list" id="lb-s-list"></ul>
+        </div>
+        <div class="lb-s-scoring">
+          <label class="lb-field lb-s-startf"><span>Starting score</span>
+            <input type="text" id="lb-s-start" inputmode="numeric" autocomplete="off" value="0"></label>
+          <div class="lb-field lb-s-btnsf"><span id="lb-s-btns-l">Buttons on each row</span>
+            <div class="lb-s-bsets">
+              <div class="lb-tabs" role="group" aria-labelledby="lb-s-btns-l">
+                <button type="button" data-bset="0" aria-pressed="true">+1 +5 +10 −1</button>
+                <button type="button" data-bset="1" aria-pressed="false">+10 +25 +50 −10</button>
+                <button type="button" data-bset="2" aria-pressed="false">+100 +200 +500 −100</button>
+                <button type="button" data-bset="own" aria-pressed="false">Your own</button>
+              </div>
+              <input type="text" id="lb-s-btns" autocomplete="off" placeholder="1, 2, 3, -1" aria-label="Your buttons, separated by commas" title="Up to 6 whole numbers; a minus takes points away" hidden>
+            </div>
+          </div>
+          <div class="lb-field"><span id="lb-s-sort-l">Order</span>
+            <div class="lb-tabs" role="group" aria-labelledby="lb-s-sort-l">
+              <button type="button" data-sort="score" aria-pressed="true">By score</button>
+              <button type="button" data-sort="order" aria-pressed="false">Entry order</button>
+            </div>
+          </div>
+        </div>
+        <p class="lb-err" id="lb-s-err" role="alert"></p>
       </div>
       <footer class="sd-dialog-foot">
-        <button type="button" id="lb-set-cancel">Cancel</button>
-        <button type="submit" class="primary" id="lb-set-save">Save</button>
+        <button type="button" class="lb-btn lb-btn-ghost lb-danger" id="lb-s-delete" hidden>Delete scoreboard</button>
+        <span class="lb-grow"></span>
+        <button type="button" class="lb-btn lb-btn-outline" id="lb-s-cancel">Cancel</button>
+        <button type="submit" class="lb-btn lb-btn-primary" id="lb-s-save">Create scoreboard</button>
       </footer>
     </form>
   </dialog>
 
   <script src="shared.js"></script>
   <script src="schedule.js"></script>
+  <script src="room.js"></script>
   <script src="nav.js"></script>
   <script src="leaderboard.js"></script>
 </body>

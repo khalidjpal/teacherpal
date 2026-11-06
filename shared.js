@@ -1177,73 +1177,49 @@ async function deleteQuizBoard(id) {
   return sb('quiz_boards', { method: 'DELETE', params: { id: `eq.${id}` } });
 }
 
-// ---------- the games' Leaderboard (migration-leaderboard.sql) ----------
-// game_results = { id, period_id, game: 'feud'|'quiz', set_id, set_name,
-//   teams: [{ name, score, won, members: [{ id, name, points }] }], counts, cleared_at, played_at }
-// Standings are summed in the browser from the games that count and aren't
-// cleared, plus the uncleared adjustments.
-const LEADERBOARD_DEFAULTS = { winnerMode: 'score', winnerPoints: 100, loserPoints: 10 };
-async function getGameResults(periodId) {
-  return sbAll('game_results', { select: '*', period_id: `eq.${periodId}`, order: 'played_at.desc' });
+// ---------- the Leaderboard's scoreboards (migration-scoreboards.sql) ----------
+// scoreboards = { id, name, kind: 'teams'|'students', sort_mode: 'score'|'order',
+//   entries: [{ id, name, score, members: [{ id, name }], sid? }], period_id,
+//   created_at, updated_at }. A standalone scorekeeper: nothing reads the games.
+const SCOREBOARD_MAX_ENTRIES = 200;
+// false once a save finds the buttons / start_score columns missing (the
+// first version of migration-scoreboards.sql): saves then leave them out
+let scoreboardExtras = true;
+const scoreboardExtrasSaved = () => scoreboardExtras;
+function scoreboardBody(f) {
+  const body = {};
+  if (f.name != null) body.name = String(f.name).trim().slice(0, 80) || 'Scoreboard';
+  if (f.kind != null) body.kind = f.kind === 'students' ? 'students' : 'teams';
+  if (f.entries != null) body.entries = f.entries.slice(0, SCOREBOARD_MAX_ENTRIES);
+  if (f.sortMode != null) body.sort_mode = f.sortMode === 'order' ? 'order' : 'score';
+  if (f.periodId !== undefined) body.period_id = f.periodId || null;
+  if (scoreboardExtras && Array.isArray(f.buttons)) body.buttons = f.buttons.slice(0, 6);
+  if (scoreboardExtras && f.startScore != null) body.start_score = Math.round(+f.startScore) || 0;
+  return body;
 }
-async function recordGameResult({ periodId, game, setId, setName, teams, counts = true }) {
-  const rows = await sb('game_results', {
-    method: 'POST',
-    body: { period_id: periodId, game, set_id: setId == null ? null : String(setId), set_name: setName ? String(setName).slice(0, 120) : null, teams, counts: !!counts },
-  });
+async function scoreboardWrite(opts) {
+  try {
+    return await sb('scoreboards', opts());
+  } catch (e) {
+    if (!scoreboardExtras || !/PGRST204|'(buttons|start_score)'/.test(String(e && e.message))) throw e;
+    scoreboardExtras = false;
+    return sb('scoreboards', opts());
+  }
+}
+// newest first
+async function getScoreboards() {
+  return sb('scoreboards', { params: { select: '*', order: 'updated_at.desc' } });
+}
+async function createScoreboard(fields) {
+  const rows = await scoreboardWrite(() => ({ method: 'POST', body: scoreboardBody(fields) }));
   return rows[0];
 }
-async function setGameCounts(id, counts) {
-  const rows = await sb('game_results', { method: 'PATCH', params: { id: `eq.${id}` }, body: { counts: !!counts } });
+async function updateScoreboard(id, fields) {
+  const rows = await scoreboardWrite(() => ({ method: 'PATCH', params: { id: `eq.${id}` }, body: { ...scoreboardBody(fields), updated_at: new Date().toISOString() } }));
   return rows[0];
 }
-async function getLeaderboardAdjustments(periodId) {
-  return sbAll('leaderboard_adjustments', { select: '*', period_id: `eq.${periodId}`, cleared_at: 'is.null', order: 'created_at.asc' });
-}
-async function addLeaderboardAdjustment(periodId, studentId, points, note) {
-  const rows = await sb('leaderboard_adjustments', {
-    method: 'POST',
-    body: { period_id: periodId, student_id: studentId, points: Math.round(points), note: note ? String(note).trim().slice(0, 120) || null : null },
-  });
-  return rows[0];
-}
-async function deleteLeaderboardAdjustment(id) {
-  return sb('leaderboard_adjustments', { method: 'DELETE', params: { id: `eq.${id}` } });
-}
-// Reset: every game and adjustment so far stops counting (the games stay in the history)
-async function resetLeaderboard(periodId) {
-  const at = new Date().toISOString();
-  await sb('game_results', { method: 'PATCH', params: { period_id: `eq.${periodId}`, cleared_at: 'is.null' }, body: { cleared_at: at }, prefer: 'return=minimal' });
-  await sb('leaderboard_adjustments', { method: 'PATCH', params: { period_id: `eq.${periodId}`, cleared_at: 'is.null' }, body: { cleared_at: at }, prefer: 'return=minimal' });
-}
-// → { winnerMode, winnerPoints, loserPoints } (the defaults when there's no row yet)
-async function getLeaderboardSettings() {
-  const rows = await sb('leaderboard_settings', { params: { select: '*' } });
-  const r = rows && rows[0];
-  if (!r) return { ...LEADERBOARD_DEFAULTS };
-  return { winnerMode: r.winner_mode === 'fixed' ? 'fixed' : 'score', winnerPoints: +r.winner_points || 0, loserPoints: +r.loser_points || 0 };
-}
-async function saveLeaderboardSettings({ winnerMode, winnerPoints, loserPoints }) {
-  const clamp = (n) => Math.max(0, Math.min(100000, Math.round(+n || 0)));
-  const rows = await sb('leaderboard_settings', {
-    method: 'POST',
-    params: { on_conflict: 'owner_id' },
-    prefer: 'resolution=merge-duplicates,return=representation',
-    body: { winner_mode: winnerMode === 'fixed' ? 'fixed' : 'score', winner_points: clamp(winnerPoints), loser_points: clamp(loserPoints), updated_at: new Date().toISOString() },
-  });
-  return rows[0];
-}
-// What each player earns from a finished game. teams: [{ score }]. The top
-// score wins (a tie at the top: every team on it wins); a winner's points are
-// the team's final score (never below 0) or the set number.
-function leaderboardAwards(teams, settings) {
-  const s = { ...LEADERBOARD_DEFAULTS, ...(settings || {}) };
-  const top = Math.max(...teams.map((t) => +t.score || 0));
-  return teams.map((t) => {
-    const won = (+t.score || 0) === top;
-    const points = won ? (s.winnerMode === 'fixed' ? s.winnerPoints : Math.max(0, +t.score || 0)) : s.loserPoints;
-    return { won, points };
-  });
+async function deleteScoreboard(id) {
+  return sb('scoreboards', { method: 'DELETE', params: { id: `eq.${id}` } });
 }
 
 async function getPickLists(periodId) {
