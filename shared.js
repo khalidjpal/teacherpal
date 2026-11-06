@@ -91,6 +91,8 @@ function normalizeSession(raw, recovery = !!(_session && _session.recovery)) {
         bell_schedule: prevUser && prevUser.bell_schedule || null,
         setup_progress: prevUser && prevUser.setup_progress || null,
         ...(prevUser && 'reduce_effects' in prevUser ? { reduce_effects: !!prevUser.reduce_effects } : {}),
+        ...(prevUser && 'winter_picker' in prevUser ? { winter_picker: prevUser.winter_picker || null } : {}),
+        ...(prevUser && 'sled_race' in prevUser ? { sled_race: prevUser.sled_race || null } : {}),
       }
     : prevUser;
   return {
@@ -266,11 +268,42 @@ async function hydrateProfileIntoSession() {
       }
     }
 
+    // The winter Name Wheel's picker (before migration-winter-picker.sql:
+    // keep this browser's choice). Null on the row = never chosen there: a
+    // choice made in this browser is adopted and saved.
+    if ('winter_picker' in p) {
+      const cached = (() => { try { return localStorage.getItem(WINTER_PICK_KEY); } catch { return null; } })();
+      if (!p.winter_picker && WINTER_PICKS.includes(cached)) {
+        _session.user.winter_picker = cached;
+        sb('rpc/set_my_winter_picker', { method: 'POST', body: { p_pick: cached } }).catch((err) => console.error('winter picker save', err));
+      } else {
+        _session.user.winter_picker = WINTER_PICKS.includes(p.winter_picker) ? p.winter_picker : null;
+      }
+    }
+
+    // The sled race: short or long, how many to pick (same rule as above).
+    if ('sled_race' in p) {
+      const cached = readSledRaceCache();
+      if (!p.sled_race && cached) {
+        _session.user.sled_race = cached;
+        sb('rpc/set_my_sled_race', { method: 'POST', body: { p_race: cached } }).catch((err) => console.error('sled race save', err));
+      } else {
+        _session.user.sled_race = p.sled_race ? normalizeSledRace(p.sled_race) : null;
+      }
+    }
+
     if (JSON.stringify(_session.user) === before) return;   // nothing moved
     saveSession(_session);
     if (currentTheme() !== _session.user.theme) applyTheme(_session.user.theme);
     if ('reduce_effects' in _session.user && reduceEffects() !== _session.user.reduce_effects) {
       applyReduceEffects(_session.user.reduce_effects);
+    }
+    if (_session.user.winter_picker && winterPicker() !== _session.user.winter_picker) {
+      applyWinterPicker(_session.user.winter_picker);
+    }
+    if (_session.user.sled_race) {
+      try { localStorage.setItem(SLED_RACE_KEY, JSON.stringify(_session.user.sled_race)); } catch { /* ignore */ }
+      document.dispatchEvent(new CustomEvent('teacherpal:sledRace', { detail: sledRace() }));
     }
     if (JSON.stringify(_session.user.teaches_periods) !== prevTeaches) {
       document.dispatchEvent(new CustomEvent('teacherpal:teachesPeriods', {
@@ -1097,6 +1130,53 @@ async function getAttendanceForDate(date) {
 // = still to go. Picks last until the list is reset, across days and devices.
 // ---------------------------------------------------------------------------
 
+// ---------- Family Feud: each teacher's named question sets ----------
+// survey_sets = { id, name, questions: [{ id, question, answers: [{ text, points }] (1-8), auto? }], sort_order }
+async function getSurveySets() {
+  return sb('survey_sets', { params: { select: '*', order: 'sort_order.asc,created_at.asc' } });
+}
+async function createSurveySet({ name, questions = [], sortOrder = 0 }) {
+  const rows = await sb('survey_sets', { method: 'POST', body: { name: name.trim(), questions, sort_order: sortOrder } });
+  return rows[0];
+}
+async function updateSurveySet(id, fields) {
+  const body = { updated_at: new Date().toISOString() };
+  if (fields.name != null) body.name = fields.name.trim();
+  if (fields.questions != null) body.questions = fields.questions;
+  if (fields.sortOrder != null) body.sort_order = fields.sortOrder;
+  const rows = await sb('survey_sets', { method: 'PATCH', params: { id: `eq.${id}` }, body });
+  return rows[0];
+}
+async function deleteSurveySet(id) {
+  return sb('survey_sets', { method: 'DELETE', params: { id: `eq.${id}` } });
+}
+// The old one-bank table (before migration-feud-sets.sql): read only.
+// survey_questions = { id, question, answers: [{ text, points }] (1-8), sort_order }
+async function getSurveyQuestions() {
+  return sb('survey_questions', { params: { select: '*', order: 'sort_order.asc,created_at.asc' } });
+}
+
+// ---------- Jeopardy: each teacher's saved boards ----------
+// quiz_boards = { id, name, categories: [{ name, clues: [{ q, a, double }] x5 }] (up to 6), sort_order }
+async function getQuizBoards() {
+  return sb('quiz_boards', { params: { select: '*', order: 'sort_order.asc,created_at.asc' } });
+}
+async function createQuizBoard({ name, categories, sortOrder = 0 }) {
+  const rows = await sb('quiz_boards', { method: 'POST', body: { name: name.trim(), categories, sort_order: sortOrder } });
+  return rows[0];
+}
+async function updateQuizBoard(id, fields) {
+  const body = { updated_at: new Date().toISOString() };
+  if (fields.name != null) body.name = fields.name.trim();
+  if (fields.categories != null) body.categories = fields.categories;
+  if (fields.sortOrder != null) body.sort_order = fields.sortOrder;
+  const rows = await sb('quiz_boards', { method: 'PATCH', params: { id: `eq.${id}` }, body });
+  return rows[0];
+}
+async function deleteQuizBoard(id) {
+  return sb('quiz_boards', { method: 'DELETE', params: { id: `eq.${id}` } });
+}
+
 async function getPickLists(periodId) {
   return sb('pick_lists', {
     params: { select: '*', period_id: `eq.${periodId}`, order: 'sort_order.asc,created_at.asc' },
@@ -1792,6 +1872,83 @@ async function setMyReduceEffects(on) {
   }
 }
 
+// ---------------------------------------------------------------------------
+// The winter Name Wheel's picker: 'sleigh' (Santa's sleigh and the present
+// pile, workshop.js; the default) or 'race' (the sled race, sled.js).
+// profiles.winter_picker (migration-winter-picker.sql) is the source of
+// truth; localStorage['teacherpal.winterPicker'] is the cache the Name
+// Wheel's head scripts read, and the pop-out follows it through the storage
+// event. On <html> as data-wpick.
+// ---------------------------------------------------------------------------
+const WINTER_PICK_KEY = 'teacherpal.winterPicker';
+const WINTER_PICKS = ['sleigh', 'race'];
+
+function winterPicker() { return document.documentElement.getAttribute('data-wpick') === 'race' ? 'race' : 'sleigh'; }
+
+// Apply and cache locally (no server call: setMyWinterPicker does that).
+function applyWinterPicker(pick) {
+  pick = WINTER_PICKS.includes(pick) ? pick : 'sleigh';
+  document.documentElement.setAttribute('data-wpick', pick);
+  try { localStorage.setItem(WINTER_PICK_KEY, pick); } catch { /* ignore */ }
+  document.dispatchEvent(new CustomEvent('teacherpal:winterPicker', { detail: { pick } }));
+}
+
+// The Name Wheel's selector: apply at once, then save to the profile.
+async function setMyWinterPicker(pick) {
+  pick = WINTER_PICKS.includes(pick) ? pick : 'sleigh';
+  applyWinterPicker(pick);
+  if (_session && _session.user) {
+    _session.user.winter_picker = pick;
+    saveSession(_session);
+    try {
+      await sb('rpc/set_my_winter_picker', { method: 'POST', body: { p_pick: pick } });
+    } catch (err) {
+      // Before the migration: still chosen in this browser, just not synced.
+      console.error('winter picker save', err);
+    }
+  }
+}
+
+// ---------------------------------------------------------------------------
+// The sled race (the winter Name Wheel's other picker): how long the race is
+// ('short', the straight run, ~5s; 'long', the winding course, ~12s) and how
+// many students it picks (1-6, the places in order). profiles.sled_race jsonb
+// (migration-winter-picker.sql) is the source of truth;
+// localStorage['teacherpal.sledRace'] is this browser's cache. The windows
+// that show the race get it in the spin descriptor, not from here.
+// ---------------------------------------------------------------------------
+const SLED_RACE_KEY = 'teacherpal.sledRace';
+const SLED_PICKS_MAX = 6;
+function normalizeSledRace(r) {
+  r = r && typeof r === 'object' ? r : {};
+  const n = Math.round(Number(r.picks));
+  return { length: r.length === 'long' ? 'long' : 'short', picks: Number.isFinite(n) ? Math.max(1, Math.min(SLED_PICKS_MAX, n)) : 1 };
+}
+function readSledRaceCache() {
+  try { const t = localStorage.getItem(SLED_RACE_KEY); return t ? normalizeSledRace(JSON.parse(t)) : null; } catch { return null; }
+}
+// { length: 'short' | 'long', picks: 1..6 }
+function sledRace() {
+  if (_session && _session.user && _session.user.sled_race) return normalizeSledRace(_session.user.sled_race);
+  return readSledRaceCache() || normalizeSledRace(null);
+}
+// The Name Wheel's selects: apply at once, then save to the profile.
+async function setMySledRace(patch) {
+  const r = normalizeSledRace({ ...sledRace(), ...(patch || {}) });
+  try { localStorage.setItem(SLED_RACE_KEY, JSON.stringify(r)); } catch { /* ignore */ }
+  if (_session && _session.user) { _session.user.sled_race = r; saveSession(_session); }
+  document.dispatchEvent(new CustomEvent('teacherpal:sledRace', { detail: r }));
+  if (_session && _session.user) {
+    try {
+      await sb('rpc/set_my_sled_race', { method: 'POST', body: { p_race: r } });
+    } catch (err) {
+      // Before the migration: still chosen in this browser, just not synced.
+      console.error('sled race save', err);
+    }
+  }
+  return r;
+}
+
 // If we already have a stored session with a theme, apply it now so pages
 // come up in the right theme even before the head script runs.
 if (_session && _session.user && _session.user.theme) applyTheme(_session.user.theme);
@@ -1800,6 +1957,12 @@ if (_session && _session.user && 'reduce_effects' in _session.user) {
   applyReduceEffects(_session.user.reduce_effects);
 } else {
   try { if (localStorage.getItem(EFFECTS_KEY) === 'reduced') document.documentElement.setAttribute('data-effects', 'reduced'); } catch { /* ignore */ }
+}
+// And the winter picker (the profile's choice, else this browser's cache).
+if (_session && _session.user && WINTER_PICKS.includes(_session.user.winter_picker)) {
+  document.documentElement.setAttribute('data-wpick', _session.user.winter_picker);
+} else {
+  try { const w = localStorage.getItem(WINTER_PICK_KEY); if (WINTER_PICKS.includes(w)) document.documentElement.setAttribute('data-wpick', w); } catch { /* ignore */ }
 }
 
 // Re-read the profile once per page load. The stored session is a cache;

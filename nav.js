@@ -22,6 +22,10 @@ const NAV_SECTIONS = [
     { href: 'noise.html', label: 'Noise Meter' },
     { href: 'wheel.html', label: 'Name Wheel' },
   ] },
+  { id: 'games', label: 'Games', items: [
+    { href: 'showdown.html', label: 'Family Feud' },
+    { href: 'quiz.html', label: 'Jeopardy' },
+  ] },
   { id: 'planning', label: 'Planning', items: [
     { href: 'lessons.html', label: 'Lesson Plans' },
     { href: 'seating.html', label: 'Seating' },

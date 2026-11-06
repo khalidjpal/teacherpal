@@ -8,7 +8,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Comfortaa:wght@400;500;600;700&family=Quicksand:wght@400;500;600;700&family=JetBrains+Mono&family=Nunito:wght@400;600;700&family=Orbitron:wght@500;600;700&family=Pirata+One&family=Rajdhani:wght@500;600;700&family=Share+Tech+Mono&display=swap" rel="stylesheet">
-  <script>(function(){try{var t=localStorage.getItem('teacherpal.theme')||'default';t={jarvis:'default',marwa:'pink',earthy:'default'}[t]||t;document.documentElement.setAttribute('data-theme',t);if(localStorage.getItem('teacherpal.effects')==='reduced')document.documentElement.setAttribute('data-effects','reduced');}catch(e){document.documentElement.setAttribute('data-theme','default');}})();</script>
+  <script>(function(){try{var t=localStorage.getItem('teacherpal.theme')||'default';t={jarvis:'default',marwa:'pink',earthy:'default'}[t]||t;document.documentElement.setAttribute('data-theme',t);if(localStorage.getItem('teacherpal.effects')==='reduced')document.documentElement.setAttribute('data-effects','reduced');if(localStorage.getItem('teacherpal.winterPicker')==='race')document.documentElement.setAttribute('data-wpick','race');}catch(e){document.documentElement.setAttribute('data-theme','default');}})();</script>
   <link rel="stylesheet" href="style.css">
 </head>
 <body class="hub">
@@ -80,7 +80,7 @@
           <button type="button" id="wheel-spin" class="wheel-hub-btn"><span class="hub-face" aria-hidden="true"></span><span class="hub-label">Spin</span></button>
           <!-- pink only: the bunny beside the wheel (wheel.js builds it) -->
           <div class="wheel-mascot" id="wheel-mascot" data-mood="idle" aria-hidden="true"></div>
-          <p class="wheel-empty" id="wheel-empty" hidden><span class="for-wheel">Nobody on the wheel</span><span class="for-brew">Nobody in the brew</span><span class="for-boba">No pearls in the cup</span><span class="for-farm">No turkeys left in the yard</span><span class="for-sled">Nobody left on the hill</span> — everyone is absent, sitting out, or already called.</p>
+          <p class="wheel-empty" id="wheel-empty" hidden><span class="for-wheel">Nobody on the wheel</span><span class="for-brew">Nobody in the brew</span><span class="for-boba">No pearls in the cup</span><span class="for-farm">No turkeys left in the yard</span><span class="for-shop">No presents left in the pile</span><span class="for-sled">Nobody left at the top of the hill</span> — everyone is absent, sitting out, or already called.</p>
         </div>
       </div>
 
@@ -96,12 +96,12 @@
             <button type="button" class="wheel-mini" id="wheel-remove" title="Take this student off the wheel">Take off</button>
           </div>
 
-          <p class="wheel-placeholder"><span class="for-wheel">Spin to pick a student</span><span class="for-brew">Stir the cauldron to pick a student</span><span class="for-boba">Click the cup to pick a student</span><span class="for-farm">Send the farmer to pick a student</span><span class="for-sled">Start the race to pick a student</span></p>
+          <p class="wheel-placeholder"><span class="for-wheel">Spin to pick a student</span><span class="for-brew">Stir the cauldron to pick a student</span><span class="for-boba">Click the cup to pick a student</span><span class="for-farm">Send the farmer to pick a student</span><span class="for-shop">Click the hilltop for Santa to dig out a student</span><span class="for-sled">Start the race to pick a student</span></p>
           <p class="wheel-result-name" id="wheel-result-name" aria-live="polite"></p>
         </div>
 
         <div class="wheel-controls">
-          <span class="wheel-hint"><span class="for-wheel">Press the hub or Space to spin</span><span class="for-brew">Click the cauldron or press Space</span><span class="for-boba">Click the cup or press Space</span><span class="for-farm">Click the farmyard or press Space</span><span class="for-sled">Click the hill or press Space</span></span>
+          <span class="wheel-hint"><span class="for-wheel">Press the hub or Space to spin</span><span class="for-brew">Click the cauldron or press Space</span><span class="for-boba">Click the cup or press Space</span><span class="for-farm">Click the farmyard or press Space</span><span class="for-shop">Click the hilltop or press Space</span><span class="for-sled">Click the hill or press Space</span></span>
 
           <!-- Four groups, each its own cluster, a gap and a hairline between
                them: Class · List · Options · View. The small labels show only
@@ -117,7 +117,7 @@
                 </label>
                 <!-- the only way to manage who's on the wheel (plus the slice
                      shortcut); the count lives on the button itself -->
-                <button type="button" id="wheel-edit" title="Choose who's in"><span class="for-wheel">Edit wheel</span><span class="for-brew">Edit who&rsquo;s in</span><span class="for-boba">Edit who&rsquo;s in</span><span class="for-farm">Edit who&rsquo;s in</span><span class="for-sled">Edit who&rsquo;s in</span><span class="wheel-edit-n" id="wheel-edit-n">—</span></button>
+                <button type="button" id="wheel-edit" title="Choose who's in"><span class="for-wheel">Edit wheel</span><span class="for-brew">Edit who&rsquo;s in</span><span class="for-boba">Edit who&rsquo;s in</span><span class="for-farm">Edit who&rsquo;s in</span><span class="for-shop">Edit who&rsquo;s in</span><span class="for-sled">Edit who&rsquo;s in</span><span class="wheel-edit-n" id="wheel-edit-n">—</span></button>
               </div>
             </section>
 
@@ -144,6 +144,24 @@
             <section class="wheel-group wg-options" aria-labelledby="wg-options-h">
               <h3 class="wg-label" id="wg-options-h">Options</h3>
               <div class="wheel-control-row wheel-icon-row">
+                <!-- winter only: which picker to show (saved per teacher) -->
+                <select id="wheel-wpick" class="wheel-wpick" aria-label="Winter picker" title="Which winter picker to show">
+                  <option value="sleigh">Santa&rsquo;s sleigh</option>
+                  <option value="race">Sled race</option>
+                </select>
+                <!-- the sled race only: how long, and how many places it picks (saved per teacher) -->
+                <select id="wheel-rlen" class="wheel-race-opt" aria-label="Race length" title="Short race (about 5 seconds) or long race (about 12 seconds, a winding course)">
+                  <option value="short">Short race</option>
+                  <option value="long">Long race</option>
+                </select>
+                <select id="wheel-rpicks" class="wheel-race-opt" aria-label="How many to pick" title="How many students the race picks: 1st, 2nd, 3rd… in order">
+                  <option value="1">1 winner</option>
+                  <option value="2">2 places</option>
+                  <option value="3">3 places</option>
+                  <option value="4">4 places</option>
+                  <option value="5">5 places</option>
+                  <option value="6">6 places</option>
+                </select>
                 <button type="button" class="icon-btn wheel-toggle" id="wheel-norepeat" role="switch" aria-checked="true" aria-label="No repeats" title="No repeats"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17 2l4 4-4 4"/><path d="M3 11v-1a4 4 0 0 1 4-4h14"/><path d="M7 22l-4-4 4-4"/><path d="M21 13v1a4 4 0 0 1-4 4H3"/><path class="ico-slash" d="M4 3l16 18"/></svg></button>
                 <button type="button" class="icon-btn wheel-toggle" id="wheel-mute" role="switch" aria-checked="false" aria-label="Mute" title="Sound on"><span class="when-off"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M11 5L6 9H2v6h4l5 4V5z"/><path d="M15.5 8.5a5 5 0 0 1 0 7"/><path d="M19 5a10 10 0 0 1 0 14"/></svg></span><span class="when-on"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M11 5L6 9H2v6h4l5 4V5z"/><path d="M22 9l-6 6M16 9l6 6"/></svg></span></button>
                 <button type="button" class="icon-btn wheel-toggle wheel-aa" id="wheel-firstnames" role="switch" aria-checked="true" aria-label="First names only" title="First names"><span aria-hidden="true">Aa</span></button>
@@ -170,7 +188,7 @@
       <dialog id="wheel-roster-dialog" class="wheel-roster-dialog card">
         <form method="dialog" class="wheel-roster-form">
           <div class="card-head">
-            <h2><span class="for-wheel">Wheel roster</span><span class="for-brew">Who&rsquo;s in the brew</span><span class="for-boba">Who&rsquo;s in the cup</span><span class="for-farm">Who&rsquo;s in the yard</span><span class="for-sled">Who&rsquo;s on the hill</span></h2>
+            <h2><span class="for-wheel">Wheel roster</span><span class="for-brew">Who&rsquo;s in the brew</span><span class="for-boba">Who&rsquo;s in the cup</span><span class="for-farm">Who&rsquo;s in the yard</span><span class="for-shop">Who&rsquo;s in the pile</span><span class="for-sled">Who&rsquo;s racing</span></h2>
             <span class="chip"><span id="wheel-roster-count">—</span></span>
           </div>
           <p class="hint">Tap a name to put them on or take them off. Nothing here changes attendance.</p>
@@ -223,6 +241,7 @@
   <script src="farmer.js"></script>
   <script src="farmyard.js"></script>
   <script src="sled.js"></script>
+  <script src="workshop.js"></script>
   <script src="wheel.js"></script>
 </body>
 </html>

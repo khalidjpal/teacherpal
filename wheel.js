@@ -80,6 +80,7 @@
   let muted = false;
   let followBell = true;
   let winnerId = null;
+  let winnerIds = [];                 // a sled race's places in order (winnerId = the first)
   let spin = null;                    // { from, to, startedAt, duration, winnerId }
   // Rotation is a RUNNING TOTAL that only ever increases - it is never
   // wrapped back into 0-360. Wrapping it was what made a second spin able to
@@ -91,14 +92,17 @@
   const $ = (id) => document.getElementById(id);
   // The skins (each is a no-op outside its own theme), and the one that is
   // showing in a given document, if any.
-  const skins = () => [window.Cauldron, window.Boba, window.Farmyard, window.Sled].filter(Boolean);
+  const skins = () => [window.Cauldron, window.Boba, window.Farmyard, window.Workshop, window.Sled].filter(Boolean);
   const skinFor = (doc = document) => skins().find((k) => k.isOn(doc)) || null;
-  const eachSkin = (fn) => skins().forEach(fn);
+  // one skin failing (a hidden one, say) mustn't stop the others
+  const eachSkin = (fn) => skins().forEach((s) => { try { fn(s); } catch (e) { console.error(e); } });
   // the words follow the skin
   const onIt = () => (window.Cauldron && window.Cauldron === skinFor() ? 'in the brew'
     : window.Boba && window.Boba === skinFor() ? 'in the cup'
     : window.Farmyard && window.Farmyard === skinFor() ? 'in the yard'
-    : window.Sled && window.Sled === skinFor() ? 'on the hill' : 'on the wheel');
+    : window.Workshop && window.Workshop === skinFor() ? 'in the pile'
+    : window.Sled && window.Sled === skinFor() ? 'on the hill'
+    : 'on the wheel');
   const reduceMotion = () => window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
   // ---------- names (same rule as Create Groups) ----------
@@ -173,9 +177,9 @@
   let writes = Promise.resolve();
   const queueWrite = (fn) => { writes = writes.then(fn).catch(listWriteFailed); };
   // `called` changes go through these three, so the list is written as it moves
-  function callAdd(id, { manual = false } = {}) {
+  function callAdd(id, { manual = false, at = null } = {}) {
     if (!useLists()) { called.add(id); saveCalled(); return; }
-    const at = new Date().toISOString();
+    at = at || new Date().toISOString();
     picks.delete(id);                  // picked again: to the end, with the new date
     picks.set(id, { at, manual });
     called.add(id);
@@ -569,9 +573,18 @@
       || displayList.some((d, i) => !pool[i] || pool[i].id !== d.id);
     if (stale) { winnerId = null; syncWheel(); }
 
-    // 1. decide the winner - nothing about the animation touches this
+    // 1. decide the winner - nothing about the animation touches this. The
+    //    sled race can pick several (its places, in order): each one drawn
+    //    the same way from whoever is left.
+    const skin = skinFor();
+    const race = skin && skin.MULTI && typeof sledRace === 'function' ? sledRace() : null;
     const idx = randInt(pool.length);
     const chosen = pool[idx];
+    const places = [chosen.id];
+    if (race && race.picks > 1) {
+      const rest = pool.filter((p) => p.id !== chosen.id);
+      while (places.length < race.picks && rest.length) places.push(rest.splice(randInt(rest.length), 1)[0].id);
+    }
     // 2. work out where the wheel must stop for that slice to sit under the
     //    pointer (top = screen angle 270), with a little jitter inside it.
     //    Built as "where we are + at least MIN_TURNS whole turns + whatever
@@ -591,8 +604,8 @@
     const slow = reduceMotion();
     // A skin's timeline (the cauldron's boil and pop) replaces the spin's. The rotation is still worked out,
     // so a window showing the wheel instead still lands on the same name.
-    const skin = skinFor();
     winnerId = null;
+    winnerIds = [];
     spin = {
       from, to,
       overshoot: (slow || skin) ? 0 : OVERSHOOT,
@@ -601,7 +614,11 @@
       slices: pool.length,
       startedAt: Date.now(),
       winnerId: chosen.id,
+      winners: places,
+      long: !!race && race.length === 'long',
     };
+    // the race's own length (short or long, and a beat per extra place)
+    if (skin && skin.timing) Object.assign(spin, skin.timing(spin));
     renderWinner();          // clears the hub - the name comes back at the end
     broadcast();
     renderControls();
@@ -661,13 +678,18 @@
     // transition put it - no reset, so nothing can snap at the end.
     rotation = s.to;
     winnerId = s.winnerId;
+    winnerIds = (s.winners && s.winners.length ? s.winners : [s.winnerId]).slice();
     spin = null;
     const skin = skinFor(doc);
     if (skin) skin.finish(doc, s, { respawn: !noRepeats });
     if (isPopout) applyRemotePicked();
     if (!isPopout) {
       // a saved list records every pick (its history), No repeats or not
-      if (useLists() || noRepeats) callAdd(winnerId);
+      // (every place of a sled race, in finishing order)
+      if (useLists() || noRepeats) {
+        const t0 = Date.now();
+        winnerIds.forEach((id, i) => callAdd(id, { at: new Date(t0 + i).toISOString() }));
+      }
       // Counts update, but the wheel keeps the winner under the pointer
       // until the next spin - the landing is the whole point.
       rebuildPool({ redraw: false });
@@ -749,7 +771,7 @@
   // Sitting out is not absent, so it never lists them.
   function missingList() {
     return roster.filter((s) => absentIds.has(s.id))
-      .map((s) => { const full = s.name.trim(); return { first: full.split(/\s+/)[0], full }; })
+      .map((s) => { const full = s.name.trim(); return { id: s.id, first: full.split(/\s+/)[0], full }; })
       .sort((a, b) => a.full.localeCompare(b.full));
   }
   function renderMissing() {
@@ -872,9 +894,12 @@
   }
 
   // ---------- render ----------
+  // one name, or a race's places: "1. Ava, 2. Liam, 3. Noah"
+  const placesText = (ids) => ids.length > 1 ? ids.map((id, i) => `${i + 1}. ${nameOf(id)}`).join(', ') : (ids[0] ? nameOf(ids[0]) : '');
   function renderWinner() {
     const stage = $('wheel-stage');
-    const name = winnerId ? nameOf(winnerId) : '';
+    if (!winnerId) winnerIds = [];
+    const name = winnerId ? placesText(winnerIds.length ? winnerIds : [winnerId]) : '';
 
     // the pop-out shows the name in the hub; the page shows it in the result
     // panel on the right
@@ -927,6 +952,9 @@
     if (left) left.textContent = noRepeats ? `${pool.length} left of ${avail}` : `${avail} ${onIt()}`;
     const sel = $('pick-list-select');
     if (sel) sel.disabled = !!spin;
+    const wp = $('wheel-wpick');
+    if (wp) wp.disabled = !!spin;
+    for (const id of ['wheel-rlen', 'wheel-rpicks']) { const e = $(id); if (e) e.disabled = !!spin; }
     const rep = $('wheel-norepeat');
     if (rep) {
       rep.setAttribute('aria-checked', String(noRepeats));
@@ -1079,12 +1107,16 @@
         rotation, spin, winnerId,
         winnerLabel: winnerId ? nameOf(winnerId) : '',
         spinLabel: spin ? nameOf(spin.winnerId) : '',
+        winnerLabels: winnerId ? (winnerIds.length ? winnerIds : [winnerId]).map(nameOf) : [],
+        spinLabels: spin ? (spin.winners || [spin.winnerId]).map(nameOf) : [],
         left: pool.length, total: eligible.length, noRepeats,
         picked: p.list, pickedTotal: p.total,
         listName: list ? list.name : '',
         listPicked: useLists() ? pickedCount() : null,
         roster: roster.length,
         missing: missingList(),
+        wpick: document.documentElement.getAttribute('data-wpick') || 'sleigh',
+        race: typeof sledRace === 'function' ? sledRace() : null,
         period: (periods.find((x) => x.id === currentPeriodId) || {}).name || '',
       },
     });
@@ -1196,14 +1228,46 @@
       farm.addEventListener('click', startSpin);
       farm.addEventListener('keydown', (e) => { if (e.key === 'Enter' && e.target === farm) { e.preventDefault(); startSpin(); } });
     }
-    // winter: the whole sledding hill
+    // winter: the whole workshop yard
+    const shop = $('workshop');
+    if (shop) {
+      shop.setAttribute('role', 'button');
+      shop.setAttribute('tabindex', '0');
+      shop.setAttribute('aria-label', 'Send Santa to pick a student');
+      shop.addEventListener('click', startSpin);
+      shop.addEventListener('keydown', (e) => { if (e.key === 'Enter' && e.target === shop) { e.preventDefault(); startSpin(); } });
+    }
+    // winter, the other picker: the whole sledding hill
     const sled = $('sled');
     if (sled) {
       sled.setAttribute('role', 'button');
       sled.setAttribute('tabindex', '0');
-      sled.setAttribute('aria-label', 'Start the sledding race to pick a student');
+      sled.setAttribute('aria-label', 'Start the sled race to pick a student');
       sled.addEventListener('click', startSpin);
       sled.addEventListener('keydown', (e) => { if (e.key === 'Enter' && e.target === sled) { e.preventDefault(); startSpin(); } });
+    }
+    // winter: Santa's sleigh or the sled race, saved per teacher
+    const wpick = $('wheel-wpick');
+    if (wpick) {
+      wpick.value = typeof winterPicker === 'function' ? winterPicker() : 'sleigh';
+      wpick.addEventListener('change', () => {
+        if (spin) { wpick.value = winterPicker(); return; }
+        setMyWinterPicker(wpick.value);
+      });
+      document.addEventListener('teacherpal:winterPicker', () => {
+        wpick.value = winterPicker();
+        if (!spin) { rebuildPool(); renderWinner(); broadcast(); }
+      });
+    }
+    // the sled race: short or long, and how many places it picks (saved per teacher)
+    const rlen = $('wheel-rlen'), rpicks = $('wheel-rpicks');
+    if (rlen && rpicks && typeof sledRace === 'function') {
+      const paintRace = () => { const r = sledRace(); rlen.value = r.length; rpicks.value = String(r.picks); };
+      paintRace();
+      rlen.addEventListener('change', () => { if (spin) { paintRace(); return; } setMySledRace({ length: rlen.value }); });
+      rpicks.addEventListener('change', () => { if (spin) { paintRace(); return; } setMySledRace({ picks: Number(rpicks.value) }); });
+      document.addEventListener('teacherpal:sledRace', () => { paintRace(); eachSkin((k) => k.setRace && k.setRace(document, sledRace())); broadcast(); });
+      eachSkin((k) => k.setRace && k.setRace(document, sledRace()));
     }
     // pink: the whole bubble tea cup (its hit area is #boba-straw, sized
     // over the cup in the CSS)
@@ -1402,8 +1466,13 @@
         const label = document.getElementById('wheel-period');
         if (label) { label.textContent = s.period || ''; label.hidden = !s.period; }
         winnerId = s.winnerId;
+        if (!winnerId) winnerIds = [];
         rotation = s.rotation;
         noRepeats = !!s.noRepeats;           // the cauldron re-floats a popped name only without it
+        // winter: the main window's picker (sleigh or race), between picks
+        if (s.wpick && !spin && document.documentElement.getAttribute('data-wpick') !== s.wpick) document.documentElement.setAttribute('data-wpick', s.wpick);
+        // the race course follows the page between races (a spin brings its own)
+        if (s.race && !spin) eachSkin((k) => k.setRace && k.setRace(document, s.race));
         eachSkin((k) => k.setAbsent && k.setAbsent(document, s.missing || []));
         if (s.spin) {
           // a spin just started in the main window - run the same curve here
@@ -1437,10 +1506,22 @@
       el('wm-where').textContent = [s.period, s.listName].filter(Boolean).join(' · ');
       // the name comes up when the main window's scene reveals it
       const picking = !!s.spin && Date.now() < s.spin.startedAt + s.spin.duration;
+      const names = picking ? [] : ((s.spin ? s.spinLabels : s.winnerLabels) || []);
       const name = picking ? '' : (s.spin ? s.spinLabel : s.winnerLabel) || '';
       const n = el('wm-name');
-      n.textContent = picking ? 'Picking…' : name;
-      n.dataset.len = name.length > 14 ? 'long' : name.length > 9 ? 'mid' : '';
+      if (names.length > 1) {
+        // several places: 1. … 2. … as a list, sized to fit
+        n.textContent = '';
+        const ol = document.createElement('ol');
+        ol.className = 'wm-places';
+        names.forEach((nm) => { const li = document.createElement('li'); li.textContent = nm; ol.appendChild(li); });
+        n.appendChild(ol);
+        n.dataset.len = 'list';
+        n.style.setProperty('--rows', String(names.length));
+      } else {
+        n.textContent = picking ? 'Picking…' : name;
+        n.dataset.len = name.length > 14 ? 'long' : name.length > 9 ? 'mid' : '';
+      }
       el('wm-view').dataset.state = picking ? 'picking' : name ? 'picked' : '';
       const empty = el('wm-empty');
       empty.hidden = picking || !!name;

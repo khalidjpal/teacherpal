@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Family Feud</title>
+  <meta name="color-scheme" content="dark">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Anton&family=Comfortaa:wght@400;500;600;700&family=Orbitron:wght@500;600;700&family=Pirata+One&family=Rajdhani:wght@500;600;700&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+  <script>(function(){try{var t=localStorage.getItem('teacherpal.theme')||'default';t={jarvis:'default',marwa:'pink',earthy:'default'}[t]||t;document.documentElement.setAttribute('data-theme',t);if(localStorage.getItem('teacherpal.effects')==='reduced')document.documentElement.setAttribute('data-effects','reduced');}catch(e){document.documentElement.setAttribute('data-theme','default');}})();</script>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body class="sd-popout">
+  <!-- Read-only projector view (and, at ?mini=1, the mini window). The main
+       Family Feud tab sends the board over
+       BroadcastChannel('teacherpal-showdown'); this window just draws it. -->
+  <section class="sd-stage" id="sd-stage" aria-label="Family Feud board"></section>
+  <p class="sd-waiting" id="sd-waiting" hidden>Open Family Feud in the main tab</p>
+  <script src="showdown.js"></script>
+</body>
+</html>

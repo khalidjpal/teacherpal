@@ -100,6 +100,35 @@
 --     picked_at   timestamptz when they were called
 --     manual      boolean     marked by hand rather than by the wheel
 --
+--   survey_questions            (Family Feud: the old one-bank model; read only
+--                                when survey_sets is missing)
+--     id          uuid        primary key
+--     owner_id    uuid        -> auth.users.id (cascade delete)
+--     question    text        1–300 chars
+--     answers     jsonb       [{ text, points }], 1–8, highest points first
+--     sort_order  integer     order in the game and the editor
+--     created_at  timestamptz
+--     updated_at  timestamptz
+--
+--   survey_sets                 (Family Feud: each teacher's named question sets)
+--     id          uuid        primary key
+--     owner_id    uuid        -> auth.users.id (cascade delete)
+--     name        text        1–60 chars
+--     questions   jsonb       [{ id, question, answers: [{ text, points }] 1–8, auto? }], up to 100
+--     sort_order  integer     order in the set lists
+--     created_at  timestamptz
+--     updated_at  timestamptz
+--
+--   quiz_boards                 (Jeopardy: each teacher's saved boards)
+--     id          uuid        primary key
+--     owner_id    uuid        -> auth.users.id (cascade delete)
+--     name        text        1–80 chars ("Macbeth")
+--     categories  jsonb       up to 6 × { name, clues: [{ q, a, double }] x5 };
+--                             a clue's value comes from its row (100–500)
+--     sort_order  integer     order in the board list
+--     created_at  timestamptz
+--     updated_at  timestamptz
+--
 --   attendance                  (one row per period AND date; present students
 --                                are not stored)
 --     id          uuid        primary key
@@ -397,6 +426,44 @@ create index if not exists pick_list_picks_owner_idx on public.pick_list_picks (
 create unique index if not exists pick_list_picks_list_student_uidx on public.pick_list_picks (list_id, student_id);
 create index if not exists pick_list_picks_student_idx on public.pick_list_picks (student_id);
 
+create table if not exists public.survey_questions (
+  id          uuid primary key default gen_random_uuid(),
+  owner_id    uuid not null default auth.uid() references auth.users(id) on delete cascade,
+  question    text not null check (length(btrim(question)) between 1 and 300),
+  answers     jsonb not null default '[]'::jsonb
+                check (jsonb_typeof(answers) = 'array' and jsonb_array_length(answers) between 1 and 8),
+  sort_order  integer not null default 0,
+  created_at  timestamptz not null default now(),
+  updated_at  timestamptz not null default now()
+);
+create index if not exists survey_questions_owner_idx on public.survey_questions (owner_id, sort_order);
+
+create table if not exists public.survey_sets (
+  id          uuid primary key default gen_random_uuid(),
+  owner_id    uuid not null default auth.uid() references auth.users(id) on delete cascade,
+  name        text not null check (length(btrim(name)) between 1 and 60),
+  questions   jsonb not null default '[]'::jsonb
+                check (jsonb_typeof(questions) = 'array' and jsonb_array_length(questions) <= 100
+                       and pg_column_size(questions) <= 300000),
+  sort_order  integer not null default 0,
+  created_at  timestamptz not null default now(),
+  updated_at  timestamptz not null default now()
+);
+create index if not exists survey_sets_owner_idx on public.survey_sets (owner_id, sort_order);
+
+create table if not exists public.quiz_boards (
+  id          uuid primary key default gen_random_uuid(),
+  owner_id    uuid not null default auth.uid() references auth.users(id) on delete cascade,
+  name        text not null check (length(btrim(name)) between 1 and 80),
+  categories  jsonb not null default '[]'::jsonb
+                check (jsonb_typeof(categories) = 'array' and jsonb_array_length(categories) <= 6
+                       and pg_column_size(categories) <= 200000),
+  sort_order  integer not null default 0,
+  created_at  timestamptz not null default now(),
+  updated_at  timestamptz not null default now()
+);
+create index if not exists quiz_boards_owner_idx on public.quiz_boards (owner_id, sort_order);
+
 create table if not exists public.schedule_overrides (
   id           uuid primary key default gen_random_uuid(),
   owner_id     uuid not null default auth.uid() references auth.users(id) on delete cascade,
@@ -434,6 +501,9 @@ alter table public.bathroom_log       enable row level security;
 alter table public.schedule_overrides enable row level security;
 alter table public.pick_lists         enable row level security;
 alter table public.pick_list_picks    enable row level security;
+alter table public.survey_questions   enable row level security;
+alter table public.survey_sets        enable row level security;
+alter table public.quiz_boards        enable row level security;
 
 do $$
 declare
@@ -443,7 +513,7 @@ begin
   foreach t in array array[
     'periods','courses','students','room_layouts','seat_assignments','seating_arrangements','seating_rules',
     'attendance','lesson_plans','lesson_attachments','bathroom_log','schedule_overrides',
-    'pick_lists','pick_list_picks'
+    'pick_lists','pick_list_picks','survey_questions','survey_sets','quiz_boards'
   ] loop
     policy_name := format('%s owner select', t);
     if not exists (select 1 from pg_policies where schemaname='public' and tablename=t and policyname=policy_name) then

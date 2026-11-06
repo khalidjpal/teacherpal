@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Jeopardy</title>
+  <meta name="color-scheme" content="dark">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Libre+Baskerville:wght@700&family=Oswald:wght@500;600;700&family=Comfortaa:wght@400;500;600;700&family=Orbitron:wght@500;600;700&family=Pirata+One&family=Rajdhani:wght@500;600;700&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+  <script>(function(){try{var t=localStorage.getItem('teacherpal.theme')||'default';t={jarvis:'default',marwa:'pink',earthy:'default'}[t]||t;document.documentElement.setAttribute('data-theme',t);if(localStorage.getItem('teacherpal.effects')==='reduced')document.documentElement.setAttribute('data-effects','reduced');}catch(e){document.documentElement.setAttribute('data-theme','default');}})();</script>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body class="qb-popout">
+  <!-- Read-only projector view (and, at ?mini=1, the mini window). The main
+       Jeopardy tab sends the board over BroadcastChannel('teacherpal-quiz');
+       this window just draws it. -->
+  <section class="qb-stage" id="qb-stage" aria-label="Quiz board"></section>
+  <p class="qb-waiting" id="qb-waiting" hidden>Open Jeopardy in the main tab</p>
+  <script src="quiz.js"></script>
+</body>
+</html>

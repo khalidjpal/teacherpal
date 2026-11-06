@@ -20,10 +20,10 @@ Dark dashboard look with a subtle pink accent (see design-ref.png).
 
 ## Screens
 
-Eleven screens behind **four grouped dropdowns** in the top nav (built by
+Thirteen screens behind **five grouped dropdowns** in the top nav (built by
 `nav.js` on every page), mirroring the hub's sections: **Daily**
 (Attendance, Bathroom) · **Teacher Tools** (Create Groups, Timer, Noise
-Meter, Name Wheel) · **Planning** (Lesson Plans, Seating) · **System**
+Meter, Name Wheel) · **Games** (Family Feud, Jeopardy) · **Planning** (Lesson Plans, Seating) · **System**
 (Schedule, Rosters, Admin). The brand at the left is the link to the hub. The active
 screen gets `aria-current="page"` (pink fill). The nav bar also carries
 the live readouts — clock, date, SCHED, NOW period + countdown — and the
@@ -36,7 +36,9 @@ full-screen toggle. There is no sidebar; every page uses the full width.
 | Lesson Plans | `lessons.html` | Writing plans **by course**: a Day / Week / Month calendar (courses × Mon–Fri, no-school days blocked out; one plan per course per day, shared by its periods, with an out-of-the-way per-period split) with the full editor for the selected period's day beside it; files and links attached per plan (Supabase Storage), and one search over every plan and attachment |
 | Create Groups | `groups.html` | Random / formula groups, projector view in full screen |
 | Timer | `timer.html` | Classroom countdown / stopwatch: big digits, presets, ±1 min, mute, pop-out + Picture-in-Picture for the projector while another tab is active |
-| Name Wheel | `wheel.html` | Cold-calling: spin a wheel of the period's present students, big name in the middle, no-repeats mode, saved pick lists per period ("Board work · 12 of 28 picked", kept until reset), full screen window + mini window. In halloween the wheel is a cauldron (names float in the brew as bubbles; the winner's bubble rises and pops), in pink a bubble tea cup (a boba pearl per student; the cup shakes, the pearls swirl, and the winner's pearl, its name on it, travels up the straw and comes to the front of the screen as a big disc with the name readable across the room), in thanksgiving a farmer choosing a turkey (the scene fills the width, controls in one row under it: the farm on the left two thirds, a turkey per student, its first name on it, penned in a fenced yard in a still sunset farm with a painted "<display name>'s Turkey Farm" sign; the farmer (each teacher picks how they look: Settings → Your farmer…, a hijab among the options) walks the flock, inspects a couple and shakes his head while the rest duck and one sneaks off, then points at one, which freezes mid-gobble; he lobs it into the hopper at the top of a production line down the right third (as it drops in, the name comes up large over the farm and stays up): an oven (out comes a golden roast turkey, steaming), an S of conveyor belt down through a packer (white foam tray, clear film) and a labeller (a small name label) onto a grocery shelf at the bottom; with No repeats the shelf fills a slot per student from the top shelf down, the count on its base, until SOLD OUT drops and "Let them out" bursts the packages and sends the turkeys back into the pen); in winter a sledding race (a sledder per student on a snowy hill, their name on the sled; a whistle, the pack races down and one wins; picked students sit in a cabin's window with cocoa until "Let them out" sends them back up the hill) |
+| Name Wheel | `wheel.html` | Cold-calling: spin a wheel of the period's present students, big name in the middle, no-repeats mode, saved pick lists per period ("Board work · 12 of 28 picked", kept until reset), full screen window + mini window. In halloween the wheel is a cauldron (names float in the brew as bubbles; the winner's bubble rises and pops), in pink a bubble tea cup (a boba pearl per student; the cup shakes, the pearls swirl, and the winner's pearl, its name on it, travels up the straw and comes to the front of the screen as a big disc with the name readable across the room), in thanksgiving a farmer choosing a turkey (the scene fills the width, controls in one row under it: the farm on the left two thirds, a turkey per student, its first name on it, penned in a fenced yard in a still sunset farm with a painted "<display name>'s Turkey Farm" sign; the farmer (each teacher picks how they look: Settings → Your farmer…, a hijab among the options) walks the flock, inspects a couple and shakes his head while the rest duck and one sneaks off, then points at one, which freezes mid-gobble; he lobs it into the hopper at the top of a production line down the right third (as it drops in, the name comes up large over the farm and stays up): an oven (out comes a golden roast turkey, steaming), an S of conveyor belt down through a packer (white foam tray, clear film) and a labeller (a small name label) onto a grocery shelf at the bottom; with No repeats the shelf fills a slot per student from the top shelf down, the count on its base, until SOLD OUT drops and "Let them out" bursts the packages and sends the turkeys back into the pen); in winter Santa's sleigh on a snowy hilltop at night (a heaped pile of wrapped presents fills the left and centre, a name on each gift tag; Santa sits in his sleigh on the right, reins in hand, reindeer hitched, a big open sack beside him; he leans out and rummages through the pile, lifting one and putting it back, grabs the winner and holds it up as the name comes up large, then tosses it over his shoulder into the sack; the pile shrinks and the load in the sleigh grows, "7 / 28" on its side, and when everyone's picked the reindeer take off; "Let them out" dumps the load back into a fresh pile; absentees are on a "Not here today" notice staked in the snow). **In winter the teacher chooses the picker** (a small select in the Options group, saved per teacher): Santa's sleigh (above, the default) or a **sled race** (every student on their own sled at the top of a long snowy hill, the name on the sled's side; a whistle, a race down past pines and snowmen with bumps, air and bumps between sleds, the winner across the finish line, their name up large with snow and confetti, a couple of others wiping out; the winner goes into a warm lodge at the side that fills as the class is called, "Let them out" sends them back up). The race has two more selects, saved per teacher: **Short race** (that straight run, ~6s) or **Long race** (~19s, a winding course: bends, a valley, a big jump, a pine tunnel, a final sprint, with the lead changing hands, filmed in shots it cuts between: wide at the gate, side tracking, over the leader's shoulder, tight on two sleds battling, low in the snow at the jump, head-on at the finish), and **1 winner … 6 places** (the places cross one at a time, each announced with its name, then a numbered results panel; every place is marked picked). **Built to be followed**: while they race each sled carries an upright name badge above it (nudged apart so none overlap), the sleds hold lanes spread down the track, the camera moves gently, the background steps back, and a live leaderboard down the left lists everyone in running order |
+| Family Feud | `showdown.html` | A survey game for two teams (its own look, not the TV show's): "We asked 100 students…" over a board of up to 8 numbered slots that flip to the answer and its points with a ding; strikes (up to three, a buzzer, big X's across the screen); the round's pot, given to either team; previous / next question; reset. Teams are just names, or the class split in two from a period's roster in one click. Each teacher's own named question sets (one per unit), set up by pasting a whole game as text (points optional: filled in for you, an AI prompt a click away), then a short list where one question opens at a time; autosaved. It opens on a game-show **start screen** (the title, the sets as cards, the teams, a big Start game, or Resume game when one is in progress); everything else before the game is in one full-screen **Game setup** hub (Questions, Get questions with AI, Teams, How to play). Full screen window + mini window. **Two screens**: with the full screen window open on the projector, the laptop shows the host view (every answer and its points as buttons, the pot, strikes, teams, every control) |
+| Jeopardy | `quiz.html` | A category-and-value quiz game for 2–4 teams (its own look, not the TV show's): up to 6 categories × 5 clues (100–500, Round 2 doubles them); a clue grows out of its cell to fill the board, Space shows the answer, + / − the value per team (scores can go negative), the cell goes dark, back to the board; hidden doubles with a wager first. Teams are names, or the class split from a period's roster. Each teacher's saved boards (one per unit), set up by pasting a whole board as text, with a copyable AI prompt, or clue by clue; autosaved, Duplicate. The same start screen and **Game setup** hub as Family Feud (Boards, Get a board with AI, Teams, How to play). Full screen window + mini window. **Two screens**: with the full screen window open on the projector, the laptop shows the host view (every clue with its answer, the open clue's controls, the scores) |
 | Noise Meter | `noise.html` | Room volume from the laptop mic: big green/amber/red meter, three zones with activity presets, "Too loud" hold + chime, pop-out for the projector. Mic only while you hold it on |
 | Seating | `seating.html` | Room builder + seat assignment |
 | Bathroom | `bathroom.html` | Bathroom tracker: tap a card to sign out (quick tap or timer); per-student pass checkboxes, red flag past the limit. One centred control island (period · mode · search · gear) over a scrolling student grid, with **Out now** (live timers + End timer) and **Log** (the day's trips + a day switcher; its History button opens the quarter review — counts, CSV, print) as two fixed-height panels underneath |
@@ -65,11 +67,13 @@ full-screen toggle. There is no sidebar; every page uses the full width.
 | `migration-theme-rename.sql` | **The** theme migration (supersedes `migration-themes.sql`, which was never run on the live project): adds `profiles.theme` (existing rows NULL = not chosen on the server yet, new rows `'default'`), renames old ids (jarvis → default, marwa → pink, earthy → default) if any exist, adds the `profiles_theme_format` check and creates `set_my_theme(text)`. Safe to re-run from scratch; ends with a count per theme |
 | `migration-teaches-periods.sql` | One-off migration that adds `profiles.teaches_periods integer[]` (each entry 0-7) and the `set_my_teaches_periods(int[])` RPC. Seeds `khalid` to `{1,2,3,5,6}` and `marwa` to `{2,3,4,5,6}` |
 | `migration-roster-numbers.sql` | One-off migration that adds `students.roster_number integer` (1–999, nullable): a hand-set roster number for when Aeries numbers a student differently. Ends with a check query |
+| `migration-feud-sets.sql` | One-off migration for Family Feud's **question sets**: `survey_sets` (a name + the questions as one jsonb array, ≤ 100, a size cap) with the four owner policies, then each owner's `survey_questions` copied into a set "My questions" (only for owners with no sets yet). **Until it is run the editor is read-only** and the game plays the old bank (or `STARTER`). Run after `migration-survey-showdown.sql`; safe to re-run; ends with a check |
+| `migration-survey-showdown.sql` | Historical (superseded by `migration-feud-sets.sql`, still run first): Family Feud's first bank, `survey_questions` (the question bank, answers as jsonb) with the four owner policies, then the eight starter questions for `khalid` and `marwa` (only if that account has none yet). **Until it is run the game plays the starter set** (`STARTER` in showdown.js) and the editor is read-only. Safe to re-run; ends with a check |
 | `migration-pick-lists.sql` | One-off migration for the Name Wheel's saved pick lists: `pick_lists` (named rotations per period) and `pick_list_picks` (one row per student picked on a list), each with the four owner policies; safe to re-run, ends with a check query |
 | `migration-farmer.sql` | One-off migration for the thanksgiving farmer's look: `profiles.farmer jsonb` (null = the default farmer; a size check only, the app ignores unknown keys) and `set_my_farmer(jsonb)` (own row only); starts `marwa` as a woman in a grey hijab, with the soft face, a curvy figure and a white long-sleeve top under denim overalls (if she hasn't chosen yet, or still has an earlier seed) and gives `khalid` the wavy middle part. **Until it is run the column is missing and every farmer is the default** (the app reads `farmer` only if the profile row has it). Safe to re-run; ends with a check |
 | `migration-reduce-effects.sql` | One-off migration for **Reduce effects**: `profiles.reduce_effects boolean not null default false` and `set_my_reduce_effects(boolean)` (own row only). Before it runs, the gear-menu switch still works in that browser (localStorage) but doesn't follow the teacher; the first time the column is seen, a switch already on in this browser wins over the default `false` and is saved. Safe to re-run; ends with a check |
 | `migration-display-name.sql` | One-off migration that adds `profiles.display_name text` (how the teacher is addressed — the top-bar USER chip) and seeds `khalid` → "Mr. Pal", `marwa` → "Ms. Mohammadi" |
-| `index.html`   | Hub launcher (`body.hub.launcher`): `.hub-sections` — four labelled sections (Daily, Teacher tools, Planning, System) each with its own `.hub-panels` row of `.hud-panel` links; loads only `shared.js`, `schedule.js`, `nav.js` (top bar **without** nav links — the panels are the nav) |
+| `index.html`   | Hub launcher (`body.hub.launcher`): `.hub-sections` — five labelled sections (Daily, Teacher tools, Games, Planning, System) each with its own `.hub-panels` row of `.hud-panel` links; loads only `shared.js`, `schedule.js`, `nav.js` (top bar **without** nav links — the panels are the nav) |
 | `attendance.html` | Attendance screen: `#attendance` in **full** mode — big chart + side column with counts, lists, Copy, Reset, date |
 | `nav.js`       | Shared top bar: renders brand + nav links + readouts + full-screen button into `<header class="topbar">`, marks the active page, runs the clock / bell status (`teacherpal:tick`), exposes `navReady` (periods, overrides, teaches, byNumber). Also the gear menu's **Courses…** dialog, `openCoursesDialog()`. Loaded on every page after `shared.js` + `schedule.js`. |
 | `lessons.html` | Lesson Plans screen: the calendar (Day / Week / Month), search and cell drops (inline script) + `#lesson` editor from `lesson.js` |
@@ -78,16 +82,25 @@ full-screen toggle. There is no sidebar; every page uses the full width.
 | `bathroom.js`  | `initBathroom()` — the bathroom tracker (tiles, sign out/in, live elapsed, flag + cap settings in localStorage, log, history). |
 | `timer.html`   | Timer screen: the `.timer-stage` (mode toggle, label, big display + ring, presets, custom min/sec, start/reset/±1, mute, "Full screen window" (the pop-out), "Mini window" (PiP), full screen) — loads `timer.js`. |
 | `timer.js`     | Countdown + stopwatch logic, plus `buildDial()` / `paintDial()` for the themed dial. **End-timestamp model**: state is `{ mode, running, paused, label, muted, targetMs, endsAt, remainingAtPause, startedAt, elapsedAtPause, zeroed }` in `localStorage['teacherpal.timer.state']`; every window computes the display from `Date.now()` against `endsAt`/`startedAt`, so tab-throttling doesn't drift. `BroadcastChannel('teacherpal-timer')` syncs main ↔ pop-out ↔ PiP. Web Audio API beep on zero (respects mute). `documentPictureInPicture.requestWindow()` on Chrome for an always-on-top floating display. Space toggles start/pause. |
+| `showdown.html` | Family Feud screen: `#sd-stage` (the board, built by `showdown.js`), `#sd-host` (the host view, shown instead of the board while hosting), `#sd-start` (the start screen, over both until Start), the `.sd-controls` row (only what's used while playing; see "Game setup" under Family Feud), and two dialogs: `#sd-setup` (the Game setup hub, Teams included) and `#sd-editor` (see "Game editors" under Family Feud). Loads `formula.js` (the team split) and `showdown.js` |
+| `showdown.js` | The whole game, in all three windows (see Family Feud under the Design rules) |
+| `quiz.html` | Jeopardy screen: `#qb-stage` (the board, the teams and the clue, built by `quiz.js`), `#qb-host` (the host view, shown instead of the stage while hosting), `#qb-start` (the start screen), the `.qb-controls` row (Game setup, Round 1 / Round 2 ×2, Undo, Reset game, then the icons: host view, sound, the two windows, full screen) and two dialogs: `#qb-setup` (the Game setup hub) and `#qb-editor` (it borrows Family Feud's `.sd-dialog` classes). Loads `formula.js` (the team split) and `quiz.js` |
+| `quiz.js` | The whole Jeopardy game, in all three windows (see Jeopardy under the Design rules) |
+| `quiz-popout.html` | Jeopardy's full screen window (`body.qb-popout`: the board, the teams and the open clue, no controls), and at `?mini=1` the mini window (`body.qb-mini-mode`: the board's name and the scores, the clue over them while one is open). Read-only, fed over `BroadcastChannel('teacherpal-quiz')`, and sent only the open clue (its answer once shown); the full screen window also says "here" every 2s, which turns on the host view; loads only `quiz.js` |
+| `migration-quiz-boards.sql` | One-off migration for Jeopardy: `quiz_boards` (name + categories as jsonb, up to 6, a size cap) with the four owner policies. **Until it is run the game plays the built-in sample board** (`SAMPLE` in quiz.js) and the editor is read-only. Safe to re-run; ends with a check |
+| `showdown-popout.html` | Family Feud's full screen window (`body.sd-popout`), and at `?mini=1` the mini window (`body.sd-mini-mode`: the question, the pot, the strikes and both scores, no board). Read-only, fed over `BroadcastChannel('teacherpal-showdown')`, and sent only the answers already revealed; the full screen window also says "here" every 2s, which turns on the host view; loads only `showdown.js` (no shared.js, no Supabase) |
 | `noise.html`   | Noise Meter screen: the `.noise-stage` in three groups — `.noise-head` (activity presets + the `#status` line, inside the card), the `.noise-meter` (reading + bar + zone word; the bunny in pink, the ghost in halloween), `.noise-foot` (one `.noise-foot-row` of Start/Stop, chime, "Full screen window" · the two zone sliders side by side · full screen, then a one-line privacy note with a `?`) — plus `#noise-privacy-dialog` (the full mic note). Loads `noise.js`. |
 | `noise.js`     | Mic → `AnalyserNode` → RMS → a 35–95 relative "dB" reading, 500ms rolling average, three zones, "Too loud" after 3s in the red, optional chime. Polls on `setInterval` (**not** rAF — rAF freezes in a background window and the pop-out would stall). `BroadcastChannel('teacherpal-noise')` feeds the pop-out. Opens the mic only on Start; stops every track on Stop and on `pagehide`. Nothing is recorded or sent anywhere. |
-| `wheel.html`   | Name Wheel screen: the wheel on the left; on the right the result panel and the controls (period, **Edit wheel**, the pick list, then an icon cluster: No repeats / sound / First names "Aa" · "Full screen window" / "Mini window" (PiP, Chrome only) / full screen), plus the `#wheel-roster-dialog` toggle-chip modal — loads `cauldron.js`, `boba.js`, `farmer.js`, `farmyard.js`, `sled.js`, then `wheel.js`. Words that differ per skin come in `.for-wheel` / `.for-brew` / `.for-boba` / `.for-farm` / `.for-sled` sets ("Edit wheel" / "Edit who's in", the empty-wheel line, …) and CSS shows the one for the theme. |
+| `wheel.html`   | Name Wheel screen: the wheel on the left; on the right the result panel and the controls (period, **Edit wheel**, the pick list, then an icon cluster: No repeats / sound / First names "Aa" · "Full screen window" / "Mini window" (PiP, Chrome only) / full screen), plus the `#wheel-roster-dialog` toggle-chip modal — loads `cauldron.js`, `boba.js`, `farmer.js`, `farmyard.js`, `sled.js`, `workshop.js`, then `wheel.js`. In winter the Options group starts with `#wheel-wpick`, the Santa's sleigh / Sled race select, and in race mode `#wheel-rlen` (Short / Long race) and `#wheel-rpicks` (1 winner … 6 places), `.wheel-race-opt`, shown only for the race. Words that differ per skin come in `.for-wheel` / `.for-brew` / `.for-boba` / `.for-farm` / `.for-shop` / `.for-sled` sets ("Edit wheel" / "Edit who's in", the empty-wheel line, …) and CSS shows the one for the theme. |
 | `wheel.js`     | The wheel: draws the slices as SVG into `#wheel-rotor` (the only thing that spins), runs the spin on rAF with an ease-out, ticks as each slice passes the pointer, and syncs the pop-out over `BroadcastChannel('teacherpal-wheel')`. **Winner is drawn first** (`crypto.getRandomValues`), then the landing rotation is computed — the animation can't bias it. |
 | `wheel-popout.html` | The full screen window (`body.wheel-popout`): the same dial or skin scene filling the window, fed by broadcast, no controls; a click on the scene or Space asks the main window for a pick. The mini window is this same page at `?mini=1` in an iframe, which shows the compact `.wm-view` instead (see Name Wheel). |
 | `cauldron.js` | The Name Wheel's halloween skin, `window.Cauldron` (`isOn`, `build`, `sync`, `run`, `finish`, `setWinner`, `setDisabled`, `BOIL_MS`, `SETTLE_MS`). Draws the cauldron into `.wheel-wrap`, floats each name as an HTML bubble (rAF physics), and animates a pick from the spin descriptor `wheel.js` hands it: boil → rise → hover → pop. Owns its sounds (bubbling that builds, a pop). Never picks anything. |
 | `boba.js` | The Name Wheel's pink skin, `window.Boba` — the same shape as `Cauldron` (`isOn`, `build`, `sync`, `run`, `finish`, `setWinner`, `setDisabled`, `setPicked`, `busy`, `HOLDS_ROUND`, `DURATION_MS`, `SETTLE_MS`). A bubble tea cup in `.wheel-wrap`: warm tan milk tea with a cream swirl, a domed lid, a narrow see-through pink straw, **the whole cup as the Spin button** (`#boba-straw`, a hit area over the cup), one near-black pearl per student with their first name on it in small cream type (rAF physics in box units: gravity, a swirl, soft collisions, the tapered walls), condensation, and "N left" in small flat text under the cup. A pick (~4s, the `T` timeline at its top) shakes the cup, swirls the pearls up, lights one up, draws it up the straw in sips, then the **spotlight**: the pearl grows into a big disc in front of the dimmed page with the name on it (click / Space / Enter / Esc closes it); with No repeats on it then arcs over into the **jar** on the right, a second cup that fills as the class is called and is poured back to start a new round. Owns its sounds (shake, slosh, slurp, pop). Never picks anything. |
 | `farmer.js` | The thanksgiving farmer, `window.FarmerArt`: `markup(look)` (the SVG, every pose), `vars(look)` (the look's colours as `--fy-*` overrides, only where it differs from `DEFAULT`, so the default farmer is exactly the theme's tokens), `apply(g, look)`, `normalize()`, `OPTIONS` / `DEFAULT`, `user()` / `current()` (the session's `farmer`, read from localStorage where shared.js isn't loaded: the pop-out), and `openDialog()`, **Settings → Your farmer…** (see the thanksgiving skin). Loaded by the Name Wheel and its pop-out before `farmyard.js`; `nav.js` loads it on first use elsewhere |
 | `farmyard.js` | The Name Wheel's thanksgiving skin, `window.Farmyard` — the same shape as `Boba` (`isOn`, `build`, `sync`, `run`, `finish`, `setWinner`, `setDisabled`, `setPicked`, `busy`, `HOLDS_ROUND`, `DURATION_MS`, `SETTLE_MS`). A farmyard at sunset in `.wheel-wrap` (`#farm`, the whole scene is the Spin button): as wide as its box (`layout()`), the scenery still (only the flock, the farmer and the line move), warm low light and long shadows, and a painted sign on posts at the back of the yard: "<display_name>'s / TURKEY FARM" (just TURKEY FARM without one). **The farm takes the left two thirds or so**: one plump cartoon turkey per student, its first name small on its body, milling about, pecking, ruffling, looking round **inside a fenced pen**, and a farmer in a big thinking pose, drawn by `farmer.js` to the teacher's own look. **The right third is the production column, top to bottom**: a hopper and an oven at the top, an S of conveyor belt down through the packer and the labeller, and a grocery shelf at the bottom. A pick: he walks the flock, leans in at a couple of turkeys and shakes his head; the turkeys near him duck and one sneaks off; he points at the winner, it freezes mid-gobble, he hoists it and lobs it into the hopper, and as it drops in the name rises large over the farm; out of the oven comes a golden roast turkey, steaming, that rides the S down, one beat per station: under the packer's stamp (white foam tray, clear film with a shine and drops), past the labeller (a small name label at the bottom of the package) and onto the shelf. The decoys are on his way to the winner, from a seeded random of the spin descriptor. **The shelf is where the round collects** (No repeats on): one slot per student, filled from the top shelf down, names on the labels, "n / N" on its base; full, a SOLD OUT sign drops and it celebrates; "Let them out" bursts the packages and the turkeys hop back to the pen. Owns its sounds (clucks, footsteps, a sting, a thud into the hopper, clacks, a rumble, a ding and hiss, the stamp, the labeller's click, a plunk, a bell fanfare, a gobble). Never picks anything. |
-| `sled.js` | The Name Wheel's winter skin, `window.Sled` — the same shape as `Farmyard` (`isOn`, `build`, `sync`, `run`, `finish`, `setWinner`, `setDisabled`, `setPicked`, `busy`, `HOLDS_ROUND`, `DURATION_MS`, `SETTLE_MS`). A snowy hill at night in `.wheel-wrap` (`#sled`, the whole scene is the Spin button), as wide as its box (`layout()`): START at the top, FINISH at the bottom, one sledder per student on the hilltop with their name on the sled, and a log cabin by the finish. A pick: a whistle, the pack races down (weaving, bumping, snow spray), one pulls ahead over the line, the name comes up large with a spray of snow; the winner walks into the cabin (No repeats on), the rest walk back up pulling their sleds. See the winter skin under Name Wheel. Owns its sounds. Never picks anything. |
+| `workshop.js` | The Name Wheel's winter skin, `window.Workshop` — the same shape as `Farmyard` (`isOn`, `build`, `sync`, `run`, `finish`, `setWinner`, `setDisabled`, `setPicked`, `setAbsent`, `busy`, `HOLDS_ROUND`, `DURATION_MS`, `SETTLE_MS`). A snowy hilltop at night in `.wheel-wrap` (`#workshop`, the whole scene is the Spin button; the name is kept from the workshop it replaced), as wide as its box and all still: a heaped pile of presents on the left and centre (one per student, the name on its gift tag; it shrinks as the class is called), Santa in his sleigh on the right with the reins, two reindeer and a big open sack, the load and the count on the sleigh, and a "Not here today" notice staked in the snow. A pick: Santa leans out and rummages, the winner pops into his hand, he holds it up (the name comes up) and tosses it over his shoulder into the sack. When everyone's picked the reindeer take off; Let them out dumps the load back into a fresh pile. See the winter skin under Name Wheel. Owns its sounds. Never picks anything. Shown only while the winter picker is the sleigh (`data-wpick` not `race`). |
+| `sled.js` | The Name Wheel's other winter skin, `window.Sled`, the **sled race** (when the teacher picks it: `data-wpick="race"`) — the same shape as `Workshop` (`isOn`, `build`, `sync`, `run`, `finish`, `setWinner`, `setDisabled`, `setPicked`, `busy`, `HOLDS_ROUND`, `DURATION_MS`, `SETTLE_MS`). A long snowy hill at dusk seen from the side (`#sled`, the whole scene is the Spin button), the sledders at the top, the race down to the finish with the camera following, and the lodge at the right where the round collects. Also `MULTI: true` (wheel.js draws several places for it), `timing(spin)` (the descriptor's duration / settle, from the race's length and places) and `setRace(doc, race)` (draws the long or short course between races). See the sled race skin under Name Wheel. Owns its sounds. Never picks anything. |
+| `migration-winter-picker.sql` | One-off migration for the winter Name Wheel's choice: `profiles.winter_picker text` (null = never chosen = the sleigh; `'sleigh'` / `'race'`, check constraint) and `set_my_winter_picker(text)` (own row only); also `profiles.sled_race jsonb` (`{ length: 'short' | 'long', picks: 1–6 }`, null = short, 1) and `set_my_sled_race(jsonb)` (validates both, own row only). Until it is run the selects still work in that browser (localStorage) but doesn't follow the teacher. Safe to re-run; ends with a check |
 | `noise-popout.html` | Read-only projector pop-out (`body.noise-popout`): reading + bar + zone word, fed over BroadcastChannel. Never opens a mic of its own; says so when the main window isn't answering. |
 | `timer-popout.html` | Minimal read-only pop-out window (`body.timer-popout`): label + display + the same themed dial filling the window, no controls; listens for state via BroadcastChannel. |
 | `migration-lessons-bathroom.sql` | One-off migration creating `lesson_plans` + `bathroom_log` (incl. the manual-tally columns; run in the Supabase SQL editor) |
@@ -116,8 +129,8 @@ full-screen toggle. There is no sidebar; every page uses the full width.
 
 Every page: `<link rel="stylesheet" href="style.css">`, an **empty**
 `<header class="topbar"></header>` (nav.js fills it), then at the end of
-`<body>`: `shared.js`, `schedule.js`, (`cauldron.js`, `boba.js`, `farmer.js`, `farmyard.js` and `sled.js` before `wheel.js` on the Name Wheel and its pop-out; `formula.js` on Seating and Create
-Groups, `room.js` on Seating / hub / attendance), `nav.js`, then the page's
+`<body>`: `shared.js`, `schedule.js`, (`cauldron.js`, `boba.js`, `farmer.js`, `farmyard.js`, `sled.js` and `workshop.js` before `wheel.js` on the Name Wheel and its pop-out; `formula.js` on Seating, Create
+Groups, Family Feud and Jeopardy, `room.js` on Seating / hub / attendance), `nav.js`, then the page's
 own script (`attendance.js` + `initAttendance()` on Attendance; `lesson.js`
 on Lesson Plans; `bathroom.js` on Bathroom; `timer.js` on Timer; nothing on
 the hub; an inline `<script>` elsewhere). Pages should have a
@@ -162,7 +175,7 @@ shared across accounts.
   in `localStorage['teacherpal.session']` = `{ access_token,
   refresh_token, expires_at, user: { id, email, username, display_name,
   is_admin, theme,
-  teaches_periods, farmer } }`. `hydrateProfileIntoSession()` runs right after the
+  teaches_periods, farmer, winter_picker, sled_race } }`. `hydrateProfileIntoSession()` runs right after the
   token exchange and fills in the profile fields.
 - **Self sign-up** (`migration-self-signup.sql`). The admin opens or closes
   it on `admin.html`; the state is `app_settings.signup_open` (one row,
@@ -263,6 +276,21 @@ shared across accounts.
   Theme: `THEMES` (registry), `applyTheme(id)`, `currentTheme()`,
   `setMyTheme(id)` (applies locally + POSTs `set_my_theme` RPC to persist
   on the profile).
+  Winter picker: `winterPicker()` → `'sleigh'` | `'race'` (from
+  `<html data-wpick>`), `applyWinterPicker(pick)` (attribute, the
+  `teacherpal.winterPicker` cache, `teacherpal:winterPicker` event),
+  `setMyWinterPicker(pick)` (also the session and the
+  `set_my_winter_picker` RPC; logs a failure, e.g. before
+  `migration-winter-picker.sql`). The profile is the source of truth and
+  the profile refresh applies it; a NULL column adopts this browser's cached
+  choice and saves it. Every page's bootstrap sets `data-wpick` from the
+  session, else the cache; the Name Wheel and its pop-out also read the
+  cache in their head script (no flash of the other picker).
+  Sled race: `sledRace()` → `{ length: 'short' | 'long', picks: 1..6 }`
+  (session, else the `teacherpal.sledRace` cache), `setMySledRace(patch)`
+  (merges, caches, the session, `teacherpal:sledRace`, then the
+  `set_my_sled_race` RPC; logs a failure). Same profile rule as the
+  winter picker: a NULL column adopts this browser's cached choice.
   Farmer: `setMyFarmer(look | null)` (the session, `teacherpal:farmer` so
   the farm redraws at once, then the `set_my_farmer` RPC; throws if that
   fails, e.g. before `migration-farmer.sql`).
@@ -542,6 +570,42 @@ No row = still to go; **Reset deletes the list's rows**. One row per pick
 once can't overwrite each other. Upsert is `POST
 /pick_list_picks?on_conflict=list_id,student_id`.
 
+### `survey_sets` — Family Feud's named question sets, per teacher
+| column       | type        | notes |
+|--------------|-------------|-------|
+| `id`         | uuid        | PK |
+| `name`       | text        | 1–60 chars ("Unit 3: Macbeth") |
+| `questions`  | jsonb       | `[{ id, question, answers: [{ text, points }], auto? }]`, ≤ 100 (check constraint, plus a 300 kB size cap). `id` is a short random string the editor keeps across edits, so a running game stays on its question; `auto: true` = the points were filled in by the editor (`autoPoints()`) and follow the answers' order. Saved with every answer's points filled, highest first |
+| `sort_order` | integer     | order in the selects |
+| `created_at` / `updated_at` | timestamptz | |
+
+One row per set, so an autosave is one PATCH. The game state's `setId`
+says which set is playing.
+
+### `survey_questions` — legacy, read-only (Family Feud's first bank)
+| column       | type        | notes |
+|--------------|-------------|-------|
+| `id`         | uuid        | PK |
+| `question`   | text        | 1–300 chars |
+| `answers`    | jsonb       | `[{ text, points }]`, 1–8 (check constraint), highest points first (the editor sorts on save) |
+| `sort_order` | integer     | order in the game and the editor |
+| `created_at` / `updated_at` | timestamptz | |
+
+The game itself (scores, teams, the round) is not stored: it lives in this
+browser (`teacherpal.showdown.game`).
+
+### `quiz_boards` — Jeopardy's saved boards, per teacher
+| column       | type        | notes |
+|--------------|-------------|-------|
+| `id`         | uuid        | PK |
+| `name`       | text        | 1–80 chars ("Macbeth", "Grammar review") |
+| `categories` | jsonb       | up to 6 (check constraint, plus a 200 kB size cap): `[{ name, clues: [{ q, a, double }] x5 }]`. A clue's **value comes from its row** (100–500, ×2 in Round 2), so nothing stores points. Saved trimmed after the last category in use; the editor always shows 6 × 5 |
+| `sort_order` | integer     | order in the board list and the select |
+| `created_at` / `updated_at` | timestamptz | |
+
+The game (teams, scores, which clues are used) is not stored: it lives in
+this browser (`teacherpal.quiz.game`).
+
 ### `schedule_overrides` — dates that don't follow the weekday default
 | column        | type        | notes |
 |---------------|-------------|-------|
@@ -623,6 +687,8 @@ sends it):
 - Courses: `getCourses()`, `createCourse(name, sortOrder)`, `renameCourse(id, name)`, `deleteCourse(id)` (periods unassigned, its plans cascade), `setPeriodCourse(periodId, courseId|null)`, `countCoursePlans(courseId)`.
 - Lesson plans take a **target** — `{ courseId }` (the course's plan) or `{ periodId }` (a period's own) — through `planWhere()` / `planOwner()`: `getLessonPlan(target, date)` → row or `null`; `getLessonPlansRange(from, to)` (every row, both kinds); `getRecentLessonPlans(target, limit)` (Copy from day); `getAllLessonPlans()` (search; paged by `sbAll()` past the 1000-row cap); `saveLessonPlan(target, date, plan)` (upsert on `course_id,date` or `period_id,date`); `deleteLessonPlan(target, date)`; `EMPTY_PLAN()`. Everything selects `*`, so the page still works per period before `migration-courses.sql`.
 - Lesson attachments (bucket `LESSON_BUCKET` = `'lesson-files'`, `LESSON_FILE_MAX` 50 MB): `getLessonAttachments(target, date)`, `getLessonAttachmentsRange(from, to)` (calendar counts), `getAllLessonAttachments()` (search); `uploadLessonFile(target, date, file, { onProgress, sortOrder })` (XHR so it can report progress; uploads the object, then the row, and removes the object again if the row fails); `addLessonLink(target, date, { url, name, sortOrder })`; `copyLessonAttachments(rows, target, date)` (new rows, same objects); `deleteLessonAttachment(row)`; `lessonFileUrl(row, { download })` → a signed URL (`download: true` saves it under its original name). Every Storage call goes through `storageCall()`, which refreshes the token once on a 401 / "jwt" error exactly like `sb()`.
+- Family Feud: `getSurveySets()`, `createSurveySet({ name, questions, sortOrder })`, `updateSurveySet(id, { name?, questions?, sortOrder? })`, `deleteSurveySet(id)`; `getSurveyQuestions()` only reads the legacy bank (the fallback before `migration-feud-sets.sql`)
+- Jeopardy: `getQuizBoards()`, `createQuizBoard({ name, categories, sortOrder })`, `updateQuizBoard(id, { name?, categories?, sortOrder? })`, `deleteQuizBoard(id)`
 - Pick lists (Name Wheel): `getPickLists(periodId)`, `createPickList(periodId, name, sortOrder)`, `renamePickList(id, name)`, `deletePickList(id)` (its picks cascade); `getPickListPicks(listId)` → `[{ student_id, picked_at, manual }]` oldest first, `addPickListPick(listId, studentId, { manual, at })` (upsert: picking again moves the date), `removePickListPick(listId, studentId)`, `clearPickListPicks(listId)` (Reset)
 - `getBathroomLog(periodId, date)`, `getBathroomHistory(periodId)` (all dates, newest first, ≤2000), `getBathroomQuarter(quarter, from, to)` (every period: trips dated in `[from, to]`, either end `null` = open, plus that quarter's manual tallies; paged), `bathroomSignOut(periodId, studentId, date)` → row, `bathroomSignIn(id)` → row, `deleteBathroomTrip(id)`, `setManualTally(periodId, studentId, quarter, count)` (read-then-write because the uniqueness is a partial index; count 0 deletes)
 - `getScheduleOverrides()` → rows ordered by date; `saveScheduleOverride({ date, schedule, finals_pair, note })` (upsert on `date,owner_id`; `finals_pair` is nulled unless `schedule === 'finals'`); `deleteScheduleOverride(id)`
@@ -934,8 +1000,9 @@ the structure, and every other theme is a colour swap of it. A theme is
       and snow settled along the bottom edge (`--winter-drift-img`, kept
       faint so text near the bottom keeps AA).
     - **Timer**: a melting snowman. **Noise Meter**: a snow globe. **Name
-      Wheel**: a sledding race (`sled.js`). See each section.
-  Tokens: `--wt-*` (snowman), `--sg-*` (globe), `--sl-*` (sled race),
+      Wheel**: Santa's sleigh on a snowy hilltop (`workshop.js`) or, if the
+      teacher picks it, a sled race (`sled.js`). See each section.
+  Tokens: `--wt-*` (snowman), `--sg-*` (globe), `--ws-*` (hilltop),
   `--winter-*` (page). 24-hour clock.
 - **`pink`** — a **pure colour swap of default** (depth tokens off) with four tiny extras. Same
   layout, spacing, radii, borders, fonts, weights, tracks, shadows,
@@ -986,13 +1053,13 @@ the structure, and every other theme is a colour swap of it. A theme is
   spotlight), the timer's drain, final-minute and time's-up states, and the
   noise meter's reading and its loud / alert reactions. **It drops**:
     - ambient motion: the page decorations (bats, fog, leaves), idle loops
-      (breathing, bobbing, blinking, pecking, swaying, the thinking
+      (breathing, bobbing, blinking, pecking, swaying, the sledders jostling at the top, the thinking
       farmer), smoke, flicker, licking flames, the level bar's rider;
-    - half of every particle burst (`> i:nth-child(even)`), half the snow
+    - half of every particle burst and the sleds' snow spray (`> i:nth-child(even)`), half the snow
       globe's flakes and mood fx, and the cauldron's embers;
     - expensive paint: backdrop blur everywhere, drop-shadow glows and blur
-      filters in the tools (the farm's sun glow and the cabin's window glow
-      are hidden), animated filters, the glow tokens (`--hover-glow: none`,
+      filters in the tools (the farm's sun glow is
+      hidden), animated filters, the glow tokens (`--hover-glow: none`,
       `--hud-glow*` = `0 0 0 transparent`, since they sit inside shadow
       lists), and the big digit glow on the default / halloween timer.
   Farm turkeys share parts between idle and pick states, so the idle rules
@@ -1251,10 +1318,10 @@ All styling lives in `style.css`; pages carry almost no inline styling.
     `flex: 1 1 15rem; max-width: 20rem; min-height: clamp(9.5rem, 20vh, 12.5rem)`
     so 1..N cards flow naturally without an outer grid template. **From
     900×560 up the hub fills the screen**: `.hub-sections` and each section
-    are `flex: 1` and the panel rows stretch, so the four rows share the
+    are `flex: 1` and the panel rows stretch, so the five rows share the
     height (no empty band under System). Sections
     in order: **Daily** (Attendance, Bathroom), **Teacher tools**
-    (Create Groups, Timer, Noise Meter, Name Wheel), **Planning** (Lesson Plans, Seating), **System**
+    (Create Groups, Timer, Noise Meter, Name Wheel), **Games** (Family Feud, Jeopardy), **Planning** (Lesson Plans, Seating), **System**
     (Schedule, Rosters — both `.setup` dashed + quieter). Adding a tool
     means one `<a class="hud-panel">` inside the right `<section>`; no
     CSS grid template to reflow. Each panel is only a thin-line SVG icon
@@ -1282,7 +1349,7 @@ All styling lives in `style.css`; pages carry almost no inline styling.
     `.fs-btn` full-screen toggle. `#hud-now[data-state]` dims passing /
     break / before-school lines to `--text-2` and after-school / weekend /
     no-school to muted. **Everything shares one row** — grouping the nav
-    into four triggers freed the space, so `header.topnav` is a single
+    into five triggers freed the space, so `header.topnav` is a single
     `"brand nav read tail"` grid; below 1100px the readouts drop to their
     own row again. Below 1600px the readout key labels drop, below
     1200px the date, below 900px SCHED. Periods +
@@ -1386,8 +1453,8 @@ All styling lives in `style.css`; pages carry almost no inline styling.
     `migration-lesson-attachments.sql` and the rest of the editor still
     works. `onChange` / `onAttachments` keep the calendar and the search
     index current.
-  - **The nav is four grouped dropdowns**, defined by `NAV_SECTIONS` in
-    `nav.js` (Daily · Teacher Tools · Planning · System — the hub's own
+  - **The nav is five grouped dropdowns**, defined by `NAV_SECTIONS` in
+    `nav.js` (Daily · Teacher Tools · Games · Planning · System — the hub's own
     sections). Add a screen to the right section there and every page's nav
     updates; `NAV_ITEMS` is still derived from it as a flat list. Each
     section is a `.nav-group` holding a `.tab.nav-trigger` button and an
@@ -2259,8 +2326,8 @@ All styling lives in `style.css`; pages carry almost no inline styling.
   `BroadcastChannel('teacherpal-wheel')`. The main window is still the only
   writer; `broadcast()` sends everything they show: `list` (who's on the
   wheel / in the yard), `rotation`, `spin`, `winnerId` + `winnerLabel` /
-  `spinLabel`, `picked` + `pickedTotal` (the round: who's on the shelf /
-  in the cabin, `pickedState()`), `listName` / `listPicked` / `roster`
+  `spinLabel` (and `winnerLabels` / `spinLabels`, a race's places), `race` (the sled race setting, applied between races), `picked` + `pickedTotal` (the round: who's on the shelf /
+  on the sleigh, `pickedState()`), `listName` / `listPicked` / `roster`
   (the pick list's count), `left`, `noRepeats`, `missing`, `period`.
   `rebuildPool()` broadcasts, so every change to the round reaches them
   (picks loaded late, a list switch, Reset). The pop-out runs the same
@@ -2277,7 +2344,7 @@ All styling lives in `style.css`; pages carry almost no inline styling.
   `wheel-popout.html?mini=1` in an iframe. The scene shrunk that far was
   unreadable, so `initMini()` builds no skin and shows `.wm-view` (body
   `.wm-mode`; **not** `.wheel-mini`, which is the result panel's small
-  pill buttons): the period · list on top, the winner's name as large as
+  pill buttons): the period · list on top, the winner's name (a race's places: a numbered `ol.wm-places`, `data-len="list"`, sized by `--rows`) as large as
   fits (cqi sizes by length; "Picking…" until the main scene reveals it at
   `startedAt + duration`), a compact count ("8 of 24 picked", or "16 left"
   without lists) and a **Pick** button.
@@ -2342,9 +2409,10 @@ All styling lives in `style.css`; pages carry almost no inline styling.
       flicker, the name's glow pulse); the brew and the pick run, like the
       wheel's spin.
   **Skins**: `wheel.js` keeps `skins()` =
-  `[Cauldron, Boba, Farmyard, Sled]`, `skinFor(doc)` = the one whose `isOn(doc)` is true
-  (halloween / pink / thanksgiving / winter), and `eachSkin()` to keep every skin's DOM in sync
-  (each is built and synced always, and hidden by CSS outside its theme).
+  `[Cauldron, Boba, Farmyard, Workshop, Sled]`, `skinFor(doc)` = the one whose `isOn(doc)` is true
+  (halloween / pink / thanksgiving / winter: the sleigh or the race, by `data-wpick`), and `eachSkin()` to keep every skin's DOM in sync
+  (each is built and synced always, and hidden by CSS outside its theme; one skin throwing is
+  logged and doesn't stop the others, so a hidden skin can't break the visible one).
   `startSpin()` takes the active skin's `DURATION_MS` / `SETTLE_MS`;
   `runSpin()` / `finishSpin()` call its `run()` / `finish()`;
   `renderWinner()` / `renderControls()` call every skin's `setWinner()` /
@@ -2717,75 +2785,359 @@ All styling lives in `style.css`; pages carry almost no inline styling.
     - **`transform-box: fill-box` only on the parts that move** (listed in
       the CSS). On `*` it also moves the SVG `transform` attributes inside
       (tail feathers), which knocked them out of place.
-  **winter skin — a sledding race instead of the wheel** (`sled.js`, the
-  "Name Wheel — winter skin: a SLEDDING RACE" block in `style.css`). CSS
-  hides the wheel SVG, the hub button and the mascot, and shows `.sled`,
-  which **is** the Spin button (click, Space, Enter). Layout: the
-  thanksgiving one (the scene fills the width, one row of controls under
-  it; those rules are `:root:is([data-theme="thanksgiving"],
-  [data-theme="winter"])`).
-    - **The scene** (`bgMarkup(W)`, redrawn when the width changes): 400
-      units tall, `W = 400 × box aspect` (620–1300). A night sky with stars
-      and a moon, far hills, a snowy hill whose ridge (`ridgeY()`) runs from
-      a flat top left down to a valley on the right, grooves down the track,
-      pines (kept off the track), a red START banner and dashed line at the
-      top, a blue FINISH banner and checkered line at the bottom, and a log
-      cabin by the finish (`cabinBox()`): snowy roof, chimney smoke, a door
-      and a big lit window.
-    - **The track** (`track(W, u, l)`): a cubic from the start line to the
-      finish, `u` 0..1 down it (past 1 = the run-out on the flat), `l` the
-      lane across it (-1..1, mostly depth). Further up = smaller
-      (`persp()`).
-    - **Sledders** (`RIDER`): one per name in `displayList`, facing
-      downhill: a wooden sled with the student's name on its side board
-      (`.sl-tag`, the wheel's label, cut to 8 letters + "…"; cream on wood,
-      a close-up detail), a rider in one of five coats, three hats, three
-      skin tones (from a hash), and a standing walker (pulling the sled by a
-      rope) for the walk pose. Poses are `data-pose`: `idle` (a breath),
-      `ready` (leaning back), `race` (tucked forward, a rattle, snow spray
-      behind), `stopped`, `walk` (the walker, legs swinging, flipped to face
-      the way they go; the name is outside the flip so it never mirrors).
-      At rest they wait on the hilltop in staggered rows (`homesFor()`),
-      packed smaller for a big class (`homeS`, blended back to full size on
-      the slope).
-    - **A pick** (`DURATION_MS` 3500 + `SETTLE_MS` 2300; `T` at the top of
-      the file; everything from a seeded random of the descriptor, so the
-      pop-out runs the same race): a whistle; at 0.45s they push off from
-      their spots onto the track, each in a shuffled lane, weaving
-      (`wob`), jostling for places and now and then bumped (`.bump`, a
-      thump); the pack stays together (each racer's `pace` 0.72–0.92 of the
-      way when the winner crosses) until the second half, when the winner
-      pulls ahead and crosses the line at 3.5s. The name comes up large over
-      the hill on a frost-on-night plate (`.sl-name`, `placeName()`) with a
-      spray of snow (`.sl-burst`) and a bell. The others coast to a stop
-      past the line. With No repeats on the winner then walks to the cabin
-      door (from 4.1s) and goes in, and appears in the window; the others
-      walk back up the hill a few at a time (`finish()`), and race from
-      wherever they are if the next pick comes first.
-    - **The cabin is where the round collects**: everyone picked sits in
-      the window (`renderCabin()`, the most even grid for the round, filled
-      from the bottom row up) with a mug of cocoa, steam rising; "n / N"
-      on a plate by the door (page and full screen window). Full: the window pulses, snow
-      bursts out of it and a chime plays (only on the change to full).
-      **Let them out** (`.sl-pour`, top right, page only, primary once
-      full; Reset does the same) dispatches the cancelable
-      `teacherpal:wheel-reset-request`, then `teacherpal:wheel-reset`; as
-      they come back into `displayList` they walk out of the cabin door and
-      up the hill (`incoming` / `inCabin`, or still on the old picked list
-      when `sync()` runs before `setPicked()`). `busy()` blocks a pick
-      meanwhile. `HOLDS_ROUND` is true.
-    - **Counts**: "N left" (or "N on the hill" without No repeats) top left,
-      page only.
-    - **Sound** (main window only, respects mute): a referee's whistle, the
-      hiss of runners swelling down the hill, a thump per bump, a bell and a
-      cheer at the line, a chime when the cabin fills, a door bell on Let
-      them out.
-    - Under reduced motion every CSS loop and the bursts stop
-      (`.sled * { animation: none }`); the race, the walks and the poses
-      still run (JS): they are the pick.
-    - **`.sl-art` must not get `transform-box: fill-box`**: its flip
-      (`scale(-1 1)`) would then turn about the art's own edge and the sled
-      would leave its name behind.
+  **winter skin — Santa's sleigh on a snowy hilltop instead of the wheel**
+  (`workshop.js`, the "Name Wheel — winter skin: SANTA'S SLEIGH ON A SNOWY
+  HILLTOP" block in `style.css`; the file, `window.Workshop` and the
+  `.workshop` / `.for-shop` names are kept from the workshop it replaced).
+  CSS hides the wheel SVG, the hub button and the mascot, and shows
+  `.workshop`, which **is** the Spin button (click, Space, Enter). The page
+  layout is the thanksgiving one: the scene fills the width, with one row of
+  controls under it (those rules are
+  `:root:is([data-theme="thanksgiving"], [data-theme="winter"])`). Words that
+  differ come in `.for-shop` spans ("Edit who's in", "Who's in the pile").
+    - **The scene** (`geo(W)`, redrawn when the width changes): 400 units
+      tall, `W = 400 × box aspect` (620–1500). **All still**: a night sky
+      (gradient), seeded stars, a moon with a soft glow, far and near snowy
+      hills with a few pines, the snow of the hilltop with sparkles
+      (`bgMarkup()`). Nothing moves at rest; Santa and the presents move
+      only during a pick, a reflow or the dump back, from JS (no CSS
+      animations on them).
+    - **The pile** (`pileSlots(G, N, left)`, `renderPile()`) fills the left
+      and centre: one wrapped present per student (`giftLook(id)`: size,
+      paper `p0…p5`, ribbon `r0…r3` with `CLASH`, pattern), each with **a
+      gift tag on its front carrying the name** (the wheel's label, cut
+      past 9 letters, full name in a `<title>`). It is a heap: rows that
+      lose one present a row (or every other row, whichever gives bigger
+      presents), staggered, neighbours overlapping a little, each tilted a
+      few degrees (seeded). The slots are sized for **the whole round**
+      (`roundSize()`: on the wheel + picked + in the sleigh), filled bottom
+      row first, centre out, so the heap shrinks from the top as the class
+      is called and a pick never resizes it. A present keeps its slot; when
+      one leaves, the highest present falls into the gap (springs, in
+      `stepPile()`). While someone is absent the pile leaves the notice's
+      strip free on the left.
+    - **The sleigh** (`rideMarkup()`, its own 300-unit drawing scaled by
+      `v.R.s`, ~42% of the width, bottom right): red with gold trim and
+      runners, two reindeer hitched in front (harness, collars with
+      bells), **reins** from Santa's right glove to both collars (redrawn
+      every frame in `santaStep()`), the **big open sack** behind the load,
+      and the count plate on its side (`.ws-count`: "7 / 28", or "N names"
+      without No repeats).
+    - **Santa** (`SANTA`, front view, `SA`) sits in the sleigh between its
+      back and front panels: a red coat with fur, a belt, beard, hat. He is
+      posed from JS every frame (`santaStep()`): `.sa-lean` turns about
+      his hips, each arm turns about its shoulder and stretches
+      (`setArmLen()`), the head tilts; `gloveRide()` / `armSolve()`
+      convert between an arm pose and a point. `.grin` swaps the mouth.
+    - **The load** (`renderLoad()`, `loadGeom()` / `loadSlot()`, ride
+      units): everyone picked this round, stacked in rows on the sleigh's
+      bed in front of the sack, **tags readable**; the newest bounces in
+      (`.new`). The sack grows with the round (scale 0.82 → 1.24).
+    - **A pick** (`DURATION_MS` 3300 to the name + `SETTLE_MS` 1800; the `T`
+      timeline at the top of the file). `makePlan()` takes a seeded random
+      of `winnerId:startedAt`, so the full screen window plays the same pick:
+      - 0.15s: Santa leans out of the sleigh over the pile.
+      - 0.6s: he **lifts one present** (one of the four nearest him), has a
+        look, and puts it back.
+      - 1.3s: he **shoves another aside**, and it slides back.
+      - 1.8s: he digs in; the presents round his hand jostle and the
+        winner wobbles in its slot.
+      - 2.25s: the winner **pops out of the pile** into his hand (the pile
+        settles into the gap).
+      - 2.65s: he sits up and **holds it high**, grinning.
+      - 3.3s: **the name comes up large** over the pile (`.ws-name`, frost
+        on a night plate, snow and gold stars), with a "ho ho ho" and
+        sleigh bells. It stays up until the next pick.
+      - 4.35s: he **tosses it over his shoulder**; it spins into its place
+        on the load (4.95s, `landLoad()`), the sack gulps (`.gulp`), a
+        puff of snow, bells.
+    - **The round** (No repeats on): the pile shrinks, the load grows,
+      "n / N" on the sleigh. **When everyone's been picked** (`.full`) the
+      reindeer **take off** with the loaded sleigh (`.leaving`,
+      `ws-takeoff`: up and away to the top right, a snow and star burst,
+      bells and a fanfare). It stays gone while full. That happens only on
+      the change to full (`celebrate()`; a page load that finds the round
+      done shows the end state without the flight). With No repeats off,
+      the present lands in the sleigh, then hops back onto the pile 1.4s
+      after the pick.
+    - **Let them out** (`.ws-pour`, top right, page only, primary once
+      full; Reset does the same): it sends the cancelable
+      `teacherpal:wheel-reset-request`, then `teacherpal:wheel-reset`. The
+      sleigh comes back (`.returning`) and the load **tumbles out of it back
+      into a fresh pile**, each present flying from its spot in the sleigh
+      to its slot (`v.loadPos`, staggered 45ms; after the sleigh is back
+      when it had flown off). `busy()` blocks a pick meanwhile.
+    - **Absent students** (`setAbsent()`; wheel.js's `missingList()` gives
+      `{ id, first, full }`): a small paper notice on a wooden board, staked
+      in the snow at the left, "NOT HERE / today", with their first names
+      (up to 8, then "+N more"; names by `textContent`, full names in its
+      `<title>`). It shows only while someone is absent. Absent only, never
+      sitting out; kept current by `refreshAbsent()`, and the pop-out gets
+      it in the broadcast.
+    - **Sound** (main window only, respects mute): paper rustles and taps
+      while he rummages, a whoosh as the present pops out and as he tosses
+      it, a "ho ho ho" (three low hums) and sleigh bells with a chime at the
+      name, a plop and bells into the sleigh, a fanfare at takeoff, and a
+      run of thumps as the load tumbles back.
+    - The full screen window shows the same scene, pile, load and count
+      (the round comes in the broadcast) but no Let them out. The mini
+      window shows the compact view.
+    - Colours are `--ws-*` tokens in the winter block (sky, moon, hills,
+      snow, pines, papers, ribbons, tags, Santa, sleigh, sack, reins,
+      reindeer, notice, plate; `--ws-star` / `--ws-smoke` are also the snow
+      globe's). Under reduced motion every CSS animation in the scene stops
+      (`.workshop * { animation: none }`); Santa and the presents still
+      move (JS): they are the pick. Nothing here is ambient, so Reduce
+      effects has nothing to drop.
+  **The winter picker is a choice** (`#wheel-wpick`, a select at the start
+  of the Options group, shown only in winter: Santa's sleigh / Sled race).
+  It is saved per teacher (`setMyWinterPicker()`, `profiles.winter_picker`,
+  see shared.js) and applied as `<html data-wpick="race">`; the two skins'
+  `isOn()` read it, and CSS shows `.workshop` / `.for-shop` or `.sled` /
+  `.for-sled` (`:root[data-theme="winter"]:not([data-wpick="race"])` vs
+  `[data-wpick="race"]`). Switching is instant (`rebuildPool`, a
+  broadcast); it is disabled mid-pick. The pop-out gets `wpick` in the
+  broadcast and switches with the page. Both obey every picker rule: the
+  winner is drawn first by wheel.js, absent and sitting-out students aren't
+  in it, pick lists, Edit who's in, sound, the full screen and mini
+  windows.
+  **The race's settings** (`#wheel-rlen`, `#wheel-rpicks`, after
+  `#wheel-wpick`, shown only in race mode; `sledRace()` /
+  `setMySledRace()`, `profiles.sled_race`; disabled mid-pick): the
+  length and how many places. **Several winners** (`skin.MULTI`):
+  `startSpin()` draws the first with `randInt` as always, then each
+  further place the same way from whoever is left, and puts them in the
+  descriptor as `winners` (place order; `winnerId` = the first) with
+  `long`; `skin.timing(spin)` sets its duration and settle.
+  `finishSpin()` keeps them in `winnerIds` and records **every place**
+  on the pick list (in order, a millisecond apart); the result panel and
+  its live region read "1. Ava, 2. Liam, …". The other skins ignore all
+  of it (one winner, their own timing). With the race in the window bar,
+  the bar's groups pad less and the pick-list line is capped shorter, so
+  it stays one row at 1366px; under 1300px the groups wrap.
+  **winter skin, the other picker — a SLED RACE** (`sled.js`, the "Name
+  Wheel — winter skin, the other picker: a SLED RACE" block in
+  `style.css`, `--sr-*` tokens in the winter block). The page layout is
+  the sleigh's. `.sled` **is** the Spin button (click, Space, Enter).
+    - **The scene** (`geo(W)`, redrawn when the width changes): 400 units
+      tall, `W = 400 × box aspect` (620–1500). The course runs from the
+      start line `G` (0.58 W) to the finish `L` (G + 800 + W), downhill
+      to the right: a flat top, a drop in, a slope that varies, five
+      kickers (a crest to catch air off and a dip after it, `crests`), and a
+      flat run-out. Seen from the side and a little above: the track is a
+      band `DEPTH` (116) deep (wide, so the lanes are well apart), its front edge `SKEW` (30) to the left; a
+      sledder at course x and depth d (0 back, 1 front) stands at
+      `onTrack(g, x, d)`.
+    - **Layers**, each its own SVG moved by a CSS `translate3d` (the
+      camera), so nothing repaints when the view moves: the sky (gradient,
+      low sun, clouds, two ranges of mountains; still), the far ridge and
+      its forest (0.3 of the camera), the hill (the slope behind the track
+      with rows of snowy pines, densest at the back; the track with worn
+      grooves and shaded dips; the START banner, a pennant string and the
+      gate's bar; the checkered FINISH line, flags and banner; snowmen
+      along the back edge and a crowd at the finish), the sledders, the
+      front layer (a rope fence, pines and snowmen below the track; the
+      landing puffs), and the foreground (drifts, big pines, flags; 1.4 of
+      the camera). Pines and snowmen are `<symbol>`s used with `<use>`.
+    - **The sledders** (`makeRider()`): one per name in `displayList`,
+      each three small elements, **each its own compositor layer** (a
+      shadow, the drawing: an SVG in a `.sr-rw` div with the snow spray,
+      and the name plate, in three `.sr-box` containers). Position, the
+      slope's angle and the landing squash are CSS transforms on them.
+      **Don't put them back in one big SVG**: that layer re-rasterised half
+      the screen every frame (measured 3× the raster time). Sizes are in
+      em, one rider unit = `v.B` px (`sizeRiders()`). Inside the drawing
+      only pose changes repaint, and the lean and scarf flutter update at
+      most ~15 times a second. The looks come from a hash of the id
+      (`lookOf()`): a toboggan, runner sled, saucer or inner tube, coat,
+      trousers, hat (beanie, bobble, trapper, helmet), scarf, skin, mittens
+      and sled colours (`--sr-*` tokens, set as `--coat`, `--hat`, … on
+      the elements), goggles, and a style (leaning forward or gripping the
+      sides). **At the top the name is on a plate on the sled's side**
+      (`.sr-plate`, HTML: ink on cream, the wheel's label cut past 9
+      letters, the full name in its `title`). **While they race it is a
+      name badge above the sled** (`.sr-plate.float`, from `paint()` for
+      riders in `race` / `tolodge`): white on dark with a light rim,
+      **upright and one size for everyone** (`--lf`, 3% of the scene's
+      height, 12–30px, whatever the sled's tilt, depth or the class size),
+      on a thin stem down to the sled. `layoutLabels()` lays them out
+      every frame, lowest first: a badge that would overlap one already
+      placed goes up above it (the stem stretches), eased so they don't
+      jump. The leaders' (long race) and the finishers' place is a number
+      in the badge (`data-rk`, gold / silver / bronze / ice,
+      `paintBadges()`); a finisher's badge turns gold (1st) or ice. The arm poses
+      (`data-arms`: rest, scarf, grip, lean, out, up, flail) and faces
+      (`data-face`) are CSS.
+    - **At the top** (`assignHomes()`): staggered rows behind the start
+      line, as big as fit (`v.gs`). Waiting, they jostle, bounce and now
+      and then fix their scarves (from JS; still under reduced motion or
+      Reduce effects).
+    - **Timing** (`SHORT` / `LONG`, `times(s)` → `v.tm`): the short race's
+      winner crosses at 5.4s, the long one's at 19s (slow enough to follow
+      one sled; the short pace is `tau^1.3`, a soft finish); each further
+      place crosses a `beat` later (650 / 700ms, `tm.cross[k]`); with several
+      places the results come up 950ms after the last, then the lodge and
+      the climb back. `timing(s)` gives wheel.js `duration` (the last
+      crossing) and `settle`. Deterministic like everything else here.
+    - **A pick, the short race**: a whistle, the gate swings up, they launch. Everything is
+      worked out from the descriptor's timestamps and a seeded random of
+      `winnerId:startedAt` (`makePlan()`), so the full screen window runs
+      the same race: the winner reaches the line at `tm.fin` exactly
+      (`xRace()`); the others finish behind by a gap each, weave and
+      overtake on the way (gently), keep a share of their starting place
+      until late, and **hold lanes**: neighbours in the finishing order get
+      lanes well apart (3–7 lanes across the track, `p.lane`), so sleds
+      near each other on the course are spread down it; the field is
+      spaced 30–120 units apart at the line, and bump off each other where the plan
+      found two close together (a star and a bonk). The places' gaps at
+      the line are their beat times the speed there (`vLine()`), so they
+      cross a beat apart; everyone else finishes behind the last place. Over each kicker they
+      catch air in proportion to their speed and land with a squash, a
+      puff and a thump; snow sprays behind the leaders only (`.sr-spray`, a
+      CSS loop switched by `.spray`; no speed lines).
+      **The camera** follows the front of the pack (the mean of the first
+      four, so a change of leader doesn't jerk it) on a damped spring with
+      its speed capped, never letting the leader leave the view, and
+      settles on the finish (the trees, the ridge and the foreground scroll
+      past at their depths).
+      **Quiet while they race** (`.sled.quiet`, from the go to the
+      results): a pale veil (`.sr-veil`, `--sr-veil`) over the sky and far
+      hills, the foreground and the tunnel's front pines faded, half the
+      spray, fewer bumps.
+      **The leaderboard** (`.sr-lb`, `buildBoard()` / `placeBoard()` /
+      `boardStep()`, shown with `.quiet`): a dark strip down the left
+      under "N left", every racer's name in running order, the numbers
+      fixed and the names sliding between them (one column, two past 14;
+      rows sized to the scene's height). Re-sorted every 450ms by course
+      position (finishers by finishing order, with a tick), two within 22
+      units keeping their order so it doesn't flicker; a name that changes
+      column jumps rather than sliding across the others. It is how a
+      student who loses their sled in the pack still follows the race.
+      At the line: the winner gets a gold glow, throws their arms up, and
+      the name comes up large (`.sr-name`) with snow and confetti and a
+      cheer; two who cross just behind wipe out (off the sled, tumbling,
+      dizzy stars, the sled spinning on). Everyone coasts to a stop short of
+      the lodge.
+    - **The long race** (`geo(W, true)`, `COURSE` in race fractions;
+      `g.long`): the course is `G + 5000 + 1.3 W` long. The track's depth,
+      skew and bend are per-x arrays (`depAt` / `skwAt` / `bendAt`,
+      used by `onTrack()` / `edge()`), so the band **widens and swings
+      round two bends** (banked snow walls and red chevron boards,
+      `longHill()`), **dips through a valley**, rises to a **big jump**
+      (a crest flagged and boarded JUMP; air up to 300 units), runs through
+      a **tunnel of snow-laden pines** (big pines packed along both edges
+      and the track in their shade, `tunnelFront()`), then the FINAL
+      STRETCH banner and a straight to the finish. **Pace** (`g.prog`,
+      `uAt()`): steady, slower round the bends, a surge out of the
+      valley, and ×1.6 on the final straight (×1.4). Riders lean into the bends
+      (`7 × bendAt`) and drift outward on them.
+      **Lead changes** (`planLong()`): at eight stages (`KN`) one of a
+      few contenders (the first three places and some others) leads by
+      110–150 units, a different one each time; the winner leads once,
+      mid-race, and never going into the final straight, so it isn't
+      obvious until the end; the rest of the field drifts back and forth
+      behind (`formAt()`). Places close in from 0.8 of the race.
+      **Two of the field tumble mid-race** (`p.mw`: off the sled head over
+      heels, a bonk, a dizzy moment, back on, winning back some of what
+      they lost; `xRace()`). **Places on the badges**: the current top three's name
+      badges carry gold / silver / bronze numbers (with hysteresis so they
+      don't flicker). The runners hiss again for the final sprint.
+    - **Camera shots, the long race only** (`planShots()`, `shotCam()`,
+      `setShot()`; the short race is one steady shot). Planned with the
+      race from its timeline, so the full screen window cuts with the page
+      (measured: within one 40ms sample). **Cuts are instant** (no swoop,
+      spin or fade) and every shot is held at least `MIN_HOLD` (2.4s).
+      The low shot runs from 0.8s before the big jump to the end of the last
+      bend, the head-on shot from there through the line. The time before
+      the low shot is shared out evenly between the other four, in this
+      order:
+      - `wide`: the gate in the middle, zoomed out to 0.6, still.
+      - `side`: the usual camera. On a cut back to it, it lands on its
+        mark.
+      - `behind`: over the leader's shoulder (perspective, below).
+      - `tight`: the two to watch (`pickBattle()`: the closest pair near
+        the front over the shot, a swap of places in their favour),
+        zoomed 1.3–1.75 to keep both in. Their badges get an ice ring and
+        are a size up (`.duel`).
+      - `low`: down in the snow just past the crest, zoom 1.3, a lip of
+        snow along the bottom (`.sr-bank`). The sleds fly up through the
+        frame; once the pack is past the middle it follows them on, still
+        low.
+      - `head`: head-on (perspective). It backs down the course ahead of
+        the leader, then holds just past where they stop. It ends 0.9s
+        after the last place crosses (before the results), then cuts back
+        to the side view of the finish.
+
+      **Zoom** draws the world layers at the shot's scale
+      (`setZoom()` → `sizeLayers()`, `v.k` = `v.K` × zoom; a CSS scale
+      would blur them). They sit in one `.sr-world` wrapper. The sky,
+      the far range, the lodge and the screen-space parts (`toPx()`: the
+      name, the results) stay on `v.K`. The lodge and the foreground hide
+      in every shot but `side`.
+
+      **The perspective shots** (`behind` / `head`) can't come from the
+      side scene, so they're their own simple 3D view on a canvas
+      (`.sr-cine`, `drawCine()`):
+      - The course ahead in 20-unit strips, with its real bends (a
+        sideways drift), crests and width. The strips are measured against
+        the slope under the camera, so the hill doesn't tip the view.
+      - Seeded pines, dense in the tunnel, and the FINISH and FINAL
+        STRETCH banners (each fades out before the camera passes under
+        it). Checks across the track at the line.
+      - The sledders from behind or from the front in their own `--sr-*`
+        colours (`cineRider()`): sled, coat, arms by pose, scarf, face,
+        hat, the place glow.
+      - The cameras are set high (`CINE`), so a sled further down the
+        course is higher on the picture and the pack spreads up it.
+
+      **Badges stay on in every shot**: the race's HTML badges, laid out by
+      `layoutLabels()` as always. In the perspective shots they are
+      anchored on the drawn sleds (`r.cv`) and sized by distance (0.85×
+      far off, 1.15× / 1.3× close, with hysteresis). In the close 2D shots
+      they're a size up (`lfK`). A cut drops their easing so they land at
+      once. **The leaderboard stays up through every cut.**
+    - **Several places** (`v.places`): each crosses on its own beat
+      (`crossLine(v, r, k)`): the name comes up with its place over it
+      ("2ND", `.sr-place`), a smaller burst and a bell a step lower
+      (`ding(k)`); the winner keeps the gold glow and plate, the others a
+      softer one (`.placed`, `--sr-plate-place`) and a numbered badge.
+      950ms after the last, **the results panel** (`.sr-results`,
+      `showResults()` / `placeResults()`) replaces the banner: every
+      place numbered (gold, silver, bronze, then ice), sized so all six
+      rows fit the scene's height and the longest name fits left of the
+      lodge (measured at 1366×768: ~50px names for six); names by
+      `textContent`. It stays up until the next pick. Every place goes
+      into the lodge, one after another (`v.entering`, a Set).
+    - **The lodge** (fixed at the right of the view, an A-frame of logs with
+      warm windows, fairy lights, a wreath, smoke, a "LODGE" board and a
+      count sign "7 / 28"): with No repeats on, the winner hops over to its
+      door and goes in; **everyone picked this round sits in its windows
+      with cocoa** (`renderLodge()`: the biggest guests that fit the whole
+      round, in overlapping rows, the big windows first). Then the view
+      sweeps back up the hill (`tm.back`) and everyone else is at the top
+      again. When the last one goes in (`celebrate()`, only on the change
+      to full) the windows and lights flash, a burst and a chime.
+      **Let them out** (`.sr-pour`, top right, page only, primary once
+      full; Reset does the same) sends the cancelable
+      `teacherpal:wheel-reset-request`, then `teacherpal:wheel-reset`;
+      they come out of the door one after another and hop back to the top.
+      With No repeats off the winner stays on the hill (no lodge count).
+    - Counts: "N left" (or "N on the hill") top left; the lodge sign.
+    - **Sound** (main window only, respects mute): a referee's whistle,
+      runners hissing, thumps on landing, bonks, a wipeout, a cheer with a
+      bell, the lodge door's jingle, a chime when it's full, a whoosh for
+      Let them out.
+    - Under reduced motion every CSS animation in the scene stops and the
+      spray hides; the race itself (JS) still runs: it is the pick. Reduce
+      effects keeps them still at the top and halves the bursts and the
+      spray.
+    - **Performance**: in headless Edge with the GPU allowed, a 30-student
+      race at 1080p ran at ~42 fps (the farm's pick: ~29); the long race's
+      shots: wide ~42, side ~33, behind ~35, tight ~32, low ~29, head-on
+      ~26 (the canvas is capped at 1600px wide; far strips are drawn two or
+      four at a time). Before the shots, the long race
+      at ~35 fps (its layers are wider, so more tiles paint as the camera
+      moves; splitting the hill layer into chunks would be the fix).
   **pink skin — a bubble tea cup instead of the wheel** (`boba.js`, the
   "Name Wheel — pink skin: a BUBBLE TEA cup" block in `style.css`). CSS
   hides the wheel SVG, the hub button and the wheel's bunny, and shows
@@ -3037,6 +3389,430 @@ All styling lives in `style.css`; pages carry almost no inline styling.
       tokens in the pink block. Under reduced motion only the loops stop (see the cup above).
       Testing: rAF doesn't run under `--virtual-time-budget`, so drive
       Edge over the DevTools protocol in real time.
+- **Family Feud** (`showdown.html` + `showdown-popout.html` +
+  `showdown.js`), a survey game for two teams. **The name is the TV show's** (the
+  teacher chose it; it was "Survey Showdown" before). Both game names are
+  registered trademarks, so revisit them before the app is sold. The look
+  and the wording on screen are our own, not the show's.
+  Files, classes (`sd-*`), storage keys and the table keep their old
+  `showdown` names (the bank is now `survey_sets`).
+  - **Its own game-show look, not the app theme** (asked for: it looks the
+    same in every theme). A royal-blue stage lit from behind the board, two
+    soft stage lights, gold and amber accents, chrome edges on the panels
+    and the board frame, a floor glow under the board, and a broadcast face,
+    **Anton** (`--ss-display`, loaded only by showdown.html and its
+    window). The palette is the `--ss-*` tokens at the top of the "Survey
+    Showdown" block in `style.css`; the same block re-points the app's
+    shared tokens (`--card*`, `--accent`, `--text*`, `--danger`, …)
+    inside `.showdown-page`, `body.sd-popout`, `.sd-flash` and
+    `.sd-confetti`, and **inside its dialogs** (`dialog.sd-game`: the
+    question editor and Game setup), so buttons, inputs, selects, borders and
+    text follow the game in every theme: someone on pink or halloween sees
+    exactly the same screens, editors included. The block sets every
+    general colour token (surfaces, borders, text, accent, ring, tints,
+    shadows, `--hud-*`, `--bg-*`), not just the few the board uses, so
+    nothing falls through to the theme. The dialogs get the stage's frame
+    (royal blue under a gold edge, the title in Anton gold), the games'
+    selects a light arrow, and halloween's corner cobwebs skip
+    `.sd-dialog`. **The top bar follows the game too** on both game pages
+    (its selector lists include `body:has(.showdown-page) header.topbar` /
+    `body:has(.quiz-page) header.topbar`, plus a navy / black bar with a
+    gold hairline at the end of the "Start screen" block), so the page reads
+    as one piece; only the gear menu's own dialogs keep the teacher's theme. A new dialog on either game page must carry
+    `sd-game` / `qb-game`. `body.sd-popout` is in the
+    themes' pop-out exclusion list, so no bats, leaves or frost reach the
+    projector window.
+  - **The board** (`buildStage()` / `renderBoard()`, the same in all three
+    windows): a team panel each side (name, the score as an illuminated
+    amber readout, **Give N to <team>**, the team's names under it, two
+    columns past 9; the leading team's panel is brighter with a gold glow,
+    `.lead`), and in the middle, as one cluster centred in the height:
+    "We asked 100 students…" over the question, **Points in play** (the
+    round's pot, big and centred, gold-framed; it bumps as it grows), the
+    board, and the **strikes** under it. The board is two columns,
+    numbered down the left then the right, as many rows as the answers
+    need (2–4), of **short wide bars** (`--bar-h`, a little taller for 2–3
+    rows, `data-rows` on the stage). A hidden bar is a dark inset face in
+    a gold frame with its number as a small gold disc at the left; revealed,
+    it is lit gold with the answer (navy, Anton) and the points in a navy
+    block on the right, the number still at the left. Revealed after the
+    round was given = silver, no points.
+  - **Moments** (all CSS **animations**, never transitions, since the
+    app-wide reduced-motion rule kills transitions): the reveal is a real
+    3D flip on the horizontal axis that overshoots and snaps back
+    (`sd-flip`, `.flipping` from `animateFlip()`) with a burst of gold
+    sparkles (`sparkle()`); a new question sends a spotlight sweep across
+    the board (`.sweeping`); a strike flashes the whole screen red behind
+    one huge X (`.sd-flash`, fixed on `<body>`, 1.4s), shakes the stage,
+    and stamps the X into the row under the board, where it stays (empty
+    strikes are faint ghosts); giving the pot lights the team's panel and
+    drops confetti over its side (`confetti()`). Under reduced motion the
+    flip (shorter) and the strike stay, the sweep, shake, sparkles and
+    confetti go; Reduce effects halves the sparkles and confetti.
+  - **The round**: a slot adds its points to the pot (`revealed[i] = 1`);
+    clicking it again hides it and takes them back. **Give** moves the pot
+    to a team (`awardedTo`), and after that a reveal is free
+    (`revealed[i] = 2`, shown in grey), as is **Show all**. **Strike**
+    adds an X, up to three ("Three strikes: the other team can steal"),
+    with a buzzer and the red flash (`strikeAt`, so every window flashes
+    it). Next / previous
+    question clears the round. **Undo** (Ctrl+Z) steps back through every
+    change (a snapshot stack, `act()`). **Reset game** zeroes both scores
+    and goes back to question 1, keeping the teams. Keys: 1–8 reveal,
+    X strike, ← → question.
+  - **State** lives in the main tab only: `localStorage
+    ['teacherpal.showdown.game']` = `{ qIndex, questionId, revealed,
+    strikes, pot, awardedTo, teams: [{ name, score, members }], strikeAt,
+    awardAt }`, so a reload keeps the game (a question that no longer
+    exists starts a fresh round). Nothing about the game is in Supabase.
+  - **The start screen** (`#sd-start` here, `#qb-start` on Jeopardy;
+    `section.gs`, `.gs-sd` / `.gs-qb`, the "Start screen" block in
+    `style.css`): **the game always opens here** (main tab only), never on
+    the board. A title screen, not a settings page, **built as a stage**:
+    - **A lighting rig** along the top (`.gs-rig`: a truss and nine lamp
+      cans, four lit), with a **beam off each lit lamp** (`.gs-lights i`):
+      soft-edged cones (a conic-gradient mask, no hard clip), brighter in
+      the core, with **haze drifting in them** (`::after` blobs) and a
+      faint haze under the rig. The beams sway and the haze drifts; still
+      under reduced motion and Reduce effects (which also hides the haze).
+    - **A horizon and a floor** (`.gs-body::before` / `::after`, wide
+      layers clipped by `.gs-inner`'s `overflow: clip`): a bright line
+      behind the panels at 46% of their height, then the floor running
+      down in perspective (an SVG grid, `--gs-grid`, lines converging on a
+      point above the horizon, faded with distance) with a light pool
+      under the Start button. **The panels stand on it** with a soft
+      reflection (`-webkit-box-reflect`; Chromium / Safari only, off under
+      Reduce effects).
+    - The title huge in the game's face (Feud: "FAMILY" over a gold,
+      extruded "FEUD" in Anton; Jeopardy: "JEOPARDY!" in Oswald gold with a
+      hard black shadow over a dimmed board grid).
+    - **Two equal panels** (`.gs-panel`, `1fr 1fr`, stretched to one
+      height; measured 500 × 174 each at 1366×768): each a console desk
+      with a head row (the label, then "2 sets" or **Split a class into
+      teams**) over a two-column grid of **tiles**. **A set card and a
+      team plate are the same tile** (`--tile-h`, one frame, corner,
+      depth, centred text in the game's display face); **gold fill means
+      selected and nothing else**. The cards scroll past two rows.
+    - **The buttons**: `[Game setup] [START GAME] [How to play]` on one
+      row (`.gs-sec` pills with an icon either side of `.gs-go`; under
+      900px Start takes its own row above them). Start **breathes**
+      (`gs-pulse` scale + a gold halo on its `::after`, paused on hover;
+      off under reduced motion and Reduce effects).
+    - **The sets / boards as cards** (`.gs-card`, `aria-pressed`): name,
+      "8 questions" / "6 categories · 29 clues", and when it was last
+      played ("Played today", "Played 3 days ago", "Not played yet": this
+      browser, `teacherpal.showdown.played` / `teacherpal.quiz.played`,
+      `{ id: ms }`, written on Start). Click picks one (`selId`;
+      double-click starts it). An empty set can't be picked. The cards are
+      a grid (`auto-fill`, ≥ 9.5rem: three across at 1366px), rows one
+      fixed height (`--tile-h`), names clamped to two lines; past two rows
+      the grid scrolls by whole rows (scroll snap). Each card is a
+      `.gs-item` holding the card and, beside it (never inside: no button
+      in a button), a **pencil** in its top-right corner (`.gs-edit`,
+      `data-edit`) that opens that set's editor straight away (the hub's
+      own `onSetupClick`; not the sample board or the starter set). The
+      last card is **+ New set** / **+ New board** (`.gs-new`, `data-new`,
+      the same tile with a dashed gold outline and a plus; once the table
+      exists): it opens the editor on a new set's paste box, focused, not
+      Game setup. Closing the editor repaints the start screen.
+    - **No saved sets** (once the table exists): one big add-card fills the
+      panel (`.gs-first`, two rows tall, the dashed gold `.gs-new`): a plus,
+      **Make your first set** / **Make your first board**, and one line, "Or
+      press Start to try the starter questions." / "… the sample board.". It
+      goes straight to the editor's paste box, like + New set.
+    - **Nothing in a tile scrolls or clips.** If copy doesn't fit, it is cut:
+      a card says "29 clues" (not categories too), an empty one just
+      "Empty", names clamp to two lines with the full name on hover. Tiles
+      are `overflow: hidden` only as a guard; check with a script that every
+      child stays inside its card.
+    - **The teams** as plates: the names are inputs (type over them to
+      rename), the student count under each, and **Split a class into
+      teams** in the panel's head (Game setup → Teams).
+    - **A game in progress** (`inProgress()`: Feud any score, pot, strike,
+      revealed answer or a question past the first; Jeopardy any used
+      clue, result, score fix or Round 2) and the same set picked: the
+      button says **Resume game**, and a strip above it
+      (`.gs-progress-wrap`: a red dot, "Game in progress: Owls 120 – 80
+      Team 2, question 4 of 8", and **Start over** at its end). Picking a
+      different set: **Start game**, and the strip says "Starting ends the
+      game in progress: …" with **Resume that game**. Start / Start
+      over = `startNew()` (that set from the top, scores to 0, teams and
+      names kept; one Undo step); Resume changes nothing. Either way the
+      screen goes and the board is ready.
+    - While it's up the rest of the page is `inert` and the game keys are
+      off (`startOn`). Game setup's **Start the game** also skips it; its X
+      comes back to it, repainted (a set used in the hub is now picked).
+    - **Loading**: until the sets are in, `commit()` neither saves nor
+      moves the game (`listLoaded`); before that, a reload rendered the
+      starter set first and saved over the game in progress (Feud lost
+      the round, Jeopardy jumped to the first board).
+  - **The bottom bar holds only what's touched while playing**:
+    **Game setup**, Strike, Undo, ‹ Question n of N ›, Show all, Reset
+    game, then the icon buttons: host view (`#sd-host-btn`,
+    `aria-pressed`), sound, full screen window, mini window, full screen.
+    Sets and teams live in Game setup.
+  - **Game setup** (`#sd-setup` here, `#qb-setup` on Jeopardy; `dialog.gh`
+    in the game's palette, the "Game setup" block in `style.css`, the
+    `gh-*` classes): a full-screen hub for someone who isn't technical.
+    Plain words only (no "import", "parse", "config"), every section opens
+    with one sentence saying what it's for, big buttons, one primary
+    action per screen. Four numbered sections down the left
+    (`.gh-nav`, `showSection()`; a row of chips under 900px), one shown at
+    a time, and a footer that's always there: a one-line summary
+    ("Unit 3 · 8 questions · Owls vs Team 2", `paintSummary()`) and
+    **Start the game** (closes it). It reopens on the section last open.
+    - **Questions** (Jeopardy: **Boards**): a card per set (name, "8
+      questions", or "6 categories · 29 clues"), the one playing ringed in
+      the accent with "✓ Playing now"; the others have a big **Use this
+      set** (`playSet()`, undoable) and **Edit** (opens `#sd-editor` over the
+      hub). A dashed **Make a new set** card opens the editor on a new set's
+      paste box, with "Or get questions with AI" under it. Before the
+      migration: the built-in set's card only, and a plain note.
+    - **Get questions with AI**: four numbered steps (copy this message,
+      with **Copy**; open ChatGPT or Claude and change `[topic]`; copy what
+      it writes back; paste it here), the paste box beside **a worked
+      example** of a good answer, a live line ("Found 8 questions. Give
+      them a name and save."), a name field and **Save these 8
+      questions**, which creates the set (`createSurveySet`, or
+      `newBoard()` on Jeopardy), plays it and goes back to Questions with
+      "Saved … It's ready to play."
+    - **Teams**: the names (Jeopardy: how many teams, then a box per
+      team with its score), **Split into two teams** from a period's
+      roster, and who's on each team: today's attendance (the table,
+    else the absent cache) minus anyone sitting out, then
+    `groupWithFormula(present, 2, rules)` when that period's **grouping**
+    rules are on in Create Groups (impossible musts run as "try"), else a
+    shuffle dealt alternately. Names are first names with the growing
+    last-name prefix (Create Groups' rule). Click a name to move it across;
+    **Clear the names** clears them.
+    - **How to play**: six illustrated steps (small HTML/CSS pictures,
+      `.hp-*`: the teams, the question, the board with one answer flipped,
+      three X's, the pot going to a team, the final scores; Jeopardy's: a
+      board with a square picked, a clue, +/− buttons, Double!) and a
+      "Good to know" box (keys, the projector window, Undo).
+    - **First time**: the start screen says so (below) and points at
+      Game setup; it no longer opens by itself.
+  - **Question sets**: each teacher keeps several named sets (one per
+    unit, `survey_sets`); Game setup's cards pick the one playing (`playSet()`, undoable, back to question 1).
+  - **Game editors** (`#sd-editor` here, `#qb-editor` on Jeopardy; the
+    shared "Game editors" block in `style.css`, `ed-*` classes, in each
+    game's own palette), full screen under 900px. **Nothing to save by
+    hand**: every change saves itself 700ms later (`scheduleSave()` →
+    one serialized PATCH), the head says Saving… / Saved / Not saved, and
+    closing (or Esc) saves anything pending. Jeopardy's is laid out
+    differently (see the board editor below); Family Feud's is deliberately
+    **one simple choice, not a control panel** (`dialog.sd-ed`,
+    `min(54rem, 96vw)` × `min(44rem, 92vh)`):
+    - **Head**: the set picker (its last option "+ New set"), a **⋯ menu**
+      (`#sd-set-menu`, a `<details>`: Rename, which swaps the picker for
+      a name field until Enter / blur, Esc cancels; Duplicate set; Delete
+      set, with a confirm), the save state, **Play this set**, and a close
+      **X**. Nothing else up there.
+    - **Two views, never both** (`edView`): a set with questions opens on
+      its list, an empty or new set on the paste box.
+    - **The paste view** (`#sd-paste`): a heading, one hint line, the box,
+      **Add N questions** (live count) and, folded away, **"Need questions?
+      Get help writing them"** (`.ed-help`): the AI prompt with **Copy
+      prompt**. Pasting adds the questions straight away (`addPasted()` on
+      the `paste` event) and swaps to the list ("Added 3 questions."); typed
+      text goes in with the button. An empty set also offers "start from the
+      8 built-in questions"; from the list, **Paste more** brings the box
+      back (empty; what's added joins the end) with "Back to the list".
+    - **The list** (`#sd-list`): one line per question: number, the
+      question, "6 answers" (or "Needs an answer" in red), a chevron. Click
+      one to open it; **only one is open at a time** (`openQ`). The open
+      one is edited in place, with no boxes: the question on a hairline,
+      the answers in two columns of text + points on hairlines (no spinner,
+      the × shows on hover), "+ Add an answer", the auto-points note or
+      "Fill in points for me", and **Play this one / Duplicate / Delete**
+      on that question only. Enter in the question goes to the answers,
+      Enter in an answer adds the next, Backspace on an empty one removes
+      it. **+ New question** adds and opens one.
+    - **The parser** (`parseGame()`, `window.__showdownParse`): a blank
+      line separates questions, the first line is the question, each line
+      after it an answer. Forgiving: "Q:" / "A:" cues, bullets and "1." /
+      "a)" numbering dropped; answers split on `|`, `;` or commas on one
+      line; points trailing or leading ("Pencil 30", "Pencil - 30",
+      "Pencil: 30", "Pencil (30 pts)", "30 - Pencil", tabs); a line that
+      looks like a question ("…?", "Name a…", a wh-question) starts a new
+      one even without a blank line; "Name a color: Red, Blue, Green" is a
+      whole question on one line. If only a few answers in a question have
+      a number, the numbers are part of the answer ("Route 66"). Up to 8
+      answers; the extra are counted on the count line.
+    - **Auto points** (`autoPoints(n)`, `window.__showdownPoints`): a
+      question pasted with no numbers gets descending points totalling 100,
+      each 0.7 of the one before (6 answers: 34/24/16/12/8/6), shown muted
+      in italics with "Points filled in for you". Typing a number makes the
+      question manual (`auto` off); "Fill in points for me" turns it back
+      on. A few missing points in a manual question are filled the same way
+      on save.
+  - **Before `migration-feud-sets.sql`**: the editor is read-only (a note
+    says to run it; the list opens, nothing to paste, no ⋯ menu) and the game plays the old `survey_questions` bank as
+    "My questions", or `STARTER` without it. A teacher with no sets plays
+    `STARTER` until they paste one.
+  - **Host mode (two screens)**: the teacher drags the full screen window
+    to the projector and runs the game from the laptop.
+    - **When**: the projector window posts `{ type: 'here' }` every 2s
+      (and `bye` on `pagehide`); while one was heard in the last 7s the
+      main tab adds `.hosting` to `.showdown-page`, which hides
+      `#sd-stage` and shows `#sd-host`. Close it and the board comes back
+      on its own, so one screen still works. The host view icon button
+      (`#sd-host-btn`, `aria-pressed`, first in the controls) overrides
+      it for the visit (`hostPref`); opening the window from the page
+      (`openProjector()`) goes back to following it.
+    - **The host view** (`paintHost()`, from `commit()`): the question
+      and "Question n of N"; every answer as a `.sd-ha` button (number,
+      text, points, "Reveal"), which reveals it on the projector with the
+      full flip; revealed = marked done (green number, "✓ On the board",
+      or "Shown, no points"), and a click hides it again, like the board.
+      Under them the pot, the three strikes and the round note
+      (`roundNote()`, shared with the board). On the right: the projector
+      status (a green / red dot, "Open projector window" when there is
+      none), each team's score with **Give N to …**, and the key hints. The
+      controls row stays under it (Game setup, Strike, Undo, the question
+      arrows, Show all, Reset, the icons). Compact, laptop-sized, `--ss-*` look.
+    - **The projector never gets the answers**: `send()` broadcasts
+      `redacted(view())`, in which every hidden answer is
+      `{ text: '', points: '' }`, so not even its page source gives one
+      away; the mini window gets the same.
+    - While hosting, the strike flash and the confetti play only in the
+      other windows (`boardQuiet`), not over the teacher's sheet. Sounds
+      stay in the main tab.
+  - **Windows**: the main tab is the only writer and broadcasts
+    `{ st, q, num, total }` on every change; the full screen window and
+    the mini window (Chrome's Picture-in-Picture with
+    `showdown-popout.html?mini=1` in an iframe) post `request-state` on
+    opening. Sounds (Web Audio: a two-note ding, a sawtooth buzzer, a
+    rising chime for Give) play only in the main tab; mute is
+    `teacherpal.showdown.muted`.
+  - **Layout**: the board fills the page at 1366×768 with the controls in
+    one row under it; under 900px the board goes on top, the two teams
+    side by side under it, and the page scrolls. Full screen hides the
+    Questions / Teams / Reset group and the window buttons, and keeps
+    Strike, Undo and the question arrows (the teacher runs the game from
+    the projected screen).
+- **Jeopardy** (`quiz.html` + `quiz-popout.html` + `quiz.js`), a
+  category-and-value quiz game for 2–4 teams. **The name is the TV show's**
+  (the teacher chose it; it was "Quiz Board" before; see the trademark note
+  under Family Feud). The look is our own. Files, classes (`qb-*`),
+  storage keys and the table keep their old `quiz` / `quiz_boards` names.
+  It sits in the
+  **Games** section with Family Feud.
+  - **Its own look, independent of the themes and of Family Feud**: a
+    classic quiz-show board, deep blue cells (`--qb-cell`, a radial
+    gradient) divided by **heavy black lines** (the grid's `gap` over a
+    black `.qb-boardwrap`, a heavier one under the category row) on a
+    near-black ground; values in **gold with a hard black drop shadow**;
+    category names in white condensed caps (**Oswald**, `--qb-display`);
+    the clue in a **bold serif, upper case** (**Libre Baskerville**,
+    `--qb-serif`). Both fonts load only on quiz.html and its window. The
+    palette is `--qb-*` at the top of the "Jeopardy" block in
+    `style.css`, which also re-points the shared tokens inside
+    `.quiz-page`, `body.qb-popout` and its dialogs (`dialog.qb-game`:
+    the editor and Game setup, framed in black with an Oswald gold title), exactly
+    as Family Feud does: the same screens in every theme. `body.qb-popout` is in the themes' pop-out
+    exclusion lists next to `body.sd-popout`.
+  - **The board** (`buildStage()` / `render()`, every window): a header
+    row of categories (`fitCats()` shrinks a long name until it fits its
+    cell, down to half size; it wraps only between words), then five rows
+    of values. Only the categories in use are shown (`playCols()`, each
+    keeping its column index `c`, so a key never shifts). A clue with no
+    text is a dark, unclickable `.blank` cell; a **used** cell goes dark
+    too, but stays clickable: it reopens on its answer, to fix a score.
+    Under the board, a podium per team (name, score, members); a score
+    below zero is coral (`.neg`), the leader (above zero, not tied with
+    everyone) is outlined in gold (`.lead`).
+  - **A clue** (`st.open = { key, c, r, phase, wagerTeam, wager }`;
+    phases `wager` → `clue` → `answer`): it opens over the board only
+    (same grid cell, so the scores stay in view) and **grows out of its
+    cell**: `zoomFrom()` measures the cell and the card and plays
+    `qb-zoom` from the cell's box (each window measures its own), the
+    text fading in after. Category · value on top, the clue large and
+    centred. Space, a click on the clue or **Show answer** shows the answer
+    in gold under a rule; then each team has **+value** and **−value**
+    buttons (keys 1–4 / Shift+1–4); pressing one again clears it, and both
+    teams can be marked (one right, one wrong). Space or Esc again (or
+    **Back to board**) closes it and the cell is used.
+  - **Scores** are derived, never stored as totals: a team's score is its
+    `adjust` plus every result (`results[key] = { v, r: { team: ±1 } }`),
+    so reopening a clue and changing a mark just works. Typing a score in
+    Game setup's Teams changes `adjust`. Keys are `<boardId>:<round>:<c>-<r>`, so each
+    board and round keeps its own used cells.
+  - **Doubles**: any clue can be marked a hidden double in the editor.
+    Opening one shows **Double!** (a bounce) and the wager form first: pick
+    the team, the wager (0 up to its score, or the round's top value if
+    that's more, `maxWager()`), then **Show the clue**; only that team
+    can be marked, for the wager.
+  - **Round 2 ×2** doubles every value (200–1000) and is a fresh board
+    (its own used cells); Round 1 comes back as it was.
+  - **The start screen** (`#qb-start`): Family Feud's (see there), with
+    boards; the teams are 2–4 plates.
+  - **Game setup** (`#qb-setup`): Family Feud's hub (see there), with
+    Boards for Questions. **Teams** there: 2–4 teams (dropping one moves its
+    members to the last team left), names, scores, and **Split the class
+    into the teams** from a period: today's attendance minus anyone
+    sitting out, then the period's **grouping** rules when they're on
+    (`groupWithFormula` into N, impossible musts as "try"), else a shuffle
+    dealt round. Click a name to move it to the next team.
+  - **The board editor** (`#qb-editor`, from a board's Edit or Make a
+    new board in Game setup): the game editor described under Family
+    Feud (autosave, Close, the picker with "+ New board", Duplicate board,
+    Delete board, Play this board). Its tabs:
+    - **Paste the whole board** (default): the text box, the AI prompt with
+      Copy, and the preview: the board as it will play (the categories in
+      use, 5 rows, every clue with its value, answer and a DOUBLE tag; "No
+      answer yet" in red). A click on a cell opens it in Clue by clue. Text
+      ↔ board both ways (`parseImport()` / `boardText()`): a category on
+      its own line, then its clues, easiest first, as "clue | answer"; a
+      leading `*` or "(double)" marks a double; "(blank)" keeps a clue's
+      place empty and "(no category name)" an unnamed category, so the text
+      written back reads in exactly as it was. Forgiving: tabs, " — ",
+      " = ", "Answer:", "100 | clue | answer", "$200." in front, Q: / A:
+      pairs, numbering and bullets, blank lines anywhere; an optional
+      "Board: Name" line names a board still called "New board". Extra
+      clues past five and categories past six are counted on the count line.
+    - **Clue by clue**: the 6 × 5 grid (category names on top, a button per
+      clue showing its value and the start of its text, DOUBLE on a double)
+      and the selected clue's form (clue, answer, the double box). Enter in
+      the answer moves to the next clue down.
+  - **No boards yet**: before the migration the game plays `SAMPLE`
+    (an English review board) and the editor is read-only with a note;
+    after it, a teacher with no boards still plays the sample (read-only
+    in the editor) and **Duplicate board** makes an editable copy.
+  - **Host mode (two screens)**: the same as Family Feud's: the
+    projector window's "here" every 2s puts `.hosting` on `.quiz-page`
+    (the stage hides, `#qb-host` shows), the board comes back 7s after it
+    closes, and the host view icon button (`#qb-host-btn`) overrides it.
+    - **The host view** (`paintHost()`): on the left the whole board as a
+      grid of `.qb-hc` buttons, each the value (and a DOUBLE tag), the
+      clue (3 lines) and its answer in gold (2 lines); a played cell is dark
+      with "✓ played" and who scored ("Team 1 +500"), the open one is ringed
+      in gold. A click opens it on the projector (a played one reopens on
+      its answer, as on the board). On the right: the projector status, the
+      open clue (category · value, what the projector shows now, the clue,
+      the answer always visible to the teacher), and its controls in
+      phase order: the wager (team buttons, the amount, **Show the clue**),
+      **Show answer**, then **+ / −** per team, and **Back to board**;
+      then the scores and the key hints. `paintWager()` and
+      `scoreButtons()` are shared with the clue card. The keys work the
+      same in both views.
+    - **The projector never gets a clue early**: `redacted()` blanks every
+      clue to `'?'` (or `''` for a blank cell) and every answer, except
+      the open clue, whose text arrives once the wager is in and its answer
+      once it's shown.
+  - **State and windows**: the main tab is the only writer (localStorage
+    `teacherpal.quiz.game`, an Undo stack, Ctrl+Z) and broadcasts
+    `{ st, board }` on every change over `BroadcastChannel('teacherpal-quiz')`;
+    the full screen window and the mini window (Picture-in-Picture with
+    `quiz-popout.html?mini=1`) post `request-state` when they open.
+    Sounds (Web Audio: a rising sweep on open, a two-note reveal, a chime
+    for right, a buzz for wrong, a fanfare for Double) play only in the
+    main tab; mute is `teacherpal.quiz.muted`.
+  - **Layout**: the board fills the page at 1366×768 with the teams and
+    one row of controls under it; full screen hides Game setup, Reset
+    and the window buttons; under 900px the page scrolls. Reduced
+    motion: the clue fades in instead of zooming, no Double bounce. Reduce
+    effects: no Double bounce, no gold glow on the leader.
 - **Noise Meter** (`noise.html` + `noise-popout.html` + `noise.js`). One
   `.noise-stage` `.hud-box` that fills the page (`flex: 1`, up to 80rem
   wide, rows `auto 1fr auto` with the meter centred in the middle one; the

@@ -1,0 +1,309 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Family Feud — TeacherPal</title>
+  <meta name="color-scheme" content="dark">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Anton&family=Comfortaa:wght@400;500;600;700&family=Orbitron:wght@500;600;700&family=Pirata+One&family=Rajdhani:wght@500;600;700&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+  <script>(function(){try{var t=localStorage.getItem('teacherpal.theme')||'default';t={jarvis:'default',marwa:'pink',earthy:'default'}[t]||t;document.documentElement.setAttribute('data-theme',t);if(localStorage.getItem('teacherpal.effects')==='reduced')document.documentElement.setAttribute('data-effects','reduced');}catch(e){document.documentElement.setAttribute('data-theme','default');}})();</script>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body class="hub">
+  <div class="app">
+    <header class="topbar"></header>
+
+    <main class="page showdown-page">
+      <div id="status" class="status"></div>
+
+      <!-- The start screen: where the game opens. Pick the questions, check
+           the teams, Start (or Resume). Covers the board until then. -->
+      <section class="gs gs-sd" id="sd-start" aria-labelledby="sd-start-title">
+        <div class="gs-rig" aria-hidden="true"><i></i><i class="on"></i><i></i><i class="on"></i><i></i><i class="on"></i><i></i><i class="on"></i><i></i></div>
+        <div class="gs-lights" aria-hidden="true"><i></i><i></i><i></i><i></i></div>
+        <div class="gs-inner">
+          <header class="gs-head">
+            <h1 class="gs-title" id="sd-start-title"><span class="gs-t1">Family</span><span class="gs-t2">Feud</span></h1>
+            <p class="gs-tag">We asked 100 students…</p>
+          </header>
+          <div class="gs-body">
+            <section class="gs-panel gs-sets" aria-labelledby="sd-gs-sets-h">
+              <div class="gs-panel-head"><h2 class="gs-h" id="sd-gs-sets-h">Choose your questions</h2><span class="gs-meta" id="sd-gs-count"></span></div>
+              <div class="gs-cards" id="sd-gs-cards" role="list"></div>
+            </section>
+            <section class="gs-panel gs-teams" aria-labelledby="sd-gs-teams-h">
+              <div class="gs-panel-head"><h2 class="gs-h" id="sd-gs-teams-h">Teams</h2><button type="button" class="gs-mini" id="sd-gs-roster">Split a class into teams</button></div>
+              <div class="gs-team-row" id="sd-gs-teams"></div>
+            </section>
+          </div>
+          <div class="gs-progress-wrap" id="sd-gs-pwrap" hidden>
+            <span class="gs-dot" aria-hidden="true"></span>
+            <p class="gs-progress" id="sd-gs-progress" role="status"></p>
+            <button type="button" class="gs-mini" id="sd-gs-second">Start over</button>
+          </div>
+          <div class="gs-actions">
+            <button type="button" class="gs-sec" id="sd-gs-setup"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h10M18 6h2M4 12h4M12 12h8M4 18h12M20 18h0"/><circle cx="16" cy="6" r="2"/><circle cx="10" cy="12" r="2"/><circle cx="18" cy="18" r="2"/></svg>Game setup</button>
+            <button type="button" class="gs-go" id="sd-gs-go">Start game</button>
+            <button type="button" class="gs-sec" id="sd-gs-howto"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M9.5 9.5a2.5 2.5 0 1 1 3.5 2.3c-.6.3-1 .9-1 1.6v.6M12 17.5h0"/></svg>How to play</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- The board: built by showdown.js (the same markup as the full screen
+           window and the mini window, showdown-popout.html). -->
+      <section class="sd-stage" id="sd-stage" aria-label="Family Feud board"></section>
+
+      <!-- Host view (built by showdown.js): every answer with its points, the
+           pot, the strikes and the teams, for the teacher's own screen. On
+           whenever a projector window is open (or by the Host view switch). -->
+      <section class="sd-host" id="sd-host" aria-label="Host view" hidden>
+        <div class="sd-host-main">
+          <div class="sd-host-head">
+            <span class="sd-host-qnum" id="sd-host-qnum"></span>
+            <h2 class="sd-host-q" id="sd-host-q"></h2>
+          </div>
+          <ol class="sd-host-answers" id="sd-host-answers" aria-label="Answers: click one to show it on the projector"></ol>
+          <div class="sd-host-round">
+            <div class="sd-host-pot"><span>Points in play</span><b id="sd-host-pot">0</b></div>
+            <div class="sd-host-strikes" id="sd-host-strikes" aria-label="Strikes: 0 of 3"><span></span><span></span><span></span></div>
+            <span class="sd-host-note" id="sd-host-note"></span>
+          </div>
+        </div>
+        <aside class="sd-host-side">
+          <div class="sd-proj" id="sd-proj" data-on="0">
+            <span class="sd-proj-dot" aria-hidden="true"></span>
+            <span class="sd-proj-text" id="sd-proj-text">No projector window</span>
+            <button type="button" id="sd-proj-open" class="primary">Open projector window</button>
+          </div>
+          <div class="sd-host-teams" id="sd-host-teams"></div>
+          <p class="sd-host-keys"><kbd>1</kbd>–<kbd>8</kbd> reveal · <kbd>X</kbd> strike · <kbd>←</kbd> <kbd>→</kbd> question · <kbd>Ctrl Z</kbd> undo</p>
+        </aside>
+      </section>
+
+      <div class="sd-controls" role="toolbar" aria-label="Game controls">
+        <div class="sd-ctl-group no-present">
+          <button type="button" id="sd-setup-btn" class="gh-open"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 6h10M18 6h2M4 12h4M12 12h8M4 18h12M20 18h0"/><circle cx="16" cy="6" r="2"/><circle cx="10" cy="12" r="2"/><circle cx="18" cy="18" r="2"/></svg><span>Game setup</span></button>
+        </div>
+        <div class="sd-ctl-group">
+          <button type="button" id="sd-strike" class="sd-strike-btn" title="Strike (X)"><span class="sd-x-glyph" aria-hidden="true">✕</span><span>Strike</span></button>
+          <button type="button" id="sd-undo" title="Undo (Ctrl+Z)" disabled><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 14 4 9l5-5"/><path d="M4 9h11a5 5 0 0 1 0 10h-3"/></svg><span>Undo</span></button>
+        </div>
+        <div class="sd-ctl-group sd-nav-group">
+          <button type="button" id="sd-prev" class="icon-btn" title="Previous question (←)" aria-label="Previous question"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15 18-6-6 6-6"/></svg></button>
+          <span class="sd-qcount" id="sd-qcount">Question 1 of 1</span>
+          <button type="button" id="sd-next" class="icon-btn" title="Next question (→)" aria-label="Next question"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg></button>
+          <button type="button" id="sd-reveal-all" title="Show every answer still hidden (no points)">Show all</button>
+        </div>
+        <div class="sd-ctl-group no-present">
+          <button type="button" id="sd-reset">Reset game</button>
+        </div>
+        <div class="sd-ctl-group sd-icons">
+          <button type="button" id="sd-host-btn" class="icon-btn no-present" aria-pressed="false" title="Host view: every answer and the controls on your screen, while the projector window shows only the board" aria-label="Host view"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="12" rx="1.5"/><path d="M8 20h8M12 16v4"/><path d="M7 8h6M7 11h4"/></svg></button>
+          <button type="button" id="sd-mute" class="icon-btn" role="switch" aria-checked="false" title="Sound on" aria-label="Mute sound"><span class="when-off"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M11 5 6 9H2v6h4l5 4z"/><path d="M15.5 8.5a5 5 0 0 1 0 7M19 5a10 10 0 0 1 0 14"/></svg></span><span class="when-on"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M11 5 6 9H2v6h4l5 4z"/><path d="m22 9-6 6M16 9l6 6"/></svg></span></button>
+          <button type="button" id="sd-popout" class="icon-btn no-present" title="Full screen window: opens a window you can make full screen on your projector" aria-label="Full screen window"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/></svg></button>
+          <button type="button" id="sd-pip" class="icon-btn no-present" title="Mini window: a small window that floats above other apps" aria-label="Mini window" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="4" width="20" height="16" rx="2"/><rect x="12.5" y="11.5" width="7" height="5.5" rx="1" fill="currentColor"/></svg></button>
+          <button type="button" class="icon-btn" data-fullscreen aria-pressed="false" title="Full screen (F)" aria-label="Toggle full screen"><span class="when-off"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 3H5a2 2 0 0 0-2 2v3M16 3h3a2 2 0 0 1 2 2v3M8 21H5a2 2 0 0 1-2-2v-3M16 21h3a2 2 0 0 0 2-2v-3"/></svg></span><span class="when-on"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 3v3a2 2 0 0 1-2 2H3M21 8h-3a2 2 0 0 1-2-2V3M3 16h3a2 2 0 0 1 2 2v3M16 21v-3a2 2 0 0 1 2-2h3"/></svg></span></button>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <!-- Game setup: everything before the game, one section at a time.
+       Built for someone who has never set up a game. -->
+  <dialog id="sd-setup" class="gh sd-game" aria-labelledby="sd-setup-title">
+    <div class="gh-inner">
+      <header class="gh-head">
+        <h2 id="sd-setup-title">Game setup</h2>
+        <button type="button" id="sd-setup-close" class="ed-close" aria-label="Close setup" title="Close"><svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+      </header>
+      <nav class="gh-nav" aria-label="Setup">
+        <button type="button" data-sec="questions" aria-current="true"><span class="gh-nav-n" aria-hidden="true">1</span><span><b>Questions</b><small>Choose what to play</small></span></button>
+        <button type="button" data-sec="ai"><span class="gh-nav-n" aria-hidden="true">2</span><span><b>Get questions with AI</b><small>Let ChatGPT or Claude write them</small></span></button>
+        <button type="button" data-sec="teams"><span class="gh-nav-n" aria-hidden="true">3</span><span><b>Teams</b><small>Who's playing</small></span></button>
+        <button type="button" data-sec="howto"><span class="gh-nav-n" aria-hidden="true">4</span><span><b>How to play</b><small>The rules, step by step</small></span></button>
+      </nav>
+      <div class="gh-main">
+        <section class="gh-sec" data-sec="questions" aria-labelledby="sd-gh-q-h">
+          <h3 id="sd-gh-q-h" tabindex="-1">Questions</h3>
+          <p class="gh-lead">Choose the questions you want to play, or make a set of your own.</p>
+          <p class="gh-flash" id="sd-gh-flash" role="status"></p>
+          <p class="gh-note" id="sd-gh-note"></p>
+          <div class="gh-cards" id="sd-gh-cards"></div>
+        </section>
+
+        <section class="gh-sec" data-sec="ai" aria-labelledby="sd-gh-ai-h" hidden>
+          <h3 id="sd-gh-ai-h" tabindex="-1">Get questions with AI</h3>
+          <p class="gh-lead">ChatGPT or Claude can write a whole game for you in about a minute. Follow these four steps.</p>
+          <ol class="gh-steps">
+            <li>
+              <p class="gh-step-t">Copy this message</p>
+              <div class="gh-prompt">
+                <p id="sd-gh-prompt">Create 8 Family Feud style survey questions about <mark class="gh-mark">[topic]</mark> for high school students. For each, give the question on its own line, followed by 6 likely answers on separate lines, most common first. Keep the answers to one or two words. Leave a blank line between questions. No numbering, no points, no extra text.</p>
+                <button type="button" id="sd-gh-copy" class="primary">Copy</button>
+              </div>
+            </li>
+            <li>
+              <p class="gh-step-t">Open ChatGPT or Claude and paste it in</p>
+              <p>Change <mark class="gh-mark">[topic]</mark> to your unit, like "Macbeth" or "the water cycle", then send it.</p>
+            </li>
+            <li>
+              <p class="gh-step-t">Copy everything it writes back</p>
+              <p>All of it, from the first line to the last.</p>
+            </li>
+            <li>
+              <p class="gh-step-t">Paste it in the box below</p>
+              <div class="gh-paste">
+                <textarea id="sd-gh-text" spellcheck="false" aria-label="Paste what ChatGPT or Claude wrote" placeholder="Paste it here"></textarea>
+                <aside class="gh-example" aria-label="Example">
+                  <p class="gh-example-t">A good answer looks like this:</p>
+                  <pre>Name something Macbeth sees.
+A dagger
+A ghost
+The witches
+Blood
+A forest
+
+Name a word that means "brave".
+Bold
+Fearless
+Heroic</pre>
+                  <p class="gh-example-n">A question, its answers on the lines under it, then a blank line before the next question. You don't need points: they're filled in for you.</p>
+                </aside>
+              </div>
+              <div class="gh-save">
+                <label class="gh-field"><span>Name it</span><input type="text" id="sd-gh-name" maxlength="60" placeholder="For example: Unit 3, Macbeth"></label>
+                <button type="button" id="sd-gh-save" class="primary gh-big" disabled>Save these questions</button>
+              </div>
+              <p class="gh-msg" id="sd-gh-msg" role="status"></p>
+            </li>
+          </ol>
+        </section>
+
+        <section class="gh-sec" data-sec="teams" aria-labelledby="sd-gh-t-h" hidden>
+          <h3 id="sd-gh-t-h" tabindex="-1">Teams</h3>
+          <p class="gh-lead">Name your two teams. If you like, split your class between them.</p>
+          <div class="gh-names">
+            <label class="gh-field"><span>Team 1</span><input type="text" id="sd-name-0" maxlength="30"></label>
+            <label class="gh-field"><span>Team 2</span><input type="text" id="sd-name-1" maxlength="30"></label>
+          </div>
+          <div class="gh-block">
+            <p class="gh-block-t">Split your class (if you want)</p>
+            <p class="gh-help">Picks from today's attendance, so absent students are left out.</p>
+            <div class="gh-row">
+              <select id="sd-period" aria-label="Class period"></select>
+              <button type="button" id="sd-split" class="primary">Split into two teams</button>
+              <button type="button" id="sd-clear-members">Clear the names</button>
+            </div>
+            <p class="gh-help" id="sd-split-note"></p>
+          </div>
+          <div class="sd-team-cols gh-team-cols">
+            <section class="sd-team-col"><p class="gh-team-h" id="sd-team-h-0">Team 1</p><ul id="sd-members-0" class="sd-member-list"></ul></section>
+            <section class="sd-team-col"><p class="gh-team-h" id="sd-team-h-1">Team 2</p><ul id="sd-members-1" class="sd-member-list"></ul></section>
+          </div>
+          <p class="gh-help">Click a name to move it to the other team.</p>
+        </section>
+
+        <section class="gh-sec" data-sec="howto" aria-labelledby="sd-gh-h-h" hidden>
+          <h3 id="sd-gh-h-h" tabindex="-1">How to play</h3>
+          <p class="gh-lead">Two teams try to guess the most popular answers to a survey question. Here is how a round goes.</p>
+          <ol class="gh-howto">
+            <li><div class="gh-pic" aria-hidden="true"><span class="hp-team">Team 1</span><span class="hp-vs">vs</span><span class="hp-team">Team 2</span></div><b>Make two teams</b><p>Split the class in two. Each team picks a name.</p></li>
+            <li><div class="gh-pic" aria-hidden="true"><span class="hp-q"><small>We asked 100 students…</small>Name something in your backpack</span></div><b>Read the question</b><p>Read it out loud. 100 students were asked it, and the board hides their most popular answers.</p></li>
+            <li><div class="gh-pic" aria-hidden="true"><span class="hp-board"><span class="hp-bar lit"><i>Pencil</i><em>30</em></span><span class="hp-bar">3</span><span class="hp-bar">2</span><span class="hp-bar">4</span></span></div><b>Guess the answers</b><p>A team calls out guesses. When a guess is on the board, click it and it flips over to show the answer and its points.</p></li>
+            <li><div class="gh-pic" aria-hidden="true"><span class="hp-x">✕</span><span class="hp-x">✕</span><span class="hp-x">✕</span></div><b>Three wrong guesses</b><p>A wrong guess is a strike. After three strikes the other team gets one guess. If it's on the board, they steal the points.</p></li>
+            <li><div class="gh-pic" aria-hidden="true"><span class="hp-pot">64</span><span class="hp-arrow">→</span><span class="hp-team">Team 1</span></div><b>Give the points</b><p>The points from the round go to the team that won it. Then go on to the next question.</p></li>
+            <li><div class="gh-pic" aria-hidden="true"><span class="hp-scores"><span class="hp-score win">Team 1 <b>212</b></span><span class="hp-score">Team 2 <b>148</b></span></span></div><b>Most points wins</b><p>Play as many questions as you like. The team with the most points at the end wins.</p></li>
+          </ol>
+          <div class="gh-tips">
+            <p class="gh-tips-t">Good to know</p>
+            <ul>
+              <li>On the keyboard: <b>1</b> to <b>8</b> flips an answer, <b>X</b> gives a strike, and the arrow keys change the question.</li>
+              <li>Using a projector? Press the full screen window button and drag that window to the projector. Your laptop then shows every answer, so only you can see them.</li>
+              <li>Made a mistake? Undo takes back the last thing you did.</li>
+            </ul>
+          </div>
+        </section>
+      </div>
+      <footer class="gh-foot">
+        <span class="gh-summary" id="sd-gh-summary"></span>
+        <button type="button" id="sd-gh-start" class="primary gh-start">Start the game</button>
+      </footer>
+    </div>
+  </dialog>
+
+  <!-- Questions: the open set, either as a paste box or as a list of
+       questions (one open at a time). Saves itself; the X closes. -->
+  <dialog id="sd-editor" class="sd-dialog sd-game ed-dialog sd-ed" aria-labelledby="sd-editor-title">
+    <div class="sd-dialog-inner">
+      <header class="ed-head">
+        <h2 id="sd-editor-title">Questions</h2>
+        <div class="ed-set">
+          <select id="sd-set-pick" aria-label="Question set"></select>
+          <input type="text" id="sd-set-name" maxlength="60" aria-label="Set name" hidden>
+          <details class="ed-menu" id="sd-set-menu">
+            <summary aria-label="More for this set" title="More">
+              <svg viewBox="0 0 24 24" aria-hidden="true" fill="currentColor"><circle cx="5" cy="12" r="1.8"/><circle cx="12" cy="12" r="1.8"/><circle cx="19" cy="12" r="1.8"/></svg>
+            </summary>
+            <div class="ed-menu-list" role="menu">
+              <button type="button" role="menuitem" id="sd-set-rename">Rename</button>
+              <button type="button" role="menuitem" id="sd-set-dup">Duplicate set</button>
+              <button type="button" role="menuitem" id="sd-set-del" class="danger">Delete set</button>
+            </div>
+          </details>
+        </div>
+        <span class="ed-save" id="sd-save-state" role="status"></span>
+        <button type="button" id="sd-play-set" class="primary">Play this set</button>
+        <button type="button" id="sd-editor-close" class="ed-close" aria-label="Close" title="Close">
+          <svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>
+        </button>
+      </header>
+      <p class="ed-note" id="sd-editor-note"></p>
+
+      <div class="sd-pastev" id="sd-paste">
+        <h3 class="sd-pastev-title" id="sd-paste-title">Paste your questions</h3>
+        <p class="ed-label">A blank line between questions. The question first, then one answer per line. Points are optional.</p>
+        <textarea id="sd-paste-text" class="ed-text" spellcheck="false" aria-labelledby="sd-paste-title" placeholder="Name something you keep in your backpack.
+Pencil 30
+Notebook 22
+Phone 18
+
+Name something you find in a kitchen.
+Fridge
+Stove
+Sink"></textarea>
+        <div class="sd-pastev-row">
+          <button type="button" id="sd-paste-add" class="primary" disabled>Add these questions</button>
+          <button type="button" id="sd-paste-back" class="ed-link">Back to the list</button>
+          <button type="button" id="sd-starter" class="ed-link">Or start from the 8 built-in questions</button>
+        </div>
+        <details class="ed-help">
+          <summary>Need questions? Get help writing them</summary>
+          <p>Give this prompt to ChatGPT or Claude with your topic or unit notes, then paste its answer in the box.</p>
+          <div class="ed-ai-box">
+            <pre class="ed-ai-prompt" id="sd-ai-prompt">Create 8 Family Feud style survey questions about [topic] for high school students. For each, give the question on its own line, followed by 6 likely answers on separate lines, most common first. Keep the answers to one or two words. Leave a blank line between questions. No numbering, no points, no extra text.</pre>
+            <button type="button" id="sd-ai-copy">Copy prompt</button>
+          </div>
+        </details>
+      </div>
+
+      <div class="sd-listv" id="sd-list-view" hidden>
+        <div class="sd-listv-bar">
+          <span class="ed-count" id="sd-list-count"></span>
+          <span class="sd-listv-note" id="sd-list-note" role="status"></span>
+          <button type="button" id="sd-list-new">+ New question</button>
+          <button type="button" id="sd-paste-more">Paste more</button>
+        </div>
+        <ol class="sd-list" id="sd-list" aria-label="Questions: click one to edit it"></ol>
+      </div>
+    </div>
+  </dialog>
+
+  <script src="shared.js"></script>
+  <script src="schedule.js"></script>
+  <script src="formula.js"></script>
+  <script src="nav.js"></script>
+  <script src="showdown.js"></script>
+</body>
+</html>
