@@ -25,6 +25,7 @@ const NAV_SECTIONS = [
   { id: 'games', label: 'Games', items: [
     { href: 'showdown.html', label: 'Family Feud' },
     { href: 'quiz.html', label: 'Jeopardy' },
+    { href: 'leaderboard.html', label: 'Leaderboard' },
   ] },
   { id: 'planning', label: 'Planning', items: [
     { href: 'lessons.html', label: 'Lesson Plans' },

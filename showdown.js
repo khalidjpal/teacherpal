@@ -17,7 +17,10 @@
 //
 // Game state (localStorage teacherpal.showdown.game, so a reload keeps the game):
 //   { setId, qIndex, questionId, revealed: [0|1|2 x8], strikes, pot, awardedTo,
-//     teams: [{ name, score, members: [label] } x2], strikeAt, awardAt }
+//     teams: [{ name, score, members: [label] } x2], strikeAt, awardAt,
+//     roster: null | { periodId, periodName, students: { label: { id, name } } } }
+//   roster: set when the teams were split from a class, so End game can put
+//   the game on that period's Leaderboard (game-end.js); null = just names.
 //   revealed: 0 hidden, 1 shown and in the round's pot, 2 shown for nothing
 //   (after the round was awarded, or "Show all").
 (function () {
@@ -396,7 +399,7 @@
   // ---------- the main tab ----------
   function freshTeams() { return [{ name: 'Team 1', score: 0, members: [] }, { name: 'Team 2', score: 0, members: [] }]; }
   function freshRound() { return { revealed: Array(SLOTS).fill(0), strikes: 0, pot: 0, awardedTo: null, strikeAt: 0, awardAt: 0 }; }
-  function freshGame() { return { setId: null, qIndex: 0, questionId: null, teams: freshTeams(), ...freshRound() }; }
+  function freshGame() { return { setId: null, qIndex: 0, questionId: null, teams: freshTeams(), roster: null, ...freshRound() }; }
 
   let sets = [];               // [{ id, name, questions }]: the teacher's question sets
   let fallbackSet = STARTER_SET;   // played while there are no sets (or no table: the old bank, else the starter set)
@@ -411,7 +414,8 @@
       const g = JSON.parse(localStorage.getItem(GAME_KEY) || 'null');
       if (g && Array.isArray(g.teams) && g.teams.length === 2 && Array.isArray(g.revealed)) {
         const base = freshGame();
-        return { ...base, ...g, teams: g.teams.map((t, k) => ({ ...base.teams[k], ...t, members: Array.isArray(t.members) ? t.members : [] })) };
+        const roster = g.roster && g.roster.periodId && g.roster.students && typeof g.roster.students === 'object' ? g.roster : null;
+        return { ...base, ...g, roster, teams: g.teams.map((t, k) => ({ ...base.teams[k], ...t, members: Array.isArray(t.members) ? t.members : [] })) };
       }
     } catch { /* ignore */ }
     return freshGame();
@@ -441,6 +445,7 @@
     send();
     paintHost();
     $('sd-undo').disabled = !undo.length;
+    $('sd-end').disabled = !inProgress();
     // the arrows only stop at the ends, and then they say why
     const atFirst = st.qIndex <= 0, atLast = st.qIndex >= questions.length - 1;
     const arrow = (id, off, on, why) => { const el = $(id); el.disabled = off; el.title = off ? why : on; el.setAttribute('aria-label', off ? why : on.replace(/ (.)$/, '')); };
@@ -507,6 +512,26 @@
     act(() => {
       const teams = st.teams.map((t) => ({ ...t, score: 0 }));
       Object.assign(st, freshGame(), { teams });
+    });
+  }
+  // End game: the final scores, then (teams from a roster) onto the
+  // Leaderboard; the game then starts fresh on the start screen
+  function endGame() {
+    if (typeof openGameEnd !== 'function') return;
+    const set = playingSet();
+    openGameEnd({
+      game: 'feud', palette: 'sd-game',
+      setId: set ? set.id : null, setName: set ? set.name : '',
+      teams: st.teams.map((t) => ({ name: t.name, score: t.score, members: t.members.slice() })),
+      roster: st.roster,
+      onEnd(saved) {
+        act(() => {
+          const teams = st.teams.map((t) => ({ ...t, score: 0 }));
+          Object.assign(st, freshGame(), { teams, roster: st.roster, setId: st.setId });
+        });
+        setStart(true);
+        setStatus(saved ? `Game saved to the ${(st.roster && st.roster.periodName) || 'class'} leaderboard.` : 'Game ended.', 'ok');
+      },
     });
   }
   function live(msg) { const el = $('sd-live'); if (el) el.textContent = msg; }
@@ -643,6 +668,20 @@
       }
     }
   }
+  // each student's label on the board, unique within the class, and the
+  // label -> student map End game records the leaderboard from
+  function rosterFor(periodId, present) {
+    const label = new Map();
+    const students = {};
+    for (const s of present) {
+      let l = labelFor(s, present);
+      for (let n = 2; students[l]; n++) l = `${labelFor(s, present)} (${n})`;
+      label.set(s.id, l);
+      students[l] = { id: s.id, name: s.name };
+    }
+    const opt = $('sd-period').selectedOptions[0];
+    return { label, info: { periodId, periodName: opt ? opt.textContent : '', students } };
+  }
   async function splitClass() {
     const periodId = $('sd-period').value;
     if (!periodId) { setStatus('Add a period in Rosters first.', 'error'); return; }
@@ -673,8 +712,10 @@
         const mixed = shuffle(present.slice());
         groups = [mixed.filter((_, i) => i % 2 === 0), mixed.filter((_, i) => i % 2 === 1)];
       }
+      const roster = rosterFor(periodId, present);
       act(() => {
-        groups.forEach((g, k) => { st.teams[k].members = g.map((s) => labelFor(s, present)).sort((a, b) => a.localeCompare(b)); });
+        st.roster = roster.info;
+        groups.forEach((g, k) => { st.teams[k].members = g.map((s) => roster.label.get(s.id)).sort((a, b) => a.localeCompare(b)); });
       });
       const skipped = students.length - present.length;
       $('sd-split-note').textContent = `${present.length} students split ${how}${skipped ? ` (${skipped} absent or sitting out)` : ''}.`;
@@ -1750,7 +1791,8 @@
   $('sd-gh-save').addEventListener('click', saveAi);
   editor.addEventListener('close', () => { if (setup.open) paintSetup(); if (startOn) paintStart(); });
   $('sd-split').addEventListener('click', splitClass);
-  $('sd-clear-members').addEventListener('click', () => { act(() => { st.teams.forEach((t) => { t.members = []; }); }); paintTeamsDialog(); });
+  $('sd-clear-members').addEventListener('click', () => { act(() => { st.teams.forEach((t) => { t.members = []; }); st.roster = null; }); paintTeamsDialog(); });
+  $('sd-end').addEventListener('click', endGame);
   for (const k of [0, 1]) {
     $(`sd-name-${k}`).addEventListener('input', (e) => {
       st.teams[k].name = e.target.value.trim().slice(0, 30) || `Team ${k + 1}`;

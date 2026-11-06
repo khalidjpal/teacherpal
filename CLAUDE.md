@@ -20,10 +20,10 @@ Dark dashboard look with a subtle pink accent (see design-ref.png).
 
 ## Screens
 
-Thirteen screens behind **five grouped dropdowns** in the top nav (built by
+Fourteen screens behind **five grouped dropdowns** in the top nav (built by
 `nav.js` on every page), mirroring the hub's sections: **Daily**
 (Attendance, Bathroom) · **Teacher Tools** (Create Groups, Timer, Noise
-Meter, Name Wheel) · **Games** (Family Feud, Jeopardy) · **Planning** (Lesson Plans, Seating) · **System**
+Meter, Name Wheel) · **Games** (Family Feud, Jeopardy, Leaderboard) · **Planning** (Lesson Plans, Seating) · **System**
 (Schedule, Rosters, Admin). The brand at the left is the link to the hub. The active
 screen gets `aria-current="page"` (pink fill). The nav bar also carries
 the live readouts — clock, date, SCHED, NOW period + countdown — and the
@@ -39,6 +39,7 @@ full-screen toggle. There is no sidebar; every page uses the full width.
 | Name Wheel | `wheel.html` | Cold-calling: spin a wheel of the period's present students, big name in the middle, no-repeats mode, saved pick lists per period ("Board work · 12 of 28 picked", kept until reset), full screen window + mini window. In halloween the wheel is a cauldron (names float in the brew as bubbles; the winner's bubble rises and pops), in pink a bubble tea cup (a boba pearl per student; the cup shakes, the pearls swirl, and the winner's pearl, its name on it, travels up the straw and comes to the front of the screen as a big disc with the name readable across the room), in thanksgiving a farmer choosing a turkey (the scene fills the width, controls in one row under it: the farm on the left two thirds, a turkey per student, its first name on it, penned in a fenced yard in a still sunset farm with a painted "<display name>'s Turkey Farm" sign; the farmer (each teacher picks how they look: Settings → Your farmer…, a hijab among the options) walks the flock, inspects a couple and shakes his head while the rest duck and one sneaks off, then points at one, which freezes mid-gobble; he lobs it into the hopper at the top of a production line down the right third (as it drops in, the name comes up large over the farm and stays up): an oven (out comes a golden roast turkey, steaming), an S of conveyor belt down through a packer (white foam tray, clear film) and a labeller (a small name label) onto a grocery shelf at the bottom; with No repeats the shelf fills a slot per student from the top shelf down, the count on its base, until SOLD OUT drops and "Let them out" bursts the packages and sends the turkeys back into the pen); in winter Santa's sleigh on a snowy hilltop at night (a heaped pile of wrapped presents fills the left and centre, a name on each gift tag; Santa sits in his sleigh on the right, reins in hand, reindeer hitched, a big open sack beside him; he leans out and rummages through the pile, lifting one and putting it back, grabs the winner and holds it up as the name comes up large, then tosses it over his shoulder into the sack; the pile shrinks and the load in the sleigh grows, "7 / 28" on its side, and when everyone's picked the reindeer take off; "Let them out" dumps the load back into a fresh pile; absentees are on a "Not here today" notice staked in the snow). **In winter the teacher chooses the picker** (a small select in the Options group, saved per teacher): Santa's sleigh (above, the default) or a **sled race** (every student on their own sled at the top of a long snowy hill, the name on the sled's side; a whistle, a race down past pines and snowmen with bumps, air and bumps between sleds, the winner across the finish line, their name up large with snow and confetti, a couple of others wiping out; the winner goes into a warm lodge at the side that fills as the class is called, "Let them out" sends them back up). The race has two more selects, saved per teacher: **Short race** (that straight run, ~6s) or **Long race** (~19s, a winding course: bends, a valley, a big jump, a pine tunnel, a final sprint, with the lead changing hands, filmed in shots it cuts between: wide at the gate, side tracking, over the leader's shoulder, tight on two sleds battling, low in the snow at the jump, head-on at the finish), and **1 winner … 6 places** (the places cross one at a time, each announced with its name, then a numbered results panel; every place is marked picked). **Built to be followed**: while they race each sled carries an upright name badge above it (nudged apart so none overlap), the sleds hold lanes spread down the track, the camera moves gently, the background steps back, and a live leaderboard down the left lists everyone in running order |
 | Family Feud | `showdown.html` | A survey game for two teams (its own look, not the TV show's): "We asked 100 students…" over a board of up to 8 numbered slots that flip to the answer and its points with a ding; strikes (up to three, a buzzer, big X's across the screen); the round's pot, given to either team; previous / next question; reset. Teams are just names, or the class split in two from a period's roster in one click. Each teacher's own named question sets (one per unit), set up by pasting a whole game as text (points optional: filled in for you, an AI prompt a click away), then a short list where one question opens at a time; autosaved. It opens on a game-show **start screen** (the title, the sets as cards, the teams, a big Start game, or Resume game when one is in progress); everything else before the game is in one full-screen **Game setup** hub (Questions, Get questions with AI, Teams, How to play). Full screen window + mini window. **Two screens**: with the full screen window open on the projector, the laptop shows the host view (every answer and its points as buttons, the pot, strikes, teams, every control) |
 | Jeopardy | `quiz.html` | A category-and-value quiz game for 2–4 teams (its own look, not the TV show's): up to 6 categories × 5 clues (100–500, Round 2 doubles them); a clue grows out of its cell to fill the board, Space shows the answer, + / − the value per team (scores can go negative), the cell goes dark, back to the board; hidden doubles with a wager first. Teams are names, or the class split from a period's roster. Each teacher's saved boards (one per unit), set up by pasting a whole board as text, with a copyable AI prompt, or clue by clue; autosaved, Duplicate. The same start screen and **Game setup** hub as Family Feud (Boards, Get a board with AI, Teams, How to play). Full screen window + mini window. **Two screens**: with the full screen window open on the projector, the laptop shows the host view (every clue with its answer, the open clue's controls, the scores) |
+| Leaderboard | `leaderboard.html` | Running standings per class across every Family Feud and Jeopardy game. It opens on a **home screen** (the title, the period, that class's top three big, **See full standings**, then Games played / Projector view / Settings); the standings: every student ranked (rank, name, points, games played; crimson for first, violet for second and third), a **Games played** tab (date, game, set or board, final scores, a Counts / Just for fun switch per game), **Reset standings** per period (with a confirm; the games stay in the history), ± to adjust a student's points by hand, **How points work** (winners get their team's final score or a set amount, everyone else a participation amount). Fed by **End game** in both games, only when the teams were split from that period's roster. Its own purple and crimson look. Full screen = the projector view: the top three on a podium, then 4–10 |
 | Noise Meter | `noise.html` | Room volume from the laptop mic: big green/amber/red meter, three zones with activity presets, "Too loud" hold + chime, pop-out for the projector. Mic only while you hold it on |
 | Seating | `seating.html` | Room builder + seat assignment |
 | Bathroom | `bathroom.html` | Bathroom tracker: tap a card to sign out (quick tap or timer); per-student pass checkboxes, red flag past the limit. One centred control island (period · mode · search · gear) over a scrolling student grid, with **Out now** (live timers + End timer) and **Log** (the day's trips + a day switcher; its History button opens the quarter review — counts, CSV, print) as two fixed-height panels underneath |
@@ -84,7 +85,10 @@ full-screen toggle. There is no sidebar; every page uses the full width.
 | `timer.js`     | Countdown + stopwatch logic, plus `buildDial()` / `paintDial()` for the themed dial. **End-timestamp model**: state is `{ mode, running, paused, label, muted, targetMs, endsAt, remainingAtPause, startedAt, elapsedAtPause, zeroed }` in `localStorage['teacherpal.timer.state']`; every window computes the display from `Date.now()` against `endsAt`/`startedAt`, so tab-throttling doesn't drift. `BroadcastChannel('teacherpal-timer')` syncs main ↔ pop-out ↔ PiP. Web Audio API beep on zero (respects mute). `documentPictureInPicture.requestWindow()` on Chrome for an always-on-top floating display. Space toggles start/pause. |
 | `showdown.html` | Family Feud screen: `#sd-stage` (the board, built by `showdown.js`), `#sd-host` (the host view, shown instead of the board while hosting), `#sd-start` (the start screen, over both until Start), the `.sd-controls` row (only what's used while playing; see "Game setup" under Family Feud), and two dialogs: `#sd-setup` (the Game setup hub, Teams included) and `#sd-editor` (see "Game editors" under Family Feud). Loads `formula.js` (the team split) and `showdown.js` |
 | `showdown.js` | The whole game, in all three windows (see Family Feud under the Design rules) |
-| `quiz.html` | Jeopardy screen: `#qb-stage` (the board, the teams and the clue, built by `quiz.js`), `#qb-host` (the host view, shown instead of the stage while hosting), `#qb-start` (the start screen), the `.qb-controls` row (Game setup, Round 1 / Round 2 ×2, Undo, Reset game, then the icons: host view, sound, the two windows, full screen) and two dialogs: `#qb-setup` (the Game setup hub) and `#qb-editor` (it borrows Family Feud's `.sd-dialog` classes). Loads `formula.js` (the team split) and `quiz.js` |
+| `game-end.js` | `openGameEnd({ game, palette, setId, setName, teams, roster, onEnd })`: the **End the game** dialog both games share (main tab only; loaded by showdown.html and quiz.html before the game's script). Final scores and the winner; with a roster, what each team's players earn (`leaderboardAwards()` with the teacher's settings), a "Count this game on the leaderboard" box and **End and save** (`recordGameResult`); without one, a line saying the game isn't recorded. It builds its own `dialog.sd-dialog.ge-dialog` with the game's palette class. See Leaderboard under the Design rules |
+| `leaderboard.html` / `leaderboard.js` | The Leaderboard screen (see Leaderboard under the Design rules): `.leaderboard-page[data-view="home|standings|history"]` (the `.lb-home` home screen, the head, Standings / Games played panels, the full-screen `.lb-show`) and two dialogs, `#lb-adjust` and `#lb-settings` (`#settings` in the address opens it). Loads `shared.js`, `schedule.js`, `nav.js`, `leaderboard.js` |
+| `migration-leaderboard.sql` | One-off migration for the Leaderboard: `game_results`, `leaderboard_adjustments` and `leaderboard_settings` (one row per teacher, keyed by `owner_id`), each with the four owner policies. **Until it is run** End game says the leaderboard isn't set up and just ends the game, and the Leaderboard page says to run it. Safe to re-run; ends with a check |
+| `quiz.html` | Jeopardy screen: `#qb-stage` (the board, the teams and the clue, built by `quiz.js`), `#qb-host` (the host view, shown instead of the stage while hosting), `#qb-start` (the start screen), the `.qb-controls` row (Game setup, Round 1 / Round 2 ×2, Undo, End game, Reset game, then the icons: host view, sound, the two windows, full screen) and two dialogs: `#qb-setup` (the Game setup hub) and `#qb-editor` (it borrows Family Feud's `.sd-dialog` classes). Loads `formula.js` (the team split) and `quiz.js` |
 | `quiz.js` | The whole Jeopardy game, in all three windows (see Jeopardy under the Design rules) |
 | `quiz-popout.html` | Jeopardy's full screen window (`body.qb-popout`: the board, the teams and the open clue, no controls), and at `?mini=1` the mini window (`body.qb-mini-mode`: the board's name and the scores, the clue over them while one is open). Read-only, fed over `BroadcastChannel('teacherpal-quiz')`, and sent only the open clue (its answer once shown); the full screen window also says "here" every 2s, which turns on the host view; loads only `quiz.js` |
 | `migration-quiz-boards.sql` | One-off migration for Jeopardy: `quiz_boards` (name + categories as jsonb, up to 6, a size cap) with the four owner policies. **Until it is run the game plays the built-in sample board** (`SAMPLE` in quiz.js) and the editor is read-only. Safe to re-run; ends with a check |
@@ -131,7 +135,7 @@ Every page: `<link rel="stylesheet" href="style.css">`, an **empty**
 `<header class="topbar"></header>` (nav.js fills it), then at the end of
 `<body>`: `shared.js`, `schedule.js`, (`cauldron.js`, `boba.js`, `farmer.js`, `farmyard.js`, `sled.js` and `workshop.js` before `wheel.js` on the Name Wheel and its pop-out; `formula.js` on Seating, Create
 Groups, Family Feud and Jeopardy, `room.js` on Seating / hub / attendance), `nav.js`, then the page's
-own script (`attendance.js` + `initAttendance()` on Attendance; `lesson.js`
+own script (`game-end.js` before it on Family Feud and Jeopardy; `attendance.js` + `initAttendance()` on Attendance; `lesson.js`
 on Lesson Plans; `bathroom.js` on Bathroom; `timer.js` on Timer; nothing on
 the hub; an inline `<script>` elsewhere). Pages should have a
 `<div id="status" class="status"></div>` so `setStatus()` / `showError()`
@@ -606,6 +610,43 @@ browser (`teacherpal.showdown.game`).
 The game (teams, scores, which clues are used) is not stored: it lives in
 this browser (`teacherpal.quiz.game`).
 
+### `game_results` — the Leaderboard: one row per game ended with teams from a roster
+| column       | type        | notes |
+|--------------|-------------|-------|
+| `id`         | uuid        | PK |
+| `period_id`  | uuid        | FK → periods.id, `on delete cascade`: the class it was played with |
+| `game`       | text        | `'feud'` \| `'quiz'` |
+| `set_id` / `set_name` | text | the set or board played, and its name then (no FK: sets get deleted, the history stays; may be `'starter'` / `'sample'`) |
+| `teams`      | jsonb       | 2–4, a size cap: `[{ name, score, won, members: [{ id, name, points }] }]`. `points` = what each student earned, **fixed when the game ended** (later settings changes never rewrite it) |
+| `counts`     | boolean     | counts toward the standings (off = "Just for fun") |
+| `cleared_at` | timestamptz | set by Reset standings: still in the history, no longer counts, and can't be switched back on |
+| `played_at`  | timestamptz | |
+
+### `leaderboard_adjustments` — hand corrections to a student's points
+| column       | type        | notes |
+|--------------|-------------|-------|
+| `id`         | uuid        | PK |
+| `period_id`  | uuid        | FK → periods.id, `on delete cascade` |
+| `student_id` | uuid        | FK → students.id, `on delete cascade` |
+| `points`     | integer     | + or −, never 0 |
+| `note`       | text        | optional, ≤ 120 |
+| `cleared_at` | timestamptz | set by Reset standings |
+| `created_at` | timestamptz | |
+
+### `leaderboard_settings` — one row per teacher
+| column          | type    | notes |
+|-----------------|---------|-------|
+| `owner_id`      | uuid    | **PK** (default `auth.uid()`); upsert `on_conflict=owner_id` |
+| `winner_mode`   | text    | `'score'` (each winner gets the team's final score, never below 0) \| `'fixed'` |
+| `winner_points` | integer | each winner's points when `'fixed'` (default 100) |
+| `loser_points`  | integer | each player on the other teams (default 10) |
+
+**Standings are computed, not stored**: per student, the sum of their
+`points` in every game with `counts` and no `cleared_at`, plus their
+uncleared adjustments (`leaderboard.js`). Games played = how many of those
+games they were on a team in. Only students on the period's roster now are
+listed.
+
 ### `schedule_overrides` — dates that don't follow the weekday default
 | column        | type        | notes |
 |---------------|-------------|-------|
@@ -689,6 +730,7 @@ sends it):
 - Lesson attachments (bucket `LESSON_BUCKET` = `'lesson-files'`, `LESSON_FILE_MAX` 50 MB): `getLessonAttachments(target, date)`, `getLessonAttachmentsRange(from, to)` (calendar counts), `getAllLessonAttachments()` (search); `uploadLessonFile(target, date, file, { onProgress, sortOrder })` (XHR so it can report progress; uploads the object, then the row, and removes the object again if the row fails); `addLessonLink(target, date, { url, name, sortOrder })`; `copyLessonAttachments(rows, target, date)` (new rows, same objects); `deleteLessonAttachment(row)`; `lessonFileUrl(row, { download })` → a signed URL (`download: true` saves it under its original name). Every Storage call goes through `storageCall()`, which refreshes the token once on a 401 / "jwt" error exactly like `sb()`.
 - Family Feud: `getSurveySets()`, `createSurveySet({ name, questions, sortOrder })`, `updateSurveySet(id, { name?, questions?, sortOrder? })`, `deleteSurveySet(id)`; `getSurveyQuestions()` only reads the legacy bank (the fallback before `migration-feud-sets.sql`)
 - Jeopardy: `getQuizBoards()`, `createQuizBoard({ name, categories, sortOrder })`, `updateQuizBoard(id, { name?, categories?, sortOrder? })`, `deleteQuizBoard(id)`
+- Leaderboard: `getGameResults(periodId)` (newest first, cleared ones too), `recordGameResult({ periodId, game, setId, setName, teams, counts })`, `setGameCounts(id, counts)`, `getLeaderboardAdjustments(periodId)` (uncleared), `addLeaderboardAdjustment(periodId, studentId, points, note)`, `deleteLeaderboardAdjustment(id)`, `resetLeaderboard(periodId)` (stamps `cleared_at` on the period's games and adjustments), `getLeaderboardSettings()` → `{ winnerMode, winnerPoints, loserPoints }` (`LEADERBOARD_DEFAULTS` with no row), `saveLeaderboardSettings(s)`, and the pure `leaderboardAwards(teams, settings)` → `[{ won, points }]` (the top score wins; a tie at the top: every team on it wins)
 - Pick lists (Name Wheel): `getPickLists(periodId)`, `createPickList(periodId, name, sortOrder)`, `renamePickList(id, name)`, `deletePickList(id)` (its picks cascade); `getPickListPicks(listId)` → `[{ student_id, picked_at, manual }]` oldest first, `addPickListPick(listId, studentId, { manual, at })` (upsert: picking again moves the date), `removePickListPick(listId, studentId)`, `clearPickListPicks(listId)` (Reset)
 - `getBathroomLog(periodId, date)`, `getBathroomHistory(periodId)` (all dates, newest first, ≤2000), `getBathroomQuarter(quarter, from, to)` (every period: trips dated in `[from, to]`, either end `null` = open, plus that quarter's manual tallies; paged), `bathroomSignOut(periodId, studentId, date)` → row, `bathroomSignIn(id)` → row, `deleteBathroomTrip(id)`, `setManualTally(periodId, studentId, quarter, count)` (read-then-write because the uniqueness is a partial index; count 0 deletes)
 - `getScheduleOverrides()` → rows ordered by date; `saveScheduleOverride({ date, schedule, finals_pair, note })` (upsert on `date,owner_id`; `finals_pair` is nulled unless `schedule === 'finals'`); `deleteScheduleOverride(id)`
@@ -1321,7 +1363,7 @@ All styling lives in `style.css`; pages carry almost no inline styling.
     are `flex: 1` and the panel rows stretch, so the five rows share the
     height (no empty band under System). Sections
     in order: **Daily** (Attendance, Bathroom), **Teacher tools**
-    (Create Groups, Timer, Noise Meter, Name Wheel), **Games** (Family Feud, Jeopardy), **Planning** (Lesson Plans, Seating), **System**
+    (Create Groups, Timer, Noise Meter, Name Wheel), **Games** (Family Feud, Jeopardy, Leaderboard), **Planning** (Lesson Plans, Seating), **System**
     (Schedule, Rosters — both `.setup` dashed + quieter). Adding a tool
     means one `<a class="hud-panel">` inside the right `<section>`; no
     CSS grid template to reflow. Each panel is only a thin-line SVG icon
@@ -3463,8 +3505,13 @@ All styling lives in `style.css`; pages carry almost no inline styling.
   - **State** lives in the main tab only: `localStorage
     ['teacherpal.showdown.game']` = `{ qIndex, questionId, revealed,
     strikes, pot, awardedTo, teams: [{ name, score, members }], strikeAt,
-    awardAt }`, so a reload keeps the game (a question that no longer
-    exists starts a fresh round). Nothing about the game is in Supabase.
+    awardAt, roster }`, so a reload keeps the game (a question that no longer
+    exists starts a fresh round). Nothing about the game in progress is in
+    Supabase; only a finished one goes on the Leaderboard. `roster` =
+    `{ periodId, periodName, students: { label: { id, name } } }`, set by
+    Split into two teams (`rosterFor()`: labels made unique in the class,
+    "Ava B. (2)" if ever needed), kept while names move between teams,
+    cleared by Clear the names; null = teams that are just names.
   - **The start screen** (`#sd-start` here, `#qb-start` on Jeopardy;
     `section.gs`, `.gs-sd` / `.gs-qb`, the "Start screen" block in
     `style.css`): **the game always opens here** (main tab only), never on
@@ -3558,8 +3605,9 @@ All styling lives in `style.css`; pages carry almost no inline styling.
       starter set first and saved over the game in progress (Feud lost
       the round, Jeopardy jumped to the first board).
   - **The bottom bar holds only what's touched while playing**:
-    **Game setup**, Strike, Undo, ‹ Question n of N ›, Show all, Reset
-    game, then the icon buttons: host view (`#sd-host-btn`,
+    **Game setup**, Strike, Undo, ‹ Question n of N ›, Show all, **End
+    game** (`#sd-end`, disabled until something has happened: see
+    Leaderboard), Reset game, then the icon buttons: host view (`#sd-host-btn`,
     `aria-pressed`), sound, full screen window, mini window, full screen.
     Sets and teams live in Game setup.
   - **Game setup** (`#sd-setup` here, `#qb-setup` on Jeopardy; `dialog.gh`
@@ -3886,6 +3934,106 @@ All styling lives in `style.css`; pages carry almost no inline styling.
     and the window buttons; under 900px the page scrolls. Reduced
     motion: the clue fades in instead of zooming, no Double bounce. Reduce
     effects: no Double bounce, no gold glow on the leader.
+- **Leaderboard** (`leaderboard.html` + `leaderboard.js`, fed by
+  `game-end.js` in both games; the three tables in
+  `migration-leaderboard.sql`). One standing per student per class across
+  every Family Feud and Jeopardy game.
+  - **End game** (`#sd-end` / `#qb-end`, in each game's controls next to
+    Reset game, hidden in full screen with it; disabled until
+    `inProgress()`): `openGameEnd()` shows the final scores (highest
+    first, the winner tagged) and "Owls win!". **Only teams split from a
+    roster are recorded** (the game's `st.roster`, see Family Feud's State;
+    Jeopardy has the same field): then it lists "Leaderboard · <period>",
+    each team's student count and "+240 each", a "Count this game on the
+    leaderboard" box (on), and **End and save**. Teams that are just names
+    get one line saying the game won't go on the leaderboard, and **End
+    game**. Either way the game then starts fresh on the same set (scores
+    to 0, question 1 / every clue back, teams, names and roster kept; one
+    Undo step), the start screen comes up, and the status line says "Game
+    saved to the <period> leaderboard." A failed save keeps the game and
+    says so in the dialog. Before the migration it says the leaderboard
+    isn't set up and just ends. **Reset game is still a discard**: nothing
+    is recorded.
+  - **Points** (`leaderboardAwards()`, settings from
+    `leaderboard_settings`): the top score wins, and a tie at the top is a
+    win for every team on it. Each winner gets the team's final score
+    (never below 0; Jeopardy's can be negative) or a set amount; each player
+    on the other teams the participation amount (default 10). Worked out
+    and stored per student **when the game ends**, so changing the settings
+    never rewrites old games.
+  - **Its own look, purple and crimson** (not Family Feud's blue and gold
+    or Jeopardy's board blue; the same in every theme, top bar and dialogs
+    included: the `--lb-*` tokens at the top of the "Leaderboard" block in
+    `style.css` also re-point the shared tokens inside `.leaderboard-page`,
+    `dialog.lb-dialog` and its top bar). Ground `#1E1030`, panels
+    `#2A1745`, borders `#43265E`, text `#F4ECFF` (14:1 on the panel), muted
+    `#A890C4` (5.7:1). **Crimson `#E03A5C`** and **violet `#9B5DE5`** are
+    fills, edges and glows only (both are under 4.5:1 as text on the
+    panel); as text they use `--lb-crimson-ink` `#FF8FA3` (7.4:1) and
+    `--lb-violet-ink` `#C9A6FF` (7.9:1); white on the filled discs. A
+    crimson-to-violet rule under the title, along the top of the panel and
+    the dialogs. Display face **Russo One** (only leaderboard.html loads
+    it). **First is crimson, second and third violet**: a filled disc, a
+    wash and an edge along the row, bigger name and points; first a size up
+    again with a glow. The tabs are a pill, the selected one filled crimson;
+    the Counts switch is crimson when on. The podium: first a crimson step,
+    second and third violet. (The `data-medal` values are still gold /
+    silver / bronze.) The End game dialog stays in each game's own palette.
+  - **Calm, like the game editors**: groups sit on soft fills
+    (`--lb-fill*`), never outlines (only the fields and the dialogs' frames
+    keep an edge); no box in a box (the lists sit straight on the page, the
+    dialogs' contents unboxed); no monospace (`--font-mono` is the body face
+    on the page and in its dialogs, with tabular figures); no copy narrating
+    the controls; tight inside a group, generous between groups. **One
+    scrollbar**: the open list scrolls, the page doesn't (under 900px the
+    page scrolls instead and the lists don't).
+  - **The home screen** (`#lb-home`, `data-view="home"`): **the page always
+    opens here**, never on the table. The title (Russo One, a
+    crimson-to-violet rule under it), then the period select (the same
+    `#lb-period`, moved between `#lb-home-slot` and the head's slot by
+    `showView()`; `fillPeriodSelect`, remembered); then the class's **top
+    three, big** (`#lb-trio`, 2nd · 1st · 3rd, first taller and crimson,
+    second and third violet; names and points; an open place is a faint
+    "—"), and "26 students · 6 games" under it; with nobody on the board
+    yet, one block saying why ("No games yet" and how to get one, or no
+    students / no classes / not set up). Then **See full standings**
+    (`#lb-go`, the biggest thing on the screen), and under it Games played,
+    Projector view (`[data-fullscreen]`) and Settings as soft pills.
+  - **Standings / Games played**: the head is **‹ Leaderboard** (back home;
+    Esc does the same, except while a dialog is open or just after leaving
+    full screen), the period select, the **Standings** / **Games played**
+    tabs (a pill, the selected one crimson, ← →), then Reset standings, the
+    gear (**How points work**) and **Show on projector** (crimson;
+    `[data-fullscreen]`).
+    - **Standings**: every student on the roster: rank (a plain number; the
+      top three a filled disc; ties share a rank, 1 1 1 4),
+      name, points (Russo One, "+25 adjusted" under it), games played, and
+      a quiet ± button. Rows alternate a faint fill. Sorted by points, then games, then name. Ranks 1–3 with
+      points get the crimson / violet treatment above
+      (`data-medal`; a three-way tie for first is three crimsons and then 4).
+      Students with nothing yet are muted at the bottom.
+    - **Games played**: newest first: date and time, the game, the set or
+      board, the final scores (the winner bold with a crimson ★; each team's
+      players in its `title`), and a switch, **Counts** / **Just for fun**
+      (`setGameCounts`, optimistic). A game from before a reset is muted
+      and says "Before reset" (muted italic) instead.
+    - **Reset standings** (confirm): `resetLeaderboard()` stamps
+      `cleared_at`, so everyone is at 0 and the games stay listed. For
+      starting each quarter fresh.
+    - **Adjust** (`#lb-adjust`): the name, "1,535 points now", Points
+      (a minus takes some away), Note, and that student's
+      adjustments since the last reset, each removable.
+    - **How points work** (`#lb-settings`, also `leaderboard.html#settings`,
+      which End game's "Change how points work" opens in a new tab).
+    - Coming back to the tab reloads (a game ended in another tab shows
+      up). Before the migration the page says to run it and the controls
+      are disabled.
+  - **The projector view** = the app's full screen (`body.present`; the
+    head and panels are `.no-present`, `.lb-show` takes the page): the
+    period over a huge LEADERBOARD, the top three on a podium (2nd,
+    1st, 3rd; the middle step tallest, crimson with a glow), then 4–10 in two
+    columns. Only students with points. Nobody yet: "No games yet. Play one
+    to get on the board!"
 - **Noise Meter** (`noise.html` + `noise-popout.html` + `noise.js`). One
   `.noise-stage` `.hud-box` that fills the page (`flex: 1`, up to 80rem
   wide, rows `auto 1fr auto` with the meter centred in the middle one; the
