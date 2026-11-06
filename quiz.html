@@ -27,6 +27,11 @@
           <header class="gs-head">
             <h1 class="gs-title" id="qb-start-title"><span class="gs-t2">Jeopardy!</span></h1>
             <p class="gs-tag">Pick a category. Pick a value. Answer the clue.</p>
+            <div class="gs-progress-wrap" id="qb-gs-pwrap" hidden>
+              <span class="gs-dot" aria-hidden="true"></span>
+              <p class="gs-progress" id="qb-gs-progress" role="status"></p>
+              <button type="button" class="gs-mini" id="qb-gs-second">Start over</button>
+            </div>
           </header>
           <div class="gs-body">
             <section class="gs-panel gs-sets" aria-labelledby="qb-gs-sets-h">
@@ -37,11 +42,6 @@
               <div class="gs-panel-head"><h2 class="gs-h" id="qb-gs-teams-h">Teams</h2><button type="button" class="gs-mini" id="qb-gs-roster">Split a class into teams</button></div>
               <div class="gs-team-row" id="qb-gs-teams"></div>
             </section>
-          </div>
-          <div class="gs-progress-wrap" id="qb-gs-pwrap" hidden>
-            <span class="gs-dot" aria-hidden="true"></span>
-            <p class="gs-progress" id="qb-gs-progress" role="status"></p>
-            <button type="button" class="gs-mini" id="qb-gs-second">Start over</button>
           </div>
           <div class="gs-actions">
             <button type="button" class="gs-sec" id="qb-gs-setup"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h10M18 6h2M4 12h4M12 12h8M4 18h12M20 18h0"/><circle cx="16" cy="6" r="2"/><circle cx="10" cy="12" r="2"/><circle cx="18" cy="18" r="2"/></svg>Game setup</button>
@@ -123,15 +123,14 @@
         <button type="button" id="qb-setup-close" class="ed-close" aria-label="Close setup" title="Close"><svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
       </header>
       <nav class="gh-nav" aria-label="Setup">
-        <button type="button" data-sec="questions" aria-current="true"><span class="gh-nav-n" aria-hidden="true">1</span><span><b>Boards</b><small>Choose what to play</small></span></button>
-        <button type="button" data-sec="ai"><span class="gh-nav-n" aria-hidden="true">2</span><span><b>Get a board with AI</b><small>Let ChatGPT or Claude write them</small></span></button>
-        <button type="button" data-sec="teams"><span class="gh-nav-n" aria-hidden="true">3</span><span><b>Teams</b><small>Who's playing</small></span></button>
-        <button type="button" data-sec="howto"><span class="gh-nav-n" aria-hidden="true">4</span><span><b>How to play</b><small>The rules, step by step</small></span></button>
+        <button type="button" data-sec="questions" aria-current="true"><span class="gh-nav-n" aria-hidden="true">1</span><span><b>Boards</b></span></button>
+        <button type="button" data-sec="ai"><span class="gh-nav-n" aria-hidden="true">2</span><span><b>Get a board with AI</b></span></button>
+        <button type="button" data-sec="teams"><span class="gh-nav-n" aria-hidden="true">3</span><span><b>Teams</b></span></button>
+        <button type="button" data-sec="howto"><span class="gh-nav-n" aria-hidden="true">4</span><span><b>How to play</b></span></button>
       </nav>
       <div class="gh-main">
         <section class="gh-sec" data-sec="questions" aria-labelledby="qb-gh-q-h">
           <h3 id="qb-gh-q-h" tabindex="-1">Boards</h3>
-          <p class="gh-lead">Choose the board you want to play, or make one of your own.</p>
           <p class="gh-flash" id="qb-gh-flash" role="status"></p>
           <p class="gh-note" id="qb-gh-note"></p>
           <div class="gh-cards" id="qb-gh-cards"></div>
@@ -139,13 +138,12 @@
 
         <section class="gh-sec" data-sec="ai" aria-labelledby="qb-gh-ai-h" hidden>
           <h3 id="qb-gh-ai-h" tabindex="-1">Get a board with AI</h3>
-          <p class="gh-lead">ChatGPT or Claude can write a whole board for you in about a minute. Follow these four steps.</p>
           <ol class="gh-steps">
             <li>
               <p class="gh-step-t">Copy this message</p>
               <div class="gh-prompt">
                 <p id="qb-gh-prompt">Create a Jeopardy-style review game for high school students about <mark class="gh-mark">[topic]</mark>. Give 6 categories with 5 clues each, easiest first. Put each category name on its own line, then its 5 clues, one per line, written as: clue | answer. Keep the answers short. Start one or two of the hardest clues with * to mark them as doubles. Leave a blank line between categories. No numbering, no point values, no extra text.</p>
-                <button type="button" id="qb-gh-copy" class="primary">Copy</button>
+                <button type="button" id="qb-gh-copy">Copy</button>
               </div>
             </li>
             <li>
@@ -154,7 +152,6 @@
             </li>
             <li>
               <p class="gh-step-t">Copy everything it writes back</p>
-              <p>All of it, from the first line to the last.</p>
             </li>
             <li>
               <p class="gh-step-t">Paste it in the box below</p>
@@ -172,7 +169,6 @@ His sons will be kings. | Banquo
 Quotes
 "Out, damned spot!" | Lady Macbeth
 …</pre>
-                  <p class="gh-example-n">A category name on its own line, then its five clues, easiest first, each as clue | answer. A blank line before the next category.</p>
                 </aside>
               </div>
               <div class="gh-save">
@@ -186,11 +182,9 @@ Quotes
 
         <section class="gh-sec" data-sec="teams" aria-labelledby="qb-gh-t-h" hidden>
           <h3 id="qb-gh-t-h" tabindex="-1">Teams</h3>
-          <p class="gh-lead">Choose how many teams and name them. If you like, split your class between them.</p>
           <label class="gh-field gh-count"><span>How many teams?</span><select id="qb-count"><option value="2">2</option><option value="3">3</option><option value="4">4</option></select></label>
           <div class="gh-block">
-            <p class="gh-block-t">Split your class (if you want)</p>
-            <p class="gh-help">Picks from today's attendance, so absent students are left out.</p>
+            <p class="gh-block-t">Split your class</p>
             <div class="gh-row">
               <select id="qb-period" aria-label="Class period"></select>
               <button type="button" id="qb-split" class="primary">Split into the teams</button>
@@ -199,7 +193,7 @@ Quotes
             <p class="gh-help" id="qb-split-note"></p>
           </div>
           <div class="qb-team-cols gh-team-cols" id="qb-team-cols"></div>
-          <p class="gh-help">Type a team's name in its box. Click a student's name to move them to the next team. You can also fix a score here.</p>
+          <p class="gh-help">Click a student's name to move them to the next team.</p>
         </section>
 
         <section class="gh-sec" data-sec="howto" aria-labelledby="qb-gh-h-h" hidden>
@@ -208,7 +202,7 @@ Quotes
           <ol class="gh-howto">
             <li><div class="gh-pic" aria-hidden="true"><span class="hp-team">Team 1</span><span class="hp-team">Team 2</span><span class="hp-team">Team 3</span></div><b>Make teams</b><p>Two to four teams. Each team picks a name.</p></li>
             <li><div class="gh-pic" aria-hidden="true"><span class="hp-grid"><span>100</span><span>100</span><span>100</span><span>200</span><span class="on">200</span><span>200</span><span>300</span><span>300</span><span>300</span></span></div><b>Pick a square</b><p>A team chooses a category and an amount. Click that square. Bigger amounts are harder clues.</p></li>
-            <li><div class="gh-pic" aria-hidden="true"><span class="hp-clue">He kills Duncan.<small>Macbeth</small></span></div><b>Read the clue</b><p>Read it out loud and let the team answer. Press Space to show the right answer.</p></li>
+            <li><div class="gh-pic" aria-hidden="true"><span class="hp-clue">He kills Duncan.</span></div><b>Read the clue</b><p>Read it out loud and let the team answer. Press Space to show the right answer.</p></li>
             <li><div class="gh-pic" aria-hidden="true"><span class="hp-pm plus">+300</span><span class="hp-pm minus">−300</span></div><b>Right or wrong</b><p>Right: click + to give the team the points. Wrong: click − to take them away. Scores can go below zero.</p></li>
             <li><div class="gh-pic" aria-hidden="true"><span class="hp-dbl">Double!</span></div><b>Hidden doubles</b><p>A few squares hide a Double. The team bets some of its points before it sees the clue.</p></li>
             <li><div class="gh-pic" aria-hidden="true"><span class="hp-scores"><span class="hp-score win">Team 2 <b>1,800</b></span><span class="hp-score">Team 1 <b>1,200</b></span></span></div><b>Most points wins</b><p>Round 2 doubles every amount. When the board is done, the team with the most points wins.</p></li>
@@ -243,7 +237,7 @@ Quotes
           <button type="button" id="qb-delete" class="danger">Delete board</button>
         </div>
         <span class="ed-save" id="qb-save-state" role="status"></span>
-        <button type="button" id="qb-editor-close" class="primary">Close</button>
+        <button type="button" id="qb-editor-close" class="ed-close" aria-label="Close" title="Close"><svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
       </header>
       <p class="ed-note" id="qb-editor-note"></p>
       <div class="ed-modes">
@@ -252,12 +246,12 @@ Quotes
           <button type="button" id="qb-mode-grid" aria-pressed="false">Clue by clue</button>
         </div>
         <span class="ed-count" id="qb-pv-count"></span>
-        <button type="button" id="qb-play">Play this board</button>
+        <button type="button" id="qb-play" class="primary">Play this board</button>
       </div>
 
       <div class="ed-paste qb-paste" id="qb-paste">
         <div class="ed-left">
-          <label class="ed-label" for="qb-paste-text">A category on its own line, then its five clues as clue | answer, easiest first. Start a clue with * to make it a double.</label>
+          <label class="ed-label" for="qb-paste-text">A category on its own line, then five clues as <b class="ed-fmt">clue <span class="ed-sep">|</span> answer</b>, easiest first. A leading <b class="ed-fmt">*</b> makes a double.</label>
           <textarea id="qb-paste-text" class="ed-text" spellcheck="false" placeholder="Characters
 He kills Duncan. | Macbeth
 His sons flee to England and Ireland. | Duncan
@@ -267,7 +261,7 @@ Quotes
 Fair is foul, and foul is fair. | The witches
 Out, damned spot! | Lady Macbeth"></textarea>
           <div class="ed-ai">
-            <p>No board yet? Give this prompt to ChatGPT or Claude with your topic or your unit notes, then paste its answer in the box.</p>
+            <h3 class="ed-ai-title">Get a board from ChatGPT or Claude</h3>
             <div class="ed-ai-box">
               <pre class="ed-ai-prompt" id="qb-ai-prompt">Create a Jeopardy-style review game for high school students about [topic, or the unit material pasted below]. Give 6 categories with 5 clues each, easiest first. Put each category name on its own line, then its 5 clues, one per line, written as: clue | answer. Keep the answers short. Start one or two of the hardest clues with * to mark them as doubles. Leave a blank line between categories. No numbering, no point values, no extra text.</pre>
               <button type="button" id="qb-ai-copy">Copy prompt</button>
@@ -283,7 +277,7 @@ Out, damned spot! | Lady Macbeth"></textarea>
           <div class="qb-cell-label" id="qb-cell-label"></div>
           <label class="sd-field"><span>Clue</span><textarea id="qb-f-q" rows="2" maxlength="500" placeholder="He kills Duncan in Act 2."></textarea></label>
           <label class="sd-field"><span>Answer</span><input type="text" id="qb-f-a" maxlength="200" placeholder="Macbeth"></label>
-          <label class="qb-dbl-check"><input type="checkbox" id="qb-f-double"> <span>Hidden double: the team wagers before the clue is shown</span></label>
+          <label class="qb-dbl-check"><input type="checkbox" id="qb-f-double"> <span>Hidden double (the team wagers first)</span></label>
         </div>
       </div>
     </div>

@@ -441,8 +441,11 @@
     send();
     paintHost();
     $('sd-undo').disabled = !undo.length;
-    $('sd-prev').disabled = st.qIndex <= 0;
-    $('sd-next').disabled = st.qIndex >= questions.length - 1;
+    // the arrows only stop at the ends, and then they say why
+    const atFirst = st.qIndex <= 0, atLast = st.qIndex >= questions.length - 1;
+    const arrow = (id, off, on, why) => { const el = $(id); el.disabled = off; el.title = off ? why : on; el.setAttribute('aria-label', off ? why : on.replace(/ (.)$/, '')); };
+    arrow('sd-prev', atFirst, 'Previous question (←)', 'This is the first question');
+    arrow('sd-next', atLast, 'Next question (→)', questions.length > 1 ? 'This is the last question' : 'This set has only one question');
     $('sd-strike').disabled = !currentQ() || st.strikes >= 3;
     const q2 = currentQ();
     $('sd-reveal-all').disabled = !q2 || q2.answers.every((_, i) => st.revealed[i]);
@@ -628,7 +631,7 @@
       $(`sd-team-h-${k}`).textContent = `${st.teams[k].name} · ${st.teams[k].members.length || 'no'} student${st.teams[k].members.length === 1 ? '' : 's'}`;
       const ul = $(`sd-members-${k}`);
       if (!st.teams[k].members.length) {
-        const li = document.createElement('li'); li.className = 'none'; li.textContent = 'No students yet. That\'s fine: the team name is enough.';
+        const li = document.createElement('li'); li.className = 'none'; li.textContent = 'No students yet';
         ul.replaceChildren(li);
       } else {
         ul.replaceChildren(...st.teams[k].members.map((m, i) => {
@@ -706,333 +709,521 @@
   }
 
   // ---------- the editor ----------
-  // One set open at a time (ed), in one of two views, never both:
-  //   paste: just the paste box (and, folded away, the AI prompt). Pasting a
-  //          game adds its questions and swaps to the list.
-  //   list:  one line per question; click one to open it (one at a time).
-  //          "Paste more" brings the box back.
-  // Every change saves itself 700ms later; the X saves anything pending.
+  // One set open at a time (ed), on one of two tabs:
+  //   paste: the paste box beside a live preview of what was read from it,
+  //          "Add these questions", and the AI prompt under them.
+  //   write: one question at a time, big: the question, answer rows (three
+  //          to start, one more as the last fills, up to 8), points tucked
+  //          on the right; "Save and add another"; "Question 3 of 5" with
+  //          arrows; the questions so far down the left.
+  // Every change saves itself 700ms later; the X and Done save anything pending.
   const editor = $('sd-editor');
   let ed = null;               // { id | null (not created yet), name, questions, readonly, extra }
-  let edView = 'paste';
-  let openQ = -1;              // the question open in the list
+  let edView = 'paste';        // 'paste' | 'write'
+  let cur = 0;                 // the question open on the write tab
   const canEdit = () => !!ed && !ed.readonly && bankReady;
   const clone = (x) => JSON.parse(JSON.stringify(x));
   const qDone = (q) => q.question.trim() && q.answers.some((a) => a.text.trim());
+  const qBlank = (q) => !q.question.trim() && !q.answers.some((a) => a.text.trim());
+  const blankQ = () => ({ id: newId(), question: '', answers: [], auto: true });
 
+  // a set still called what the app called it has no name of its own yet
+  const DEFAULT_NAME = /^(new set|untitled set)( \d+)?$/i;
   function loadDraft(set) {
     const builtin = !set || set === fallbackSet;
+    const fresh = builtin && bankReady;     // a new set, not saved until it has a question
     ed = {
       id: builtin ? null : set.id,
-      name: builtin ? (bankReady ? uniqueName('My questions') : set.name) : set.name,
-      questions: builtin && bankReady ? [] : clone(set.questions),
+      name: fresh ? '' : set.name,
+      questions: fresh ? [] : clone(set.questions),
       readonly: !bankReady,
       extra: 0,
+      unnamed: fresh || (!builtin && DEFAULT_NAME.test(set.name.trim())),
+      asked: false,                         // the name prompt shows once per set
     };
-    openQ = -1;
-    edView = ed.questions.length || !canEdit() ? 'list' : 'paste';
+    hideAsk();
+    cur = 0;
+    edView = ed.questions.length || !canEdit() ? 'write' : 'paste';
     $('sd-paste-text').value = '';
     renaming(false);
     paintSave('');
     paintEditor();
   }
+  // the set's name, as an editable title, and beside it a separate control
+  // that only switches sets
   function paintPick() {
+    paintTitle();
     const pick = $('sd-set-pick');
-    const opts = sets.map((s) => [s.id, s.name]);
-    if (!ed.id) opts.push(['', ed.name + (bankReady ? ' (new)' : '')]);
-    if (bankReady) opts.push(['__new', '+ New set']);
-    pick.replaceChildren(...opts.map(([v, t]) => { const o = document.createElement('option'); o.value = v; o.textContent = t; return o; }));
-    pick.value = ed.id || '';
-    pick.disabled = !bankReady;
+    const head = document.createElement('option');
+    head.value = ''; head.textContent = 'Switch set'; head.disabled = true; head.hidden = true;
+    const opts = sets.map((x) => { const o = document.createElement('option'); o.value = x.id; o.textContent = (x.id === ed.id ? '✓ ' : '') + x.name; return o; });
+    if (bankReady) { const o = document.createElement('option'); o.value = '__new'; o.textContent = '+ New set'; opts.push(o); }
+    pick.replaceChildren(head, ...opts);
+    pick.value = '';
+    pick.disabled = !bankReady || (!sets.length && !!ed.id);
+    pick.hidden = !bankReady;
+  }
+  function paintTitle() {
+    const t = $('sd-set-name');
+    if (document.activeElement !== t) t.value = ed.unnamed ? '' : ed.name;
+    t.disabled = !canEdit();
   }
   function paintEditor() {
     paintPick();
     $('sd-set-menu').hidden = !canEdit();
     $('sd-set-dup').disabled = $('sd-set-del').disabled = !ed.id;
-    $('sd-play-set').disabled = !ed.id || !cleanQuestions(ed.questions).length;
+    paintPlay();
     paintView();
   }
+  const paintPlay = () => { $('sd-play-set').disabled = !ed.id || !cleanQuestions(ed.questions).length; };
+  function paintTabs() {
+    for (const [v, id] of [['paste', 'sd-tab-paste'], ['write', 'sd-tab-write']]) {
+      const t = $(id), on = edView === v;
+      t.setAttribute('aria-selected', String(on)); t.tabIndex = on ? 0 : -1;
+    }
+    const n = ed.questions.filter((q) => !qBlank(q)).length;
+    $('sd-tab-n').textContent = n ? String(n) : '';
+  }
   function paintView() {
+    if (edView === 'write' && !ed.questions.length && canEdit()) { ed.questions.push(blankQ()); cur = 0; }
+    paintTabs();
     $('sd-paste').hidden = edView !== 'paste';
-    $('sd-list-view').hidden = edView !== 'list';
-    if (edView === 'paste') paintPasteView(); else paintList();
+    $('sd-write').hidden = edView !== 'write';
+    if (edView === 'paste') paintPasteView(); else paintWrite();
+  }
+  function showTab(v, focus) {
+    if (v === edView) return;
+    if (edView === 'write') dropBlank();
+    edView = v;
+    paintView();
+    if (focus) focusTab();
+  }
+  function focusTab() {
+    if (!canEdit()) return;
+    if (edView === 'paste') $('sd-paste-text').focus();
+    else { const q = ed.questions[cur]; const a = q && q.question.trim() && !q.answers.some((x) => x.text.trim()) ? firstEmptyAnswer() : null; (a || $('sd-wq-q')).focus(); }
   }
   function paintSave(text, kind) {
     const el = $('sd-save-state');
     el.textContent = text; el.dataset.kind = kind || '';
   }
+  function flashEd(text) {
+    const el = $('sd-ed-flash');
+    el.textContent = text;
+    clearTimeout(flashEd.t);
+    flashEd.t = setTimeout(() => { el.textContent = ''; }, 5000);
+  }
 
-  // ---------- the paste view ----------
+  // ---------- the paste tab ----------
   function paintPasteView() {
-    const more = ed.questions.length > 0;
-    $('sd-paste-title').textContent = more ? 'Paste more questions' : 'Paste your questions';
-    $('sd-paste-back').hidden = !more;
-    $('sd-starter').hidden = more || !canEdit();
+    $('sd-starter').hidden = ed.questions.some((q) => !qBlank(q)) || !canEdit();
+    $('sd-paste-text').disabled = !canEdit();
     paintFound();
   }
+  // the preview: every question read from the box, its answers and points
   function paintFound() {
-    const { questions } = parseGame($('sd-paste-text').value);
-    const n = questions.filter(qDone).length;
+    const { questions, extra } = parseGame($('sd-paste-text').value);
+    const ok = questions.filter(qDone);
+    const n = ok.length;
     $('sd-paste-add').disabled = !n || !canEdit();
     $('sd-paste-add').textContent = n ? `Add ${n} question${n === 1 ? '' : 's'}` : 'Add these questions';
+    const bad = questions.length - n;
+    $('sd-pv-count').textContent = questions.length
+      ? `${n} question${n === 1 ? '' : 's'} found${bad ? ` · ${bad} not finished` : ''}${extra ? ` · ${extra} left out` : ''}` : '';
+    const list = $('sd-pv-list');
+    if (!questions.length) {
+      const li = document.createElement('li'); li.className = 'sd-pv-empty';
+      li.textContent = 'Nothing yet';
+      list.replaceChildren(li);
+      return;
+    }
+    list.replaceChildren(...questions.map((q, i) => {
+      const li = document.createElement('li'); li.className = 'sd-pv-q' + (qDone(q) ? '' : ' bad');
+      const h = document.createElement('div'); h.className = 'sd-pv-head';
+      const num = document.createElement('span'); num.className = 'sd-pv-n'; num.textContent = i + 1;
+      const t = document.createElement('span'); t.className = 'sd-pv-text'; t.textContent = q.question.trim() || 'No question';
+      h.append(num, t);
+      li.appendChild(h);
+      if (!qDone(q)) {
+        const w = document.createElement('p'); w.className = 'sd-pv-warn';
+        w.textContent = q.question.trim() ? 'No answers yet: this one won’t be added' : 'No question: this one won’t be added';
+        li.appendChild(w);
+        return li;
+      }
+      const ol = document.createElement('ol'); ol.className = 'sd-pv-ans' + (q.auto ? ' auto' : '');
+      q.answers.filter((a) => a.text.trim()).forEach((a) => {
+        const r = document.createElement('li');
+        const at = document.createElement('span'); at.textContent = a.text;
+        const ap = document.createElement('b'); ap.textContent = a.points;
+        r.append(at, ap); ol.appendChild(r);
+      });
+      li.appendChild(ol);
+      if (q.auto) { const p = document.createElement('p'); p.className = 'sd-pv-auto'; p.textContent = 'Points filled in for you'; li.appendChild(p); }
+      return li;
+    }));
   }
-  // what's in the box joins the set, and the list comes back
+  // what's in the box joins the set
   function addPasted() {
     if (!canEdit()) return false;
     const { questions, extra } = parseGame($('sd-paste-text').value);
     const found = questions.filter(qDone);
     if (!found.length) return false;
     found.forEach((q) => { q.id = newId(); });
+    dropBlank();
     ed.questions.push(...found);
     ed.extra = extra;
     $('sd-paste-text').value = '';
-    edView = 'list'; openQ = -1;
     paintEditor();
-    flashList(`Added ${found.length} question${found.length === 1 ? '' : 's'}${extra ? ` · ${extra} answer${extra === 1 ? '' : 's'} left out (8 per question)` : ''}.`);
+    flashEd(`Added ${found.length} question${found.length === 1 ? '' : 's'}. See ${found.length === 1 ? 'it' : 'them'} on Write questions.${extra ? ` ${extra} answer${extra === 1 ? '' : 's'} left out (8 per question).` : ''}`);
     scheduleSave();
+    askName(() => $('sd-paste-text').focus());
     return true;
   }
-  function flashList(text) {
-    const el = $('sd-list-note');
-    el.textContent = text;
-    clearTimeout(flashList.t);
-    flashList.t = setTimeout(() => { el.textContent = ''; }, 5000);
-  }
 
-  // ---------- the list ----------
-  function rowMeta(q) {
-    if (!q.question.trim()) return ['Needs a question', true];
-    const n = q.answers.filter((a) => a.text.trim()).length;
-    return n ? [`${n} answer${n === 1 ? '' : 's'}`, false] : ['Needs an answer', true];
-  }
-  function rowHead(q, i) {
-    const b = document.createElement('button');
-    b.type = 'button'; b.className = 'ed-row'; b.dataset.act = 'toggle';
-    b.setAttribute('aria-expanded', String(i === openQ));
-    const n = document.createElement('span'); n.className = 'ed-row-n'; n.textContent = i + 1;
-    const t = document.createElement('span'); t.className = 'ed-row-q'; t.textContent = q.question.trim() || 'New question';
-    if (!q.question.trim()) t.classList.add('blank');
-    const [meta, warn] = rowMeta(q);
-    const m = document.createElement('span'); m.className = 'ed-row-meta' + (warn ? ' warn' : ''); m.textContent = meta;
-    const chev = document.createElement('span'); chev.className = 'ed-row-chev'; chev.setAttribute('aria-hidden', 'true');
-    b.append(n, t, m, chev);
-    return b;
-  }
-  function questionBody(q, i) {
-    const ro = !canEdit();
-    const body = document.createElement('div'); body.className = 'ed-q';
-    const qt = document.createElement('textarea'); qt.rows = 1;
-    qt.className = 'ed-q-text'; qt.dataset.f = 'q'; qt.maxLength = 300; qt.value = q.question; qt.disabled = ro;
-    qt.placeholder = 'Type the question'; qt.setAttribute('aria-label', `Question ${i + 1}`);
-    const ol = document.createElement('ol'); ol.className = 'ed-ans';
-    q.answers.forEach((a, j) => {
-      const row = document.createElement('li'); row.className = 'ed-a'; row.dataset.a = j;
-      const t = document.createElement('input'); t.type = 'text'; t.className = 'ed-a-text'; t.dataset.f = 'text'; t.maxLength = 60; t.value = a.text; t.disabled = ro;
-      t.placeholder = 'Answer'; t.setAttribute('aria-label', `Question ${i + 1}, answer ${j + 1}`);
-      const p = document.createElement('input'); p.type = 'number'; p.className = 'ed-a-pts' + (q.auto ? ' auto' : ''); p.dataset.f = 'points';
-      p.min = 0; p.max = 999; p.inputMode = 'numeric'; p.placeholder = 'pts'; p.value = a.points == null ? '' : a.points; p.disabled = ro;
-      p.setAttribute('aria-label', `Points for answer ${j + 1}`);
-      row.append(t, p);
-      if (!ro) { const x = document.createElement('button'); x.type = 'button'; x.className = 'ed-x'; x.dataset.act = 'rm'; x.setAttribute('aria-label', 'Remove this answer'); x.title = 'Remove'; x.textContent = '×'; row.appendChild(x); }
-      ol.appendChild(row);
-    });
-    const foot = document.createElement('div'); foot.className = 'ed-q-foot';
-    const link = (act, text, cls = 'ed-link') => { const b = document.createElement('button'); b.type = 'button'; b.className = cls; b.dataset.act = act; b.textContent = text; return b; };
-    if (!ro && q.answers.length < SLOTS) foot.appendChild(link('add', '+ Add an answer'));
-    const tag = document.createElement('span'); tag.className = 'ed-auto'; tag.textContent = 'Points filled in for you'; tag.hidden = !q.auto || !q.answers.some((a) => a.text.trim());
-    foot.appendChild(tag);
-    if (!ro && !q.auto && q.answers.length > 1) foot.appendChild(link('auto', 'Fill in points for me'));
-    const sp = document.createElement('span'); sp.className = 'ed-spacer'; foot.appendChild(sp);
-    if (ed.id && qDone(q)) foot.appendChild(link('play', 'Play this one', 'ed-mini'));
-    if (!ro) { foot.appendChild(link('dup', 'Duplicate', 'ed-mini')); foot.appendChild(link('del', 'Delete', 'ed-mini danger')); }
-    body.append(ol, foot);
-    // the open question's header: its number, the question to edit, the count, and the fold
-    const head = document.createElement('div'); head.className = 'ed-open-head';
-    const n = document.createElement('span'); n.className = 'ed-row-n'; n.textContent = i + 1;
-    const [meta, warn] = rowMeta(q);
-    const m = document.createElement('span'); m.className = 'ed-row-meta' + (warn ? ' warn' : ''); m.textContent = meta;
-    const fold = document.createElement('button'); fold.type = 'button'; fold.className = 'ed-fold'; fold.dataset.act = 'toggle';
-    fold.setAttribute('aria-label', 'Close this question'); fold.title = 'Close'; fold.setAttribute('aria-expanded', 'true');
-    const chev = document.createElement('span'); chev.className = 'ed-row-chev'; chev.setAttribute('aria-hidden', 'true'); fold.appendChild(chev);
-    head.append(n, qt, m, fold);
-    return [head, body];
-  }
-  function paintList() {
-    const ro = !canEdit();
-    const done = cleanQuestions(ed.questions).length;
-    $('sd-list-count').textContent = ed.questions.length ? `${ed.questions.length} question${ed.questions.length === 1 ? '' : 's'}${done < ed.questions.length ? ` · ${ed.questions.length - done} not finished` : ''}` : 'No questions yet';
-    $('sd-list-new').hidden = $('sd-paste-more').hidden = ro;
-    const ol = $('sd-list');
-    if (!ed.questions.length) {
-      const li = document.createElement('li'); li.className = 'ed-empty'; li.textContent = 'No questions.';
-      ol.replaceChildren(li);
-      return;
+  // ---------- the write tab ----------
+  // a totally empty question is dropped when you leave it (unless it's the only one)
+  function dropBlank() {
+    const q = ed && ed.questions[cur];
+    if (q && qBlank(q) && ed.questions.length > 1) {
+      ed.questions.splice(cur, 1);
+      cur = Math.min(cur, ed.questions.length - 1);
     }
-    ol.replaceChildren(...ed.questions.map((q, i) => {
-      const li = document.createElement('li'); li.className = 'ed-item' + (i === openQ ? ' open' : ''); li.dataset.q = i;
-      if (i === openQ) li.append(...questionBody(q, i));
-      else li.appendChild(rowHead(q, i));
+  }
+  // how many answer rows to show: three to start, one empty row after the
+  // last filled one, never more than 8
+  function rowCount(q) {
+    let last = -1;
+    q.answers.forEach((a, j) => { if (a.text.trim()) last = j; });
+    return Math.min(SLOTS, Math.max(3, last + 2));
+  }
+  function paintWrite() {
+    const ro = !canEdit();
+    const qs = ed.questions;
+    cur = Math.max(0, Math.min(cur, qs.length - 1));
+    const q = qs[cur];
+    // the questions so far
+    $('sd-wq-list').replaceChildren(...qs.map((x, i) => {
+      const li = document.createElement('li');
+      const b = document.createElement('button'); b.type = 'button'; b.className = 'sd-wq-item'; b.dataset.go = i;
+      if (i === cur) b.setAttribute('aria-current', 'true');
+      const n = document.createElement('span'); n.className = 'sd-wq-item-n'; n.textContent = i + 1;
+      const t = document.createElement('span'); t.className = 'sd-wq-item-t'; t.textContent = x.question.trim() || 'New question';
+      if (!x.question.trim()) t.classList.add('blank');
+      b.append(n, t);
+      if (!qDone(x) && !qBlank(x)) { const w = document.createElement('span'); w.className = 'sd-wq-item-warn'; w.title = x.question.trim() ? 'Needs an answer' : 'Needs a question'; b.appendChild(w); b.title = w.title; }
+      li.appendChild(b);
       return li;
     }));
-    ol.querySelectorAll('.ed-q-text').forEach(fitText);
+    $('sd-wq-new').hidden = ro;
+    const main = $('sd-wq-main');
+    main.hidden = !q;
+    if (!q) return;
+    $('sd-wq-count').textContent = `Question ${cur + 1} of ${qs.length}`;
+    $('sd-wq-prev').disabled = cur <= 0;
+    $('sd-wq-next').disabled = cur >= qs.length - 1;
+    const qt = $('sd-wq-q');
+    if (document.activeElement !== qt) qt.value = q.question;
+    qt.disabled = ro;
+    fitText(qt);
+    paintAnswers();
+    $('sd-wq-auto').checked = !!q.auto;
+    $('sd-wq-auto').disabled = ro;
+    $('sd-wq-play').hidden = !ed.id || !qDone(q);
+    $('sd-wq-dup').hidden = $('sd-wq-del').hidden = ro || qBlank(q);
+    $('sd-wq-another').hidden = $('sd-wq-done').hidden = ro;
   }
-  const fitText = (ta) => { ta.style.height = 'auto'; ta.style.height = `${ta.scrollHeight + 2}px`; };
-  function openQuestion(i, focusSel) {
-    openQ = i;
-    paintList();
-    if (i < 0) return;
-    const li = $('sd-list').querySelector(`[data-q="${i}"]`);
-    if (!li) return;
-    li.scrollIntoView({ block: 'nearest' });
-    if (focusSel && canEdit()) { const el = li.querySelector(focusSel); if (el) el.focus(); }
+  // one answer row: number, text, points, and × once it has text
+  function answerRow(j) {
+    const ro = !canEdit();
+    const q = ed.questions[cur];
+    const a = q.answers[j] || { text: '', points: null };
+    const li = document.createElement('li'); li.className = 'sd-wq-a'; li.dataset.a = j;
+    const num = document.createElement('span'); num.className = 'sd-wq-a-n'; num.textContent = j + 1;
+    const t = document.createElement('input'); t.type = 'text'; t.className = 'sd-wq-a-text'; t.maxLength = 60; t.value = a.text; t.disabled = ro;
+    t.placeholder = j === 0 ? 'The most popular answer' : j === 1 ? 'The next most popular' : 'Another answer';
+    t.setAttribute('aria-label', `Answer ${j + 1}`);
+    const p = document.createElement('input'); p.type = 'number'; p.className = 'sd-wq-a-pts' + (q.auto ? ' auto' : '');
+    p.min = 0; p.max = 999; p.inputMode = 'numeric'; p.placeholder = 'pts'; p.disabled = ro;
+    p.value = a.text.trim() && a.points != null ? a.points : '';
+    p.setAttribute('aria-label', `Points for answer ${j + 1}`);
+    const x = document.createElement('button'); x.type = 'button'; x.className = 'sd-wq-x'; x.dataset.rm = j;
+    x.setAttribute('aria-label', `Remove answer ${j + 1}`); x.title = 'Remove'; x.textContent = '×';
+    x.hidden = ro || !a.text.trim();
+    li.append(num, t, p, x);
+    return li;
   }
-
-  // a change in the open question: repaint (or patch) and save
-  function edited(repaint, focus) {
-    ed.extra = 0;
-    if (repaint) {
-      paintList();
-      if (focus) {
-        const el = $('sd-list').querySelector(`[data-q="${focus.q}"] ${focus.a != null ? `[data-a="${focus.a}"] ` : ''}${focus.sel}`);
-        if (el) { el.focus(); if (el.select && focus.select) el.select(); }
-      }
+  function paintAnswers(focus) {
+    const q = ed.questions[cur];
+    const ol = $('sd-wq-ans');
+    ol.replaceChildren(...Array.from({ length: rowCount(q) }, (_, j) => answerRow(j)));
+    if (focus) {
+      const el = ol.querySelector(`[data-a="${focus.a}"] ${focus.sel || '.sd-wq-a-text'}`);
+      if (el) { el.focus(); if (focus.caret != null && el.setSelectionRange) el.setSelectionRange(focus.caret, focus.caret); }
     }
-    $('sd-play-set').disabled = !ed.id || !cleanQuestions(ed.questions).length;
-    scheduleSave();
   }
-  function patchOpen(i) {
-    const li = $('sd-list').querySelector(`[data-q="${i}"]`);
-    if (!li) return;
-    const q = ed.questions[i];
-    li.querySelectorAll('.ed-a').forEach((row) => {
-      const a = q.answers[+row.dataset.a];
-      const p = row.querySelector('.ed-a-pts');
-      if (a && document.activeElement !== p) p.value = a.points == null ? '' : a.points;
+  // while typing: rows are added or taken off the end, never rebuilt, so the
+  // box being typed in stays put
+  function syncRows() {
+    const q = ed.questions[cur];
+    const ol = $('sd-wq-ans');
+    const want = rowCount(q);
+    let have = ol.children.length;
+    while (have < want) ol.appendChild(answerRow(have++));
+    while (have > want && !ol.lastElementChild.contains(document.activeElement)) { ol.lastElementChild.remove(); have--; }
+    [...ol.children].forEach((li) => { const a = q.answers[+li.dataset.a]; li.querySelector('.sd-wq-x').hidden = !canEdit() || !(a && a.text.trim()); });
+  }
+  const firstEmptyAnswer = () => [...$('sd-wq-ans').querySelectorAll('.sd-wq-a-text')].find((i) => !i.value.trim()) || null;
+  // the bits of the write tab that follow a keystroke without a repaint
+  function patchWrite() {
+    const q = ed.questions[cur];
+    $('sd-wq-ans').querySelectorAll('.sd-wq-a').forEach((li) => {
+      const a = q.answers[+li.dataset.a];
+      const p = li.querySelector('.sd-wq-a-pts');
+      if (document.activeElement !== p) p.value = a && a.text.trim() && a.points != null ? a.points : '';
       p.classList.toggle('auto', !!q.auto);
     });
-    const tag = li.querySelector('.ed-auto');
-    if (tag) tag.hidden = !q.auto || !q.answers.some((a) => a.text.trim());
-    const [meta, warn] = rowMeta(q);
-    const m = li.querySelector('.ed-row-meta'); m.textContent = meta; m.classList.toggle('warn', warn);
-  }
-  function onFieldInput(e) {
-    const t = e.target;
-    if (!t.dataset.f || !canEdit()) return;
-    const card = t.closest('[data-q]');
-    const i = +card.dataset.q, q = ed.questions[i];
-    if (!q) return;
-    if (t.dataset.f === 'q') { q.question = t.value.replace(/\n/g, ' ').slice(0, 300); fitText(t); }
-    else {
-      const a = q.answers[+t.closest('[data-a]').dataset.a];
-      if (t.dataset.f === 'text') { a.text = t.value.slice(0, 60); if (q.auto) fillPoints(q); }
-      else {
-        a.points = t.value === '' ? null : Math.max(0, Math.min(999, Math.round(+t.value) || 0));
-        q.auto = false;
-      }
+    $('sd-wq-auto').checked = !!q.auto;
+    const item = $('sd-wq-list').querySelector(`[data-go="${cur}"]`);
+    if (item) {
+      const t = item.querySelector('.sd-wq-item-t');
+      t.textContent = q.question.trim() || 'New question'; t.classList.toggle('blank', !q.question.trim());
+      const warn = !qDone(q) && !qBlank(q);
+      let w = item.querySelector('.sd-wq-item-warn');
+      if (warn && !w) { w = document.createElement('span'); w.className = 'sd-wq-item-warn'; item.appendChild(w); }
+      if (!warn && w) w.remove();
+      item.title = warn ? (q.question.trim() ? 'Needs an answer' : 'Needs a question') : '';
     }
-    patchOpen(i);
-    edited(false);
+    $('sd-wq-play').hidden = !ed.id || !qDone(q);
+    $('sd-wq-dup').hidden = $('sd-wq-del').hidden = qBlank(q);
+    paintTabs();
   }
-  function addAnswer(i, at) {
-    const q = ed.questions[i];
-    if (!q || q.answers.length >= SLOTS) return;
-    const j = at == null ? q.answers.length : at;
-    q.answers.splice(j, 0, { text: '', points: null });
-    if (q.auto) fillPoints(q);
-    edited(true, { q: i, a: j, sel: '.ed-a-text' });
+  function edited() {
+    ed.extra = 0;
+    paintPlay();
+    scheduleSave();
   }
-  function onEditorClick(e) {
-    // a click outside the ⋯ menu closes it
-    const menu = $('sd-set-menu');
-    if (menu.open && !e.target.closest('#sd-set-menu')) menu.open = false;
-    const b = e.target.closest('[data-act]');
-    if (!b || !b.closest('#sd-list')) return;
-    const card = b.closest('[data-q]');
-    const i = card ? +card.dataset.q : -1, q = ed.questions[i];
-    if (b.dataset.act === 'toggle') { openQuestion(openQ === i ? -1 : i, '.ed-q-text'); return; }
-    if (b.dataset.act === 'play') { playFromEditor(q.id); return; }
-    if (!canEdit()) return;
-    switch (b.dataset.act) {
-      case 'add': addAnswer(i); break;
-      case 'rm': {
-        const j = +b.closest('[data-a]').dataset.a;
-        q.answers.splice(j, 1);
-        if (q.auto) fillPoints(q);
-        edited(true, q.answers.length ? { q: i, a: Math.max(0, j - 1), sel: '.ed-a-text' } : { q: i, sel: '.ed-q-text' });
-        break;
-      }
-      case 'auto': q.auto = true; fillPoints(q); edited(true); break;
-      case 'dup': {
-        const c = clone(q); c.id = newId();
-        ed.questions.splice(i + 1, 0, c);
-        openQ = i + 1;
-        edited(true, { q: i + 1, sel: '.ed-q-text', select: true });
-        break;
-      }
-      case 'del': {
-        const has = q.question.trim() || q.answers.some((a) => a.text.trim());
-        if (has && !confirm(`Delete question ${i + 1}${q.question.trim() ? `, "${q.question.trim()}"` : ''}?`)) return;
-        ed.questions.splice(i, 1);
-        openQ = -1;
-        edited(true);
-        break;
-      }
-      default:
+  function openQ(i, focusQ) {
+    if (i < 0 || i >= ed.questions.length || i === cur) return;
+    const leaving = ed.questions[cur];
+    cur = i;
+    if (leaving && qBlank(leaving) && ed.questions.length > 1) {
+      const k = ed.questions.indexOf(leaving);
+      ed.questions.splice(k, 1);
+      if (k < cur) cur--;
     }
-  }
-  // Enter in the question goes to the answers; Enter in an answer adds the
-  // next one; Backspace in an empty one removes it
-  function onEditorKey(e) {
-    const t = e.target;
-    if (!canEdit() || !t.closest || !t.closest('#sd-list')) return;
-    if (t.dataset.f === 'q' && e.key === 'Enter') {
-      e.preventDefault();
-      const i = +t.closest('[data-q]').dataset.q;
-      if (!ed.questions[i].answers.length) addAnswer(i);
-      else { const a = t.closest('[data-q]').querySelector('.ed-a-text'); if (a) a.focus(); }
-      return;
-    }
-    if (t.dataset.f !== 'text') return;
-    const i = +t.closest('[data-q]').dataset.q, j = +t.closest('[data-a]').dataset.a;
-    const q = ed.questions[i];
-    if (e.key === 'Enter') { e.preventDefault(); if (q.answers.length < SLOTS) addAnswer(i, j + 1); }
-    else if (e.key === 'Backspace' && !t.value && q.answers.length > 1) {
-      e.preventDefault();
-      q.answers.splice(j, 1);
-      if (q.auto) fillPoints(q);
-      edited(true, { q: i, a: Math.max(0, j - 1), sel: '.ed-a-text' });
-    }
+    paintWrite();
+    if (focusQ && canEdit()) $('sd-wq-q').focus();
   }
   function newQuestion() {
     if (!canEdit()) return;
-    ed.questions.push({ id: newId(), question: '', answers: [{ text: '', points: null }], auto: true });
-    edView = 'list';
-    $('sd-paste').hidden = true; $('sd-list-view').hidden = false;
-    openQuestion(ed.questions.length - 1, '.ed-q-text');
-    edited(false);
+    dropBlank();
+    ed.questions.push(blankQ());
+    cur = ed.questions.length - 1;
+    if (edView !== 'write') { edView = 'write'; paintView(); } else paintWrite();
+    paintTabs();
+    $('sd-wq-q').focus();
   }
+  // "Save and add another": the open question has to be whole first
+  function saveAndAnother() {
+    if (!canEdit()) return;
+    const q = ed.questions[cur];
+    if (qBlank(q)) { $('sd-wq-q').focus(); return; }
+    if (!q.question.trim()) { flashEd('Type the question first.'); $('sd-wq-q').focus(); return; }
+    if (!q.answers.some((a) => a.text.trim())) { flashEd('Add at least one answer first.'); const a = firstEmptyAnswer(); if (a) a.focus(); return; }
+    scheduleSave(); flushSave();
+    const n = cur + 1;
+    newQuestion();
+    flashEd(`Question ${n} saved.`);
+    askName(() => $('sd-wq-q').focus());
+  }
+  function onWriteInput(e) {
+    const t = e.target;
+    if (!canEdit() || !t.closest('#sd-write')) return;
+    const q = ed.questions[cur];
+    if (!q) return;
+    if (t.id === 'sd-wq-q') { q.question = t.value.replace(/\n/g, ' ').slice(0, 300); fitText(t); patchWrite(); edited(); return; }
+    if (t.id === 'sd-wq-auto') { q.auto = t.checked; if (q.auto) fillPoints(q); patchWrite(); edited(); return; }
+    const row = t.closest('[data-a]');
+    if (!row) return;
+    const j = +row.dataset.a;
+    while (q.answers.length <= j) q.answers.push({ text: '', points: null });
+    const a = q.answers[j];
+    if (t.classList.contains('sd-wq-a-text')) {
+      a.text = t.value.slice(0, 60);
+      if (q.auto) fillPoints(q);
+      syncRows();   // one more row as the last one fills
+    } else {
+      a.points = t.value === '' ? null : Math.max(0, Math.min(999, Math.round(+t.value) || 0));
+      q.auto = false;
+    }
+    patchWrite();
+    edited();
+  }
+  function removeAnswer(j, focusPrev) {
+    const q = ed.questions[cur];
+    if (!q || j >= q.answers.length) return;
+    q.answers.splice(j, 1);
+    if (q.auto) fillPoints(q);
+    paintAnswers({ a: Math.max(0, focusPrev ? j - 1 : j), caret: focusPrev ? 999 : 0 });
+    patchWrite();
+    edited();
+  }
+  // Enter in the question goes to the answers; Enter in an answer moves to the
+  // next row (Enter in an empty row, once there's an answer, is "Save and add
+  // another"); Backspace in an empty row goes back up; ↑ ↓ move between rows
+  function onWriteKey(e) {
+    const t = e.target;
+    if (!canEdit() || !t.closest || !t.closest('#sd-write')) return;
+    if (t.id === 'sd-wq-q' && e.key === 'Enter') {
+      e.preventDefault();
+      const a = $('sd-wq-ans').querySelector('.sd-wq-a-text'); if (a) a.focus();
+      return;
+    }
+    const row = t.closest('[data-a]');
+    if (!row) return;
+    const j = +row.dataset.a;
+    const inputs = [...$('sd-wq-ans').querySelectorAll(t.classList.contains('sd-wq-a-pts') ? '.sd-wq-a-pts' : '.sd-wq-a-text')];
+    const q = ed.questions[cur];
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      if (t.classList.contains('sd-wq-a-text') && !t.value.trim() && q.answers.some((a) => a.text.trim())) { saveAndAnother(); return; }
+      const next = $('sd-wq-ans').querySelector(`[data-a="${j + 1}"] .sd-wq-a-text`);
+      if (next) next.focus(); else if (j >= SLOTS - 1) $('sd-wq-another').focus();
+    } else if (e.key === 'ArrowDown' && inputs[j + 1]) { e.preventDefault(); inputs[j + 1].focus(); }
+    else if (e.key === 'ArrowUp') { e.preventDefault(); if (inputs[j - 1]) inputs[j - 1].focus(); else if (t.classList.contains('sd-wq-a-text')) $('sd-wq-q').focus(); }
+    else if (e.key === 'Backspace' && t.classList.contains('sd-wq-a-text') && !t.value && j > 0) {
+      e.preventDefault();
+      if (j < q.answers.length) removeAnswer(j, true);
+      else { const prev = inputs[j - 1]; prev.focus(); prev.setSelectionRange(prev.value.length, prev.value.length); }
+    }
+  }
+  function onWriteClick(e) {
+    const go = e.target.closest('[data-go]');
+    if (go) { openQ(+go.dataset.go, true); return; }
+    const rm = e.target.closest('[data-rm]');
+    if (rm && canEdit()) removeAnswer(+rm.dataset.rm, false);
+  }
+  function dupQuestion() {
+    if (!canEdit()) return;
+    const c = clone(ed.questions[cur]); c.id = newId();
+    ed.questions.splice(cur + 1, 0, c);
+    cur++;
+    paintWrite(); paintTabs();
+    $('sd-wq-q').focus(); $('sd-wq-q').select();
+    edited();
+    flashEd(`Duplicated as question ${cur + 1}.`);
+  }
+  function delQuestion() {
+    if (!canEdit()) return;
+    const q = ed.questions[cur];
+    if (!qBlank(q) && !confirm(`Delete question ${cur + 1}${q.question.trim() ? `, "${q.question.trim()}"` : ''}?`)) return;
+    ed.questions.splice(cur, 1);
+    if (!ed.questions.length) ed.questions.push(blankQ());
+    cur = Math.min(cur, ed.questions.length - 1);
+    paintWrite(); paintTabs();
+    edited();
+  }
+  const fitText = (ta) => { ta.style.height = 'auto'; ta.style.height = `${ta.scrollHeight + 2}px`; };
   function showPaste() {
     if (!canEdit()) return;
-    edView = 'paste';
-    paintView();
-    $('sd-paste-text').focus();
+    showTab('paste', true);
   }
 
-  // ---------- renaming (from the ⋯ menu) ----------
+  // ---------- the set's name ----------
+  // The title is the name: click it (the whole name selects) and type.
   function renaming(on) {
-    $('sd-set-pick').hidden = on;
-    $('sd-set-name').hidden = !on;
-    if (on) { $('sd-set-name').value = ed.name; $('sd-set-name').focus(); $('sd-set-name').select(); }
+    if (on && canEdit()) { const t = $('sd-set-name'); t.focus(); t.select(); }
   }
   function finishRename(keep) {
-    if ($('sd-set-name').hidden) return;
-    const v = $('sd-set-name').value.trim().slice(0, 60);
-    renaming(false);
-    if (!keep || !v || v === ed.name) return;
-    ed.name = v;
+    const t = $('sd-set-name');
+    if (!ed || t.disabled) return;
+    const v = t.value.trim().slice(0, 60);
+    if (!keep || !v) { t.value = ed.unnamed ? '' : ed.name; return; }
+    if (!ed.unnamed && v === ed.name) return;
+    ed.name = v; ed.unnamed = false; ed.asked = true;
+    t.value = v;
     paintPick();
     if (ed.id || cleanQuestions(ed.questions).length) scheduleSave();
   }
+
+  // Asked once, when an unnamed set gets its first questions: a small prompt
+  // under the title with a name suggested from the first question.
+  let askAfter = null;
+  const askOpen = () => !$('sd-name-ask').hidden;
+  function hideAsk() { $('sd-name-ask').hidden = true; askAfter = null; }
+  function askName(after) {
+    if (!canEdit() || !ed.unnamed || ed.asked || !cleanQuestions(ed.questions).length) return false;
+    ed.asked = true;
+    askAfter = after || null;
+    const sug = suggestName(ed.questions);
+    const inp = $('sd-name-ask-in');
+    inp.value = sug ? uniqueName(sug) : '';
+    $('sd-name-ask-hint').textContent = sug ? 'Suggested from your first question' : '';
+    $('sd-name-ask').hidden = false;
+    inp.focus(); inp.select();
+    return true;
+  }
+  function finishAsk(save) {
+    if (!askOpen()) return;
+    const v = $('sd-name-ask-in').value.trim().slice(0, 60);
+    const after = askAfter;
+    hideAsk();
+    if (save && v) { ed.name = v; ed.unnamed = false; }
+    else if (!ed.name.trim()) ed.name = uniqueName('Untitled set');
+    paintPick();
+    scheduleSave();
+    if (after) after(); else focusTab();
+  }
+
+  // A name from the first question's topic: a name in it ("Macbeth"), else
+  // the short thing it asks for ("Name a fruit" → Fruit), else what follows
+  // its first in / on / at / about ("…in your backpack" → Backpack).
+  const STOP = new Set('a an the some any one something someone somewhere thing things that you your yours they their people person students student most most popular common might would could should can do does did is are was were be to of and or for with from by as it its this these those what which who whom whose when where why how many much often usually likely ever'.split(' '));
+  const GENERIC = new Set('thing things word words reason reasons way ways place places item items kind type sort example time times job jobs'.split(' '));
+  function suggestName(questions) {
+    const q = (questions || []).find((x) => x.question && x.question.trim());
+    if (!q) return '';
+    const text = q.question.replace(/^\s*(we asked [^:.?]*[:.]\s*)/i, '').replace(/["“”]/g, '').trim();
+    // a proper name, not at the start of the sentence: "Macbeth",
+    // "Romeo and Juliet", "Lord of the Flies"
+    const words = text.split(/\s+/).map((w) => w.replace(/[^A-Za-z'’-]/g, ''));
+    const cap = (w) => /^[A-Z][a-z'’-]+$/.test(w || '');
+    for (let i = 1; i < words.length; i++) {
+      if (!cap(words[i]) || words[i].length < 3) continue;
+      const out = [words[i]];
+      let j = i + 1;
+      while (j < words.length) {
+        if (cap(words[j])) { out.push(words[j]); j++; continue; }
+        if (/^(and|of|the)$/.test(words[j])) {
+          let k = j; const glue = [];
+          while (k < words.length && /^(and|of|the)$/.test(words[k])) glue.push(words[k++]);
+          if (cap(words[k])) { out.push(...glue, words[k]); j = k + 1; continue; }
+        }
+        break;
+      }
+      return out.join(' ').slice(0, 40);
+    }
+    let t = text.toLowerCase().replace(/[?.!,;:]+/g, ' ').replace(/\s+/g, ' ').trim();
+    t = t.replace(/^(name|list|give|tell (me|us)?|think of|guess)\s+/, '')
+      .replace(/^(a|an|one|the|some|something|someone|somewhere|a thing|things|anything)\s+/, '');
+    const content = (str) => str.split(' ').filter((w) => w && !STOP.has(w) && !/^(means?|meant|keep|kept|see|sees|saw|find|found|get|gets|got|use|uses|used|make|makes|made|say|says|said|go|goes|went|like|likes|want|wants|need|needs)$/.test(w));
+    const title = (ws) => ws.join(' ').replace(/(^|\s)\S/g, (m) => m.toUpperCase()).slice(0, 40);
+    const all = t.split(' ');
+    // what it asks for, up to the first "that / you / a student …"
+    const headEnd = all.findIndex((w, i) => i > 0 && /^(that|which|who|you|your|people|a|an|the|students?|someone|might|would|could|should|in|on|at|to|for|about|during|when|where|with)$/.test(w));
+    const head = content((headEnd < 0 ? all : all.slice(0, headEnd)).join(' '));
+    const generic = head.length === 1 && GENERIC.has(head[0]);
+    // short and specific: "a fruit", "a school subject", "a pizza topping"
+    if (head.length && head.length <= 3 && !generic) return title(head);
+    // else the object of the first in / on / at / to / about …
+    const m = t.match(/\b(in|on|at|to|about|during|inside|around)\s+(.+)$/);
+    if (m) { const obj = content(m[2].split(/\b(?:in|on|at|to|about|during|inside|around)\b/)[0]).slice(0, 2); if (obj.length) return title(obj); }
+    // else what comes after a generic head: "a word that means brave" → Brave
+    const rest = content(all.slice(headEnd < 0 ? all.length : headEnd).join(' ')).slice(0, 2);
+    if (rest.length) return title(rest);
+    return head.length ? title(head.slice(0, 2)) : '';
+  }
+  window.__showdownSuggest = suggestName;
 
   // ---------- autosave ----------
   let saveTimer = 0, pending = false, saving = Promise.resolve();
@@ -1054,8 +1245,10 @@
     const draft = ed;
     if (!draft || draft.readonly) return;
     const questions = cleanQuestions(draft.questions);
-    const name = draft.name.trim() || 'Untitled set';
     if (!draft.id && !questions.length) { paintSave(''); return; }   // nothing to keep yet
+    if (!draft.id && draft.unnamed && askOpen()) { pending = true; paintSave(''); return; }   // the name comes first
+    if (!draft.name.trim()) draft.name = uniqueName('Untitled set');
+    const name = draft.name.trim();
     try {
       let row;
       if (draft.id) row = await updateSurveySet(draft.id, { name, questions });
@@ -1081,13 +1274,9 @@
   async function switchSet(id) {
     await flushSave();
     if (id === '__new') {
-      try {
-        const row = await createSurveySet({ name: uniqueName('New set'), questions: [], sortOrder: sets.length });
-        sets.push(normSet(row));
-        fillGameSelect();
-        loadDraft(sets[sets.length - 1]);
-        $('sd-paste-text').focus();
-      } catch (err) { paintSave(`Couldn't make the set: ${err.message || err}`, 'error'); paintEditor(); }
+      if (!bankReady) return;
+      loadDraft(null);
+      $('sd-paste-text').focus();
       return;
     }
     const s = sets.find((x) => x.id === id);
@@ -1124,11 +1313,15 @@
   }
   async function closeEditor() {
     finishRename(true);
+    if (askOpen()) finishAsk(true);                       // closing keeps the name in the box
+    else if (askName(() => closeEditor())) return;         // asked once, before it's saved as "Untitled set"
     await flushSave();
     editor.close();
   }
   // play the open set, from its first question or from the one given
   async function playFromEditor(qid) {
+    if (askOpen()) finishAsk(true);
+    else if (askName(() => playFromEditor(qid))) return;
     await flushSave();
     if (!ed.id) return;
     const at = qid ? Math.max(0, playingSetById(ed.id).questions.findIndex((x) => x.id === qid)) : 0;
@@ -1213,7 +1406,7 @@
     }
     if (bankReady) {
       const add = document.createElement('div'); add.className = 'gh-card gh-new';
-      add.innerHTML = '<b class="gh-card-name">Make a new set</b><span class="gh-card-n">Type or paste questions you already have.</span><div class="gh-card-acts"><button type="button" class="gh-big" data-new>+ Make a new set</button><button type="button" class="gh-link" data-goto="ai">Or get questions with AI</button></div>';
+      add.innerHTML = '<b class="gh-card-name">Make a new set</b><div class="gh-card-acts"><button type="button" class="gh-big" data-new>+ Make a new set</button><button type="button" class="gh-link" data-goto="ai">Or get questions with AI</button></div>';
       cards.push(add);
     }
     $('sd-gh-cards').replaceChildren(...cards);
@@ -1244,7 +1437,7 @@
     const found = aiFound();
     if (!found.length || !bankReady) return;
     found.forEach((q) => { q.id = newId(); });
-    const name = $('sd-gh-name').value.trim().slice(0, 60) || uniqueName('New set');
+    const name = $('sd-gh-name').value.trim().slice(0, 60) || uniqueName(suggestName(found) || 'Untitled set');
     const btn = $('sd-gh-save');
     btn.disabled = true; btn.textContent = 'Saving…';
     try {
@@ -1278,8 +1471,7 @@
       if (!set) return;
       loadDraft(set);
       editor.showModal();
-      if (edView === 'paste') $('sd-paste-text').focus();
-      else { const r = $('sd-list').querySelector('.ed-row'); if (r) r.focus(); }
+      focusTab();
       return;
     }
     if (e.target.closest('[data-new]')) {
@@ -1339,7 +1531,7 @@
         const n = document.createElement('b'); n.className = 'gs-card-name'; n.textContent = x === fallbackSet && bankReady ? 'Starter questions' : x.name;
         const c = document.createElement('span'); c.className = 'gs-card-n'; c.textContent = `${x.questions.length} question${x.questions.length === 1 ? '' : 's'}`;
         const w = document.createElement('span'); w.className = 'gs-card-when'; w.textContent = ago(m[x.id]);
-        b.append(n, c, w); b.title = n.textContent;
+        b.append(c, n, w); b.title = n.textContent;
         item.append(b);
         if (!(x.questions.length)) { b.disabled = true; w.textContent = 'Empty'; }
         if (bankReady && x !== fallbackSet) {
@@ -1584,31 +1776,67 @@
   $('sd-editor-close').addEventListener('click', closeEditor);
   editor.addEventListener('cancel', (e) => {
     e.preventDefault();
+    if (askOpen()) { finishAsk(false); return; }
     if ($('sd-set-menu').open) { $('sd-set-menu').open = false; return; }
     closeEditor();
   });
-  editor.addEventListener('input', onFieldInput);
-  editor.addEventListener('click', onEditorClick);
-  editor.addEventListener('keydown', onEditorKey);
+  editor.addEventListener('input', onWriteInput);
+  editor.addEventListener('click', (e) => {
+    // a click outside the ⋯ menu closes it
+    const menu = $('sd-set-menu');
+    if (menu.open && !e.target.closest('#sd-set-menu')) menu.open = false;
+    onWriteClick(e);
+  });
+  editor.addEventListener('keydown', onWriteKey);
+  // the tabs: click, or ← → between them
+  $('sd-tab-paste').addEventListener('click', () => showTab('paste', true));
+  $('sd-tab-write').addEventListener('click', () => showTab('write', true));
+  editor.querySelector('.sd-tabs').addEventListener('keydown', (e) => {
+    if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return;
+    e.preventDefault();
+    showTab(edView === 'paste' ? 'write' : 'paste');
+    $(edView === 'paste' ? 'sd-tab-paste' : 'sd-tab-write').focus();
+  });
   $('sd-paste-text').addEventListener('input', paintFound);
-  // pasting a game in adds it straight away
-  $('sd-paste-text').addEventListener('paste', () => setTimeout(() => { addPasted(); }, 0));
   $('sd-paste-add').addEventListener('click', addPasted);
-  $('sd-paste-back').addEventListener('click', () => { edView = 'list'; paintView(); });
+  $('sd-name-ask-ok').addEventListener('click', () => finishAsk(true));
+  $('sd-name-ask-later').addEventListener('click', () => finishAsk(false));
+  $('sd-name-ask-in').addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') { e.preventDefault(); finishAsk(true); }
+    else if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); finishAsk(false); }
+  });
   $('sd-starter').addEventListener('click', () => {
     if (!canEdit()) return;
+    dropBlank();
     ed.questions.push(...clone(STARTER).map((x) => ({ ...x, id: newId(), auto: false })));
-    edView = 'list'; openQ = -1;
     paintEditor();
+    flashEd('Added the 8 built-in questions. See them on Write questions.');
     scheduleSave();
+    askName(() => $('sd-paste-text').focus());
   });
-  $('sd-list-new').addEventListener('click', newQuestion);
-  $('sd-paste-more').addEventListener('click', showPaste);
-  $('sd-set-pick').addEventListener('change', (e) => switchSet(e.target.value));
+  $('sd-wq-new').addEventListener('click', newQuestion);
+  $('sd-wq-prev').addEventListener('click', () => openQ(cur - 1));
+  $('sd-wq-next').addEventListener('click', () => openQ(cur + 1));
+  $('sd-wq-another').addEventListener('click', saveAndAnother);
+  $('sd-wq-done').addEventListener('click', closeEditor);
+  $('sd-wq-dup').addEventListener('click', dupQuestion);
+  $('sd-wq-del').addEventListener('click', delQuestion);
+  $('sd-wq-play').addEventListener('click', () => { const q = ed.questions[cur]; if (q) playFromEditor(q.id); });
+  $('sd-set-pick').addEventListener('change', (e) => {
+    const v = e.target.value;
+    e.target.value = '';
+    if (v && v !== ed.id) switchSet(v);
+  });
   $('sd-set-rename').addEventListener('click', () => { $('sd-set-menu').open = false; renaming(true); });
+  // a click on the title selects the whole name, so typing replaces it
+  $('sd-set-name').addEventListener('mousedown', (e) => {
+    const t = e.currentTarget;
+    if (document.activeElement !== t && !t.disabled) { e.preventDefault(); t.focus(); t.select(); }
+  });
+  $('sd-set-name').addEventListener('focus', (e) => e.currentTarget.select());
   $('sd-set-name').addEventListener('keydown', (e) => {
-    if (e.key === 'Enter') { e.preventDefault(); finishRename(true); }
-    else if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); finishRename(false); }
+    if (e.key === 'Enter') { e.preventDefault(); finishRename(true); e.currentTarget.blur(); }
+    else if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); finishRename(false); e.currentTarget.blur(); }
   });
   $('sd-set-name').addEventListener('blur', () => finishRename(true));
   $('sd-set-dup').addEventListener('click', () => { $('sd-set-menu').open = false; duplicateSet(); });

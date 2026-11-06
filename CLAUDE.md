@@ -3455,7 +3455,7 @@ All styling lives in `style.css`; pages carry almost no inline styling.
     (`revealed[i] = 2`, shown in grey), as is **Show all**. **Strike**
     adds an X, up to three ("Three strikes: the other team can steal"),
     with a buzzer and the red flash (`strikeAt`, so every window flashes
-    it). Next / previous
+    it). Next / previous (any time: after Give and three strikes too; they stop only at the first / last question, and their tooltip says so)
     question clears the round. **Undo** (Ctrl+Z) steps back through every
     change (a snapshot stack, `act()`). **Reset game** zeroes both scores
     and goes back to question 1, keeping the teams. Keys: 1–8 reveal,
@@ -3492,7 +3492,18 @@ All styling lives in `style.css`; pages carry almost no inline styling.
       teams**) over a two-column grid of **tiles**. **A set card and a
       team plate are the same tile** (`--tile-h`, one frame, corner,
       depth, centred text in the game's display face); **gold fill means
-      selected and nothing else**. The cards scroll past two rows.
+      selected and nothing else**. The cards scroll past two rows. A set
+      card reads top to bottom: its count (on the pencil's row), the name in
+      the middle, when it was last played.
+    - **It all fits one screen without scrolling**, down to a 1366×650
+      viewport (a 1366×768 laptop with the browser's toolbar): the title,
+      tile height (`--tile-h`), gaps and Start button all scale with the
+      height (`vh`); "Make your first set" is one tile tall. Checked at
+      1920×940, 1440×780 and 1366×650 with a game in progress.
+    - **The nav's menus open over it**: `.showdown-page` / `.quiz-page` are
+      `isolation: isolate`, so the start screen's `z-index: 30` stays inside
+      the page and the top bar (`z-index: 20`) wins. Without that the Games
+      menu was cut off by the start screen.
     - **The buttons**: `[Game setup] [START GAME] [How to play]` on one
       row (`.gs-sec` pills with an icon either side of `.gs-go`; under
       900px Start takes its own row above them). Start **breathes**
@@ -3531,8 +3542,8 @@ All styling lives in `style.css`; pages carry almost no inline styling.
     - **A game in progress** (`inProgress()`: Feud any score, pot, strike,
       revealed answer or a question past the first; Jeopardy any used
       clue, result, score fix or Round 2) and the same set picked: the
-      button says **Resume game**, and a strip above it
-      (`.gs-progress-wrap`: a red dot, "Game in progress: Owls 120 – 80
+      button says **Resume game**, and a strip **in the header, in the
+      tagline's place** (so it adds no row; `.gs-progress-wrap`: a red dot, "Game in progress: Owls 120 – 80
       Team 2, question 4 of 8", and **Start over** at its end). Picking a
       different set: **Start game**, and the strip says "Starting ends the
       game in progress: …" with **Resume that game**. Start / Start
@@ -3554,8 +3565,9 @@ All styling lives in `style.css`; pages carry almost no inline styling.
   - **Game setup** (`#sd-setup` here, `#qb-setup` on Jeopardy; `dialog.gh`
     in the game's palette, the "Game setup" block in `style.css`, the
     `gh-*` classes): a full-screen hub for someone who isn't technical.
-    Plain words only (no "import", "parse", "config"), every section opens
-    with one sentence saying what it's for, big buttons, one primary
+    Plain words only (no "import", "parse", "config"), no lines narrating
+    what a section or field is for (only How to play keeps an opening
+    line: it describes the game), big buttons, one primary
     action per screen. Four numbered sections down the left
     (`.gh-nav`, `showSection()`; a row of chips under 900px), one shown at
     a time, and a footer that's always there: a one-line summary
@@ -3599,35 +3611,96 @@ All styling lives in `style.css`; pages carry almost no inline styling.
     game's own palette), full screen under 900px. **Nothing to save by
     hand**: every change saves itself 700ms later (`scheduleSave()` →
     one serialized PATCH), the head says Saving… / Saved / Not saved, and
-    closing (or Esc) saves anything pending. Jeopardy's is laid out
-    differently (see the board editor below); Family Feud's is deliberately
-    **one simple choice, not a control panel** (`dialog.sd-ed`,
-    `min(54rem, 96vw)` × `min(44rem, 92vh)`):
-    - **Head**: the set picker (its last option "+ New set"), a **⋯ menu**
-      (`#sd-set-menu`, a `<details>`: Rename, which swaps the picker for
-      a name field until Enter / blur, Esc cancels; Duplicate set; Delete
-      set, with a confirm), the save state, **Play this set**, and a close
-      **X**. Nothing else up there.
-    - **Two views, never both** (`edView`): a set with questions opens on
-      its list, an empty or new set on the paste box.
-    - **The paste view** (`#sd-paste`): a heading, one hint line, the box,
-      **Add N questions** (live count) and, folded away, **"Need questions?
-      Get help writing them"** (`.ed-help`): the AI prompt with **Copy
-      prompt**. Pasting adds the questions straight away (`addPasted()` on
-      the `paste` event) and swaps to the list ("Added 3 questions."); typed
-      text goes in with the button. An empty set also offers "start from the
-      8 built-in questions"; from the list, **Paste more** brings the box
-      back (empty; what's added joins the end) with "Back to the list".
-    - **The list** (`#sd-list`): one line per question: number, the
-      question, "6 answers" (or "Needs an answer" in red), a chevron. Click
-      one to open it; **only one is open at a time** (`openQ`). The open
-      one is edited in place, with no boxes: the question on a hairline,
-      the answers in two columns of text + points on hairlines (no spinner,
-      the × shows on hover), "+ Add an answer", the auto-points note or
-      "Fill in points for me", and **Play this one / Duplicate / Delete**
-      on that question only. Enter in the question goes to the answers,
-      Enter in an answer adds the next, Backspace on an empty one removes
-      it. **+ New question** adds and opens one.
+    closing (or Esc) saves anything pending.
+    **The calm pass** (the block of that name at the end of "Game editors"
+    in `style.css`, scoped to `dialog.ed-dialog` and `dialog.gh`, so both
+    editors and both Game setup hubs) keeps them from reading as generic
+    built UI:
+    - **Almost no outlines.** Only the fields you type in keep a border.
+      Groups sit on soft white fills (`--calm-fill` / `-2` / `-3`), never
+      rules or frames, and never a box in a box: the AI prompt is just its
+      text on a lighter ground with Copy beside it (under it in Jeopardy's
+      narrow column and on phones).
+    - **Buttons**: a secondary button is a soft fill with no outline (a
+      zero-specificity `:where()` rule, so components keep their own look).
+      **The primary is solid gold**, the loudest thing on the screen, and
+      stays gold at half opacity when disabled. The Game setup cards' "Use
+      this set" is a fill (gold on hover), so only Start the game is solid
+      there. Secondary links are muted (`.ed-link.ed-quiet`, `.gh-card
+      .gh-link`).
+    - **No monospace**: `--font-mono` is re-pointed at the body face inside
+      them, so the paste boxes, the prompt, the counts and the points read in
+      Rajdhani (tabular figures). Jeopardy's format line highlights the
+      `|` (`.ed-sep`), since Rajdhani's pipe looks like an I.
+    - **Tabs** are words with a gold underline under the selected one.
+    - **Copy**: no narrating lines. An empty preview says "Nothing yet";
+      the keyboard tip for Save and add another is its tooltip.
+    - **One scroller**: Family Feud's paste panel doesn't scroll (only the
+      box and the preview do), except on phones and under 560px tall.
+    - **Spacing**: tight inside a group (a label 0.3–0.4rem from its
+      field), generous between groups (the AI prompt and the Game setup
+      blocks are `--space-6` away); headings `--fs-md` to `--fs-2xl`, bold.
+
+    Jeopardy's is laid out
+    differently (see the board editor below). Family Feud's
+    (`dialog.sd-ed`, `min(66rem, 96vw)` × `min(46rem, 92vh)`) is **two tabs**:
+    - **Head**: **the set's name as an editable title** (`#sd-set-name`,
+      `.sd-title`: big bold text, no box; on hover a soft fill, a pencil
+      and a pointer; a click selects the whole name so typing replaces it;
+      Enter / blur saves, Esc puts it back; empty shows "Name this set"),
+      then **Switch set** (`#sd-set-pick`, `.sd-pick`, a separate small
+      select that only switches: the sets, ✓ on the open one, "+ New set"),
+      a **⋯ menu** (`#sd-set-menu`, a `<details>`: Rename, which focuses
+      the title; Duplicate set; Delete set, with a confirm), the save state,
+      **Play this set**, and a close **X**. Nothing else up there.
+    - **Naming a new set**: "+ New set" (and Game setup's / the start
+      screen's new-set buttons) opens an unsaved draft with no name
+      (`ed.unnamed`; a saved set still called "New set" / "Untitled set"
+      counts as unnamed too). The first time it gets questions (Add these
+      questions, Save and add another, the built-in questions, or closing /
+      Play with questions in it), **a small prompt asks once**
+      (`#sd-name-ask`, under the title, `askName()` / `finishAsk()`), with
+      a name **suggested from the first question** filled in and selected
+      (`suggestName()`, `window.__showdownSuggest`: a proper name in it
+      — "Macbeth", "Romeo and Juliet" — else what it asks for — "Name a
+      pizza topping" → Pizza Topping — else the place or thing after
+      in / on / at — "…in your backpack" → Backpack). Enter or Save name
+      takes it; Not now / Esc saves it as "Untitled set" and never asks
+      again for that set. The draft isn't created on the server until the
+      prompt is answered. Game setup's AI section names an unnamed save
+      the same way.
+    - **The tabs** (`.sd-tabs`, real `role="tab"`, ← → between them;
+      `edView` = `'paste'` | `'write'`): **Paste questions** and **Write
+      questions** (with a count badge). A set with questions opens on Write,
+      an empty or new set on Paste with the box focused. Messages ("Added 3
+      questions. See them on Write questions.", "Question 4 saved.") show
+      at the right of the tab row (`#sd-ed-flash`).
+    - **Paste questions** (`#sd-paste`): one hint line, then the box
+      beside a **live preview** (`paintFound()`: each question read from
+      it, its answers as pills with their points, "Points filled in for
+      you", and the unfinished ones in red as "won't be added"; a count
+      line on top). **Nothing is added until "Add N questions"** is pressed
+      (pasting no longer adds straight away: the preview is the check). An
+      empty set also offers "use the 8 built-in questions" (a quiet link). Under
+      them, **always open**, the AI prompt (`.sd-ai`) with **Copy prompt**.
+    - **Write questions** (`#sd-write`): the questions so far down the
+      left (`.sd-wq-side`, click to jump; a red dot on an unfinished one;
+      **+ New question**), and **one question at a time** on the right
+      (`cur`): ‹ "Question 3 of 5" › with Play this one / Duplicate /
+      Delete, the question in a big field, then the answer rows (number,
+      text, a small points box on the right, × once it has text). **Three
+      rows to start, one more as the last fills, up to 8** (`rowCount()`);
+      while typing, rows are added or taken off the end in place
+      (`syncRows()`, never a rebuild, so the box being typed in never
+      changes under the cursor). **Fill in points for me** is a checkbox
+      (`q.auto`; typing a number turns it off). Keys: Enter in the question
+      goes to the first answer, Enter in an answer moves down a row, **Enter
+      on an empty row (once there's an answer) is Save and add another**,
+      ↑ ↓ move between rows, Backspace in an empty row goes back up. Footer:
+      **Save and add another** (primary: the question needs its text and an
+      answer, then it saves and opens a new one) and **Done** (saves and
+      closes). A totally empty question is dropped when you leave it
+      (`dropBlank()`).
     - **The parser** (`parseGame()`, `window.__showdownParse`): a blank
       line separates questions, the first line is the question, each line
       after it an answer. Forgiving: "Q:" / "A:" cues, bullets and "1." /
@@ -3647,7 +3720,7 @@ All styling lives in `style.css`; pages carry almost no inline styling.
       on. A few missing points in a manual question are filled the same way
       on save.
   - **Before `migration-feud-sets.sql`**: the editor is read-only (a note
-    says to run it; the list opens, nothing to paste, no ⋯ menu) and the game plays the old `survey_questions` bank as
+    says to run it; the fields are disabled, no ⋯ menu) and the game plays the old `survey_questions` bank as
     "My questions", or `STARTER` without it. A teacher with no sets plays
     `STARTER` until they paste one.
   - **Host mode (two screens)**: the teacher drags the full screen window

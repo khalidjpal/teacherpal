@@ -711,7 +711,7 @@
       sl.append(sp, sc);
       const ul = document.createElement('ul'); ul.className = 'qb-member-list';
       if (!t.members.length) {
-        const li = document.createElement('li'); li.className = 'none'; li.textContent = 'No students yet. The team name is enough.'; ul.appendChild(li);
+        const li = document.createElement('li'); li.className = 'none'; li.textContent = 'No students yet'; ul.appendChild(li);
       } else {
         const next = st.teams[(k + 1) % st.teams.length].name;
         t.members.forEach((m, i) => {
@@ -854,7 +854,7 @@
     while (n > 0 && !catUsed(full[n - 1])) n--;
     if (!n) {
       const p = document.createElement('p'); p.className = 'ed-empty';
-      p.textContent = editable() ? 'What you paste shows up here as a board, ready to fix and play.' : 'No clues.';
+      p.textContent = editable() ? 'Nothing yet' : 'No clues';
       box.style.removeProperty('--cols');
       box.replaceChildren(p);
       return;
@@ -1100,7 +1100,7 @@
         const n = document.createElement('b'); n.className = 'gs-card-name'; n.textContent = x.name;
         const c = document.createElement('span'); c.className = 'gs-card-n'; c.textContent = (() => { const n = boardClues(x.categories); return n ? `${n} clue${n === 1 ? '' : 's'}` : 'No clues yet'; })();
         const w = document.createElement('span'); w.className = 'gs-card-when'; w.textContent = ago(m[x.id]);
-        b.append(n, c, w); b.title = n.textContent;
+        b.append(c, n, w); b.title = n.textContent;
         item.append(b);
         if (!(boardClues(x.categories))) { b.disabled = true; w.textContent = 'Empty'; }
         if (bankReady && !x.sample) {
@@ -1244,7 +1244,7 @@
     });
     if (bankReady) {
       const add = document.createElement('div'); add.className = 'gh-card gh-new';
-      add.innerHTML = '<b class="gh-card-name">Make a new board</b><span class="gh-card-n">Type or paste clues you already have.</span><div class="gh-card-acts"><button type="button" class="gh-big" data-new>+ Make a new board</button><button type="button" class="gh-link" data-goto="ai">Or get a board with AI</button></div>';
+      add.innerHTML = '<b class="gh-card-name">Make a new board</b><div class="gh-card-acts"><button type="button" class="gh-big" data-new>+ Make a new board</button><button type="button" class="gh-link" data-goto="ai">Or get a board with AI</button></div>';
       cards.push(add);
     }
     $('qb-gh-cards').replaceChildren(...cards);
